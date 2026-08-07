@@ -1,5 +1,5 @@
 --[[
-    Junejo Ultra Script Hub - Wash the House (Testing Edition v3 - Speed Slider & Auto Farm Patch)
+    Junejo Ultra Script Hub - Wash the House (Testing Edition v4 - Smooth Fix Patch)
     Target Game: Wash the House (Roblox)
     Created for junejo18146
 --]]
@@ -282,7 +282,7 @@ SpeedCorner.Parent = SpeedTextBox
 local SpeedStroke = Instance.new("UIStroke")
 SpeedStroke.Color = Color3.fromRGB(45, 45, 55)
 SpeedStroke.Thickness = 1.5
-SpeedStroke.Parent = SpeedTextBox
+SpeedStroke.Parent = SpeedControlRow
 
 local SetSpeedButton = Instance.new("TextButton")
 SetSpeedButton.Name = "SetSpeedButton"
@@ -364,29 +364,41 @@ local AddBtnCorner = Instance.new("UICorner")
 AddBtnCorner.CornerRadius = UDim.new(0, 6)
 AddBtnCorner.Parent = AddCashButton
 
--- Deep Comprehensive Cash Injector
+-- Deep Comprehensive Cash Injector (Client UI + Leaderstats + Fire Remotes)
 local function ApplyCash(val)
     local targetVal = tonumber(val) or CustomCashAmount
     pcall(function()
+        -- 1. Player Value Search
         for _, obj in ipairs(LocalPlayer:GetDescendants()) do
             if obj:IsA("ValueBase") then
-                local n = obj.Name:lower()
-                if n:find("cash") or n:find("coin") or n:find("money") or n:find("dollar") or n:find("clean") or n:find("balance") or n:find("val") then
-                    obj.Value = targetVal
+                obj.Value = targetVal
+            end
+        end
+
+        -- 2. Leaderstats / Stats Search
+        local leaderstats = LocalPlayer:FindFirstChild("leaderstats") or LocalPlayer:FindFirstChild("stats") or LocalPlayer:FindFirstChild("Data")
+        if leaderstats then
+            for _, stat in ipairs(leaderstats:GetDescendants()) do
+                if stat:IsA("ValueBase") then
+                    stat.Value = targetVal
                 end
             end
         end
 
+        -- 3. Fire all possible Money / Coin RemoteEvents in ReplicatedStorage
         for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
             if remote:IsA("RemoteEvent") then
-                local n = remote.Name:lower()
-                if n:find("cash") or n:find("coin") or n:find("money") or n:find("earn") or n:find("reward") or n:find("clean") or n:find("add") then
-                    pcall(function()
-                        remote:FireServer(targetVal)
-                        remote:FireServer("Cash", targetVal)
-                        remote:FireServer(100000)
-                    end)
-                end
+                pcall(function()
+                    remote:FireServer(targetVal)
+                    remote:FireServer("Coins", targetVal)
+                    remote:FireServer("Cash", targetVal)
+                    remote:FireServer("Add", targetVal)
+                    remote:FireServer(1000000)
+                end)
+            elseif remote:IsA("RemoteFunction") then
+                pcall(function()
+                    remote:InvokeServer(targetVal)
+                end)
             end
         end
     end)
@@ -399,16 +411,18 @@ AddCashButton.MouseButton1Click:Connect(function()
     ApplyCash(CustomCashAmount)
 end)
 
--- Teleport to Next Room Logic
+-- Robust Teleport to Next Room / Door / House
 local CurrentRoomIndex = 1
 local function TeleportToNextRoom()
     pcall(function()
-        local rooms = {}
+        local targets = {}
         for _, obj in ipairs(Workspace:GetDescendants()) do
             if obj:IsA("BasePart") or obj:IsA("Model") then
                 local n = obj.Name:lower()
-                if n:find("room") or n:find("door") or n:find("house") or n:find("stage") or n:find("area") or n:find("floor") then
-                    table.insert(rooms, obj)
+                if n:find("door") or n:find("room") or n:find("house") or n:find("stage") or n:find("teleport") or n:find("spawn") or n:find("checkpoint") or n:find("gate") or n:find("next") or n:find("exit") then
+                    if not obj:IsDescendantOf(LocalPlayer.Character or Instance.new("Folder")) then
+                        table.insert(targets, obj)
+                    end
                 end
             end
         end
@@ -416,13 +430,14 @@ local function TeleportToNextRoom()
         local char = LocalPlayer.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
         if hrp then
-            if #rooms > 0 then
-                CurrentRoomIndex = (CurrentRoomIndex % #rooms) + 1
-                local targetObj = rooms[CurrentRoomIndex]
+            if #targets > 0 then
+                CurrentRoomIndex = (CurrentRoomIndex % #targets) + 1
+                local targetObj = targets[CurrentRoomIndex]
                 local targetCF = targetObj:IsA("Model") and targetObj:GetPivot() or targetObj.CFrame
-                hrp.CFrame = targetCF + Vector3.new(0, 3, 0)
+                hrp.CFrame = targetCF + Vector3.new(0, 4, 0)
             else
-                hrp.CFrame = hrp.CFrame * CFrame.new(0, 0, -40)
+                -- Fallback forward teleport by 60 studs
+                hrp.CFrame = hrp.CFrame * CFrame.new(0, 0, -60)
             end
         end
     end)
@@ -453,10 +468,7 @@ RunService.Stepped:Connect(function()
                     if item:IsA("Tool") then
                         for _, v in ipairs(item:GetDescendants()) do
                             if v:IsA("ValueBase") then
-                                local name = v.Name:lower()
-                                if name:find("water") or name:find("pressure") or name:find("tank") or name:find("fuel") or name:find("ammo") then
-                                    v.Value = 999999
-                                end
+                                v.Value = 999999
                             end
                         end
                     end
@@ -466,10 +478,10 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- Background Processing Loop (Coins, Sort, Clean)
+-- Smooth Non-Vibrating Background Loop (Coins, Sort, Clean)
 task.spawn(function()
     while true do
-        task.wait(0.15)
+        task.wait(0.5) -- Smooth delay to prevent screen vibration
         
         -- AUTO FARM COINS (Scattered Coin Collection)
         if FeatureStates.AutoFarmCoins then
@@ -482,11 +494,12 @@ task.spawn(function()
                             local n = item.Name:lower()
                             if n:find("coin") or n:find("cash") or n:find("dollar") or n:find("money") or n:find("drop") or n:find("orb") or n:find("reward") then
                                 local p = item:IsA("BasePart") and item or item:FindFirstChildOfClass("BasePart")
-                                if p then
-                                    p.CFrame = hrp.CFrame
+                                if p and (p.Position - hrp.Position).Magnitude < 300 then
                                     if firetouchinterest then
                                         firetouchinterest(hrp, p, 0)
                                         firetouchinterest(hrp, p, 1)
+                                    else
+                                        p.CFrame = hrp.CFrame
                                     end
                                 end
                             end
@@ -521,30 +534,29 @@ task.spawn(function()
             end)
         end
 
-        -- AUTO SORT OBJECTS (Universal ProximityPrompt / ClickDetector / Teleport)
+        -- SMOOTH AUTO SORT OBJECTS (No Screen Vibration)
         if FeatureStates.AutoSort then
             pcall(function()
                 local char = LocalPlayer.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
                 
-                -- Fire all ProximityPrompts & ClickDetectors in workspace
+                -- Trigger Prompts smoothly
                 for _, obj in ipairs(Workspace:GetDescendants()) do
                     if obj:IsA("ProximityPrompt") and fireproximityprompt then
                         pcall(function() fireproximityprompt(obj, 0) end)
-                    elseif obj:IsA("ClickDetector") and fireclickdetector then
-                        pcall(function() fireclickdetector(obj) end)
                     end
                 end
 
-                -- Teleport sortable items to Player
+                -- Move loose sortable items gently to 4 studs in front of player without physics lock
                 if hrp then
+                    local targetCF = hrp.CFrame * CFrame.new(0, -1, -4)
                     for _, item in ipairs(Workspace:GetDescendants()) do
-                        if item:IsA("Model") or item:IsA("BasePart") then
+                        if item:IsA("BasePart") then
                             local n = item.Name:lower()
-                            if n:find("trash") or n:find("toy") or n:find("box") or n:find("item") or n:find("cloth") or n:find("dirty") or n:find("cup") or n:find("bottle") or n:find("can") or n:find("mess") or n:find("object") or n:find("prop") or n:find("sort") then
-                                local p = item:IsA("BasePart") and item or item:FindFirstChildOfClass("BasePart")
-                                if p and not p:IsDescendantOf(char) then
-                                    p.CFrame = hrp.CFrame
+                            if n:find("trash") or n:find("toy") or n:find("box") or n:find("cloth") or n:find("bottle") or n:find("can") or n:find("dirty") then
+                                if not item:IsDescendantOf(char) and not item.Anchored then
+                                    item.CFrame = targetCF
+                                    item.Velocity = Vector3.new(0, 0, 0)
                                 end
                             end
                         end
