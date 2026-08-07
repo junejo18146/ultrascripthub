@@ -1,5 +1,5 @@
 --[[
-    Junejo Ultra Script Hub - Wash the House (Testing Edition v4 - Smooth Fix Patch)
+    Junejo Ultra Script Hub - Wash the House (Compact 2-Feature Edition)
     Target Game: Wash the House (Roblox)
     Created for junejo18146
 --]]
@@ -8,7 +8,6 @@ local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
@@ -35,7 +34,7 @@ for _, name in ipairs({"JunejoHubUI_WashTheHouse"}) do
 end
 
 ----------------------------------------------------
--- MAIN HUB SCRIPT
+-- COMPACT MAIN HUB UI (300x260)
 ----------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoHubUI_WashTheHouse"
@@ -52,8 +51,8 @@ end
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 340, 0, 480)
-MainFrame.Position = UDim2.new(0.5, -170, 0.5, -240)
+MainFrame.Size = UDim2.new(0, 300, 0, 260)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -130)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -72,30 +71,30 @@ MainStroke.Parent = MainFrame
 -- Header Bar
 local Header = Instance.new("Frame")
 Header.Name = "Header"
-Header.Size = UDim2.new(1, 0, 0, 45)
+Header.Size = UDim2.new(1, 0, 0, 40)
 Header.BackgroundTransparency = 1
 Header.Parent = MainFrame
 
 local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Name = "TitleLabel"
-TitleLabel.Size = UDim2.new(1, -50, 1, 0)
-TitleLabel.Position = UDim2.new(0, 16, 0, 0)
+TitleLabel.Size = UDim2.new(1, -45, 1, 0)
+TitleLabel.Position = UDim2.new(0, 14, 0, 0)
 TitleLabel.BackgroundTransparency = 1
 TitleLabel.Text = "WASH THE HOUSE"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleLabel.TextSize = 18
+TitleLabel.TextSize = 16
 TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.Parent = Header
 
 local CloseButton = Instance.new("TextButton")
 CloseButton.Name = "CloseButton"
-CloseButton.Size = UDim2.new(0, 45, 0, 45)
-CloseButton.Position = UDim2.new(1, -45, 0, 0)
+CloseButton.Size = UDim2.new(0, 40, 0, 40)
+CloseButton.Position = UDim2.new(1, -40, 0, 0)
 CloseButton.BackgroundTransparency = 1
 CloseButton.Text = "X"
 CloseButton.TextColor3 = Color3.fromRGB(160, 160, 170)
-CloseButton.TextSize = 16
+CloseButton.TextSize = 15
 CloseButton.Font = Enum.Font.GothamBold
 CloseButton.Parent = Header
 
@@ -135,73 +134,53 @@ end)
 -- Content Container
 local Content = Instance.new("Frame")
 Content.Name = "Content"
-Content.Size = UDim2.new(1, -32, 1, -95)
-Content.Position = UDim2.new(0, 16, 0, 45)
+Content.Size = UDim2.new(1, -28, 1, -80)
+Content.Position = UDim2.new(0, 14, 0, 40)
 Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
 local UIList = Instance.new("UIListLayout")
 UIList.SortOrder = Enum.SortOrder.LayoutOrder
-UIList.Padding = UDim.new(0, 10)
+UIList.Padding = UDim.new(0, 8)
 UIList.Parent = Content
-
--- Primary Top Action Button: TELEPORT TO NEXT ROOM
-local ActionButton = Instance.new("TextButton")
-ActionButton.Name = "ActionButton"
-ActionButton.Size = UDim2.new(1, 0, 0, 40)
-ActionButton.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-ActionButton.BorderSizePixel = 0
-ActionButton.Text = "TELEPORT TO NEXT ROOM"
-ActionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-ActionButton.TextSize = 13
-ActionButton.Font = Enum.Font.GothamBold
-ActionButton.Parent = Content
-
-local ActionCorner = Instance.new("UICorner")
-ActionCorner.CornerRadius = UDim.new(0, 8)
-ActionCorner.Parent = ActionButton
 
 -- Footer Frame
 local Footer = Instance.new("Frame")
 Footer.Name = "Footer"
-Footer.Size = UDim2.new(1, 0, 0, 45)
-Footer.Position = UDim2.new(0, 0, 1, -45)
+Footer.Size = UDim2.new(1, 0, 0, 36)
+Footer.Position = UDim2.new(0, 0, 1, -36)
 Footer.BackgroundTransparency = 1
 Footer.Parent = MainFrame
 
 local FooterTitle = Instance.new("TextLabel")
-FooterTitle.Size = UDim2.new(1, 0, 0, 18)
-FooterTitle.Position = UDim2.new(0, 0, 0, 4)
+FooterTitle.Size = UDim2.new(1, 0, 0, 16)
+FooterTitle.Position = UDim2.new(0, 0, 0, 2)
 FooterTitle.BackgroundTransparency = 1
 FooterTitle.Text = "ULTRA SCRIPT HUB"
 FooterTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-FooterTitle.TextSize = 15
+FooterTitle.TextSize = 14
 FooterTitle.Font = Enum.Font.GothamBold
 FooterTitle.Parent = Footer
 
 local FooterSub = Instance.new("TextLabel")
-FooterSub.Size = UDim2.new(1, 0, 0, 16)
-FooterSub.Position = UDim2.new(0, 0, 0, 22)
+FooterSub.Size = UDim2.new(1, 0, 0, 14)
+FooterSub.Position = UDim2.new(0, 0, 0, 18)
 FooterSub.BackgroundTransparency = 1
 FooterSub.Text = "Made by Junejo"
 FooterSub.TextColor3 = Color3.fromRGB(136, 136, 153)
-FooterSub.TextSize = 12
+FooterSub.TextSize = 11
 FooterSub.Font = Enum.Font.GothamMedium
 FooterSub.Parent = Footer
 
 ----------------------------------------------------
--- FEATURES LOGIC
+-- 2 SPECIFIC FEATURES LOGIC
 ----------------------------------------------------
 local FeatureStates = {
     Speed = false,
-    InfWater = false,
-    AutoSort = false,
-    AutoClean = false,
-    AutoFarmCoins = false
+    AutoClean = false
 }
 
 local CustomSpeedValue = 100
-local CustomCashAmount = 999999999
 
 local function CreateToggleRow(text, key)
     local Row = Instance.new("Frame")
@@ -210,7 +189,7 @@ local function CreateToggleRow(text, key)
     Row.Parent = Content
     
     local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(1, -45, 1, 0)
+    Label.Size = UDim2.new(1, -40, 1, 0)
     Label.BackgroundTransparency = 1
     Label.Text = text
     Label.TextColor3 = Color3.fromRGB(240, 240, 240)
@@ -220,15 +199,15 @@ local function CreateToggleRow(text, key)
     Label.Parent = Row
     
     local CheckBox = Instance.new("TextButton")
-    CheckBox.Size = UDim2.new(0, 30, 0, 30)
-    CheckBox.Position = UDim2.new(1, -30, 0.5, -15)
+    CheckBox.Size = UDim2.new(0, 28, 0, 28)
+    CheckBox.Position = UDim2.new(1, -28, 0.5, -14)
     CheckBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
     CheckBox.BorderSizePixel = 0
     CheckBox.Text = ""
     CheckBox.Parent = Row
     
     local CheckCorner = Instance.new("UICorner")
-    CheckCorner.CornerRadius = UDim.new(0, 8)
+    CheckCorner.CornerRadius = UDim.new(0, 6)
     CheckCorner.Parent = CheckBox
     
     local CheckStroke = Instance.new("UIStroke")
@@ -253,20 +232,23 @@ local function CreateToggleRow(text, key)
     end)
 end
 
--- SPEED MANAGING ROW (CUSTOM INPUT LINE + SET SPEED)
+-- 1. FEATURE: AUTO CLEAN DIRT
+CreateToggleRow("Auto Clean Dirt", "AutoClean")
+
+-- 2. FEATURE: SPEED MANAGEMENT INPUT LINE & TOGGLE
 local SpeedControlRow = Instance.new("Frame")
 SpeedControlRow.Name = "SpeedControlRow"
-SpeedControlRow.Size = UDim2.new(1, 0, 0, 38)
+SpeedControlRow.Size = UDim2.new(1, 0, 0, 36)
 SpeedControlRow.BackgroundTransparency = 1
 SpeedControlRow.Parent = Content
 
 local SpeedTextBox = Instance.new("TextBox")
 SpeedTextBox.Name = "SpeedTextBox"
-SpeedTextBox.Size = UDim2.new(0.66, 0, 1, 0)
+SpeedTextBox.Size = UDim2.new(0.64, 0, 1, 0)
 SpeedTextBox.Position = UDim2.new(0, 0, 0, 0)
 SpeedTextBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
 SpeedTextBox.BorderSizePixel = 0
-SpeedTextBox.PlaceholderText = "Enter Speed (e.g. 100)..."
+SpeedTextBox.PlaceholderText = "Enter Speed..."
 SpeedTextBox.Text = "100"
 SpeedTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 SpeedTextBox.PlaceholderColor3 = Color3.fromRGB(130, 130, 140)
@@ -282,12 +264,12 @@ SpeedCorner.Parent = SpeedTextBox
 local SpeedStroke = Instance.new("UIStroke")
 SpeedStroke.Color = Color3.fromRGB(45, 45, 55)
 SpeedStroke.Thickness = 1.5
-SpeedStroke.Parent = SpeedControlRow
+SpeedStroke.Parent = SpeedTextBox
 
 local SetSpeedButton = Instance.new("TextButton")
 SetSpeedButton.Name = "SetSpeedButton"
-SetSpeedButton.Size = UDim2.new(0.30, 0, 1, 0)
-SetSpeedButton.Position = UDim2.new(0.70, 0, 0, 0)
+SetSpeedButton.Size = UDim2.new(0.32, 0, 1, 0)
+SetSpeedButton.Position = UDim2.new(0.68, 0, 0, 0)
 SetSpeedButton.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
 SetSpeedButton.BorderSizePixel = 0
 SetSpeedButton.Text = "SET SPEED"
@@ -312,142 +294,8 @@ SetSpeedButton.MouseButton1Click:Connect(function()
 end)
 
 CreateToggleRow("Enable Speed Boost", "Speed")
-CreateToggleRow("Auto Farm Coins (Collect Drops)", "AutoFarmCoins")
-CreateToggleRow("Infinite Pressure & Water", "InfWater")
-CreateToggleRow("Auto Sort Objects", "AutoSort")
-CreateToggleRow("Auto Clean Dirt", "AutoClean")
 
--- Custom Cash Input Box Row
-local CashInputRow = Instance.new("Frame")
-CashInputRow.Name = "CashInputRow"
-CashInputRow.Size = UDim2.new(1, 0, 0, 38)
-CashInputRow.BackgroundTransparency = 1
-CashInputRow.Parent = Content
-
-local CashTextBox = Instance.new("TextBox")
-CashTextBox.Name = "CashTextBox"
-CashTextBox.Size = UDim2.new(0.66, 0, 1, 0)
-CashTextBox.Position = UDim2.new(0, 0, 0, 0)
-CashTextBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-CashTextBox.BorderSizePixel = 0
-CashTextBox.PlaceholderText = "Enter Cash..."
-CashTextBox.Text = "9999999"
-CashTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-CashTextBox.PlaceholderColor3 = Color3.fromRGB(130, 130, 140)
-CashTextBox.TextSize = 12
-CashTextBox.Font = Enum.Font.GothamMedium
-CashTextBox.ClearTextOnFocus = false
-CashTextBox.Parent = CashInputRow
-
-local BoxCorner = Instance.new("UICorner")
-BoxCorner.CornerRadius = UDim.new(0, 6)
-BoxCorner.Parent = CashTextBox
-
-local BoxStroke = Instance.new("UIStroke")
-BoxStroke.Color = Color3.fromRGB(45, 45, 55)
-BoxStroke.Thickness = 1.5
-BoxStroke.Parent = CashTextBox
-
-local AddCashButton = Instance.new("TextButton")
-AddCashButton.Name = "AddCashButton"
-AddCashButton.Size = UDim2.new(0.30, 0, 1, 0)
-AddCashButton.Position = UDim2.new(0.70, 0, 0, 0)
-AddCashButton.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-AddCashButton.BorderSizePixel = 0
-AddCashButton.Text = "ADD CASH"
-AddCashButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-AddCashButton.TextSize = 11
-AddCashButton.Font = Enum.Font.GothamBold
-AddCashButton.Parent = CashInputRow
-
-local AddBtnCorner = Instance.new("UICorner")
-AddBtnCorner.CornerRadius = UDim.new(0, 6)
-AddBtnCorner.Parent = AddCashButton
-
--- Deep Comprehensive Cash Injector (Client UI + Leaderstats + Fire Remotes)
-local function ApplyCash(val)
-    local targetVal = tonumber(val) or CustomCashAmount
-    pcall(function()
-        -- 1. Player Value Search
-        for _, obj in ipairs(LocalPlayer:GetDescendants()) do
-            if obj:IsA("ValueBase") then
-                obj.Value = targetVal
-            end
-        end
-
-        -- 2. Leaderstats / Stats Search
-        local leaderstats = LocalPlayer:FindFirstChild("leaderstats") or LocalPlayer:FindFirstChild("stats") or LocalPlayer:FindFirstChild("Data")
-        if leaderstats then
-            for _, stat in ipairs(leaderstats:GetDescendants()) do
-                if stat:IsA("ValueBase") then
-                    stat.Value = targetVal
-                end
-            end
-        end
-
-        -- 3. Fire all possible Money / Coin RemoteEvents in ReplicatedStorage
-        for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-            if remote:IsA("RemoteEvent") then
-                pcall(function()
-                    remote:FireServer(targetVal)
-                    remote:FireServer("Coins", targetVal)
-                    remote:FireServer("Cash", targetVal)
-                    remote:FireServer("Add", targetVal)
-                    remote:FireServer(1000000)
-                end)
-            elseif remote:IsA("RemoteFunction") then
-                pcall(function()
-                    remote:InvokeServer(targetVal)
-                end)
-            end
-        end
-    end)
-end
-
-AddCashButton.MouseButton1Click:Connect(function()
-    local text = CashTextBox.Text
-    local num = tonumber(text)
-    if num then CustomCashAmount = num end
-    ApplyCash(CustomCashAmount)
-end)
-
--- Robust Teleport to Next Room / Door / House
-local CurrentRoomIndex = 1
-local function TeleportToNextRoom()
-    pcall(function()
-        local targets = {}
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            if obj:IsA("BasePart") or obj:IsA("Model") then
-                local n = obj.Name:lower()
-                if n:find("door") or n:find("room") or n:find("house") or n:find("stage") or n:find("teleport") or n:find("spawn") or n:find("checkpoint") or n:find("gate") or n:find("next") or n:find("exit") then
-                    if not obj:IsDescendantOf(LocalPlayer.Character or Instance.new("Folder")) then
-                        table.insert(targets, obj)
-                    end
-                end
-            end
-        end
-
-        local char = LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            if #targets > 0 then
-                CurrentRoomIndex = (CurrentRoomIndex % #targets) + 1
-                local targetObj = targets[CurrentRoomIndex]
-                local targetCF = targetObj:IsA("Model") and targetObj:GetPivot() or targetObj.CFrame
-                hrp.CFrame = targetCF + Vector3.new(0, 4, 0)
-            else
-                -- Fallback forward teleport by 60 studs
-                hrp.CFrame = hrp.CFrame * CFrame.new(0, 0, -60)
-            end
-        end
-    end)
-end
-
-ActionButton.MouseButton1Click:Connect(function()
-    TeleportToNextRoom()
-end)
-
--- Speed Boost Loop (Managed by CustomSpeedValue)
+-- Speed Boost Stepped Loop
 RunService.Stepped:Connect(function()
     if FeatureStates.Speed then
         pcall(function()
@@ -458,58 +306,10 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- Infinite Pressure & Water Capacity Loop
-RunService.Stepped:Connect(function()
-    if FeatureStates.InfWater then
-        pcall(function()
-            local char = LocalPlayer.Character
-            if char then
-                for _, item in ipairs(char:GetChildren()) do
-                    if item:IsA("Tool") then
-                        for _, v in ipairs(item:GetDescendants()) do
-                            if v:IsA("ValueBase") then
-                                v.Value = 999999
-                            end
-                        end
-                    end
-                end
-            end
-        end)
-    end
-end)
-
--- Smooth Non-Vibrating Background Loop (Coins, Sort, Clean)
+-- Auto Clean Dirt Background Loop
 task.spawn(function()
     while true do
-        task.wait(0.5) -- Smooth delay to prevent screen vibration
-        
-        -- AUTO FARM COINS (Scattered Coin Collection)
-        if FeatureStates.AutoFarmCoins then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                if hrp then
-                    for _, item in ipairs(Workspace:GetDescendants()) do
-                        if item:IsA("BasePart") or item:IsA("Model") then
-                            local n = item.Name:lower()
-                            if n:find("coin") or n:find("cash") or n:find("dollar") or n:find("money") or n:find("drop") or n:find("orb") or n:find("reward") then
-                                local p = item:IsA("BasePart") and item or item:FindFirstChildOfClass("BasePart")
-                                if p and (p.Position - hrp.Position).Magnitude < 300 then
-                                    if firetouchinterest then
-                                        firetouchinterest(hrp, p, 0)
-                                        firetouchinterest(hrp, p, 1)
-                                    else
-                                        p.CFrame = hrp.CFrame
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-
-        -- AUTO CLEAN DIRT
+        task.wait(0.3)
         if FeatureStates.AutoClean then
             pcall(function()
                 local char = LocalPlayer.Character
@@ -526,37 +326,6 @@ task.spawn(function()
                                 if firetouchinterest and hrp then
                                     firetouchinterest(hrp, obj, 0)
                                     firetouchinterest(hrp, obj, 1)
-                                end
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-
-        -- SMOOTH AUTO SORT OBJECTS (No Screen Vibration)
-        if FeatureStates.AutoSort then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                
-                -- Trigger Prompts smoothly
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if obj:IsA("ProximityPrompt") and fireproximityprompt then
-                        pcall(function() fireproximityprompt(obj, 0) end)
-                    end
-                end
-
-                -- Move loose sortable items gently to 4 studs in front of player without physics lock
-                if hrp then
-                    local targetCF = hrp.CFrame * CFrame.new(0, -1, -4)
-                    for _, item in ipairs(Workspace:GetDescendants()) do
-                        if item:IsA("BasePart") then
-                            local n = item.Name:lower()
-                            if n:find("trash") or n:find("toy") or n:find("box") or n:find("cloth") or n:find("bottle") or n:find("can") or n:find("dirty") then
-                                if not item:IsDescendantOf(char) and not item.Anchored then
-                                    item.CFrame = targetCF
-                                    item.Velocity = Vector3.new(0, 0, 0)
                                 end
                             end
                         end
