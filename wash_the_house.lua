@@ -1,5 +1,5 @@
 --[[
-    Junejo Ultra Script Hub - Wash the House (Testing Edition v2 - Multi-Target Patch)
+    Junejo Ultra Script Hub - Wash the House (Testing Edition v3 - Speed Slider & Auto Farm Patch)
     Target Game: Wash the House (Roblox)
     Created for junejo18146
 --]]
@@ -52,8 +52,8 @@ end
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 340, 0, 420)
-MainFrame.Position = UDim2.new(0.5, -170, 0.5, -210)
+MainFrame.Size = UDim2.new(0, 340, 0, 480)
+MainFrame.Position = UDim2.new(0.5, -170, 0.5, -240)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -196,14 +196,16 @@ local FeatureStates = {
     Speed = false,
     InfWater = false,
     AutoSort = false,
-    AutoClean = false
+    AutoClean = false,
+    AutoFarmCoins = false
 }
 
+local CustomSpeedValue = 100
 local CustomCashAmount = 999999999
 
 local function CreateToggleRow(text, key)
     local Row = Instance.new("Frame")
-    Row.Size = UDim2.new(1, 0, 0, 36)
+    Row.Size = UDim2.new(1, 0, 0, 34)
     Row.BackgroundTransparency = 1
     Row.Parent = Content
     
@@ -212,14 +214,14 @@ local function CreateToggleRow(text, key)
     Label.BackgroundTransparency = 1
     Label.Text = text
     Label.TextColor3 = Color3.fromRGB(240, 240, 240)
-    Label.TextSize = 14
+    Label.TextSize = 13
     Label.Font = Enum.Font.GothamBold
     Label.TextXAlignment = Enum.TextXAlignment.Left
     Label.Parent = Row
     
     local CheckBox = Instance.new("TextButton")
-    CheckBox.Size = UDim2.new(0, 32, 0, 32)
-    CheckBox.Position = UDim2.new(1, -32, 0.5, -16)
+    CheckBox.Size = UDim2.new(0, 30, 0, 30)
+    CheckBox.Position = UDim2.new(1, -30, 0.5, -15)
     CheckBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
     CheckBox.BorderSizePixel = 0
     CheckBox.Text = ""
@@ -251,7 +253,66 @@ local function CreateToggleRow(text, key)
     end)
 end
 
-CreateToggleRow("Speed Boost", "Speed")
+-- SPEED MANAGING ROW (CUSTOM INPUT LINE + SET SPEED)
+local SpeedControlRow = Instance.new("Frame")
+SpeedControlRow.Name = "SpeedControlRow"
+SpeedControlRow.Size = UDim2.new(1, 0, 0, 38)
+SpeedControlRow.BackgroundTransparency = 1
+SpeedControlRow.Parent = Content
+
+local SpeedTextBox = Instance.new("TextBox")
+SpeedTextBox.Name = "SpeedTextBox"
+SpeedTextBox.Size = UDim2.new(0.66, 0, 1, 0)
+SpeedTextBox.Position = UDim2.new(0, 0, 0, 0)
+SpeedTextBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+SpeedTextBox.BorderSizePixel = 0
+SpeedTextBox.PlaceholderText = "Enter Speed (e.g. 100)..."
+SpeedTextBox.Text = "100"
+SpeedTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedTextBox.PlaceholderColor3 = Color3.fromRGB(130, 130, 140)
+SpeedTextBox.TextSize = 12
+SpeedTextBox.Font = Enum.Font.GothamMedium
+SpeedTextBox.ClearTextOnFocus = false
+SpeedTextBox.Parent = SpeedControlRow
+
+local SpeedCorner = Instance.new("UICorner")
+SpeedCorner.CornerRadius = UDim.new(0, 6)
+SpeedCorner.Parent = SpeedTextBox
+
+local SpeedStroke = Instance.new("UIStroke")
+SpeedStroke.Color = Color3.fromRGB(45, 45, 55)
+SpeedStroke.Thickness = 1.5
+SpeedStroke.Parent = SpeedTextBox
+
+local SetSpeedButton = Instance.new("TextButton")
+SetSpeedButton.Name = "SetSpeedButton"
+SetSpeedButton.Size = UDim2.new(0.30, 0, 1, 0)
+SetSpeedButton.Position = UDim2.new(0.70, 0, 0, 0)
+SetSpeedButton.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+SetSpeedButton.BorderSizePixel = 0
+SetSpeedButton.Text = "SET SPEED"
+SetSpeedButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+SetSpeedButton.TextSize = 11
+SetSpeedButton.Font = Enum.Font.GothamBold
+SetSpeedButton.Parent = SpeedControlRow
+
+local SetBtnCorner = Instance.new("UICorner")
+SetBtnCorner.CornerRadius = UDim.new(0, 6)
+SetBtnCorner.Parent = SetSpeedButton
+
+SetSpeedButton.MouseButton1Click:Connect(function()
+    local num = tonumber(SpeedTextBox.Text)
+    if num then CustomSpeedValue = num end
+    pcall(function()
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if hum then hum.WalkSpeed = CustomSpeedValue end
+    end)
+    FeatureStates.Speed = true
+end)
+
+CreateToggleRow("Enable Speed Boost", "Speed")
+CreateToggleRow("Auto Farm Coins (Collect Drops)", "AutoFarmCoins")
 CreateToggleRow("Infinite Pressure & Water", "InfWater")
 CreateToggleRow("Auto Sort Objects", "AutoSort")
 CreateToggleRow("Auto Clean Dirt", "AutoClean")
@@ -273,7 +334,7 @@ CashTextBox.PlaceholderText = "Enter Cash..."
 CashTextBox.Text = "9999999"
 CashTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 CashTextBox.PlaceholderColor3 = Color3.fromRGB(130, 130, 140)
-CashTextBox.TextSize = 13
+CashTextBox.TextSize = 12
 CashTextBox.Font = Enum.Font.GothamMedium
 CashTextBox.ClearTextOnFocus = false
 CashTextBox.Parent = CashInputRow
@@ -307,7 +368,6 @@ AddBtnCorner.Parent = AddCashButton
 local function ApplyCash(val)
     local targetVal = tonumber(val) or CustomCashAmount
     pcall(function()
-        -- 1. Search all descendants of LocalPlayer
         for _, obj in ipairs(LocalPlayer:GetDescendants()) do
             if obj:IsA("ValueBase") then
                 local n = obj.Name:lower()
@@ -317,7 +377,6 @@ local function ApplyCash(val)
             end
         end
 
-        -- 2. Search ReplicatedStorage for any Cash/Reward Remote Events
         for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
             if remote:IsA("RemoteEvent") then
                 local n = remote.Name:lower()
@@ -373,13 +432,13 @@ ActionButton.MouseButton1Click:Connect(function()
     TeleportToNextRoom()
 end)
 
--- Speed Boost Loop
+-- Speed Boost Loop (Managed by CustomSpeedValue)
 RunService.Stepped:Connect(function()
     if FeatureStates.Speed then
         pcall(function()
             local char = LocalPlayer.Character
             local hum = char and char:FindFirstChildOfClass("Humanoid")
-            if hum then hum.WalkSpeed = 120 end
+            if hum then hum.WalkSpeed = CustomSpeedValue end
         end)
     end
 end)
@@ -407,12 +466,37 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- Deep Auto Sort & Auto Clean Background Loop
+-- Background Processing Loop (Coins, Sort, Clean)
 task.spawn(function()
     while true do
-        task.wait(0.2)
+        task.wait(0.15)
         
-        -- Auto Clean Dirt Logic
+        -- AUTO FARM COINS (Scattered Coin Collection)
+        if FeatureStates.AutoFarmCoins then
+            pcall(function()
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    for _, item in ipairs(Workspace:GetDescendants()) do
+                        if item:IsA("BasePart") or item:IsA("Model") then
+                            local n = item.Name:lower()
+                            if n:find("coin") or n:find("cash") or n:find("dollar") or n:find("money") or n:find("drop") or n:find("orb") or n:find("reward") then
+                                local p = item:IsA("BasePart") and item or item:FindFirstChildOfClass("BasePart")
+                                if p then
+                                    p.CFrame = hrp.CFrame
+                                    if firetouchinterest then
+                                        firetouchinterest(hrp, p, 0)
+                                        firetouchinterest(hrp, p, 1)
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+
+        -- AUTO CLEAN DIRT
         if FeatureStates.AutoClean then
             pcall(function()
                 local char = LocalPlayer.Character
@@ -437,59 +521,32 @@ task.spawn(function()
             end)
         end
 
-        -- Multi-Layer Auto Sort Logic (Items, Bins, Prompts, Remotes)
+        -- AUTO SORT OBJECTS (Universal ProximityPrompt / ClickDetector / Teleport)
         if FeatureStates.AutoSort then
             pcall(function()
                 local char = LocalPlayer.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
                 
-                -- Find Bins / Drop Zones / Storage Places
-                local dropZones = {}
+                -- Fire all ProximityPrompts & ClickDetectors in workspace
                 for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if obj:IsA("BasePart") or obj:IsA("Model") then
-                        local n = obj.Name:lower()
-                        if n:find("bin") or n:find("sort") or n:find("drop") or n:find("dump") or n:find("zone") or n:find("trash") or n:find("shelf") or n:find("target") then
-                            table.insert(dropZones, obj)
-                        end
+                    if obj:IsA("ProximityPrompt") and fireproximityprompt then
+                        pcall(function() fireproximityprompt(obj, 0) end)
+                    elseif obj:IsA("ClickDetector") and fireclickdetector then
+                        pcall(function() fireclickdetector(obj) end)
                     end
                 end
 
-                -- Process Workspace items & Prompts
-                for _, item in ipairs(Workspace:GetDescendants()) do
-                    if item:IsA("Model") or item:IsA("BasePart") or item:IsA("Tool") then
-                        local n = item.Name:lower()
-                        if n:find("trash") or n:find("toy") or n:find("box") or n:find("item") or n:find("cloth") or n:find("dirty") or n:find("cup") or n:find("bottle") or n:find("can") or n:find("mess") or n:find("object") or n:find("prop") then
-                            local part = item:IsA("BasePart") and item or item:FindFirstChildOfClass("BasePart")
-                            
-                            -- Fire ProximityPrompts
-                            local prompt = item:FindFirstChildOfClass("ProximityPrompt") or (part and part:FindFirstChildOfClass("ProximityPrompt"))
-                            if prompt and fireproximityprompt then
-                                pcall(function() fireproximityprompt(prompt, 0) end)
-                            end
-
-                            -- Teleport item to Drop Zone / Bin or HRP
-                            if part and hrp then
-                                if #dropZones > 0 then
-                                    local targetBin = dropZones[1]
-                                    local binCF = targetBin:IsA("Model") and targetBin:GetPivot() or targetBin.CFrame
-                                    part.CFrame = binCF
-                                else
-                                    part.CFrame = hrp.CFrame
+                -- Teleport sortable items to Player
+                if hrp then
+                    for _, item in ipairs(Workspace:GetDescendants()) do
+                        if item:IsA("Model") or item:IsA("BasePart") then
+                            local n = item.Name:lower()
+                            if n:find("trash") or n:find("toy") or n:find("box") or n:find("item") or n:find("cloth") or n:find("dirty") or n:find("cup") or n:find("bottle") or n:find("can") or n:find("mess") or n:find("object") or n:find("prop") or n:find("sort") then
+                                local p = item:IsA("BasePart") and item or item:FindFirstChildOfClass("BasePart")
+                                if p and not p:IsDescendantOf(char) then
+                                    p.CFrame = hrp.CFrame
                                 end
                             end
-                        end
-                    end
-                end
-
-                -- Fire any Sort/Drop Remotes in ReplicatedStorage
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if remote:IsA("RemoteEvent") then
-                        local n = remote.Name:lower()
-                        if n:find("sort") or n:find("drop") or n:find("place") or n:find("deposit") or n:find("pick") or n:find("trash") or n:find("clean") then
-                            pcall(function()
-                                remote:FireServer()
-                                remote:FireServer(true)
-                            end)
                         end
                     end
                 end
