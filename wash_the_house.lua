@@ -1,5 +1,5 @@
 --[[
-    Junejo Ultra Script Hub - Wash the House (Testing Edition)
+    Junejo Ultra Script Hub - Wash the House (Testing Edition v2 - Multi-Target Patch)
     Target Game: Wash the House (Roblox)
     Created for junejo18146
 --]]
@@ -303,17 +303,30 @@ local AddBtnCorner = Instance.new("UICorner")
 AddBtnCorner.CornerRadius = UDim.new(0, 6)
 AddBtnCorner.Parent = AddCashButton
 
+-- Deep Comprehensive Cash Injector
 local function ApplyCash(val)
     local targetVal = tonumber(val) or CustomCashAmount
     pcall(function()
-        local leaderstats = LocalPlayer:FindFirstChild("leaderstats")
-        if leaderstats then
-            for _, stat in ipairs(leaderstats:GetChildren()) do
-                local name = stat.Name:lower()
-                if name:find("cash") or name:find("coin") or name:find("money") or name:find("clean") then
-                    if stat:IsA("ValueBase") then
-                        stat.Value = targetVal
-                    end
+        -- 1. Search all descendants of LocalPlayer
+        for _, obj in ipairs(LocalPlayer:GetDescendants()) do
+            if obj:IsA("ValueBase") then
+                local n = obj.Name:lower()
+                if n:find("cash") or n:find("coin") or n:find("money") or n:find("dollar") or n:find("clean") or n:find("balance") or n:find("val") then
+                    obj.Value = targetVal
+                end
+            end
+        end
+
+        -- 2. Search ReplicatedStorage for any Cash/Reward Remote Events
+        for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
+            if remote:IsA("RemoteEvent") then
+                local n = remote.Name:lower()
+                if n:find("cash") or n:find("coin") or n:find("money") or n:find("earn") or n:find("reward") or n:find("clean") or n:find("add") then
+                    pcall(function()
+                        remote:FireServer(targetVal)
+                        remote:FireServer("Cash", targetVal)
+                        remote:FireServer(100000)
+                    end)
                 end
             end
         end
@@ -335,7 +348,7 @@ local function TeleportToNextRoom()
         for _, obj in ipairs(Workspace:GetDescendants()) do
             if obj:IsA("BasePart") or obj:IsA("Model") then
                 local n = obj.Name:lower()
-                if n:find("room") or n:find("door") or n:find("house") or n:find("stage") or n:find("area") then
+                if n:find("room") or n:find("door") or n:find("house") or n:find("stage") or n:find("area") or n:find("floor") then
                     table.insert(rooms, obj)
                 end
             end
@@ -350,7 +363,6 @@ local function TeleportToNextRoom()
                 local targetCF = targetObj:IsA("Model") and targetObj:GetPivot() or targetObj.CFrame
                 hrp.CFrame = targetCF + Vector3.new(0, 3, 0)
             else
-                -- Fallback forward teleport
                 hrp.CFrame = hrp.CFrame * CFrame.new(0, 0, -40)
             end
         end
@@ -383,7 +395,7 @@ RunService.Stepped:Connect(function()
                         for _, v in ipairs(item:GetDescendants()) do
                             if v:IsA("ValueBase") then
                                 local name = v.Name:lower()
-                                if name:find("water") or name:find("pressure") or name:find("tank") or name:find("fuel") then
+                                if name:find("water") or name:find("pressure") or name:find("tank") or name:find("fuel") or name:find("ammo") then
                                     v.Value = 999999
                                 end
                             end
@@ -395,7 +407,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- Auto Clean & Auto Sort Background Loop
+-- Deep Auto Sort & Auto Clean Background Loop
 task.spawn(function()
     while true do
         task.wait(0.2)
@@ -409,7 +421,7 @@ task.spawn(function()
                 for _, obj in ipairs(Workspace:GetDescendants()) do
                     if obj:IsA("BasePart") or obj:IsA("Texture") or obj:IsA("Decal") then
                         local n = obj.Name:lower()
-                        if n:find("dirt") or n:find("stain") or n:find("clean") or n:find("grime") then
+                        if n:find("dirt") or n:find("stain") or n:find("clean") or n:find("grime") or n:find("mess") or n:find("spot") then
                             if obj:IsA("Texture") or obj:IsA("Decal") then
                                 obj.Transparency = 1
                             elseif obj:IsA("BasePart") then
@@ -425,28 +437,59 @@ task.spawn(function()
             end)
         end
 
-        -- Auto Sort Objects Logic
+        -- Multi-Layer Auto Sort Logic (Items, Bins, Prompts, Remotes)
         if FeatureStates.AutoSort then
             pcall(function()
                 local char = LocalPlayer.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
                 
+                -- Find Bins / Drop Zones / Storage Places
+                local dropZones = {}
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    if obj:IsA("BasePart") or obj:IsA("Model") then
+                        local n = obj.Name:lower()
+                        if n:find("bin") or n:find("sort") or n:find("drop") or n:find("dump") or n:find("zone") or n:find("trash") or n:find("shelf") or n:find("target") then
+                            table.insert(dropZones, obj)
+                        end
+                    end
+                end
+
+                -- Process Workspace items & Prompts
                 for _, item in ipairs(Workspace:GetDescendants()) do
-                    if item:IsA("Model") or item:IsA("BasePart") then
+                    if item:IsA("Model") or item:IsA("BasePart") or item:IsA("Tool") then
                         local n = item.Name:lower()
-                        if n:find("trash") or n:find("toy") or n:find("box") or n:find("sort") or n:find("item") then
+                        if n:find("trash") or n:find("toy") or n:find("box") or n:find("item") or n:find("cloth") or n:find("dirty") or n:find("cup") or n:find("bottle") or n:find("can") or n:find("mess") or n:find("object") or n:find("prop") then
                             local part = item:IsA("BasePart") and item or item:FindFirstChildOfClass("BasePart")
-                            local prompt = item:FindFirstChildOfClass("ProximityPrompt") or (part and part:FindFirstChildOfClass("ProximityPrompt"))
                             
-                            if prompt then
-                                if fireproximityprompt then
-                                    fireproximityprompt(prompt)
-                                end
+                            -- Fire ProximityPrompts
+                            local prompt = item:FindFirstChildOfClass("ProximityPrompt") or (part and part:FindFirstChildOfClass("ProximityPrompt"))
+                            if prompt and fireproximityprompt then
+                                pcall(function() fireproximityprompt(prompt, 0) end)
                             end
 
+                            -- Teleport item to Drop Zone / Bin or HRP
                             if part and hrp then
-                                part.CFrame = hrp.CFrame
+                                if #dropZones > 0 then
+                                    local targetBin = dropZones[1]
+                                    local binCF = targetBin:IsA("Model") and targetBin:GetPivot() or targetBin.CFrame
+                                    part.CFrame = binCF
+                                else
+                                    part.CFrame = hrp.CFrame
+                                end
                             end
+                        end
+                    end
+                end
+
+                -- Fire any Sort/Drop Remotes in ReplicatedStorage
+                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
+                    if remote:IsA("RemoteEvent") then
+                        local n = remote.Name:lower()
+                        if n:find("sort") or n:find("drop") or n:find("place") or n:find("deposit") or n:find("pick") or n:find("trash") or n:find("clean") then
+                            pcall(function()
+                                remote:FireServer()
+                                remote:FireServer(true)
+                            end)
                         end
                     end
                 end
