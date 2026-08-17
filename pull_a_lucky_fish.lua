@@ -1,5 +1,5 @@
 --[[
-    JUNEJO ULTRA SCRIPT HUB - PULL A LUCKY FISH (V2 MULTI-LAYER ENGINE)
+    JUNEJO ULTRA SCRIPT HUB - PULL A LUCKY FISH (PERFECTION FIX)
     Target Game: Pull a Lucky Fish (Roblox)
     Game URL: https://www.roblox.com/games/112781315318195/Pull-a-Lucky-Fish
     Author: Made by Junejo (junejo18146)
@@ -65,23 +65,21 @@ LocalPlayer.Idled:Connect(function()
 end)
 
 --------------------------------------------------------------------
--- ADVANCED MULTI-LAYER AUTOMATION HELPERS
+-- CLEAN & STABLE AUTOMATION HELPERS (NO MOVING MAP PARTS!)
 --------------------------------------------------------------------
 
--- 1. Deep Remotes Broadcaster (Searches all Folders & Packages)
-local function BroadcastRemotes(keywords, argSets)
+-- 1. Safe Remotes Broadcaster
+local function SafeBroadcastRemotes(keywords, argList)
     pcall(function()
         for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
             if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
                 local lname = obj.Name:lower()
-                local parentName = obj.Parent and obj.Parent.Name:lower() or ""
-                
                 for _, kw in ipairs(keywords) do
-                    if lname:find(kw) or parentName:find(kw) then
+                    if lname:find(kw) then
                         if obj:IsA("RemoteEvent") then
                             obj:FireServer()
-                            for _, arg in ipairs(argSets or {}) do
-                                pcall(function() obj:FireServer(unpack(arg)) end)
+                            for _, args in ipairs(argList or {}) do
+                                pcall(function() obj:FireServer(unpack(args)) end)
                             end
                         elseif obj:IsA("RemoteFunction") then
                             pcall(function() obj:InvokeServer() end)
@@ -94,8 +92,8 @@ local function BroadcastRemotes(keywords, argSets)
     end)
 end
 
--- 2. Trigger All Proximity Prompts & Click Detectors
-local function TriggerAllPrompts(keywords)
+-- 2. Safe Proximity Prompts Trigger (Silent & Direct)
+local function TriggerPromptsByKeywords(keywords)
     pcall(function()
         for _, prompt in ipairs(Workspace:GetDescendants()) do
             if prompt:IsA("ProximityPrompt") then
@@ -108,37 +106,25 @@ local function TriggerAllPrompts(keywords)
                         break
                     end
                 end
-            elseif prompt:IsA("ClickDetector") then
-                local cname = (prompt.Parent and prompt.Parent.Name or prompt.Name):lower()
-                for _, kw in ipairs(keywords) do
-                    if cname:find(kw) then
-                        if fireclickdetector then
-                            fireclickdetector(prompt)
-                        end
-                        break
-                    end
-                end
             end
         end
     end)
 end
 
--- 3. Click / Tap GUI Buttons for Fishing QTE & Claims
+-- 3. Click GUI Buttons Safely
 local function ClickGuiButtons(keywords)
     pcall(function()
-        local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
-        if not playerGui then return end
+        local pGui = LocalPlayer:FindFirstChild("PlayerGui")
+        if not pGui then return end
         
-        for _, btn in ipairs(playerGui:GetDescendants()) do
+        for _, btn in ipairs(pGui:GetDescendants()) do
             if btn:IsA("TextButton") or btn:IsA("ImageButton") then
                 local bname = btn.Name:lower()
                 local btext = btn:IsA("TextButton") and btn.Text:lower() or ""
-                
                 for _, kw in ipairs(keywords) do
                     if bname:find(kw) or btext:find(kw) then
                         if firesignal then
                             firesignal(btn.MouseButton1Click)
-                            firesignal(btn.MouseButton1Down)
                             firesignal(btn.Activated)
                         end
                         break
@@ -149,68 +135,8 @@ local function ClickGuiButtons(keywords)
     end)
 end
 
--- 4. Touch Interest on Target Workspace Parts
-local function TouchMatchingParts(keywords)
-    pcall(function()
-        local char = LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
-
-        for _, part in ipairs(Workspace:GetDescendants()) do
-            if part:IsA("BasePart") then
-                local pname = part.Name:lower()
-                for _, kw in ipairs(keywords) do
-                    if pname:find(kw) then
-                        if firetouchinterest then
-                            firetouchinterest(hrp, part, 0)
-                            task.wait(0.005)
-                            firetouchinterest(hrp, part, 1)
-                        end
-                        break
-                    end
-                end
-            end
-        end
-    end)
-end
-
--- 5. Find Farthest / Best Fishing Zone & Player Base
-local function GetZoneAndBase()
-    local bestZone = nil
-    local baseSpot = nil
-
-    pcall(function()
-        local char = LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        local origin = hrp and hrp.Position or Vector3.new(0, 0, 0)
-        local maxDist = 0
-
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            if obj:IsA("BasePart") or obj:IsA("Model") then
-                local n = obj.Name:lower()
-                local part = obj:IsA("BasePart") and obj or obj:FindFirstChildOfClass("BasePart")
-                if part then
-                    -- Base / Plot
-                    if n:find("base") or n:find("plot") or n:find("dock") or n:find("home") or n:find(LocalPlayer.Name:lower()) then
-                        if not baseSpot then baseSpot = part end
-                    end
-                    -- Zone
-                    if n:find("zone") or n:find("deep") or n:find("ocean") or n:find("lake") or n:find("island") or n:find("water") or n:find("spot") then
-                        local dist = (part.Position - origin).Magnitude
-                        if dist > maxDist then
-                            maxDist = dist
-                            bestZone = part
-                        end
-                    end
-                end
-            end
-        end
-    end)
-    return bestZone, baseSpot
-end
-
 --------------------------------------------------------------------
--- 7 MULTI-LAYER AUTOMATION LOOPS
+-- STABLE AUTOMATION ENGINES
 --------------------------------------------------------------------
 
 -- 1. Infinite Jump
@@ -231,17 +157,17 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- 3. AUTO FISH & FAST PULL (Continuous Multi-Layer Pulse)
+-- 3. AUTO FISH & FAST PULL (Clean & Glitch-Free)
 task.spawn(function()
     while true do
-        task.wait(0.05)
+        task.wait(0.1)
         if Toggles.AutoFish then
             pcall(function()
                 local char = LocalPlayer.Character
                 local hum = char and char:FindFirstChildOfClass("Humanoid")
                 local backpack = LocalPlayer:FindFirstChild("Backpack")
 
-                -- Layer A: Equip Fishing Tool / Rod
+                -- Equip rod
                 if backpack and hum then
                     for _, tool in ipairs(backpack:GetChildren()) do
                         if tool:IsA("Tool") then
@@ -250,119 +176,110 @@ task.spawn(function()
                     end
                 end
 
-                -- Layer B: Tool Activation & Mouse Click Simulation
+                -- Activate tool
                 if char then
                     for _, tool in ipairs(char:GetChildren()) do
                         if tool:IsA("Tool") then
                             tool:Activate()
-                            -- If tool has remote inside, fire it
-                            for _, remote in ipairs(tool:GetDescendants()) do
-                                if remote:IsA("RemoteEvent") then
-                                    remote:FireServer()
-                                    remote:FireServer(true)
-                                    remote:FireServer(1)
-                                end
-                            end
                         end
                     end
                 end
 
-                -- Layer C: Rapid Click Simulation for Fast Pull / Reeling
+                -- Virtual click pulse for reeling
                 VirtualUser:Button1Down(Vector2.new(500, 500))
-                task.wait(0.01)
+                task.wait(0.02)
                 VirtualUser:Button1Up(Vector2.new(500, 500))
 
-                -- Layer D: Click Onscreen Fishing Minigame / Reel Buttons
-                ClickGuiButtons({"reel", "pull", "catch", "fish", "cast", "tap", "click", "hit", "hook", "strike"})
-
-                -- Layer E: Deep Remotes Broadcaster for Fishing
-                BroadcastRemotes(
-                    {"fish", "cast", "reel", "pull", "catch", "hook", "bite", "strike", "throw", "rod", "bobber", "claimfish"},
-                    {
-                        {"Cast", true, 1},
-                        {"Reel", true, 1},
-                        {"Pull", true, 1},
-                        {"Catch", true},
-                        {true},
-                        {1},
-                        {"Instant"}
-                    }
+                -- Fishing Remotes & QTE Buttons
+                ClickGuiButtons({"reel", "pull", "catch", "fish", "cast", "tap", "click", "hit"})
+                SafeBroadcastRemotes(
+                    {"fish", "cast", "reel", "pull", "catch", "hook", "bite", "strike"},
+                    {{"Cast", true}, {"Reel", true}, {"Pull", true}, {"Catch", true}, {true}, {1}}
                 )
-
-                -- Layer F: Trigger Fishing Prompts
-                TriggerAllPrompts({"fish", "cast", "reel", "pull", "catch", "hook", "water"})
+                TriggerPromptsByKeywords({"fish", "cast", "reel", "pull", "catch"})
             end)
         end
     end
 end)
 
--- 4. INSTANT LAST ZONE (Deep Ocean Teleport & Instant Catch)
+-- 4. INSTANT LAST ZONE (Clean Single Teleport)
+local lastZoneDone = false
 task.spawn(function()
     while true do
-        task.wait(0.4)
+        task.wait(1.0)
         if Toggles.InstantLastZone then
             pcall(function()
                 local char = LocalPlayer.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                if hrp then
-                    local lastZone, baseSpot = GetZoneAndBase()
-                    if lastZone then
-                        -- Teleport to deepest zone
-                        hrp.CFrame = lastZone.CFrame + Vector3.new(0, 3, 0)
-                        task.wait(0.15)
-                        
-                        -- Fire fishing sequence
-                        BroadcastRemotes({"cast", "fish", "pull", "reel", "catch"}, {{"Cast", true}, {"Reel", true}})
-                        ClickGuiButtons({"reel", "pull", "catch", "fish"})
+                if hrp and not lastZoneDone then
+                    local maxDist = 0
+                    local targetZone = nil
+                    local origin = hrp.Position
+
+                    for _, obj in ipairs(Workspace:GetDescendants()) do
+                        if obj:IsA("BasePart") then
+                            local n = obj.Name:lower()
+                            if n:find("zone") or n:find("ocean") or n:find("deep") or n:find("island") or n:find("dock") then
+                                local dist = (obj.Position - origin).Magnitude
+                                if dist > maxDist and dist < 20000 then
+                                    maxDist = dist
+                                    targetZone = obj
+                                end
+                            end
+                        end
+                    end
+
+                    if targetZone then
+                        hrp.CFrame = targetZone.CFrame + Vector3.new(0, 4, 0)
+                        lastZoneDone = true
                     end
                 end
             end)
+        else
+            lastZoneDone = false
         end
     end
 end)
 
--- 5. AUTO COLLECT BASE CASH (5-Layer Income Harvesting)
+-- 5. AUTO COLLECT BASE CASH (100% CLEAN - NO MAP MOVEMENT!)
 task.spawn(function()
     while true do
-        task.wait(0.15)
+        task.wait(0.2)
         if Toggles.AutoCollectCash then
             pcall(function()
                 local char = LocalPlayer.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
 
-                -- Layer A: Remote Broadcaster for Base & Tank Cash
-                BroadcastRemotes(
-                    {"collect", "claim", "income", "cash", "money", "tank", "payout", "deposit", "withdraw", "giver", "currency"},
+                -- Layer A: Fire Collection Remotes Directly
+                SafeBroadcastRemotes(
+                    {"collect", "claim", "income", "cash", "money", "tank", "payout", "deposit", "withdraw", "giver"},
                     {
                         {"Collect", true},
                         {"Claim", true},
+                        {"ClaimAll", true},
                         {true},
                         {1}
                     }
                 )
 
-                -- Layer B: Trigger Prompts on Tanks & Collector Pads
-                TriggerAllPrompts({"collect", "claim", "cash", "money", "tank", "coin", "payout", "atm", "bank", "pad"})
+                -- Layer B: Trigger Collector Prompts on Tanks & Base
+                TriggerPromptsByKeywords({"collect", "claim", "cash", "money", "tank", "coin", "payout", "atm", "bank", "pad"})
 
                 -- Layer C: Click UI Claim Buttons
                 ClickGuiButtons({"collect", "claim", "claimall", "collectall", "payout", "withdraw", "take"})
 
-                -- Layer D: Touch Collector Pads
-                TouchMatchingParts({"collector", "cash", "coin", "money", "deposit", "pad", "bank", "atm", "income", "tank"})
-
-                -- Layer E: Floating Money Drops Teleport
+                -- Layer D: Touch Collector Pads Safely (Without moving anything!)
                 if hrp then
-                    for _, obj in ipairs(Workspace:GetDescendants()) do
+                    for _, pad in ipairs(Workspace:GetDescendants()) do
                         if not Toggles.AutoCollectCash then break end
-                        if obj:IsA("BasePart") then
-                            local n = obj.Name:lower()
-                            if n:find("coin") or n:find("cash") or n:find("money") or n:find("drop") or n:find("gem") or n:find("dollar") then
+                        if pad:IsA("BasePart") then
+                            local n = pad.Name:lower()
+                            if n == "collector" or n == "collect" or n == "collectpad" or n == "cashpad" or n == "payout" or n == "atm" or n == "deposit" then
                                 if firetouchinterest then
-                                    firetouchinterest(hrp, obj, 0)
+                                    firetouchinterest(hrp, pad, 0)
                                     task.wait(0.005)
-                                    firetouchinterest(hrp, obj, 1)
+                                    firetouchinterest(hrp, pad, 1)
                                 end
-                                obj.CFrame = hrp.CFrame
                             end
                         end
                     end
@@ -375,12 +292,15 @@ end)
 -- 6. AUTO SELL LOW TIER FISH (Merchant & Remote Broadcaster)
 task.spawn(function()
     while true do
-        task.wait(0.8)
+        task.wait(1.0)
         if Toggles.AutoSellFish then
             pcall(function()
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
                 -- Layer A: Remote Firing for Low/Common Fish Sell
-                BroadcastRemotes(
-                    {"sell", "sellfish", "selllow", "sellcommon", "sellduplicate", "sellall", "merchant", "trader"},
+                SafeBroadcastRemotes(
+                    {"sell", "sellfish", "selllow", "sellcommon", "sellduplicate", "sellall", "merchant"},
                     {
                         {"Common", true},
                         {"Uncommon", true},
@@ -391,14 +311,28 @@ task.spawn(function()
                     }
                 )
 
-                -- Layer B: Trigger Merchant / Sell Prompts
-                TriggerAllPrompts({"sell", "merchant", "shop", "trader", "buyer", "market"})
+                -- Layer B: Trigger Merchant Prompts
+                TriggerPromptsByKeywords({"sell", "merchant", "shop", "trader", "buyer"})
 
                 -- Layer C: Click UI Sell Buttons
                 ClickGuiButtons({"sell", "sellall", "sellcommon", "selllow", "confirm"})
 
-                -- Layer D: Touch Sell Pads
-                TouchMatchingParts({"sell", "merchant", "trader", "shop", "market"})
+                -- Layer D: Touch Sell Pads Safely (No part moving!)
+                if hrp then
+                    for _, pad in ipairs(Workspace:GetDescendants()) do
+                        if not Toggles.AutoSellFish then break end
+                        if pad:IsA("BasePart") then
+                            local n = pad.Name:lower()
+                            if n == "sellpad" or n == "sellarea" or n == "sell" then
+                                if firetouchinterest then
+                                    firetouchinterest(hrp, pad, 0)
+                                    task.wait(0.005)
+                                    firetouchinterest(hrp, pad, 1)
+                                end
+                            end
+                        end
+                    end
+                end
             end)
         end
     end
@@ -407,19 +341,15 @@ end)
 -- 7. AUTO REBIRTH
 task.spawn(function()
     while true do
-        task.wait(1.2)
+        task.wait(1.5)
         if Toggles.AutoRebirth then
             pcall(function()
-                BroadcastRemotes(
-                    {"rebirth", "prestige", "ascend", "rankup", "reset"},
-                    {
-                        {"Rebirth", true},
-                        {true},
-                        {1}
-                    }
+                SafeBroadcastRemotes(
+                    {"rebirth", "prestige", "ascend", "rankup"},
+                    {{"Rebirth", true}, {true}, {1}}
                 )
                 ClickGuiButtons({"rebirth", "prestige", "ascend", "confirm"})
-                TriggerAllPrompts({"rebirth", "prestige", "ascend"})
+                TriggerPromptsByKeywords({"rebirth", "prestige", "ascend"})
             end)
         end
     end
