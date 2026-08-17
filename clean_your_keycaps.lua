@@ -3,7 +3,8 @@
     Game: Clean Your Keycaps (Roblox)
     Author: Made by Junejo (junejo18146)
     Repository: junejo18146/ultrascripthub
-    Version: 3.0 (Focused 5-Feature Edition)
+    Theme: Unified Junejo Executive Dark UI (#0F0F11)
+    Status: Unlocked Direct Standalone Execution
 --]]
 
 local Players = game:GetService("Players")
@@ -14,17 +15,33 @@ local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
 local CoreGui = game:GetService("CoreGui")
 
-local LocalPlayer = Players.LocalPlayer
+local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
+
+-- Safe UI Parent getter
+local function GetUIContainer()
+    local success, res = pcall(function()
+        if gethui then return gethui() end
+        if syn and syn.protect_gui then return CoreGui end
+        return CoreGui
+    end)
+    if success and res then return res end
+    return LocalPlayer:WaitForChild("PlayerGui")
+end
+
+local UIContainer = GetUIContainer()
 
 --------------------------------------------------------------------
 -- CLEANUP PREVIOUS UI INSTANCES
 --------------------------------------------------------------------
-if CoreGui:FindFirstChild("JunejoCleanKeycapsUI") then
-    CoreGui.JunejoCleanKeycapsUI:Destroy()
+for _, name in ipairs({"JunejoCleanKeycapsUI", "JunejoHubUI_Keycaps"}) do
+    if CoreGui:FindFirstChild(name) then CoreGui[name]:Destroy() end
+    if LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild(name) then
+        LocalPlayer.PlayerGui[name]:Destroy()
+    end
 end
 
 --------------------------------------------------------------------
--- TOGGLE STATES (5 FEATURES ONLY)
+-- TOGGLE STATES
 --------------------------------------------------------------------
 local Toggles = {
     AutoWash = false,
@@ -38,16 +55,16 @@ local Toggles = {
 -- ANTI-AFK SYSTEM
 --------------------------------------------------------------------
 LocalPlayer.Idled:Connect(function()
-    VirtualUser:Button2Down(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
-    task.wait(1)
-    VirtualUser:Button2Up(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
+    pcall(function()
+        VirtualUser:Button2Down(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
+        task.wait(1)
+        VirtualUser:Button2Up(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
+    end)
 end)
 
 --------------------------------------------------------------------
 -- AUTOMATION HELPERS
 --------------------------------------------------------------------
-
--- 1. Helper: Fire matching Remotes in DataModel
 local function FireRemotesByKeywords(keywords, defaultArgs)
     pcall(function()
         for _, descendant in ipairs(game:GetDescendants()) do
@@ -58,9 +75,6 @@ local function FireRemotesByKeywords(keywords, defaultArgs)
                         if descendant:IsA("RemoteEvent") then
                             descendant:FireServer(unpack(defaultArgs or {}))
                             descendant:FireServer()
-                        elseif descendant:IsA("RemoteFunction") then
-                            pcall(function() descendant:InvokeServer(unpack(defaultArgs or {})) end)
-                            pcall(function() descendant:InvokeServer() end)
                         end
                         break
                     end
@@ -70,28 +84,22 @@ local function FireRemotesByKeywords(keywords, defaultArgs)
     end)
 end
 
--- 2. Helper: Trigger matching ProximityPrompts & ClickDetectors
 local function TriggerPromptsAndClicks(keywords)
     pcall(function()
-        for _, descendant in ipairs(Workspace:GetDescendants()) do
-            local lname = string.lower(descendant.Name)
-            if descendant:IsA("ProximityPrompt") then
-                local combined = lname .. " " .. string.lower(descendant.ActionText .. " " .. descendant.ObjectText)
+        for _, prompt in ipairs(Workspace:GetDescendants()) do
+            if prompt:IsA("ProximityPrompt") then
+                local pname = string.lower(prompt.Parent and prompt.Parent.Name or prompt.Name)
                 for _, kw in ipairs(keywords) do
-                    if combined:find(kw) then
-                        if fireproximityprompt then
-                            fireproximityprompt(descendant, 0)
-                        end
+                    if pname:find(kw) then
+                        if fireproximityprompt then fireproximityprompt(prompt) end
                         break
                     end
                 end
-            elseif descendant:IsA("ClickDetector") then
-                local pName = string.lower(descendant.Parent and descendant.Parent.Name or "")
+            elseif prompt:IsA("ClickDetector") then
+                local cname = string.lower(prompt.Parent and prompt.Parent.Name or prompt.Name)
                 for _, kw in ipairs(keywords) do
-                    if lname:find(kw) or pName:find(kw) then
-                        if fireclickdetector then
-                            fireclickdetector(descendant)
-                        end
+                    if cname:find(kw) then
+                        if fireclickdetector then fireclickdetector(prompt) end
                         break
                     end
                 end
@@ -100,7 +108,6 @@ local function TriggerPromptsAndClicks(keywords)
     end)
 end
 
--- 3. Helper: Touch interest on matching workspace parts
 local function TouchPartsByKeywords(keywords)
     pcall(function()
         local char = LocalPlayer.Character
@@ -125,7 +132,6 @@ local function TouchPartsByKeywords(keywords)
     end)
 end
 
--- 4. Helper: Activate Held/Backpack Tool
 local function ActivateMatchingTools(keywords)
     pcall(function()
         local char = LocalPlayer.Character
@@ -168,7 +174,7 @@ end
 -- 5 FEATURE AUTOMATION LOOPS
 --------------------------------------------------------------------
 
--- 1. Auto Wash Keycaps 🧼
+-- 1. Auto Wash Keycaps
 task.spawn(function()
     while true do
         task.wait(0.1)
@@ -183,7 +189,7 @@ task.spawn(function()
     end
 end)
 
--- 2. Auto Dunk & Rinse 🚰
+-- 2. Auto Dunk & Rinse
 task.spawn(function()
     while true do
         task.wait(0.15)
@@ -197,36 +203,30 @@ task.spawn(function()
     end
 end)
 
--- 3. Auto Collect Cash 💰 (SUPERCHARGED ADVANCED ENGINE)
+-- 3. Auto Collect Cash
 task.spawn(function()
     while true do
         task.wait(0.1)
         if Toggles.AutoCollect then
             pcall(function()
-                -- Layer A: Remote Firing
                 FireRemotesByKeywords({
                     "collect", "claim", "cash", "coin", "money", "currency", "reward", 
                     "giver", "deposit", "withdraw", "collectcash", "collectmoney", "addcash"
                 }, {})
 
-                -- Layer B: Prompts & Click Detectors
                 TriggerPromptsAndClicks({
                     "collect", "claim", "cash", "coin", "money", "giver", "deposit", 
                     "collector", "register", "bank", "pad", "total"
                 })
 
-                -- Layer C: Touch Interest on Collector Pads & Money Parts
                 TouchPartsByKeywords({
                     "cash", "coin", "money", "drop", "gem", "currency", "collector", 
                     "giver", "deposit", "pad", "total", "bill", "reward", "register"
                 })
 
-                -- Layer D: Character HRP Teleport to Drops & Collectors
                 local char = LocalPlayer.Character
                 if char and char:FindFirstChild("HumanoidRootPart") then
                     local hrp = char.HumanoidRootPart
-                    
-                    -- Scan Workspace for dropped cash parts or collector pads
                     for _, obj in ipairs(Workspace:GetDescendants()) do
                         if obj:IsA("BasePart") then
                             local name = string.lower(obj.Name)
@@ -237,7 +237,6 @@ task.spawn(function()
                                         task.wait(0.005)
                                         firetouchinterest(hrp, obj, 1)
                                     end
-                                    -- Teleport drop to player
                                     if name:find("drop") or name:find("coin") or name:find("cash") then
                                         obj.CFrame = hrp.CFrame
                                     end
@@ -246,74 +245,58 @@ task.spawn(function()
                         end
                     end
                 end
-
-                -- Layer E: Scan PlayerGui for UI Collect/Claim Buttons
-                local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
-                if playerGui then
-                    for _, guiObj in ipairs(playerGui:GetDescendants()) do
-                        if guiObj:IsA("TextButton") or guiObj:IsA("ImageButton") then
-                            local bText = string.lower(guiObj.Name .. " " .. (guiObj:IsA("TextButton") and guiObj.Text or ""))
-                            if bText:find("collect") or bText:find("claim") or bText:find("reward") then
-                                pcall(function()
-                                    if guiObj.Visible then
-                                        for _, connection in ipairs(getconnections(guiObj.MouseButton1Click)) do
-                                            connection:Fire()
-                                        end
-                                        for _, connection in ipairs(getconnections(guiObj.Activated)) do
-                                            connection:Fire()
-                                        end
-                                    end
-                                end)
-                            end
-                        end
-                    end
-                end
             end)
         end
     end
 end)
 
--- 4. Auto Rebirth 🔄
+-- 4. Auto Rebirth
 task.spawn(function()
     while true do
         task.wait(1.0)
         if Toggles.AutoRebirth then
             pcall(function()
-                FireRemotesByKeywords({"rebirth", "dorebirth", "performrebirth", "prestige", "reset"}, {})
-                TriggerPromptsAndClicks({"rebirth", "prestige"})
+                FireRemotesByKeywords({
+                    "rebirth", "prestige", "rankup", "ascend", "resetrank"
+                }, {"Rebirth", true, 1})
             end)
         end
     end
 end)
 
--- 5. Infinite Jump ⚡
+-- 5. Infinite Jump
 UserInputService.JumpRequest:Connect(function()
     if Toggles.InfiniteJump then
-        pcall(function()
-            local char = LocalPlayer.Character
-            if char then
-                local hum = char:FindFirstChildOfClass("Humanoid")
-                if hum then
-                    hum:ChangeState(Enum.HumanoidStateType.Jumping)
-                end
-            end
-        end)
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChildOfClass("Humanoid") then
+            pcall(function()
+                char:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
+            end)
+        end
     end
 end)
 
 --------------------------------------------------------------------
--- ULTRA COMPACT JUNEJO EXECUTIVE UI (5 FEATURES PERFECT FIT)
+-- UNIFIED JUNEJO EXECUTIVE UI
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoCleanKeycapsUI"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = CoreGui
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.DisplayOrder = 999999
 
--- Main Container Frame (Width: 270px, Height: 200px - Fits 5 Items Perfectly!)
+if syn and syn.protect_gui then
+    syn.protect_gui(ScreenGui)
+    ScreenGui.Parent = CoreGui
+else
+    ScreenGui.Parent = UIContainer
+end
+
+-- Main Container Frame (280px width, 240px height)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 270, 0, 200)
-MainFrame.Position = UDim2.new(0.5, -135, 0.5, -100)
+MainFrame.Size = UDim2.new(0, 280, 0, 240)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -120)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -332,14 +315,14 @@ MainStroke.Parent = MainFrame
 -- Header Bar
 local Header = Instance.new("Frame")
 Header.Name = "Header"
-Header.Size = UDim2.new(1, 0, 0, 32)
+Header.Size = UDim2.new(1, 0, 0, 34)
 Header.BackgroundTransparency = 1
 Header.Parent = MainFrame
 
 local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Name = "TitleLabel"
-TitleLabel.Size = UDim2.new(1, -35, 1, 0)
-TitleLabel.Position = UDim2.new(0, 12, 0, 0)
+TitleLabel.Size = UDim2.new(1, -40, 1, 0)
+TitleLabel.Position = UDim2.new(0, 14, 0, 0)
 TitleLabel.BackgroundTransparency = 1
 TitleLabel.Text = "CLEAN YOUR KEYCAPS"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -350,12 +333,12 @@ TitleLabel.Parent = Header
 
 local CloseButton = Instance.new("TextButton")
 CloseButton.Name = "CloseButton"
-CloseButton.Size = UDim2.new(0, 32, 0, 32)
-CloseButton.Position = UDim2.new(1, -32, 0, 0)
+CloseButton.Size = UDim2.new(0, 34, 0, 34)
+CloseButton.Position = UDim2.new(1, -34, 0, 0)
 CloseButton.BackgroundTransparency = 1
 CloseButton.Text = "X"
 CloseButton.TextColor3 = Color3.fromRGB(160, 160, 170)
-CloseButton.TextSize = 13
+CloseButton.TextSize = 14
 CloseButton.Font = Enum.Font.GothamBold
 CloseButton.Parent = Header
 
@@ -395,20 +378,20 @@ end)
 -- Content Frame
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -24, 1, -74)
-ContentFrame.Position = UDim2.new(0, 12, 0, 32)
+ContentFrame.Size = UDim2.new(1, -28, 0, 150)
+ContentFrame.Position = UDim2.new(0, 14, 0, 36)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
 
 local UIList = Instance.new("UIListLayout")
 UIList.SortOrder = Enum.SortOrder.LayoutOrder
-UIList.Padding = UDim.new(0, 3)
+UIList.Padding = UDim.new(0, 4)
 UIList.Parent = ContentFrame
 
--- Helper function to add tight compact toggle rows (Click anywhere on row to toggle!)
-local function AddToggleRow(text, default, callback)
+-- Helper function to add tight compact toggle rows (Full row clickable)
+local function AddToggleRow(text, configKey)
     local Row = Instance.new("Frame")
-    Row.Size = UDim2.new(1, 0, 0, 22)
+    Row.Size = UDim2.new(1, 0, 0, 24)
     Row.BackgroundTransparency = 1
     Row.Parent = ContentFrame
     
@@ -416,10 +399,11 @@ local function AddToggleRow(text, default, callback)
     RowBtn.Size = UDim2.new(1, 0, 1, 0)
     RowBtn.BackgroundTransparency = 1
     RowBtn.Text = ""
+    RowBtn.ZIndex = 5
     RowBtn.Parent = Row
     
     local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(1, -26, 1, 0)
+    Label.Size = UDim2.new(1, -28, 1, 0)
     Label.BackgroundTransparency = 1
     Label.Text = text
     Label.TextColor3 = Color3.fromRGB(240, 240, 240)
@@ -448,42 +432,37 @@ local function AddToggleRow(text, default, callback)
     CheckMark.Size = UDim2.new(0, 10, 0, 10)
     CheckMark.Position = UDim2.new(0.5, -5, 0.5, -5)
     CheckMark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    CheckMark.BackgroundTransparency = default and 0 or 1
+    CheckMark.BackgroundTransparency = Toggles[configKey] and 0 or 1
+    CheckMark.BorderSizePixel = 0
     CheckMark.Parent = CheckBox
     
     local MarkCorner = Instance.new("UICorner")
     MarkCorner.CornerRadius = UDim.new(0, 2)
     MarkCorner.Parent = CheckMark
     
-    local toggled = default or false
-    
-    local function ToggleState()
-        toggled = not toggled
-        CheckMark.BackgroundTransparency = toggled and 0 or 1
-        if callback then callback(toggled) end
-    end
-    
-    RowBtn.MouseButton1Click:Connect(ToggleState)
+    RowBtn.MouseButton1Click:Connect(function()
+        Toggles[configKey] = not Toggles[configKey]
+        CheckMark.BackgroundTransparency = Toggles[configKey] and 0 or 1
+    end)
 end
 
--- POPULATE EXACT 5 REQUESTED TOGGLE ROWS
-AddToggleRow("Auto Wash Keycaps 🧼", false, function(v) Toggles.AutoWash = v end)
-AddToggleRow("Auto Dunk & Rinse 🚰", false, function(v) Toggles.AutoDunk = v end)
-AddToggleRow("Auto Collect Cash 💰", false, function(v) Toggles.AutoCollect = v end)
-AddToggleRow("Auto Rebirth 🔄", false, function(v) Toggles.AutoRebirth = v end)
-AddToggleRow("Infinite Jump ⚡", false, function(v) Toggles.InfiniteJump = v end)
+AddToggleRow("Auto Wash Keycaps", "AutoWash")
+AddToggleRow("Auto Dunk & Rinse", "AutoDunk")
+AddToggleRow("Auto Collect Cash", "AutoCollect")
+AddToggleRow("Auto Rebirth", "AutoRebirth")
+AddToggleRow("Infinite Jump", "InfiniteJump")
 
 -- Footer Frame
 local Footer = Instance.new("Frame")
 Footer.Name = "Footer"
-Footer.Size = UDim2.new(1, 0, 0, 42)
-Footer.Position = UDim2.new(0, 0, 1, -42)
+Footer.Size = UDim2.new(1, 0, 0, 44)
+Footer.Position = UDim2.new(0, 0, 1, -44)
 Footer.BackgroundTransparency = 1
 Footer.Parent = MainFrame
 
 local FooterTitle = Instance.new("TextLabel")
 FooterTitle.Size = UDim2.new(1, 0, 0, 16)
-FooterTitle.Position = UDim2.new(0, 0, 0, 4)
+FooterTitle.Position = UDim2.new(0, 0, 0, 5)
 FooterTitle.BackgroundTransparency = 1
 FooterTitle.Text = "ULTRA SCRIPT HUB"
 FooterTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -493,12 +472,10 @@ FooterTitle.Parent = Footer
 
 local FooterSub = Instance.new("TextLabel")
 FooterSub.Size = UDim2.new(1, 0, 0, 14)
-FooterSub.Position = UDim2.new(0, 0, 0, 20)
+FooterSub.Position = UDim2.new(0, 0, 0, 21)
 FooterSub.BackgroundTransparency = 1
 FooterSub.Text = "Made by Junejo"
 FooterSub.TextColor3 = Color3.fromRGB(136, 136, 153)
 FooterSub.TextSize = 11
 FooterSub.Font = Enum.Font.GothamMedium
 FooterSub.Parent = Footer
-
-print("[JUNEJO ULTRA HUB]: Clean Your Keycaps (v3.0) loaded successfully!")
