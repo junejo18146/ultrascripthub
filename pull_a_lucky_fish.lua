@@ -1,5 +1,5 @@
 --[[
-    JUNEJO ULTRA SCRIPT HUB - PULL A LUCKY FISH (CASH COLLECTOR FIX)
+    JUNEJO ULTRA SCRIPT HUB - PULL A LUCKY FISH (4 CORE FEATURES EDITION)
     Target Game: Pull a Lucky Fish (Roblox)
     Game URL: https://www.roblox.com/games/112781315318195/Pull-a-Lucky-Fish
     Author: Made by Junejo (junejo18146)
@@ -15,11 +15,10 @@ local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
 local CoreGui = game:GetService("CoreGui")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local GuiService = game:GetService("GuiService")
 
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
--- Safe UI Parent getter
+-- Safe UI Parent getter (compatible with Delta & all mobile/PC executors)
 local function GetUIContainer()
     local success, res = pcall(function()
         if gethui then return gethui() end
@@ -40,12 +39,9 @@ for _, name in ipairs({"JunejoLuckyFishUI", "JunejoHubUI_LuckyFish", "JunejoPull
     end
 end
 
--- Feature States
+-- 4 Core Feature States
 local Toggles = {
-    AutoFish = false,
     InstantLastZone = false,
-    AutoCollectCash = false,
-    AutoSellFish = false,
     AutoRebirth = false,
     WalkSpeedBoost = false,
     InfiniteJump = false
@@ -65,155 +61,7 @@ LocalPlayer.Idled:Connect(function()
 end)
 
 --------------------------------------------------------------------
--- DEEP PLOT & REMOTES ENGINE
---------------------------------------------------------------------
-
--- Find Player's Base / Plot in Workspace
-local function GetPlayerPlot()
-    local myPlot = nil
-    pcall(function()
-        local pName = LocalPlayer.Name:lower()
-        local dName = LocalPlayer.DisplayName:lower()
-
-        for _, folder in ipairs(Workspace:GetChildren()) do
-            local fn = folder.Name:lower()
-            if fn:find("plot") or fn:find("base") or fn:find("island") or fn:find("tycoon") or fn:find("player") or fn:find("tank") then
-                -- Check children
-                for _, plot in ipairs(folder:GetChildren()) do
-                    local pn = plot.Name:lower()
-                    if pn:find(pName) or pn:find(dName) then
-                        myPlot = plot
-                        return
-                    end
-                    -- Check Owner value
-                    local owner = plot:FindFirstChild("Owner") or plot:FindFirstChild("Player") or plot:FindFirstChild("owner")
-                    if owner and (tostring(owner.Value):lower():find(pName) or tostring(owner.Value):lower():find(dName)) then
-                        myPlot = plot
-                        return
-                    end
-                end
-            end
-        end
-
-        -- Fallback: check workspace direct children
-        for _, obj in ipairs(Workspace:GetChildren()) do
-            local on = obj.Name:lower()
-            if on:find(pName) or on:find(dName) then
-                myPlot = obj
-                return
-            end
-        end
-    end)
-    return myPlot
-end
-
--- Deep Remotes Trigger
-local function FireAllCashRemotes()
-    pcall(function()
-        local pName = LocalPlayer.Name
-        local pPlot = GetPlayerPlot()
-
-        for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
-            if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
-                local n = obj.Name:lower()
-                local parentName = obj.Parent and obj.Parent.Name:lower() or ""
-
-                if n:find("collect") or n:find("claim") or n:find("cash") or n:find("money") or n:find("income") or 
-                   n:find("tank") or n:find("payout") or n:find("withdraw") or n:find("reward") or n:find("yield") or
-                   parentName:find("collect") or parentName:find("cash") or parentName:find("plot") then
-                    
-                    if obj:IsA("RemoteEvent") then
-                        obj:FireServer()
-                        obj:FireServer(true)
-                        obj:FireServer(1)
-                        obj:FireServer("Collect")
-                        obj:FireServer("ClaimAll")
-                        obj:FireServer("Cash")
-                        obj:FireServer(pName)
-                        if pPlot then obj:FireServer(pPlot) end
-                    elseif obj:IsA("RemoteFunction") then
-                        pcall(function() obj:InvokeServer() end)
-                        pcall(function() obj:InvokeServer("Collect") end)
-                        pcall(function() obj:InvokeServer(true) end)
-                    end
-                end
-            end
-        end
-    end)
-end
-
--- Deep UI Collector (Clicks any Collect/Claim button on screen)
-local function TriggerCashUI()
-    pcall(function()
-        local pGui = LocalPlayer:FindFirstChild("PlayerGui")
-        if not pGui then return end
-
-        for _, btn in ipairs(pGui:GetDescendants()) do
-            if btn:IsA("TextButton") or btn:IsA("ImageButton") then
-                local n = btn.Name:lower()
-                local t = btn:IsA("TextButton") and btn.Text:lower() or ""
-
-                if n:find("collect") or n:find("claim") or n:find("take") or n:find("payout") or n:find("withdraw") or
-                   t:find("collect") or t:find("claim") or t:find("take") or t:find("withdraw") or t:find("$") then
-                    
-                    if firesignal then
-                        firesignal(btn.MouseButton1Click)
-                        firesignal(btn.Activated)
-                    end
-                end
-            end
-        end
-    end)
-end
-
--- Deep Proximity Prompt & Touch on Player's Plot
-local function TriggerPlotCollectors()
-    pcall(function()
-        local char = LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        local plot = GetPlayerPlot()
-
-        -- Trigger all prompts inside Plot or entire workspace
-        local targetContainer = plot or Workspace
-        for _, prompt in ipairs(targetContainer:GetDescendants()) do
-            if prompt:IsA("ProximityPrompt") then
-                local pn = (prompt.Parent and prompt.Parent.Name or prompt.Name):lower()
-                if pn:find("collect") or pn:find("claim") or pn:find("cash") or pn:find("money") or 
-                   pn:find("tank") or pn:find("atm") or pn:find("bank") or pn:find("payout") or pn:find("income") then
-                    if fireproximityprompt then
-                        fireproximityprompt(prompt)
-                    end
-                end
-            elseif prompt:IsA("ClickDetector") then
-                local cn = (prompt.Parent and prompt.Parent.Name or prompt.Name):lower()
-                if cn:find("collect") or cn:find("claim") or cn:find("cash") or cn:find("money") or cn:find("tank") then
-                    if fireclickdetector then
-                        fireclickdetector(prompt)
-                    end
-                end
-            end
-        end
-
-        -- Touch collector pads inside plot
-        if hrp then
-            for _, part in ipairs(targetContainer:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    local n = part.Name:lower()
-                    if n:find("collector") or n:find("collectpad") or n:find("cashpad") or n:find("money") or n:find("deposit") or n:find("payout") then
-                        if firetouchinterest then
-                            firetouchinterest(hrp, part, 0)
-                            task.wait(0.005)
-                            firetouchinterest(hrp, part, 1)
-                        end
-                    end
-                end
-            end
-        end
-    end)
-end
-
---------------------------------------------------------------------
--- AUTOMATION LOOPS
+-- 4 CORE AUTOMATION ENGINES
 --------------------------------------------------------------------
 
 -- 1. Infinite Jump
@@ -234,54 +82,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- 3. AUTO FISH & FAST PULL
-task.spawn(function()
-    while true do
-        task.wait(0.1)
-        if Toggles.AutoFish then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hum = char and char:FindFirstChildOfClass("Humanoid")
-                local backpack = LocalPlayer:FindFirstChild("Backpack")
-
-                if backpack and hum then
-                    for _, tool in ipairs(backpack:GetChildren()) do
-                        if tool:IsA("Tool") then
-                            hum:EquipTool(tool)
-                        end
-                    end
-                end
-
-                if char then
-                    for _, tool in ipairs(char:GetChildren()) do
-                        if tool:IsA("Tool") then
-                            tool:Activate()
-                        end
-                    end
-                end
-
-                VirtualUser:Button1Down(Vector2.new(500, 500))
-                task.wait(0.02)
-                VirtualUser:Button1Up(Vector2.new(500, 500))
-
-                for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if obj:IsA("RemoteEvent") then
-                        local n = obj.Name:lower()
-                        if n:find("fish") or n:find("cast") or n:find("reel") or n:find("pull") or n:find("catch") or n:find("hook") then
-                            obj:FireServer()
-                            obj:FireServer(true)
-                            obj:FireServer(1)
-                            obj:FireServer("Cast")
-                            obj:FireServer("Reel")
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- 4. INSTANT LAST ZONE
+-- 3. Instant Last Zone (Smooth Teleport to Deepest Zone)
 local lastZoneDone = false
 task.spawn(function()
     while true do
@@ -300,7 +101,7 @@ task.spawn(function()
                             local n = obj.Name:lower()
                             if n:find("zone") or n:find("ocean") or n:find("deep") or n:find("island") or n:find("dock") then
                                 local dist = (obj.Position - origin).Magnitude
-                                if dist > maxDist and dist < 20000 then
+                                if dist > maxDist and dist < 25000 then
                                     maxDist = dist
                                     targetZone = obj
                                 end
@@ -320,65 +121,39 @@ task.spawn(function()
     end
 end)
 
--- 5. AUTO COLLECT BASE CASH (TARGETED CASH HUD INJECTION)
-task.spawn(function()
-    while true do
-        task.wait(0.15)
-        if Toggles.AutoCollectCash then
-            pcall(function()
-                -- Step 1: Fire all Cash Collection Server Remotes with multiple signatures
-                FireAllCashRemotes()
-
-                -- Step 2: Trigger Base Collector Pads & Proximity Prompts
-                TriggerPlotCollectors()
-
-                -- Step 3: Trigger Onscreen UI Cash Claim Buttons
-                TriggerCashUI()
-            end)
-        end
-    end
-end)
-
--- 6. AUTO SELL LOW TIER FISH
-task.spawn(function()
-    while true do
-        task.wait(1.0)
-        if Toggles.AutoSellFish then
-            pcall(function()
-                for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if obj:IsA("RemoteEvent") then
-                        local n = obj.Name:lower()
-                        if n:find("sell") or n:find("merchant") then
-                            obj:FireServer()
-                            obj:FireServer("Common")
-                            obj:FireServer("Uncommon")
-                            obj:FireServer("Low")
-                            obj:FireServer(true)
-                        end
-                    end
-                end
-
-                for _, prompt in ipairs(Workspace:GetDescendants()) do
-                    if prompt:IsA("ProximityPrompt") and prompt.Name:lower():find("sell") then
-                        if fireproximityprompt then fireproximityprompt(prompt) end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- 7. AUTO REBIRTH
+-- 4. Auto Rebirth
 task.spawn(function()
     while true do
         task.wait(1.5)
         if Toggles.AutoRebirth then
             pcall(function()
+                -- Remote Rebirth trigger
                 for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if obj:IsA("RemoteEvent") and (obj.Name:lower():find("rebirth") or obj.Name:lower():find("prestige")) then
-                        obj:FireServer()
-                        obj:FireServer(true)
-                        obj:FireServer(1)
+                    if obj:IsA("RemoteEvent") then
+                        local n = obj.Name:lower()
+                        if n:find("rebirth") or n:find("prestige") or n:find("ascend") or n:find("rankup") then
+                            obj:FireServer()
+                            obj:FireServer(true)
+                            obj:FireServer(1)
+                            obj:FireServer("Rebirth")
+                        end
+                    end
+                end
+
+                -- UI Rebirth button click
+                local pGui = LocalPlayer:FindFirstChild("PlayerGui")
+                if pGui then
+                    for _, btn in ipairs(pGui:GetDescendants()) do
+                        if btn:IsA("TextButton") or btn:IsA("ImageButton") then
+                            local n = btn.Name:lower()
+                            local t = btn:IsA("TextButton") and btn.Text:lower() or ""
+                            if n:find("rebirth") or t:find("rebirth") then
+                                if firesignal then
+                                    firesignal(btn.MouseButton1Click)
+                                    firesignal(btn.Activated)
+                                end
+                            end
+                        end
                     end
                 end
             end)
@@ -387,7 +162,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- UNIFIED JUNEJO EXECUTIVE UI
+-- UNIFIED JUNEJO EXECUTIVE UI (280x215px Compact)
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoLuckyFishUI"
@@ -402,11 +177,11 @@ else
     ScreenGui.Parent = UIContainer
 end
 
--- Main Container Frame (Width: 280px, Height: 300px)
+-- Main Container Frame (Width: 280px, Height: 215px)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 300)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -150)
+MainFrame.Size = UDim2.new(0, 280, 0, 215)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -107)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -488,7 +263,7 @@ end)
 -- Content Frame
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -28, 0, 210)
+ContentFrame.Size = UDim2.new(1, -28, 0, 125)
 ContentFrame.Position = UDim2.new(0, 14, 0, 36)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
@@ -498,7 +273,7 @@ UIList.SortOrder = Enum.SortOrder.LayoutOrder
 UIList.Padding = UDim.new(0, 4)
 UIList.Parent = ContentFrame
 
--- Helper function to add tight compact toggle rows (Full row clickable)
+-- Helper function to add compact toggle rows (Full row clickable)
 local function AddToggleRow(text, configKey)
     local Row = Instance.new("Frame")
     Row.Size = UDim2.new(1, 0, 0, 24)
@@ -563,15 +338,12 @@ local function AddToggleRow(text, configKey)
     end)
 end
 
--- Add Automation Features
-AddToggleRow("Auto Fish (Fast Pull)", "AutoFish")
+-- Add 3 Toggle Features
 AddToggleRow("Instant Last Zone", "InstantLastZone")
-AddToggleRow("Auto Collect Base Cash", "AutoCollectCash")
-AddToggleRow("Auto Sell Low Fish", "AutoSellFish")
 AddToggleRow("Auto Rebirth", "AutoRebirth")
 AddToggleRow("Infinite Jump", "InfiniteJump")
 
--- WalkSpeed Row with Speed Modifier Controls
+-- WalkSpeed Row with Speed Controls
 local SpeedRow = Instance.new("Frame")
 SpeedRow.Size = UDim2.new(1, 0, 0, 24)
 SpeedRow.BackgroundTransparency = 1
