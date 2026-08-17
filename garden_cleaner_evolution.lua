@@ -1,8 +1,9 @@
 --[[
-    JUNEJO ULTRA SCRIPT HUB - GARDEN CLEANER EVOLUTION (V6 PERFECTION FIX)
-    GitHub: junejo18146 / ultrascripthub
-    Theme: Exact Junejo Dark Matte Template (#0F0F11, 320x380px)
-    Key System Monetization Enabled
+    JUNEJO ULTRA SCRIPT HUB - GARDEN CLEANER EVOLUTION
+    Target Game: Garden Cleaner Evolution (Roblox)
+    Created for junejo18146
+    GitHub Repository: junejo18146/ultrascripthub
+    Status: Unlocked Direct Execution (3-Feature Edition)
 --]]
 
 local CoreGui = game:GetService("CoreGui")
@@ -11,32 +12,48 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local VirtualUser = game:GetService("VirtualUser")
+local Workspace = game:GetService("Workspace")
 
-local LocalPlayer = Players.LocalPlayer
+local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
--- Global Feature Config
+-- Safe UI Parent getter (compatible with Delta and all mobile/PC executors)
+local function GetUIContainer()
+    local success, res = pcall(function()
+        if gethui then return gethui() end
+        if syn and syn.protect_gui then return CoreGui end
+        return CoreGui
+    end)
+    if success and res then return res end
+    return LocalPlayer:WaitForChild("PlayerGui")
+end
+
+local UIContainer = GetUIContainer()
+
+-- Cleanup Previous Instantiations
+for _, name in ipairs({"JunejoGardenCleanerMainUI", "JunejoGardenCleanerKeyUI", "JunejoHubUI_GardenCleaner"}) do
+    if CoreGui:FindFirstChild(name) then CoreGui[name]:Destroy() end
+    if LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild(name) then
+        LocalPlayer.PlayerGui[name]:Destroy()
+    end
+end
+
+-- Global Feature Config (3 Selected Features Only)
 local Config = {
-    KeyRawUrl = "https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/key_garden_cleaner_evolution.txt",
-    FallbackKey = "GCE_K8F2N9X4P7Q1M5W3Z6B8R0L2T4J9H1C5",
-    LootLabsUrl = "https://lootdest.org/s?GardenCleanerKey",
-    
     AutoLeaves = false,
-    AutoClean = false,
-    AutoSell = false,
-    AutoRebirth = false,
-    AutoUpgrades = false,
-    AutoCollectCoins = false,
     WalkSpeedBoost = false,
     InfiniteJump = false
 }
 
--- Cleanup Previous Instantiations
-if CoreGui:FindFirstChild("JunejoGardenCleanerKeyUI") then
-    CoreGui.JunejoGardenCleanerKeyUI:Destroy()
-end
-if CoreGui:FindFirstChild("JunejoGardenCleanerMainUI") then
-    CoreGui.JunejoGardenCleanerMainUI:Destroy()
-end
+--------------------------------------------------------------------------------
+-- ANTI-AFK SYSTEM
+--------------------------------------------------------------------------------
+LocalPlayer.Idled:Connect(function()
+    pcall(function()
+        VirtualUser:Button2Down(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
+        task.wait(1)
+        VirtualUser:Button2Up(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
+    end)
+end)
 
 --------------------------------------------------------------------------------
 -- DRAGGABLE HELPER
@@ -74,27 +91,31 @@ local function MakeDraggable(guiObject, handleObject)
 end
 
 --------------------------------------------------------------------------------
--- STABLE AUTOMATION LOOPS (PERFECT CLEAN & NO VISUAL TRAILING)
+-- STABLE AUTOMATION LOOPS (3 FEATURES)
 --------------------------------------------------------------------------------
 
--- Infinite Jump
+-- 1. Infinite Jump
 UserInputService.JumpRequest:Connect(function()
     if Config.InfiniteJump and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-        LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
+        pcall(function()
+            LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
+        end)
     end
 end)
 
--- WalkSpeed Boost Lock
+-- 2. WalkSpeed Boost Lock (50 Speed)
 RunService.RenderStepped:Connect(function()
     if Config.WalkSpeedBoost and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-        LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = 50
+        pcall(function()
+            LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = 50
+        end)
     end
 end)
 
--- 1 & 2. AUTO LEAVES & AUTO CLEAN GARDEN (PERFECT CLEAN & ZERO VISUAL TRAILING)
+-- 3. Auto Initial Leaves (Instant collection & tool activation)
 task.spawn(function()
-    while task.wait(0.03) do
-        if Config.AutoLeaves or Config.AutoClean then
+    while task.wait(0.05) do
+        if Config.AutoLeaves then
             pcall(function()
                 local char = LocalPlayer.Character
                 local root = char and char:FindFirstChild("HumanoidRootPart")
@@ -119,15 +140,14 @@ task.spawn(function()
                         end
                     end
 
-                    -- Supercharged Leaf Collection with Instant Transparency (No Visual Trailing)
-                    for _, item in pairs(workspace:GetDescendants()) do
-                        if not (Config.AutoLeaves or Config.AutoClean) then break end
+                    -- Supercharged Leaf Collection with Zero Visual Trailing
+                    for _, item in pairs(Workspace:GetDescendants()) do
+                        if not Config.AutoLeaves then break end
                         if item:IsA("BasePart") and item.Parent then
                             local n = item.Name:lower()
                             local pName = item.Parent.Name:lower()
 
-                            if n:find("leaf") or n:find("leaves") or n:find("dirt") or n:find("weed") or n:find("trash") or n:find("clean") or n:find("starter") or pName:find("leaf") or pName:find("leaves") or item:FindFirstChildOfClass("TouchTransmitter") then
-                                -- Make completely invisible & non-collidable so NO trailing line appears on screen
+                            if n:find("leaf") or n:find("leaves") or n:find("starter") or n:find("initial") or pName:find("leaf") or pName:find("leaves") or item:FindFirstChildOfClass("TouchTransmitter") then
                                 pcall(function()
                                     item.CanCollide = false
                                     item.Transparency = 1
@@ -159,7 +179,7 @@ task.spawn(function()
                         end
                     end
 
-                    -- Remotes Broadcaster
+                    -- Remotes Broadcaster for Leaves
                     for _, remote in pairs(ReplicatedStorage:GetDescendants()) do
                         if remote:IsA("RemoteEvent") then
                             local rName = remote.Name:lower()
@@ -174,122 +194,27 @@ task.spawn(function()
     end
 end)
 
--- 3. AUTO SELL BAG
-task.spawn(function()
-    while task.wait(0.3) do
-        if Config.AutoSell then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local root = char and char:FindFirstChild("HumanoidRootPart")
-
-                for _, remote in pairs(ReplicatedStorage:GetDescendants()) do
-                    if remote:IsA("RemoteEvent") then
-                        local rName = remote.Name:lower()
-                        if rName:find("sell") or rName:find("deposit") or rName:find("convert") then
-                            pcall(function() remote:FireServer() end)
-                        end
-                    end
-                end
-
-                if root then
-                    for _, item in pairs(workspace:GetDescendants()) do
-                        if not Config.AutoSell then break end
-                        if item:IsA("BasePart") and (item.Name:lower():find("sell") or item.Name:lower():find("deposit")) then
-                            if firetouchinterest then
-                                firetouchinterest(root, item, 0)
-                                task.wait(0.02)
-                                firetouchinterest(root, item, 1)
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- 4. AUTO REBIRTH
-task.spawn(function()
-    while task.wait(0.8) do
-        if Config.AutoRebirth then
-            pcall(function()
-                for _, remote in pairs(ReplicatedStorage:GetDescendants()) do
-                    if remote:IsA("RemoteEvent") then
-                        local rName = remote.Name:lower()
-                        if rName:find("rebirth") or rName:find("ascend") or rName:find("prestige") then
-                            pcall(function() remote:FireServer() end)
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- 5. AUTO UPGRADES
-task.spawn(function()
-    while task.wait(0.8) do
-        if Config.AutoUpgrades then
-            pcall(function()
-                for _, remote in pairs(ReplicatedStorage:GetDescendants()) do
-                    if remote:IsA("RemoteEvent") then
-                        local rName = remote.Name:lower()
-                        if rName:find("upgrade") or rName:find("buy") then
-                            pcall(function()
-                                remote:FireServer("Cleaner")
-                                remote:FireServer("Bag")
-                                remote:FireServer("Speed")
-                                remote:FireServer("Capacity")
-                            end)
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- 6. AUTO COLLECT COINS
-task.spawn(function()
-    while task.wait(0.2) do
-        if Config.AutoCollectCoins then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local root = char and char:FindFirstChild("HumanoidRootPart")
-
-                if root then
-                    for _, item in pairs(workspace:GetDescendants()) do
-                        if not Config.AutoCollectCoins then break end
-                        if item:IsA("BasePart") then
-                            local n = item.Name:lower()
-                            if n:find("coin") or n:find("gem") or n:find("cash") or n:find("money") or n:find("orb") then
-                                if firetouchinterest then
-                                    firetouchinterest(root, item, 0)
-                                    task.wait()
-                                    firetouchinterest(root, item, 1)
-                                end
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
 --------------------------------------------------------------------------------
--- MAIN EXECUTION HUB UI (EXACT JUNEJO UI TEMPLATE)
+-- MAIN EXECUTION HUB UI (JUNEJO ULTRA COMPACT DARK UI)
 --------------------------------------------------------------------------------
 local function LoadMainHub()
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "JunejoGardenCleanerMainUI"
     ScreenGui.ResetOnSpawn = false
-    ScreenGui.Parent = CoreGui
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    ScreenGui.DisplayOrder = 999999
+
+    if syn and syn.protect_gui then
+        syn.protect_gui(ScreenGui)
+        ScreenGui.Parent = CoreGui
+    else
+        ScreenGui.Parent = UIContainer
+    end
 
     local MainFrame = Instance.new("Frame")
     MainFrame.Name = "MainFrame"
-    MainFrame.Size = UDim2.new(0, 320, 0, 380)
-    MainFrame.Position = UDim2.new(0.5, -160, 0.5, -190)
+    MainFrame.Size = UDim2.new(0, 300, 0, 270)
+    MainFrame.Position = UDim2.new(0.5, -150, 0.5, -135)
     MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
     MainFrame.BorderSizePixel = 0
     MainFrame.Active = true
@@ -321,7 +246,7 @@ local function LoadMainHub()
     TitleLabel.BackgroundTransparency = 1
     TitleLabel.Text = "GARDEN CLEANER EVOLUTION"
     TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    TitleLabel.TextSize = 16
+    TitleLabel.TextSize = 14
     TitleLabel.Font = Enum.Font.GothamBold
     TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
     TitleLabel.Parent = Header
@@ -341,16 +266,12 @@ local function LoadMainHub()
         ScreenGui:Destroy()
     end)
 
-    -- Content Scrolling Frame
-    local Content = Instance.new("ScrollingFrame")
+    -- Content Frame
+    local Content = Instance.new("Frame")
     Content.Name = "Content"
-    Content.Size = UDim2.new(1, -32, 1, -115)
-    Content.Position = UDim2.new(0, 16, 0, 45)
+    Content.Size = UDim2.new(1, -32, 0, 150)
+    Content.Position = UDim2.new(0, 16, 0, 48)
     Content.BackgroundTransparency = 1
-    Content.BorderSizePixel = 0
-    Content.ScrollBarThickness = 3
-    Content.ScrollBarImageColor3 = Color3.fromRGB(60, 60, 70)
-    Content.CanvasSize = UDim2.new(0, 0, 0, 360)
     Content.Parent = MainFrame
 
     local UIList = Instance.new("UIListLayout")
@@ -425,49 +346,41 @@ local function LoadMainHub()
         end)
     end
 
-    -- Add Features
+    -- Add 3 Selected Features Only
     AddToggleRow(1, "Auto Initial Leaves", "AutoLeaves")
-    AddToggleRow(2, "Auto Clean Garden", "AutoClean")
-    AddToggleRow(3, "Auto Sell Bag", "AutoSell")
-    AddToggleRow(4, "Auto Rebirth", "AutoRebirth")
-    AddToggleRow(5, "Auto Upgrades", "AutoUpgrades")
-    AddToggleRow(6, "Auto Collect Coins", "AutoCollectCoins")
-    AddToggleRow(7, "WalkSpeed Boost", "WalkSpeedBoost")
-    AddToggleRow(8, "Infinite Jump", "InfiniteJump")
+    AddToggleRow(2, "WalkSpeed Boost (50)", "WalkSpeedBoost")
+    AddToggleRow(3, "Infinite Jump", "InfiniteJump")
 
     -- Footer Frame
     local Footer = Instance.new("Frame")
     Footer.Name = "Footer"
-    Footer.Size = UDim2.new(1, 0, 0, 65)
-    Footer.Position = UDim2.new(0, 0, 1, -65)
+    Footer.Size = UDim2.new(1, 0, 0, 58)
+    Footer.Position = UDim2.new(0, 0, 1, -58)
     Footer.BackgroundTransparency = 1
     Footer.Parent = MainFrame
 
     local FooterTitle = Instance.new("TextLabel")
-    FooterTitle.Size = UDim2.new(1, 0, 0, 20)
-    FooterTitle.Position = UDim2.new(0, 0, 0, 10)
+    FooterTitle.Size = UDim2.new(1, 0, 0, 18)
+    FooterTitle.Position = UDim2.new(0, 0, 0, 8)
     FooterTitle.BackgroundTransparency = 1
     FooterTitle.Text = "ULTRA SCRIPT HUB"
     FooterTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    FooterTitle.TextSize = 16
+    FooterTitle.TextSize = 15
     FooterTitle.Font = Enum.Font.GothamBold
     FooterTitle.Parent = Footer
 
     local FooterSub = Instance.new("TextLabel")
-    FooterSub.Size = UDim2.new(1, 0, 0, 18)
-    FooterSub.Position = UDim2.new(0, 0, 0, 32)
+    FooterSub.Size = UDim2.new(1, 0, 0, 16)
+    FooterSub.Position = UDim2.new(0, 0, 0, 28)
     FooterSub.BackgroundTransparency = 1
     FooterSub.Text = "Made by Junejo"
     FooterSub.TextColor3 = Color3.fromRGB(136, 136, 153)
-    FooterSub.TextSize = 13
+    FooterSub.TextSize = 12
     FooterSub.Font = Enum.Font.GothamMedium
     FooterSub.Parent = Footer
 end
 
 --------------------------------------------------------------------------------
--- KEY SYSTEM WINDOW
+-- DIRECT LAUNCH (KEYLESS & UNLOCKED)
 --------------------------------------------------------------------------------
-----------------------------------------------------
--- DIRECT LAUNCH (KEY SYSTEM DISABLED)
-----------------------------------------------------
 LoadMainHub()
