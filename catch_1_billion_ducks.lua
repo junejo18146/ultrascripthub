@@ -1,20 +1,22 @@
 --[[
-    Junejo Ultra Script Hub - Catch 1 Billion Ducks (Monetized Edition with Key System)
+    JUNEJO ULTRA SCRIPT HUB - CATCH 1 BILLION DUCKS
     Target Game: Catch 1 Billion Ducks (Roblox)
-    Created for junejo18146
+    Author: Made by Junejo (junejo18146)
+    Repository: junejo18146/ultrascripthub
+    Theme: Unified Junejo Executive Dark UI (#0F0F11)
+    Status: Unlocked Direct Standalone Execution
 --]]
 
-local CoreGui = game:GetService("CoreGui")
-local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
+local CoreGui = game:GetService("CoreGui")
 
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
--- Safe UI Parent getter (compatible with all Roblox executors)
+-- Safe UI Parent getter
 local function GetUIContainer()
     local success, res = pcall(function()
         if gethui then return gethui() end
@@ -27,358 +29,73 @@ end
 
 local UIContainer = GetUIContainer()
 
--- Hard Game-Specific 24-Hour Key & Online Raw Link
-local GAME_KEY_PREFIX = "C1BD_"
-local VALID_KEYS = {
-    ["C1BD_K8F2N8X4P7Q1M5W3Z6B8R0L2T4J9"] = true
-}
-
-local ONLINE_KEY_RAW_URL = "https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/key_catch_1_billion_ducks.txt"
-local LOOTLABS_GET_KEY_LINK = "https://lootdest.org/s?qxvaXlcM"
-
--- Cleanup previous GUI instances
-for _, name in ipairs({"JunejoKeySystemUI_C1BD", "JunejoHubUI_C1BD"}) do
+-- Cleanup previous UI instances
+for _, name in ipairs({"JunejoKeySystemUI_C1BD", "JunejoHubUI_C1BD", "JunejoCatchDucksUI"}) do
     if CoreGui:FindFirstChild(name) then CoreGui[name]:Destroy() end
     if LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild(name) then
         LocalPlayer.PlayerGui[name]:Destroy()
     end
 end
 
-----------------------------------------------------
--- MAIN HUB SCRIPT LOADER (UNLOCKED AFTER VERIFICATION)
-----------------------------------------------------
-local function LoadMainHub()
-    local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "JunejoHubUI_C1BD"
-    ScreenGui.ResetOnSpawn = false
-    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    ScreenGui.DisplayOrder = 999999
+local Toggles = {
+    AutoCatch = false,
+    AutoSell = false,
+    Speed = false,
+    InfiniteJump = false
+}
 
-    if syn and syn.protect_gui then
-        syn.protect_gui(ScreenGui)
-        ScreenGui.Parent = CoreGui
-    else
-        ScreenGui.Parent = UIContainer
-    end
-
-    local MainFrame = Instance.new("Frame")
-    MainFrame.Name = "MainFrame"
-    MainFrame.Size = UDim2.new(0, 320, 0, 330)
-    MainFrame.Position = UDim2.new(0.5, -160, 0.5, -165)
-    MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
-    MainFrame.BorderSizePixel = 0
-    MainFrame.Active = true
-    MainFrame.ClipsDescendants = true
-    MainFrame.Parent = ScreenGui
-
-    local MainCorner = Instance.new("UICorner")
-    MainCorner.CornerRadius = UDim.new(0, 10)
-    MainCorner.Parent = MainFrame
-
-    local MainStroke = Instance.new("UIStroke")
-    MainStroke.Color = Color3.fromRGB(35, 35, 42)
-    MainStroke.Thickness = 1
-    MainStroke.Parent = MainFrame
-
-    -- Header Bar
-    local Header = Instance.new("Frame")
-    Header.Name = "Header"
-    Header.Size = UDim2.new(1, 0, 0, 42)
-    Header.BackgroundTransparency = 1
-    Header.Parent = MainFrame
-
-    local TitleLabel = Instance.new("TextLabel")
-    TitleLabel.Name = "TitleLabel"
-    TitleLabel.Size = UDim2.new(1, -45, 1, 0)
-    TitleLabel.Position = UDim2.new(0, 14, 0, 0)
-    TitleLabel.BackgroundTransparency = 1
-    TitleLabel.Text = "CATCH 1 BILLION DUCKS"
-    TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    TitleLabel.TextSize = 14
-    TitleLabel.Font = Enum.Font.GothamBold
-    TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    TitleLabel.Parent = Header
-
-    local CloseButton = Instance.new("TextButton")
-    CloseButton.Name = "CloseButton"
-    CloseButton.Size = UDim2.new(0, 40, 0, 42)
-    CloseButton.Position = UDim2.new(1, -40, 0, 0)
-    CloseButton.BackgroundTransparency = 1
-    CloseButton.Text = "X"
-    CloseButton.TextColor3 = Color3.fromRGB(160, 160, 170)
-    CloseButton.TextSize = 15
-    CloseButton.Font = Enum.Font.GothamBold
-    CloseButton.Parent = Header
-
-    CloseButton.MouseButton1Click:Connect(function()
-        ScreenGui:Destroy()
+--------------------------------------------------------------------
+-- ANTI-AFK SYSTEM
+--------------------------------------------------------------------
+LocalPlayer.Idled:Connect(function()
+    pcall(function()
+        VirtualUser:Button2Down(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
+        task.wait(1)
+        VirtualUser:Button2Up(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
     end)
+end)
 
-    -- Make Draggable
-    local dragging, dragInput, dragStart, startPos
-    Header.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = MainFrame.Position
-            
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
+--------------------------------------------------------------------
+-- AUTOMATION ENGINES
+--------------------------------------------------------------------
 
-    Header.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInput = input
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            local delta = input.Position - dragStart
-            MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
-
-    -- Content Container
-    local Content = Instance.new("Frame")
-    Content.Name = "Content"
-    Content.Size = UDim2.new(1, -28, 1, -82)
-    Content.Position = UDim2.new(0, 14, 0, 42)
-    Content.BackgroundTransparency = 1
-    Content.Parent = MainFrame
-
-    local UIList = Instance.new("UIListLayout")
-    UIList.SortOrder = Enum.SortOrder.LayoutOrder
-    UIList.Padding = UDim.new(0, 8)
-    UIList.Parent = Content
-
-    -- Footer Frame
-    local Footer = Instance.new("Frame")
-    Footer.Name = "Footer"
-    Footer.Size = UDim2.new(1, 0, 0, 36)
-    Footer.Position = UDim2.new(0, 0, 1, -36)
-    Footer.BackgroundTransparency = 1
-    Footer.Parent = MainFrame
-
-    local FooterTitle = Instance.new("TextLabel")
-    FooterTitle.Size = UDim2.new(1, 0, 0, 16)
-    FooterTitle.Position = UDim2.new(0, 0, 0, 2)
-    FooterTitle.BackgroundTransparency = 1
-    FooterTitle.Text = "ULTRA SCRIPT HUB"
-    FooterTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    FooterTitle.TextSize = 14
-    FooterTitle.Font = Enum.Font.GothamBold
-    FooterTitle.Parent = Footer
-
-    local FooterSub = Instance.new("TextLabel")
-    FooterSub.Size = UDim2.new(1, 0, 0, 14)
-    FooterSub.Position = UDim2.new(0, 0, 0, 18)
-    FooterSub.BackgroundTransparency = 1
-    FooterSub.Text = "Made by Junejo"
-    FooterSub.TextColor3 = Color3.fromRGB(136, 136, 153)
-    FooterSub.TextSize = 11
-    FooterSub.Font = Enum.Font.GothamMedium
-    FooterSub.Parent = Footer
-
-    ----------------------------------------------------
-    -- FEATURE STATES & LOGIC
-    ----------------------------------------------------
-    local FeatureStates = {
-        AutoShoot = false,
-        AutoCollect = false,
-        AutoSell = false,
-        Speed = false
-    }
-
-    local CustomSpeedValue = 100
-
-    local function CreateToggleRow(text, key)
-        local Row = Instance.new("Frame")
-        Row.Size = UDim2.new(1, 0, 0, 34)
-        Row.BackgroundTransparency = 1
-        Row.Parent = Content
-        
-        local Label = Instance.new("TextLabel")
-        Label.Size = UDim2.new(1, -40, 1, 0)
-        Label.BackgroundTransparency = 1
-        Label.Text = text
-        Label.TextColor3 = Color3.fromRGB(240, 240, 240)
-        Label.TextSize = 13
-        Label.Font = Enum.Font.GothamBold
-        Label.TextXAlignment = Enum.TextXAlignment.Left
-        Label.Parent = Row
-        
-        local CheckBox = Instance.new("TextButton")
-        CheckBox.Size = UDim2.new(0, 28, 0, 28)
-        CheckBox.Position = UDim2.new(1, -28, 0.5, -14)
-        CheckBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-        CheckBox.BorderSizePixel = 0
-        CheckBox.Text = ""
-        CheckBox.Parent = Row
-        
-        local CheckCorner = Instance.new("UICorner")
-        CheckCorner.CornerRadius = UDim.new(0, 6)
-        CheckCorner.Parent = CheckBox
-        
-        local CheckStroke = Instance.new("UIStroke")
-        CheckStroke.Color = Color3.fromRGB(45, 45, 55)
-        CheckStroke.Thickness = 1.5
-        CheckStroke.Parent = CheckBox
-        
-        local CheckMark = Instance.new("Frame")
-        CheckMark.Size = UDim2.new(0.6, 0, 0.6, 0)
-        CheckMark.Position = UDim2.new(0.2, 0, 0.2, 0)
-        CheckMark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-        CheckMark.BackgroundTransparency = 1
-        CheckMark.Parent = CheckBox
-        
-        local MarkCorner = Instance.new("UICorner")
-        MarkCorner.CornerRadius = UDim.new(0, 4)
-        MarkCorner.Parent = CheckMark
-        
-        CheckBox.MouseButton1Click:Connect(function()
-            FeatureStates[key] = not FeatureStates[key]
-            CheckMark.BackgroundTransparency = FeatureStates[key] and 0 or 1
-        end)
-    end
-
-    -- 1. FEATURE: AUTO SHOOT DUCKS
-    CreateToggleRow("Auto Shoot Ducks", "AutoShoot")
-
-    -- 2. FEATURE: AUTO COLLECT DUCKS
-    CreateToggleRow("Auto Collect Ducks", "AutoCollect")
-
-    -- 3. FEATURE: AUTO SELL DUCKS
-    CreateToggleRow("Auto Sell Ducks", "AutoSell")
-
-    -- 4. FEATURE: SPEED BOOST CONTROL & TOGGLE
-    local SpeedControlRow = Instance.new("Frame")
-    SpeedControlRow.Name = "SpeedControlRow"
-    SpeedControlRow.Size = UDim2.new(1, 0, 0, 36)
-    SpeedControlRow.BackgroundTransparency = 1
-    SpeedControlRow.Parent = Content
-
-    local SpeedTextBox = Instance.new("TextBox")
-    SpeedTextBox.Name = "SpeedTextBox"
-    SpeedTextBox.Size = UDim2.new(0.64, 0, 1, 0)
-    SpeedTextBox.Position = UDim2.new(0, 0, 0, 0)
-    SpeedTextBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-    SpeedTextBox.BorderSizePixel = 0
-    SpeedTextBox.PlaceholderText = "Enter Speed..."
-    SpeedTextBox.Text = "100"
-    SpeedTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-    SpeedTextBox.PlaceholderColor3 = Color3.fromRGB(130, 130, 140)
-    SpeedTextBox.TextSize = 12
-    SpeedTextBox.Font = Enum.Font.GothamMedium
-    SpeedTextBox.ClearTextOnFocus = false
-    SpeedTextBox.Parent = SpeedControlRow
-
-    local SpeedCorner = Instance.new("UICorner")
-    SpeedCorner.CornerRadius = UDim.new(0, 6)
-    SpeedCorner.Parent = SpeedTextBox
-
-    local SpeedStroke = Instance.new("UIStroke")
-    SpeedStroke.Color = Color3.fromRGB(45, 45, 55)
-    SpeedStroke.Thickness = 1.5
-    SpeedStroke.Parent = SpeedTextBox
-
-    local SetSpeedButton = Instance.new("TextButton")
-    SetSpeedButton.Name = "SetSpeedButton"
-    SetSpeedButton.Size = UDim2.new(0.32, 0, 1, 0)
-    SetSpeedButton.Position = UDim2.new(0.68, 0, 0, 0)
-    SetSpeedButton.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-    SetSpeedButton.BorderSizePixel = 0
-    SetSpeedButton.Text = "SET SPEED"
-    SetSpeedButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    SetSpeedButton.TextSize = 11
-    SetSpeedButton.Font = Enum.Font.GothamBold
-    SetSpeedButton.Parent = SpeedControlRow
-
-    local SetBtnCorner = Instance.new("UICorner")
-    SetBtnCorner.CornerRadius = UDim.new(0, 6)
-    SetBtnCorner.Parent = SetSpeedButton
-
-    SetSpeedButton.MouseButton1Click:Connect(function()
-        local num = tonumber(SpeedTextBox.Text)
-        if num then CustomSpeedValue = num end
+-- 1. Infinite Jump
+UserInputService.JumpRequest:Connect(function()
+    if Toggles.InfiniteJump and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
         pcall(function()
-            local char = LocalPlayer.Character
-            local hum = char and char:FindFirstChildOfClass("Humanoid")
-            if hum then hum.WalkSpeed = CustomSpeedValue end
+            LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
         end)
-        FeatureStates.Speed = true
-    end)
+    end
+end)
 
-    CreateToggleRow("Enable Speed Boost", "Speed")
+-- 2. WalkSpeed Boost Lock
+RunService.Stepped:Connect(function()
+    if Toggles.Speed and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+        pcall(function()
+            LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = 50
+        end)
+    end
+end)
 
-    ----------------------------------------------------
-    -- AUTOMATION LOOPS & MECHANICS IMPLEMENTATION
-    ----------------------------------------------------
-
-    -- WalkSpeed Stepped Loop
-    RunService.Stepped:Connect(function()
-        if FeatureStates.Speed then
+-- 3. Auto Catch Ducks
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        if Toggles.AutoCatch then
             pcall(function()
                 local char = LocalPlayer.Character
-                local hum = char and char:FindFirstChildOfClass("Humanoid")
-                if hum then hum.WalkSpeed = CustomSpeedValue end
-            end)
-        end
-    end)
-
-    -- 1. Auto Shoot Ducks Loop
-    task.spawn(function()
-        while true do
-            task.wait(0.15)
-            if FeatureStates.AutoShoot then
-                pcall(function()
-                    local char = LocalPlayer.Character
-                    if not char then return end
-                    
-                    local tool = char:FindFirstChildOfClass("Tool")
-                    if tool then
-                        tool:Activate()
-                    else
-                        local backpack = LocalPlayer:FindFirstChild("Backpack")
-                        local weapon = backpack and backpack:FindFirstChildOfClass("Tool")
-                        if weapon and char:FindFirstChildOfClass("Humanoid") then
-                            char.Humanoid:EquipTool(weapon)
-                        end
-                    end
-                    
-                    if VirtualUser then
-                        VirtualUser:CaptureController()
-                        VirtualUser:ClickButton1(Vector2.new(0, 0))
-                    end
-                end)
-            end
-        end
-    end)
-
-    -- 2. Auto Collect Ducks Loop
-    task.spawn(function()
-        while true do
-            task.wait(0.25)
-            if FeatureStates.AutoCollect then
-                pcall(function()
-                    local char = LocalPlayer.Character
-                    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                    if not hrp then return end
-
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                if hrp then
                     for _, obj in ipairs(Workspace:GetDescendants()) do
-                        if obj:IsA("ProximityPrompt") then
-                            fireproximityprompt(obj)
-                        elseif obj:IsA("BasePart") or obj:IsA("Model") then
-                            local name = obj.Name:lower()
-                            if name:find("duck") or name:find("quack") or name:find("drop") or name:find("coin") or name:find("gem") then
-                                local targetPart = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildOfClass("BasePart")) or obj
-                                if targetPart and (targetPart.Position - hrp.Position).Magnitude < 120 then
+                        if not Toggles.AutoCatch then break end
+                        if obj:IsA("Model") or obj:IsA("BasePart") then
+                            local n = obj.Name:lower()
+                            if n:find("duck") or n:find("quack") or n:find("bird") then
+                                local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildOfClass("BasePart")
+                                if targetPart then
                                     if firetouchinterest then
                                         firetouchinterest(hrp, targetPart, 0)
+                                        task.wait()
                                         firetouchinterest(hrp, targetPart, 1)
                                     else
                                         targetPart.CFrame = hrp.CFrame
@@ -387,40 +104,247 @@ local function LoadMainHub()
                             end
                         end
                     end
-                end)
-            end
+                end
+            end)
         end
-    end)
+    end
+end)
 
-    -- 3. Auto Sell Ducks Loop
-    task.spawn(function()
-        while true do
-            task.wait(2.5)
-            if FeatureStates.AutoSell then
-                pcall(function()
-                    local char = LocalPlayer.Character
-                    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                    
-                    for _, obj in ipairs(Workspace:GetDescendants()) do
-                        local name = obj.Name:lower()
-                        if name:find("sell") or name:find("deposit") then
-                            if obj:IsA("BasePart") and hrp then
-                                if firetouchinterest then
-                                    firetouchinterest(hrp, obj, 0)
-                                    firetouchinterest(hrp, obj, 1)
-                                end
-                            elseif obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
-                                obj:FireServer()
+-- 4. Auto Sell / Deposit Ducks
+task.spawn(function()
+    while true do
+        task.wait(1.5)
+        if Toggles.AutoSell then
+            pcall(function()
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    if not Toggles.AutoSell then break end
+                    local name = obj.Name:lower()
+                    if name:find("sell") or name:find("deposit") or name:find("nest") then
+                        if obj:IsA("BasePart") and hrp then
+                            if firetouchinterest then
+                                firetouchinterest(hrp, obj, 0)
+                                task.wait()
+                                firetouchinterest(hrp, obj, 1)
                             end
+                        elseif obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
+                            obj:FireServer()
                         end
                     end
-                end)
+                end
+            end)
+        end
+    end
+end)
+
+--------------------------------------------------------------------
+-- UNIFIED JUNEJO EXECUTIVE UI
+--------------------------------------------------------------------
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "JunejoCatchDucksUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.DisplayOrder = 999999
+
+if syn and syn.protect_gui then
+    syn.protect_gui(ScreenGui)
+    ScreenGui.Parent = CoreGui
+else
+    ScreenGui.Parent = UIContainer
+end
+
+-- Main Container Frame (280px width, 215px height)
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 280, 0, 215)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -107)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 10)
+MainCorner.Parent = MainFrame
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Color = Color3.fromRGB(35, 35, 42)
+MainStroke.Thickness = 1
+MainStroke.Parent = MainFrame
+
+-- Header Bar
+local Header = Instance.new("Frame")
+Header.Name = "Header"
+Header.Size = UDim2.new(1, 0, 0, 34)
+Header.BackgroundTransparency = 1
+Header.Parent = MainFrame
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Name = "TitleLabel"
+TitleLabel.Size = UDim2.new(1, -40, 1, 0)
+TitleLabel.Position = UDim2.new(0, 14, 0, 0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "CATCH 1 BILLION DUCKS"
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.TextSize = 13
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Parent = Header
+
+local CloseButton = Instance.new("TextButton")
+CloseButton.Name = "CloseButton"
+CloseButton.Size = UDim2.new(0, 34, 0, 34)
+CloseButton.Position = UDim2.new(1, -34, 0, 0)
+CloseButton.BackgroundTransparency = 1
+CloseButton.Text = "X"
+CloseButton.TextColor3 = Color3.fromRGB(160, 160, 170)
+CloseButton.TextSize = 14
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.Parent = Header
+
+CloseButton.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+-- Draggable Functionality
+local dragging, dragInput, dragStart, startPos
+Header.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
             end
+        end)
+    end
+end)
+
+Header.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- Content Frame
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Name = "ContentFrame"
+ContentFrame.Size = UDim2.new(1, -28, 0, 125)
+ContentFrame.Position = UDim2.new(0, 14, 0, 36)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.Parent = MainFrame
+
+local UIList = Instance.new("UIListLayout")
+UIList.SortOrder = Enum.SortOrder.LayoutOrder
+UIList.Padding = UDim.new(0, 4)
+UIList.Parent = ContentFrame
+
+-- Helper function to add tight compact toggle rows (Full row clickable)
+local function AddToggleRow(text, configKey)
+    local Row = Instance.new("Frame")
+    Row.Size = UDim2.new(1, 0, 0, 24)
+    Row.BackgroundTransparency = 1
+    Row.Parent = ContentFrame
+    
+    local RowBtn = Instance.new("TextButton")
+    RowBtn.Size = UDim2.new(1, 0, 1, 0)
+    RowBtn.BackgroundTransparency = 1
+    RowBtn.Text = ""
+    RowBtn.ZIndex = 5
+    RowBtn.Parent = Row
+    
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(1, -28, 1, 0)
+    Label.BackgroundTransparency = 1
+    Label.Text = text
+    Label.TextColor3 = Color3.fromRGB(240, 240, 240)
+    Label.TextSize = 12
+    Label.Font = Enum.Font.GothamBold
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = Row
+    
+    local CheckBox = Instance.new("Frame")
+    CheckBox.Size = UDim2.new(0, 18, 0, 18)
+    CheckBox.Position = UDim2.new(1, -18, 0.5, -9)
+    CheckBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+    CheckBox.BorderSizePixel = 0
+    CheckBox.Parent = Row
+    
+    local CheckCorner = Instance.new("UICorner")
+    CheckCorner.CornerRadius = UDim.new(0, 4)
+    CheckCorner.Parent = CheckBox
+    
+    local CheckStroke = Instance.new("UIStroke")
+    CheckStroke.Color = Color3.fromRGB(45, 45, 55)
+    CheckStroke.Thickness = 1.2
+    CheckStroke.Parent = CheckBox
+    
+    local CheckMark = Instance.new("Frame")
+    CheckMark.Size = UDim2.new(0, 10, 0, 10)
+    CheckMark.Position = UDim2.new(0.5, -5, 0.5, -5)
+    CheckMark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    CheckMark.BackgroundTransparency = Toggles[configKey] and 0 or 1
+    CheckMark.BorderSizePixel = 0
+    CheckMark.Parent = CheckBox
+    
+    local MarkCorner = Instance.new("UICorner")
+    MarkCorner.CornerRadius = UDim.new(0, 2)
+    MarkCorner.Parent = CheckMark
+    
+    RowBtn.MouseButton1Click:Connect(function()
+        Toggles[configKey] = not Toggles[configKey]
+        CheckMark.BackgroundTransparency = Toggles[configKey] and 0 or 1
+        if configKey == "Speed" and not Toggles.Speed then
+            pcall(function()
+                if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+                    LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = 16
+                end
+            end)
         end
     end)
 end
 
-------------------------------------------------------
--- DIRECT LAUNCH (KEY SYSTEM DISABLED)
-----------------------------------------------------
-LoadMainHub()
+AddToggleRow("Auto Catch Ducks", "AutoCatch")
+AddToggleRow("Auto Sell / Deposit", "AutoSell")
+AddToggleRow("WalkSpeed Boost (50)", "Speed")
+AddToggleRow("Infinite Jump", "InfiniteJump")
+
+-- Footer Frame
+local Footer = Instance.new("Frame")
+Footer.Name = "Footer"
+Footer.Size = UDim2.new(1, 0, 0, 44)
+Footer.Position = UDim2.new(0, 0, 1, -44)
+Footer.BackgroundTransparency = 1
+Footer.Parent = MainFrame
+
+local FooterTitle = Instance.new("TextLabel")
+FooterTitle.Size = UDim2.new(1, 0, 0, 16)
+FooterTitle.Position = UDim2.new(0, 0, 0, 5)
+FooterTitle.BackgroundTransparency = 1
+FooterTitle.Text = "ULTRA SCRIPT HUB"
+FooterTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+FooterTitle.TextSize = 13
+FooterTitle.Font = Enum.Font.GothamBold
+FooterTitle.Parent = Footer
+
+local FooterSub = Instance.new("TextLabel")
+FooterSub.Size = UDim2.new(1, 0, 0, 14)
+FooterSub.Position = UDim2.new(0, 0, 0, 21)
+FooterSub.BackgroundTransparency = 1
+FooterSub.Text = "Made by Junejo"
+FooterSub.TextColor3 = Color3.fromRGB(136, 136, 153)
+FooterSub.TextSize = 11
+FooterSub.Font = Enum.Font.GothamMedium
+FooterSub.Parent = Footer
