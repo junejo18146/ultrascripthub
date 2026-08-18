@@ -1,5 +1,5 @@
 --[[
-    JUNEJO ULTRA SCRIPT HUB - PULL A LUCKY FISH (4 CORE FEATURES EDITION)
+    JUNEJO ULTRA SCRIPT HUB - PULL A LUCKY FISH
     Target Game: Pull a Lucky Fish (Roblox)
     Game URL: https://www.roblox.com/games/112781315318195/Pull-a-Lucky-Fish
     Author: Made by Junejo (junejo18146)
@@ -39,10 +39,9 @@ for _, name in ipairs({"JunejoLuckyFishUI", "JunejoHubUI_LuckyFish", "JunejoPull
     end
 end
 
--- 4 Core Feature States
+-- 3 Core Feature States
 local Toggles = {
     InstantLastZone = false,
-    AutoRebirth = false,
     WalkSpeedBoost = false,
     InfiniteJump = false
 }
@@ -61,7 +60,7 @@ LocalPlayer.Idled:Connect(function()
 end)
 
 --------------------------------------------------------------------
--- 4 CORE AUTOMATION ENGINES
+-- AUTOMATION ENGINES
 --------------------------------------------------------------------
 
 -- 1. Infinite Jump
@@ -121,171 +120,8 @@ task.spawn(function()
     end
 end)
 
--- 4. Ultra Multi-Layer Auto Rebirth Engine
-local rebirthKeywords = {
-    "rebirth", "prestige", "ascend", "ascension", "rankup", "rank_up", 
-    "evolution", "evolve", "tierup", "tier_up", "resetrank", "reset_rank", 
-    "dorebirth", "requestrebirth", "buyrebirth", "playerrebirth", "fishrebirth"
-}
-
-local function isMatch(str, list)
-    if not str then return false end
-    str = string.lower(tostring(str))
-    for _, kw in ipairs(list) do
-        if str:find(kw) then return true end
-    end
-    return false
-end
-
-local function ClickButton(btn)
-    pcall(function()
-        if firesignal then
-            firesignal(btn.MouseButton1Click)
-            firesignal(btn.Activated)
-            firesignal(btn.MouseButton1Down)
-            firesignal(btn.MouseButton1Up)
-        end
-        if getconnections then
-            for _, c in ipairs(getconnections(btn.MouseButton1Click) or {}) do
-                pcall(function() c:Fire() end)
-            end
-            for _, c in ipairs(getconnections(btn.Activated) or {}) do
-                pcall(function() c:Fire() end)
-            end
-        end
-    end)
-end
-
-task.spawn(function()
-    while true do
-        task.wait(0.5)
-        if Toggles.AutoRebirth then
-            -- Layer 1: Remotes & RemoteFunctions Scanner
-            pcall(function()
-                local containers = { ReplicatedStorage, LocalPlayer, Workspace }
-                for _, container in ipairs(containers) do
-                    for _, obj in ipairs(container:GetDescendants()) do
-                        if obj:IsA("RemoteEvent") then
-                            local n = obj.Name
-                            local p = obj.Parent and obj.Parent.Name or ""
-                            if isMatch(n, rebirthKeywords) or isMatch(p, rebirthKeywords) then
-                                pcall(function() obj:FireServer() end)
-                                pcall(function() obj:FireServer(1) end)
-                                pcall(function() obj:FireServer(true) end)
-                                pcall(function() obj:FireServer("Rebirth") end)
-                                pcall(function() obj:FireServer("Buy") end)
-                                pcall(function() obj:FireServer(LocalPlayer) end)
-                                pcall(function() obj:FireServer("Rebirth", 1) end)
-                                pcall(function() obj:FireServer("Confirm") end)
-                            end
-                        elseif obj:IsA("RemoteFunction") then
-                            local n = obj.Name
-                            local p = obj.Parent and obj.Parent.Name or ""
-                            if isMatch(n, rebirthKeywords) or isMatch(p, rebirthKeywords) then
-                                task.spawn(function()
-                                    pcall(function() obj:InvokeServer() end)
-                                    pcall(function() obj:InvokeServer(1) end)
-                                    pcall(function() obj:InvokeServer(true) end)
-                                    pcall(function() obj:InvokeServer("Rebirth") end)
-                                    pcall(function() obj:InvokeServer("Buy") end)
-                                    pcall(function() obj:InvokeServer(LocalPlayer) end)
-                                end)
-                            end
-                        end
-                    end
-                end
-            end)
-
-            -- Layer 2: Knit Framework Packages
-            pcall(function()
-                local packages = ReplicatedStorage:FindFirstChild("Packages") or ReplicatedStorage:FindFirstChild("knit") or ReplicatedStorage:FindFirstChild("Knit")
-                if packages then
-                    for _, obj in ipairs(packages:GetDescendants()) do
-                        if (obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction")) and isMatch(obj.Name, rebirthKeywords) then
-                            if obj:IsA("RemoteEvent") then
-                                pcall(function() obj:FireServer() end)
-                                pcall(function() obj:FireServer(1) end)
-                            else
-                                task.spawn(function() pcall(function() obj:InvokeServer() end) end)
-                            end
-                        end
-                    end
-                end
-            end)
-
-            -- Layer 3: Deep UI Buttons & Confirmations
-            pcall(function()
-                local pGui = LocalPlayer:FindFirstChild("PlayerGui")
-                if pGui then
-                    for _, elem in ipairs(pGui:GetDescendants()) do
-                        if elem:IsA("TextButton") or elem:IsA("ImageButton") then
-                            local bName = elem.Name:lower()
-                            local bText = elem:IsA("TextButton") and elem.Text:lower() or ""
-                            local isRebirthBtn = false
-
-                            if isMatch(bName, rebirthKeywords) or isMatch(bText, rebirthKeywords) then
-                                isRebirthBtn = true
-                            else
-                                for _, child in ipairs(elem:GetChildren()) do
-                                    if child:IsA("TextLabel") and isMatch(child.Text, rebirthKeywords) then
-                                        isRebirthBtn = true
-                                        break
-                                    end
-                                end
-                            end
-
-                            if isRebirthBtn then
-                                ClickButton(elem)
-                            end
-
-                            local confirmKeywords = {"confirm", "yes", "accept", "proceed", "rebirth now", "ok", "agree"}
-                            if isMatch(bName, confirmKeywords) or isMatch(bText, confirmKeywords) then
-                                local parentName = elem.Parent and elem.Parent.Name:lower() or ""
-                                local grandParent = elem.Parent and elem.Parent.Parent and elem.Parent.Parent.Name:lower() or ""
-                                if isMatch(parentName, rebirthKeywords) or isMatch(grandParent, rebirthKeywords) or isMatch(parentName, {"dialog", "modal", "prompt", "popup", "confirm", "alert"}) then
-                                    ClickButton(elem)
-                                end
-                            end
-                        end
-                    end
-                end
-            end)
-
-            -- Layer 4: Workspace World Rebirth Pads & Prompts
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if obj:IsA("BasePart") or obj:IsA("Model") then
-                        local n = obj.Name:lower()
-                        if isMatch(n, rebirthKeywords) then
-                            if hrp and obj:IsA("BasePart") and firetouchinterest then
-                                pcall(function()
-                                    firetouchinterest(hrp, obj, 0)
-                                    task.wait(0.01)
-                                    firetouchinterest(hrp, obj, 1)
-                                end)
-                            end
-                            for _, prompt in ipairs(obj:GetDescendants()) do
-                                if prompt:IsA("ProximityPrompt") and fireproximityprompt then
-                                    pcall(function() fireproximityprompt(prompt) end)
-                                end
-                            end
-                            for _, cd in ipairs(obj:GetDescendants()) do
-                                if cd:IsA("ClickDetector") and fireclickdetector then
-                                    pcall(function() fireclickdetector(cd) end)
-                                end
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
 --------------------------------------------------------------------
--- UNIFIED JUNEJO EXECUTIVE UI (280x215px Compact)
+-- UNIFIED JUNEJO EXECUTIVE UI (280x190px Compact)
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoLuckyFishUI"
@@ -300,11 +136,11 @@ else
     ScreenGui.Parent = UIContainer
 end
 
--- Main Container Frame (Width: 280px, Height: 215px)
+-- Main Container Frame (Width: 280px, Height: 190px)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 215)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -107)
+MainFrame.Size = UDim2.new(0, 280, 0, 190)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -95)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -386,7 +222,7 @@ end)
 -- Content Frame
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -28, 0, 125)
+ContentFrame.Size = UDim2.new(1, -28, 0, 100)
 ContentFrame.Position = UDim2.new(0, 14, 0, 36)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
@@ -461,9 +297,8 @@ local function AddToggleRow(text, configKey)
     end)
 end
 
--- Add 3 Toggle Features
+-- Add Toggle Features
 AddToggleRow("Instant Last Zone", "InstantLastZone")
-AddToggleRow("Auto Rebirth", "AutoRebirth")
 AddToggleRow("Infinite Jump", "InfiniteJump")
 
 -- WalkSpeed Row with Speed Controls
