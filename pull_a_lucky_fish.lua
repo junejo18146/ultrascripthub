@@ -121,36 +121,159 @@ task.spawn(function()
     end
 end)
 
--- 4. Auto Rebirth
+-- 4. Ultra Multi-Layer Auto Rebirth Engine
+local rebirthKeywords = {
+    "rebirth", "prestige", "ascend", "ascension", "rankup", "rank_up", 
+    "evolution", "evolve", "tierup", "tier_up", "resetrank", "reset_rank", 
+    "dorebirth", "requestrebirth", "buyrebirth", "playerrebirth", "fishrebirth"
+}
+
+local function isMatch(str, list)
+    if not str then return false end
+    str = string.lower(tostring(str))
+    for _, kw in ipairs(list) do
+        if str:find(kw) then return true end
+    end
+    return false
+end
+
+local function ClickButton(btn)
+    pcall(function()
+        if firesignal then
+            firesignal(btn.MouseButton1Click)
+            firesignal(btn.Activated)
+            firesignal(btn.MouseButton1Down)
+            firesignal(btn.MouseButton1Up)
+        end
+        if getconnections then
+            for _, c in ipairs(getconnections(btn.MouseButton1Click) or {}) do
+                pcall(function() c:Fire() end)
+            end
+            for _, c in ipairs(getconnections(btn.Activated) or {}) do
+                pcall(function() c:Fire() end)
+            end
+        end
+    end)
+end
+
 task.spawn(function()
     while true do
-        task.wait(1.5)
+        task.wait(0.5)
         if Toggles.AutoRebirth then
+            -- Layer 1: Remotes & RemoteFunctions Scanner
             pcall(function()
-                -- Remote Rebirth trigger
-                for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if obj:IsA("RemoteEvent") then
-                        local n = obj.Name:lower()
-                        if n:find("rebirth") or n:find("prestige") or n:find("ascend") or n:find("rankup") then
-                            obj:FireServer()
-                            obj:FireServer(true)
-                            obj:FireServer(1)
-                            obj:FireServer("Rebirth")
+                local containers = { ReplicatedStorage, LocalPlayer, Workspace }
+                for _, container in ipairs(containers) do
+                    for _, obj in ipairs(container:GetDescendants()) do
+                        if obj:IsA("RemoteEvent") then
+                            local n = obj.Name
+                            local p = obj.Parent and obj.Parent.Name or ""
+                            if isMatch(n, rebirthKeywords) or isMatch(p, rebirthKeywords) then
+                                pcall(function() obj:FireServer() end)
+                                pcall(function() obj:FireServer(1) end)
+                                pcall(function() obj:FireServer(true) end)
+                                pcall(function() obj:FireServer("Rebirth") end)
+                                pcall(function() obj:FireServer("Buy") end)
+                                pcall(function() obj:FireServer(LocalPlayer) end)
+                                pcall(function() obj:FireServer("Rebirth", 1) end)
+                                pcall(function() obj:FireServer("Confirm") end)
+                            end
+                        elseif obj:IsA("RemoteFunction") then
+                            local n = obj.Name
+                            local p = obj.Parent and obj.Parent.Name or ""
+                            if isMatch(n, rebirthKeywords) or isMatch(p, rebirthKeywords) then
+                                task.spawn(function()
+                                    pcall(function() obj:InvokeServer() end)
+                                    pcall(function() obj:InvokeServer(1) end)
+                                    pcall(function() obj:InvokeServer(true) end)
+                                    pcall(function() obj:InvokeServer("Rebirth") end)
+                                    pcall(function() obj:InvokeServer("Buy") end)
+                                    pcall(function() obj:InvokeServer(LocalPlayer) end)
+                                end)
+                            end
                         end
                     end
                 end
+            end)
 
-                -- UI Rebirth button click
+            -- Layer 2: Knit Framework Packages
+            pcall(function()
+                local packages = ReplicatedStorage:FindFirstChild("Packages") or ReplicatedStorage:FindFirstChild("knit") or ReplicatedStorage:FindFirstChild("Knit")
+                if packages then
+                    for _, obj in ipairs(packages:GetDescendants()) do
+                        if (obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction")) and isMatch(obj.Name, rebirthKeywords) then
+                            if obj:IsA("RemoteEvent") then
+                                pcall(function() obj:FireServer() end)
+                                pcall(function() obj:FireServer(1) end)
+                            else
+                                task.spawn(function() pcall(function() obj:InvokeServer() end) end)
+                            end
+                        end
+                    end
+                end
+            end)
+
+            -- Layer 3: Deep UI Buttons & Confirmations
+            pcall(function()
                 local pGui = LocalPlayer:FindFirstChild("PlayerGui")
                 if pGui then
-                    for _, btn in ipairs(pGui:GetDescendants()) do
-                        if btn:IsA("TextButton") or btn:IsA("ImageButton") then
-                            local n = btn.Name:lower()
-                            local t = btn:IsA("TextButton") and btn.Text:lower() or ""
-                            if n:find("rebirth") or t:find("rebirth") then
-                                if firesignal then
-                                    firesignal(btn.MouseButton1Click)
-                                    firesignal(btn.Activated)
+                    for _, elem in ipairs(pGui:GetDescendants()) do
+                        if elem:IsA("TextButton") or elem:IsA("ImageButton") then
+                            local bName = elem.Name:lower()
+                            local bText = elem:IsA("TextButton") and elem.Text:lower() or ""
+                            local isRebirthBtn = false
+
+                            if isMatch(bName, rebirthKeywords) or isMatch(bText, rebirthKeywords) then
+                                isRebirthBtn = true
+                            else
+                                for _, child in ipairs(elem:GetChildren()) do
+                                    if child:IsA("TextLabel") and isMatch(child.Text, rebirthKeywords) then
+                                        isRebirthBtn = true
+                                        break
+                                    end
+                                end
+                            end
+
+                            if isRebirthBtn then
+                                ClickButton(elem)
+                            end
+
+                            local confirmKeywords = {"confirm", "yes", "accept", "proceed", "rebirth now", "ok", "agree"}
+                            if isMatch(bName, confirmKeywords) or isMatch(bText, confirmKeywords) then
+                                local parentName = elem.Parent and elem.Parent.Name:lower() or ""
+                                local grandParent = elem.Parent and elem.Parent.Parent and elem.Parent.Parent.Name:lower() or ""
+                                if isMatch(parentName, rebirthKeywords) or isMatch(grandParent, rebirthKeywords) or isMatch(parentName, {"dialog", "modal", "prompt", "popup", "confirm", "alert"}) then
+                                    ClickButton(elem)
+                                end
+                            end
+                        end
+                    end
+                end
+            end)
+
+            -- Layer 4: Workspace World Rebirth Pads & Prompts
+            pcall(function()
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    if obj:IsA("BasePart") or obj:IsA("Model") then
+                        local n = obj.Name:lower()
+                        if isMatch(n, rebirthKeywords) then
+                            if hrp and obj:IsA("BasePart") and firetouchinterest then
+                                pcall(function()
+                                    firetouchinterest(hrp, obj, 0)
+                                    task.wait(0.01)
+                                    firetouchinterest(hrp, obj, 1)
+                                end)
+                            end
+                            for _, prompt in ipairs(obj:GetDescendants()) do
+                                if prompt:IsA("ProximityPrompt") and fireproximityprompt then
+                                    pcall(function() fireproximityprompt(prompt) end)
+                                end
+                            end
+                            for _, cd in ipairs(obj:GetDescendants()) do
+                                if cd:IsA("ClickDetector") and fireclickdetector then
+                                    pcall(function() fireclickdetector(cd) end)
                                 end
                             end
                         end
