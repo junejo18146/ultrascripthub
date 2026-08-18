@@ -40,7 +40,6 @@ end
 
 -- Feature States
 local Toggles = {
-    AntiVoid = true,
     Fly = false,
     InfiniteJump = false,
     WalkSpeedBoost = false
@@ -48,8 +47,6 @@ local Toggles = {
 
 local CustomSpeedValue = 50
 local FlySpeed = 60
-local LastSafeCFrame = nil
-local FallThresholdY = -30
 
 --------------------------------------------------------------------
 -- ANTI-AFK SYSTEM
@@ -262,49 +259,7 @@ LocalPlayer.CharacterAdded:Connect(function()
 end)
 
 --------------------------------------------------------------------
--- 4. SMART ANTI-VOID (ANTI-FALL AUTO RESCUE)
---------------------------------------------------------------------
--- Ground tracking engine: records safe position when player is grounded
-RunService.Heartbeat:Connect(function()
-    pcall(function()
-        local char = LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        if hrp and hum and hum.Health > 0 then
-            -- If player is firmly on ground or higher than safe height
-            if hum.FloorMaterial ~= Enum.Material.Air and hrp.Position.Y > -10 then
-                LastSafeCFrame = hrp.CFrame + Vector3.new(0, 3, 0)
-            end
-
-            -- Check if player is falling into void
-            if Toggles.AntiVoid and hrp.Position.Y < FallThresholdY then
-                -- Zero out downward velocity
-                if hrp:IsA("BasePart") then
-                    hrp.Velocity = Vector3.new(0, 0, 0)
-                    if hrp.AssemblyLinearVelocity then
-                        hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                    end
-                end
-
-                -- Teleport back to safe ground
-                if LastSafeCFrame then
-                    hrp.CFrame = LastSafeCFrame
-                else
-                    -- Fallback to Spawn or origin if no safe CFrame recorded yet
-                    local spawnLoc = Workspace:FindFirstChildOfClass("SpawnLocation")
-                    if spawnLoc then
-                        hrp.CFrame = spawnLoc.CFrame + Vector3.new(0, 5, 0)
-                    else
-                        hrp.CFrame = CFrame.new(0, 25, 0)
-                    end
-                end
-            end
-        end
-    end)
-end)
-
---------------------------------------------------------------------
--- 5. SAFE ZONE TELEPORT HELPER
+-- 4. SAFE ZONE TELEPORT HELPER
 --------------------------------------------------------------------
 local function TeleportToSafeZone()
     pcall(function()
@@ -347,7 +302,7 @@ local function TeleportToSafeZone()
 end
 
 --------------------------------------------------------------------
--- 6. UNIFIED JUNEJO EXECUTIVE DARK UI (#0F0F11, 290x245px)
+-- 5. UNIFIED JUNEJO EXECUTIVE DARK UI (#0F0F11, 290x218px)
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoAnimeAbilityUI"
@@ -364,8 +319,8 @@ end
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 290, 0, 245)
-MainFrame.Position = UDim2.new(0.5, -145, 0.5, -122)
+MainFrame.Size = UDim2.new(0, 290, 0, 218)
+MainFrame.Position = UDim2.new(0.5, -145, 0.5, -109)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -424,7 +379,7 @@ HeaderLine.Parent = MainFrame
 -- Content List
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -20, 0, 160)
+ContentFrame.Size = UDim2.new(1, -20, 0, 135)
 ContentFrame.Position = UDim2.new(0, 10, 0, 38)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
@@ -521,7 +476,6 @@ local function AddToggleRow(text, configKey, callback)
 end
 
 -- Toggles
-AddToggleRow("Anti-Void (Auto Rescue)", "AntiVoid")
 AddToggleRow("Fly Mode", "Fly", function(enabled)
     if enabled then StartFly() else StopFly() end
 end)
