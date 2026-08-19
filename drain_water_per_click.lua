@@ -3,7 +3,7 @@
     Target Game: +1 Drain Water Per Click (Roblox)
     Author: Made by Junejo (junejo18146)
     Repository: junejo18146/ultrascripthub
-    Theme: Unified Junejo Executive Dark UI (#0F0F11)
+    Theme: Unified Junejo Executive Dark UI (#0F0F11) - Solid Matte Black
     Status: Unlocked Direct Standalone Execution
 --]]
 
@@ -426,7 +426,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- UNIFIED JUNEJO EXECUTIVE UI (290x228px Compact Dark UI)
+-- UNIFIED JUNEJO EXECUTIVE UI (100% SOLID MATTE BLACK THEME #0F0F11)
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoDrainWaterUI"
@@ -441,12 +441,13 @@ else
     ScreenGui.Parent = UIContainer
 end
 
--- Main Container Frame (Width: 290px, Height: 228px)
+-- Main Container Frame (Solid 100% Opaque Matte Black #0F0F11)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 290, 0, 228)
-MainFrame.Position = UDim2.new(0.5, -145, 0.5, -114)
+MainFrame.Size = UDim2.new(0, 290, 0, 218)
+MainFrame.Position = UDim2.new(0.5, -145, 0.5, -109)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
+MainFrame.BackgroundTransparency = 0
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.ClipsDescendants = true
@@ -464,14 +465,14 @@ MainStroke.Parent = MainFrame
 -- Header Bar
 local Header = Instance.new("Frame")
 Header.Name = "Header"
-Header.Size = UDim2.new(1, 0, 0, 34)
+Header.Size = UDim2.new(1, 0, 0, 32)
 Header.BackgroundTransparency = 1
 Header.Parent = MainFrame
 
 local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Name = "TitleLabel"
 TitleLabel.Size = UDim2.new(1, -40, 1, 0)
-TitleLabel.Position = UDim2.new(0, 14, 0, 0)
+TitleLabel.Position = UDim2.new(0, 12, 0, 0)
 TitleLabel.BackgroundTransparency = 1
 TitleLabel.Text = "+1 DRAIN WATER PER CLICK"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -480,21 +481,30 @@ TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.Parent = Header
 
-local CloseButton = Instance.new("TextButton")
-CloseButton.Name = "CloseButton"
-CloseButton.Size = UDim2.new(0, 34, 0, 34)
-CloseButton.Position = UDim2.new(1, -34, 0, 0)
-CloseButton.BackgroundTransparency = 1
-CloseButton.Text = "X"
-CloseButton.TextColor3 = Color3.fromRGB(160, 160, 170)
-CloseButton.TextSize = 14
-CloseButton.Font = Enum.Font.GothamBold
-CloseButton.Parent = Header
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Name = "CloseButton"
+CloseBtn.Size = UDim2.new(0, 24, 0, 24)
+CloseBtn.Position = UDim2.new(1, -28, 0, 4)
+CloseBtn.BackgroundTransparency = 1
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(160, 160, 160)
+CloseBtn.TextSize = 13
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.Parent = Header
 
-CloseButton.MouseButton1Click:Connect(function()
+CloseBtn.MouseButton1Click:Connect(function()
     StopFly()
     ScreenGui:Destroy()
 end)
+
+-- Header Separation Line
+local HeaderLine = Instance.new("Frame")
+HeaderLine.Size = UDim2.new(1, -24, 0, 1)
+HeaderLine.Position = UDim2.new(0, 12, 0, 32)
+HeaderLine.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+HeaderLine.BackgroundTransparency = 0
+HeaderLine.BorderSizePixel = 0
+HeaderLine.Parent = MainFrame
 
 -- Draggable Functionality
 local dragging, dragInput, dragStart, startPos
@@ -525,202 +535,234 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Content Frame
+-- Content List
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -28, 0, 136)
-ContentFrame.Position = UDim2.new(0, 14, 0, 36)
+ContentFrame.Size = UDim2.new(1, -24, 0, 135)
+ContentFrame.Position = UDim2.new(0, 12, 0, 38)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
 
 local UIList = Instance.new("UIListLayout")
 UIList.SortOrder = Enum.SortOrder.LayoutOrder
-UIList.Padding = UDim.new(0, 3)
+UIList.Padding = UDim.new(0, 4)
 UIList.Parent = ContentFrame
 
--- Helper function to add compact toggle rows (Full row clickable)
+-- Helper function to add tight solid toggle rows
 local function AddToggleRow(text, configKey, callback)
     local Row = Instance.new("Frame")
-    Row.Size = UDim2.new(1, 0, 0, 22)
+    Row.Size = UDim2.new(1, 0, 0, 24)
     Row.BackgroundTransparency = 1
     Row.Parent = ContentFrame
     
+    local RowBtn = Instance.new("TextButton")
+    RowBtn.Size = UDim2.new(1, 0, 1, 0)
+    RowBtn.BackgroundTransparency = 1
+    RowBtn.Text = ""
+    RowBtn.ZIndex = 5
+    RowBtn.Parent = Row
+    
     local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(1, -26, 1, 0)
+    Label.Size = UDim2.new(1, -28, 1, 0)
     Label.BackgroundTransparency = 1
     Label.Text = text
     Label.TextColor3 = Color3.fromRGB(240, 240, 240)
-    Label.TextSize = 11
+    Label.TextSize = 12
     Label.Font = Enum.Font.GothamBold
     Label.TextXAlignment = Enum.TextXAlignment.Left
     Label.Parent = Row
-
-    local CheckboxBg = Instance.new("Frame")
-    CheckboxBg.Size = UDim2.new(0, 20, 0, 20)
-    CheckboxBg.Position = UDim2.new(1, -20, 0.5, -10)
-    CheckboxBg.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-    CheckboxBg.BorderSizePixel = 0
-    CheckboxBg.Parent = Row
-
+    
+    local CheckBox = Instance.new("Frame")
+    CheckBox.Size = UDim2.new(0, 18, 0, 18)
+    CheckBox.Position = UDim2.new(1, -18, 0.5, -9)
+    CheckBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+    CheckBox.BackgroundTransparency = 0
+    CheckBox.BorderSizePixel = 0
+    CheckBox.Parent = Row
+    
     local CheckCorner = Instance.new("UICorner")
     CheckCorner.CornerRadius = UDim.new(0, 4)
-    CheckCorner.Parent = CheckboxBg
-
+    CheckCorner.Parent = CheckBox
+    
     local CheckStroke = Instance.new("UIStroke")
     CheckStroke.Color = Color3.fromRGB(45, 45, 55)
-    CheckStroke.Thickness = 1
-    CheckStroke.Parent = CheckboxBg
-
-    local Indicator = Instance.new("Frame")
-    Indicator.Size = UDim2.new(0, 10, 0, 10)
-    Indicator.Position = UDim2.new(0.5, -5, 0.5, -5)
-    Indicator.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    Indicator.BorderSizePixel = 0
-    Indicator.Visible = false
-    Indicator.Parent = CheckboxBg
-
-    local IndCorner = Instance.new("UICorner")
-    IndCorner.CornerRadius = UDim.new(0, 2)
-    IndCorner.Parent = Indicator
-
-    local ClickHitbox = Instance.new("TextButton")
-    ClickHitbox.Size = UDim2.new(1, 0, 1, 0)
-    ClickHitbox.BackgroundTransparency = 1
-    ClickHitbox.Text = ""
-    ClickHitbox.Parent = Row
-
-    local function ToggleState()
+    CheckStroke.Thickness = 1.2
+    CheckStroke.Parent = CheckBox
+    
+    local CheckMark = Instance.new("Frame")
+    CheckMark.Size = UDim2.new(0, 10, 0, 10)
+    CheckMark.Position = UDim2.new(0.5, -5, 0.5, -5)
+    CheckMark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    CheckMark.BackgroundTransparency = Toggles[configKey] and 0 or 1
+    CheckMark.BorderSizePixel = 0
+    CheckMark.Parent = CheckBox
+    
+    local MarkCorner = Instance.new("UICorner")
+    MarkCorner.CornerRadius = UDim.new(0, 2)
+    MarkCorner.Parent = CheckMark
+    
+    RowBtn.MouseButton1Click:Connect(function()
         Toggles[configKey] = not Toggles[configKey]
-        Indicator.Visible = Toggles[configKey]
-        if callback then
-            callback(Toggles[configKey])
-        end
-    end
-
-    ClickHitbox.MouseButton1Click:Connect(ToggleState)
-    return Row
+        CheckMark.BackgroundTransparency = Toggles[configKey] and 0 or 1
+        if callback then callback(Toggles[configKey]) end
+    end)
 end
 
 -- 1. Auto Drain
-AddToggleRow("Auto Drain", "AutoDrain", nil)
+AddToggleRow("Auto Drain", "AutoDrain")
 
 -- 2. Auto Rebirth
-AddToggleRow("Auto Rebirth", "AutoRebirth", nil)
+AddToggleRow("Auto Rebirth", "AutoRebirth")
 
--- 3. Fly Mode (3D Smooth Fly)
-AddToggleRow("Fly Mode", "Fly", function(state)
-    if state then
-        StartFly()
-    else
-        StopFly()
-    end
+-- 3. Fly Mode
+AddToggleRow("Fly Mode", "Fly", function(enabled)
+    if enabled then StartFly() else StopFly() end
 end)
 
--- 4. WalkSpeed Boost
-AddToggleRow("WalkSpeed Boost", "WalkSpeedBoost", function(state)
-    UpdateCharacterSpeed()
-end)
-
--- WalkSpeed Adjuster Row (- / + Controls)
+-- 4. WalkSpeed Integrated Row (Toggle + Adjuster Pill)
 local SpeedRow = Instance.new("Frame")
-SpeedRow.Size = UDim2.new(1, 0, 0, 20)
+SpeedRow.Size = UDim2.new(1, 0, 0, 24)
 SpeedRow.BackgroundTransparency = 1
 SpeedRow.Parent = ContentFrame
 
-local SpeedTitle = Instance.new("TextLabel")
-SpeedTitle.Size = UDim2.new(0, 90, 1, 0)
-SpeedTitle.BackgroundTransparency = 1
-SpeedTitle.Text = "Adjust Speed:"
-SpeedTitle.TextColor3 = Color3.fromRGB(160, 160, 175)
-SpeedTitle.TextSize = 10
-SpeedTitle.Font = Enum.Font.GothamMedium
-SpeedTitle.TextXAlignment = Enum.TextXAlignment.Left
-SpeedTitle.Parent = SpeedRow
+local SpeedToggleBtn = Instance.new("TextButton")
+SpeedToggleBtn.Size = UDim2.new(0.55, 0, 1, 0)
+SpeedToggleBtn.BackgroundTransparency = 1
+SpeedToggleBtn.Text = ""
+SpeedToggleBtn.ZIndex = 5
+SpeedToggleBtn.Parent = SpeedRow
+
+local SpeedLabel = Instance.new("TextLabel")
+SpeedLabel.Size = UDim2.new(1, -26, 1, 0)
+SpeedLabel.BackgroundTransparency = 1
+SpeedLabel.Text = "WalkSpeed"
+SpeedLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
+SpeedLabel.TextSize = 12
+SpeedLabel.Font = Enum.Font.GothamBold
+SpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
+SpeedLabel.Parent = SpeedToggleBtn
+
+local SpeedCheckBox = Instance.new("Frame")
+SpeedCheckBox.Size = UDim2.new(0, 18, 0, 18)
+SpeedCheckBox.Position = UDim2.new(1, -18, 0.5, -9)
+SpeedCheckBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+SpeedCheckBox.BackgroundTransparency = 0
+SpeedCheckBox.BorderSizePixel = 0
+SpeedCheckBox.Parent = SpeedToggleBtn
+
+local SpeedCheckCorner = Instance.new("UICorner")
+SpeedCheckCorner.CornerRadius = UDim.new(0, 4)
+SpeedCheckCorner.Parent = SpeedCheckBox
+
+local SpeedCheckStroke = Instance.new("UIStroke")
+SpeedCheckStroke.Color = Color3.fromRGB(45, 45, 55)
+SpeedCheckStroke.Thickness = 1.2
+SpeedCheckStroke.Parent = SpeedCheckBox
+
+local SpeedCheckMark = Instance.new("Frame")
+SpeedCheckMark.Size = UDim2.new(0, 10, 0, 10)
+SpeedCheckMark.Position = UDim2.new(0.5, -5, 0.5, -5)
+SpeedCheckMark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+SpeedCheckMark.BackgroundTransparency = Toggles.WalkSpeedBoost and 0 or 1
+SpeedCheckMark.BorderSizePixel = 0
+SpeedCheckMark.Parent = SpeedCheckBox
+
+local MarkCorner = Instance.new("UICorner")
+MarkCorner.CornerRadius = UDim.new(0, 2)
+MarkCorner.Parent = SpeedCheckMark
+
+SpeedToggleBtn.MouseButton1Click:Connect(function()
+    Toggles.WalkSpeedBoost = not Toggles.WalkSpeedBoost
+    SpeedCheckMark.BackgroundTransparency = Toggles.WalkSpeedBoost and 0 or 1
+    UpdateCharacterSpeed()
+end)
+
+local SpeedControlFrame = Instance.new("Frame")
+SpeedControlFrame.Size = UDim2.new(0.42, 0, 1, 0)
+SpeedControlFrame.Position = UDim2.new(0.58, 0, 0, 0)
+SpeedControlFrame.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+SpeedControlFrame.BackgroundTransparency = 0
+SpeedControlFrame.BorderSizePixel = 0
+SpeedControlFrame.Parent = SpeedRow
+
+local CtrlCorner = Instance.new("UICorner")
+CtrlCorner.CornerRadius = UDim.new(0, 4)
+CtrlCorner.Parent = SpeedControlFrame
+
+local CtrlStroke = Instance.new("UIStroke")
+CtrlStroke.Color = Color3.fromRGB(45, 45, 55)
+CtrlStroke.Thickness = 1
+CtrlStroke.Parent = SpeedControlFrame
 
 local MinusBtn = Instance.new("TextButton")
-MinusBtn.Size = UDim2.new(0, 22, 0, 18)
-MinusBtn.Position = UDim2.new(0, 95, 0.5, -9)
-MinusBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-MinusBtn.BorderSizePixel = 0
+MinusBtn.Size = UDim2.new(0, 22, 1, 0)
+MinusBtn.Position = UDim2.new(0, 0, 0, 0)
+MinusBtn.BackgroundTransparency = 1
 MinusBtn.Text = "-"
-MinusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-MinusBtn.TextSize = 11
+MinusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
+MinusBtn.TextSize = 14
 MinusBtn.Font = Enum.Font.GothamBold
-MinusBtn.Parent = SpeedRow
+MinusBtn.Parent = SpeedControlFrame
 
-local MinusCorner = Instance.new("UICorner")
-MinusCorner.CornerRadius = UDim.new(0, 4)
-MinusCorner.Parent = MinusBtn
-
-local SpeedValueLabel = Instance.new("TextLabel")
-SpeedValueLabel.Size = UDim2.new(0, 40, 1, 0)
-SpeedValueLabel.Position = UDim2.new(0, 120, 0, 0)
-SpeedValueLabel.BackgroundTransparency = 1
-SpeedValueLabel.Text = tostring(CustomSpeedValue)
-SpeedValueLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-SpeedValueLabel.TextSize = 10
-SpeedValueLabel.Font = Enum.Font.GothamBold
-SpeedValueLabel.Parent = SpeedRow
+local SpeedDisplay = Instance.new("TextLabel")
+SpeedDisplay.Size = UDim2.new(1, -44, 1, 0)
+SpeedDisplay.Position = UDim2.new(0, 22, 0, 0)
+SpeedDisplay.BackgroundTransparency = 1
+SpeedDisplay.Text = tostring(CustomSpeedValue)
+SpeedDisplay.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedDisplay.TextSize = 11
+SpeedDisplay.Font = Enum.Font.GothamBold
+SpeedDisplay.Parent = SpeedControlFrame
 
 local PlusBtn = Instance.new("TextButton")
-PlusBtn.Size = UDim2.new(0, 22, 0, 18)
-PlusBtn.Position = UDim2.new(0, 165, 0.5, -9)
-PlusBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-PlusBtn.BorderSizePixel = 0
+PlusBtn.Size = UDim2.new(0, 22, 1, 0)
+PlusBtn.Position = UDim2.new(1, -22, 0, 0)
+PlusBtn.BackgroundTransparency = 1
 PlusBtn.Text = "+"
-PlusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-PlusBtn.TextSize = 11
+PlusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
+PlusBtn.TextSize = 14
 PlusBtn.Font = Enum.Font.GothamBold
-PlusBtn.Parent = SpeedRow
-
-local PlusCorner = Instance.new("UICorner")
-PlusCorner.CornerRadius = UDim.new(0, 4)
-PlusCorner.Parent = PlusBtn
+PlusBtn.Parent = SpeedControlFrame
 
 MinusBtn.MouseButton1Click:Connect(function()
-    CustomSpeedValue = math.max(20, CustomSpeedValue - 10)
-    SpeedValueLabel.Text = tostring(CustomSpeedValue)
-    if Toggles.WalkSpeedBoost then
-        UpdateCharacterSpeed()
-    end
+    CustomSpeedValue = math.max(16, CustomSpeedValue - 15)
+    SpeedDisplay.Text = tostring(CustomSpeedValue)
+    UpdateCharacterSpeed()
 end)
 
 PlusBtn.MouseButton1Click:Connect(function()
-    CustomSpeedValue = math.min(300, CustomSpeedValue + 10)
-    SpeedValueLabel.Text = tostring(CustomSpeedValue)
-    if Toggles.WalkSpeedBoost then
-        UpdateCharacterSpeed()
-    end
+    CustomSpeedValue = math.min(300, CustomSpeedValue + 15)
+    SpeedDisplay.Text = tostring(CustomSpeedValue)
+    UpdateCharacterSpeed()
 end)
 
 -- 5. Infinite Jump
-AddToggleRow("Infinite Jump", "InfiniteJump", nil)
+AddToggleRow("Infinite Jump", "InfiniteJump")
 
 -- Footer Branding
 local Footer = Instance.new("Frame")
 Footer.Name = "Footer"
-Footer.Size = UDim2.new(1, -28, 0, 30)
-Footer.Position = UDim2.new(0, 14, 1, -34)
+Footer.Size = UDim2.new(1, 0, 0, 36)
+Footer.Position = UDim2.new(0, 0, 1, -38)
 Footer.BackgroundTransparency = 1
 Footer.Parent = MainFrame
 
 local FooterTitle = Instance.new("TextLabel")
 FooterTitle.Size = UDim2.new(1, 0, 0, 14)
+FooterTitle.Position = UDim2.new(0, 0, 0, 4)
 FooterTitle.BackgroundTransparency = 1
 FooterTitle.Text = "ULTRA SCRIPT HUB"
 FooterTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-FooterTitle.TextSize = 10
+FooterTitle.TextSize = 11
 FooterTitle.Font = Enum.Font.GothamBold
-FooterTitle.TextXAlignment = Enum.TextXAlignment.Center
 FooterTitle.Parent = Footer
 
 local FooterSub = Instance.new("TextLabel")
 FooterSub.Size = UDim2.new(1, 0, 0, 12)
-FooterSub.Position = UDim2.new(0, 0, 0, 14)
+FooterSub.Position = UDim2.new(0, 0, 0, 18)
 FooterSub.BackgroundTransparency = 1
 FooterSub.Text = "Made by Junejo"
 FooterSub.TextColor3 = Color3.fromRGB(136, 136, 153)
 FooterSub.TextSize = 9
 FooterSub.Font = Enum.Font.GothamMedium
-FooterSub.TextXAlignment = Enum.TextXAlignment.Center
 FooterSub.Parent = Footer
