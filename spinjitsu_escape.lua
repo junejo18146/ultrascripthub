@@ -280,7 +280,7 @@ task.spawn(function()
                 local hum = char and char:FindFirstChildOfClass("Humanoid")
                 local backpack = LocalPlayer:FindFirstChild("Backpack")
 
-                -- Equip tool if unequipped
+                -- Auto equip spin tool
                 if backpack and char and hum then
                     local currentTool = char:FindFirstChildOfClass("Tool")
                     if not currentTool then
@@ -710,7 +710,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- UNIFIED JUNEJO EXECUTIVE UI (100% SOLID MATTE BLACK THEME #0F0F11)
+-- UNIFIED JUNEJO EXECUTIVE UI (100% EXACT SCREENSHOT DESIGN)
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoSpinjitsuEscapeUI"
@@ -905,7 +905,7 @@ local function AddToggleRow(text, configKey, callback)
 end
 
 -- 1. Auto Spinjitsu
-AddToggleRow("Auto Spinjitsu (Train)", "AutoSpinjitsu")
+AddToggleRow("Auto Spinjitsu", "AutoSpinjitsu")
 
 -- 2. Auto Break Walls
 AddToggleRow("Auto Break Walls", "AutoBreakWalls")
