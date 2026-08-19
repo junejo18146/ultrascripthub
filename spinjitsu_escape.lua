@@ -4,7 +4,7 @@
     Game Link: https://www.roblox.com/games/131910189515331/1-Spinjitsu-Escape
     Author: Made by Junejo (junejo18146)
     Repository: junejo18146/ultrascripthub
-    Theme: Unified Junejo Executive Dark UI (#0F0F11) - Solid Matte Black with Compact Scroll
+    Theme: Unified Junejo Executive Dark UI (#0F0F11) - Ultra Compact 200px Box
     Status: Unlocked Direct Standalone Execution
 --]]
 
@@ -18,7 +18,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
--- Safe UI Parent getter (Delta, Arceus X, Fluxus, PC/Mobile compatible)
+-- Safe UI Parent getter
 local function GetUIContainer()
     local success, res = pcall(function()
         if gethui then return gethui() end
@@ -31,8 +31,8 @@ end
 
 local UIContainer = GetUIContainer()
 
--- Cleanup previous UI instances
-for _, name in ipairs({"JunejoSpinjitsuEscapeUI", "JunejoHubUI_Spinjitsu", "JunejoSpinjitsuMain"}) do
+-- Cleanup any previous UI instances immediately
+for _, name in ipairs({"JunejoSpinjitsuEscapeUI", "JunejoHubUI_Spinjitsu", "JunejoSpinjitsuMain", "JunejoHubUI"}) do
     if CoreGui:FindFirstChild(name) then CoreGui[name]:Destroy() end
     if LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild(name) then
         LocalPlayer.PlayerGui[name]:Destroy()
@@ -710,7 +710,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- UNIFIED JUNEJO EXECUTIVE UI (COMPACT SCROLLABLE TEMPLATE)
+-- ULTRA-COMPACT 200PX FRAME WITH MIDDLE SCROLL & PINNED FOOTER
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoSpinjitsuEscapeUI"
@@ -725,11 +725,11 @@ else
     ScreenGui.Parent = UIContainer
 end
 
--- Main Container Frame (Compact Fixed Height ~ 220px to show 5-6 features + Pinned Footer)
+-- Main Container Frame (Fixed 280px Width x 202px Height)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 290, 0, 222)
-MainFrame.Position = UDim2.new(0.5, -145, 0.5, -111)
+MainFrame.Size = UDim2.new(0, 280, 0, 202)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -101)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BackgroundTransparency = 0
 MainFrame.BorderSizePixel = 0
@@ -746,10 +746,10 @@ MainStroke.Color = Color3.fromRGB(35, 35, 42)
 MainStroke.Thickness = 1
 MainStroke.Parent = MainFrame
 
--- Header Bar (Fixed at top)
+-- Header Bar (Fixed at top - Height 30px)
 local Header = Instance.new("Frame")
 Header.Name = "Header"
-Header.Size = UDim2.new(1, 0, 0, 32)
+Header.Size = UDim2.new(1, 0, 0, 30)
 Header.BackgroundTransparency = 1
 Header.Parent = MainFrame
 
@@ -760,19 +760,19 @@ TitleLabel.Position = UDim2.new(0, 12, 0, 0)
 TitleLabel.BackgroundTransparency = 1
 TitleLabel.Text = "+1 SPINJITSU ESCAPE"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleLabel.TextSize = 12
+TitleLabel.TextSize = 11
 TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.Parent = Header
 
 local CloseBtn = Instance.new("TextButton")
 CloseBtn.Name = "CloseButton"
-CloseBtn.Size = UDim2.new(0, 24, 0, 24)
-CloseBtn.Position = UDim2.new(1, -28, 0, 4)
+CloseBtn.Size = UDim2.new(0, 22, 0, 22)
+CloseBtn.Position = UDim2.new(1, -26, 0, 4)
 CloseBtn.BackgroundTransparency = 1
 CloseBtn.Text = "X"
 CloseBtn.TextColor3 = Color3.fromRGB(160, 160, 160)
-CloseBtn.TextSize = 13
+CloseBtn.TextSize = 12
 CloseBtn.Font = Enum.Font.GothamBold
 CloseBtn.Parent = Header
 
@@ -795,10 +795,9 @@ end)
 
 -- Header Separation Line
 local HeaderLine = Instance.new("Frame")
-HeaderLine.Size = UDim2.new(1, -24, 0, 1)
-HeaderLine.Position = UDim2.new(0, 12, 0, 32)
+HeaderLine.Size = UDim2.new(1, -20, 0, 1)
+HeaderLine.Position = UDim2.new(0, 10, 0, 30)
 HeaderLine.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
-HeaderLine.BackgroundTransparency = 0
 HeaderLine.BorderSizePixel = 0
 HeaderLine.Parent = MainFrame
 
@@ -831,27 +830,28 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Scrollable Middle Content Area (Shows ~5-6 rows cleanly, rest scrollable)
+-- Middle Scrollable Area (Height 136px - strictly shows 5 rows, rest scrollable)
 local ContentScroll = Instance.new("ScrollingFrame")
 ContentScroll.Name = "ContentScroll"
-ContentScroll.Size = UDim2.new(1, -16, 1, -74)
-ContentScroll.Position = UDim2.new(0, 10, 0, 36)
+ContentScroll.Size = UDim2.new(1, -16, 0, 136)
+ContentScroll.Position = UDim2.new(0, 8, 0, 34)
 ContentScroll.BackgroundTransparency = 1
 ContentScroll.BorderSizePixel = 0
-ContentScroll.ScrollBarThickness = 3
-ContentScroll.ScrollBarImageColor3 = Color3.fromRGB(45, 45, 55)
-ContentScroll.CanvasSize = UDim2.new(0, 0, 0, 305)
+ContentScroll.ScrollBarThickness = 2
+ContentScroll.ScrollBarImageColor3 = Color3.fromRGB(55, 55, 68)
+ContentScroll.CanvasSize = UDim2.new(0, 0, 0, 298)
+ContentScroll.ClipsDescendants = true
 ContentScroll.Parent = MainFrame
 
 local UIList = Instance.new("UIListLayout")
 UIList.SortOrder = Enum.SortOrder.LayoutOrder
-UIList.Padding = UDim.new(0, 4)
+UIList.Padding = UDim.new(0, 3)
 UIList.Parent = ContentScroll
 
 -- Helper function to add tight solid toggle rows inside Scroll Frame
 local function AddToggleRow(text, configKey, callback)
     local Row = Instance.new("Frame")
-    Row.Size = UDim2.new(1, -6, 0, 23)
+    Row.Size = UDim2.new(1, -4, 0, 23)
     Row.BackgroundTransparency = 1
     Row.Parent = ContentScroll
     
@@ -863,7 +863,8 @@ local function AddToggleRow(text, configKey, callback)
     RowBtn.Parent = Row
     
     local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(1, -28, 1, 0)
+    Label.Size = UDim2.new(1, -26, 1, 0)
+    Label.Position = UDim2.new(0, 2, 0, 0)
     Label.BackgroundTransparency = 1
     Label.Text = text
     Label.TextColor3 = Color3.fromRGB(240, 240, 240)
@@ -939,7 +940,7 @@ end)
 
 -- 10. WalkSpeed Integrated Row (Toggle + Adjuster Pill)
 local SpeedRow = Instance.new("Frame")
-SpeedRow.Size = UDim2.new(1, -6, 0, 23)
+SpeedRow.Size = UDim2.new(1, -4, 0, 23)
 SpeedRow.BackgroundTransparency = 1
 SpeedRow.Parent = ContentScroll
 
@@ -952,6 +953,7 @@ SpeedToggleBtn.Parent = SpeedRow
 
 local SpeedLabel = Instance.new("TextLabel")
 SpeedLabel.Size = UDim2.new(1, -26, 1, 0)
+SpeedLabel.Position = UDim2.new(0, 2, 0, 0)
 SpeedLabel.BackgroundTransparency = 1
 SpeedLabel.Text = "WalkSpeed"
 SpeedLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
@@ -1013,18 +1015,18 @@ CtrlStroke.Thickness = 1
 CtrlStroke.Parent = SpeedControlFrame
 
 local MinusBtn = Instance.new("TextButton")
-MinusBtn.Size = UDim2.new(0, 22, 1, 0)
+MinusBtn.Size = UDim2.new(0, 20, 1, 0)
 MinusBtn.Position = UDim2.new(0, 0, 0, 0)
 MinusBtn.BackgroundTransparency = 1
 MinusBtn.Text = "-"
 MinusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
-MinusBtn.TextSize = 14
+MinusBtn.TextSize = 13
 MinusBtn.Font = Enum.Font.GothamBold
 MinusBtn.Parent = SpeedControlFrame
 
 local SpeedDisplay = Instance.new("TextLabel")
-SpeedDisplay.Size = UDim2.new(1, -44, 1, 0)
-SpeedDisplay.Position = UDim2.new(0, 22, 0, 0)
+SpeedDisplay.Size = UDim2.new(1, -40, 1, 0)
+SpeedDisplay.Position = UDim2.new(0, 20, 0, 0)
 SpeedDisplay.BackgroundTransparency = 1
 SpeedDisplay.Text = tostring(CustomSpeedValue)
 SpeedDisplay.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -1033,12 +1035,12 @@ SpeedDisplay.Font = Enum.Font.GothamBold
 SpeedDisplay.Parent = SpeedControlFrame
 
 local PlusBtn = Instance.new("TextButton")
-PlusBtn.Size = UDim2.new(0, 22, 1, 0)
-PlusBtn.Position = UDim2.new(1, -22, 0, 0)
+PlusBtn.Size = UDim2.new(0, 20, 1, 0)
+PlusBtn.Position = UDim2.new(1, -20, 0, 0)
 PlusBtn.BackgroundTransparency = 1
 PlusBtn.Text = "+"
 PlusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
-PlusBtn.TextSize = 14
+PlusBtn.TextSize = 13
 PlusBtn.Font = Enum.Font.GothamBold
 PlusBtn.Parent = SpeedControlFrame
 
@@ -1057,39 +1059,32 @@ end)
 -- 11. Infinite Jump
 AddToggleRow("Infinite Jump", "InfiniteJump")
 
--- Footer Branding (PERMANENTLY PINNED AT THE BOTTOM)
+-- Footer Branding (PERMANENTLY PINNED AT THE BOTTOM - Height 30px)
 local Footer = Instance.new("Frame")
 Footer.Name = "Footer"
-Footer.Size = UDim2.new(1, 0, 0, 36)
-Footer.Position = UDim2.new(0, 0, 1, -36)
+Footer.Size = UDim2.new(1, 0, 0, 30)
+Footer.Position = UDim2.new(0, 0, 1, -30)
 Footer.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 Footer.BorderSizePixel = 0
 Footer.Parent = MainFrame
 
-local FooterLine = Instance.new("Frame")
-FooterLine.Size = UDim2.new(1, -24, 0, 1)
-FooterLine.Position = UDim2.new(0, 12, 0, 0)
-FooterLine.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-FooterLine.BorderSizePixel = 0
-FooterLine.Parent = Footer
-
 local FooterTitle = Instance.new("TextLabel")
-FooterTitle.Size = UDim2.new(1, 0, 0, 14)
-FooterTitle.Position = UDim2.new(0, 0, 0, 4)
+FooterTitle.Size = UDim2.new(1, 0, 0, 13)
+FooterTitle.Position = UDim2.new(0, 0, 0, 2)
 FooterTitle.BackgroundTransparency = 1
 FooterTitle.Text = "ULTRA SCRIPT HUB"
 FooterTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-FooterTitle.TextSize = 11
+FooterTitle.TextSize = 10
 FooterTitle.Font = Enum.Font.GothamBold
 FooterTitle.Parent = Footer
 
 local FooterSub = Instance.new("TextLabel")
-FooterSub.Size = UDim2.new(1, 0, 0, 12)
-FooterSub.Position = UDim2.new(0, 0, 0, 18)
+FooterSub.Size = UDim2.new(1, 0, 0, 11)
+FooterSub.Position = UDim2.new(0, 0, 0, 15)
 FooterSub.BackgroundTransparency = 1
 FooterSub.Text = "Made by Junejo"
 FooterSub.TextColor3 = Color3.fromRGB(136, 136, 153)
-FooterSub.TextSize = 9
+FooterSub.TextSize = 8.5
 FooterSub.Font = Enum.Font.GothamMedium
 FooterSub.Parent = Footer
 
