@@ -42,7 +42,6 @@ end
 local Toggles = {
     AutoDrain = false,
     AutoRebirth = false,
-    AutoCollectCash = false,
     Fly = false,
     WalkSpeedBoost = false,
     InfiniteJump = false
@@ -427,134 +426,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 6. 5-LAYER AUTO COLLECT CASH & AUTO SELL ENGINE
---------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        task.wait(0.3)
-        if Toggles.AutoCollectCash then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                local myName = LocalPlayer.Name:lower()
-                local myDisplay = LocalPlayer.DisplayName:lower()
-                local myUserId = tostring(LocalPlayer.UserId)
-
-                local cashKeywords = {"cash", "money", "coin", "collect", "claim", "sell", "sellwater", "bank", "income", "reward", "drop", "pad", "generator", "deposit", "atm", "safe", "plot", "base"}
-
-                -- Layer 1: ProximityPrompts & ClickDetectors
-                for _, prompt in ipairs(Workspace:GetDescendants()) do
-                    if not Toggles.AutoCollectCash then break end
-                    if prompt:IsA("ProximityPrompt") then
-                        local p = prompt.Parent
-                        local pName = p and p.Name:lower() or ""
-                        local oText = (prompt.ActionText .. " " .. prompt.ObjectText):lower()
-                        
-                        local isCashPrompt = false
-                        for _, kw in ipairs(cashKeywords) do
-                            if pName:find(kw) or oText:find(kw) then
-                                isCashPrompt = true
-                                break
-                            end
-                        end
-                        
-                        if isCashPrompt and fireproximityprompt then
-                            fireproximityprompt(prompt)
-                        end
-                    elseif prompt:IsA("ClickDetector") then
-                        local cParent = prompt.Parent
-                        local cName = cParent and cParent.Name:lower() or ""
-                        for _, kw in ipairs(cashKeywords) do
-                            if cName:find(kw) then
-                                if fireclickdetector then
-                                    fireclickdetector(prompt)
-                                end
-                                break
-                            end
-                        end
-                    end
-                end
-
-                -- Layer 2: Direct Touch Interest on Sell Pads & Cash Collectors
-                if hrp and firetouchinterest then
-                    for _, part in ipairs(Workspace:GetDescendants()) do
-                        if not Toggles.AutoCollectCash then break end
-                        if part:IsA("BasePart") then
-                            local bName = part.Name:lower()
-                            local pParent = part.Parent and part.Parent.Name:lower() or ""
-                            
-                            local isCollectorPart = false
-                            for _, kw in ipairs(cashKeywords) do
-                                if bName:find(kw) or pParent:find(kw) then
-                                    isCollectorPart = true
-                                    break
-                                end
-                            end
-
-                            if isCollectorPart then
-                                firetouchinterest(hrp, part, 0)
-                                task.wait()
-                                firetouchinterest(hrp, part, 1)
-                            end
-                        end
-                    end
-                end
-
-                -- Layer 3: Player's Own Plot / Base Scanner
-                for _, container in ipairs(Workspace:GetChildren()) do
-                    local cName = container.Name:lower()
-                    if cName:find("plot") or cName:find("base") or cName:find("tycoon") or cName:find("island") or cName:find("pool") then
-                        for _, plot in ipairs(container:GetChildren()) do
-                            local plotStr = (plot.Name .. " " .. tostring(plot:GetAttribute("Owner") or "")):lower()
-                            if plotStr:find(myName) or plotStr:find(myDisplay) or plotStr:find(myUserId) then
-                                for _, item in ipairs(plot:GetDescendants()) do
-                                    if item:IsA("ProximityPrompt") and fireproximityprompt then
-                                        fireproximityprompt(item)
-                                    elseif item:IsA("BasePart") and hrp and firetouchinterest then
-                                        local iName = item.Name:lower()
-                                        if iName:find("collect") or iName:find("cash") or iName:find("money") or iName:find("sell") or iName:find("pad") or iName:find("drop") then
-                                            firetouchinterest(hrp, item, 0)
-                                            task.wait()
-                                            firetouchinterest(hrp, item, 1)
-                                        end
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-
-                -- Layer 4: ReplicatedStorage Remote Collector & Sell Sweeper
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if not Toggles.AutoCollectCash then break end
-                    if remote:IsA("RemoteEvent") then
-                        local rName = remote.Name:lower()
-                        for _, kw in ipairs({"collect", "claim", "sell", "sellwater", "cash", "money", "income", "withdraw", "payout", "harvest", "drop", "reward"}) do
-                            if rName:find(kw) then
-                                remote:FireServer()
-                                remote:FireServer(true)
-                                remote:FireServer("All")
-                                remote:FireServer(1)
-                                break
-                            end
-                        end
-                    elseif remote:IsA("RemoteFunction") then
-                        local rfName = remote.Name:lower()
-                        for _, kw in ipairs({"collect", "claim", "sell", "sellwater", "cash", "money", "income"}) do
-                            if rfName:find(kw) then
-                                pcall(function() remote:InvokeServer() end)
-                                break
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
---------------------------------------------------------------------
--- UNIFIED JUNEJO EXECUTIVE UI (290x250px Compact Dark UI)
+-- UNIFIED JUNEJO EXECUTIVE UI (290x228px Compact Dark UI)
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoDrainWaterUI"
@@ -569,11 +441,11 @@ else
     ScreenGui.Parent = UIContainer
 end
 
--- Main Container Frame (Width: 290px, Height: 250px)
+-- Main Container Frame (Width: 290px, Height: 228px)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 290, 0, 250)
-MainFrame.Position = UDim2.new(0.5, -145, 0.5, -125)
+MainFrame.Size = UDim2.new(0, 290, 0, 228)
+MainFrame.Position = UDim2.new(0.5, -145, 0.5, -114)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -656,7 +528,7 @@ end)
 -- Content Frame
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -28, 0, 158)
+ContentFrame.Size = UDim2.new(1, -28, 0, 136)
 ContentFrame.Position = UDim2.new(0, 14, 0, 36)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
@@ -735,10 +607,7 @@ AddToggleRow("Auto Drain", "AutoDrain", nil)
 -- 2. Auto Rebirth
 AddToggleRow("Auto Rebirth", "AutoRebirth", nil)
 
--- 3. Auto Collect Cash
-AddToggleRow("Auto Collect Cash", "AutoCollectCash", nil)
-
--- 4. Fly Mode (3D Smooth Fly)
+-- 3. Fly Mode (3D Smooth Fly)
 AddToggleRow("Fly Mode", "Fly", function(state)
     if state then
         StartFly()
@@ -747,7 +616,7 @@ AddToggleRow("Fly Mode", "Fly", function(state)
     end
 end)
 
--- 5. WalkSpeed Boost
+-- 4. WalkSpeed Boost
 AddToggleRow("WalkSpeed Boost", "WalkSpeedBoost", function(state)
     UpdateCharacterSpeed()
 end)
@@ -824,7 +693,7 @@ PlusBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- 6. Infinite Jump
+-- 5. Infinite Jump
 AddToggleRow("Infinite Jump", "InfiniteJump", nil)
 
 -- Footer Branding
