@@ -4,7 +4,7 @@
     Game Link: https://www.roblox.com/games/131910189515331/1-Spinjitsu-Escape
     Author: Made by Junejo (junejo18146)
     Repository: junejo18146/ultrascripthub
-    Theme: Unified Junejo Executive Dark UI (#0F0F11) - Solid Matte Black
+    Theme: Unified Junejo Executive Dark UI (#0F0F11) - Solid Matte Black with Compact Scroll
     Status: Unlocked Direct Standalone Execution
 --]]
 
@@ -710,7 +710,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- UNIFIED JUNEJO EXECUTIVE UI (100% EXACT SCREENSHOT DESIGN)
+-- UNIFIED JUNEJO EXECUTIVE UI (COMPACT SCROLLABLE TEMPLATE)
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoSpinjitsuEscapeUI"
@@ -725,11 +725,11 @@ else
     ScreenGui.Parent = UIContainer
 end
 
--- Main Container Frame (Solid 100% Opaque Matte Black #0F0F11)
+-- Main Container Frame (Compact Fixed Height ~ 220px to show 5-6 features + Pinned Footer)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 290, 0, 365)
-MainFrame.Position = UDim2.new(0.5, -145, 0.5, -182)
+MainFrame.Size = UDim2.new(0, 290, 0, 222)
+MainFrame.Position = UDim2.new(0.5, -145, 0.5, -111)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BackgroundTransparency = 0
 MainFrame.BorderSizePixel = 0
@@ -746,7 +746,7 @@ MainStroke.Color = Color3.fromRGB(35, 35, 42)
 MainStroke.Thickness = 1
 MainStroke.Parent = MainFrame
 
--- Header Bar
+-- Header Bar (Fixed at top)
 local Header = Instance.new("Frame")
 Header.Name = "Header"
 Header.Size = UDim2.new(1, 0, 0, 32)
@@ -831,25 +831,29 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Content Frame
-local ContentFrame = Instance.new("Frame")
-ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -24, 0, 285)
-ContentFrame.Position = UDim2.new(0, 12, 0, 38)
-ContentFrame.BackgroundTransparency = 1
-ContentFrame.Parent = MainFrame
+-- Scrollable Middle Content Area (Shows ~5-6 rows cleanly, rest scrollable)
+local ContentScroll = Instance.new("ScrollingFrame")
+ContentScroll.Name = "ContentScroll"
+ContentScroll.Size = UDim2.new(1, -16, 1, -74)
+ContentScroll.Position = UDim2.new(0, 10, 0, 36)
+ContentScroll.BackgroundTransparency = 1
+ContentScroll.BorderSizePixel = 0
+ContentScroll.ScrollBarThickness = 3
+ContentScroll.ScrollBarImageColor3 = Color3.fromRGB(45, 45, 55)
+ContentScroll.CanvasSize = UDim2.new(0, 0, 0, 305)
+ContentScroll.Parent = MainFrame
 
 local UIList = Instance.new("UIListLayout")
 UIList.SortOrder = Enum.SortOrder.LayoutOrder
 UIList.Padding = UDim.new(0, 4)
-UIList.Parent = ContentFrame
+UIList.Parent = ContentScroll
 
--- Helper function to add tight solid toggle rows
+-- Helper function to add tight solid toggle rows inside Scroll Frame
 local function AddToggleRow(text, configKey, callback)
     local Row = Instance.new("Frame")
-    Row.Size = UDim2.new(1, 0, 0, 23)
+    Row.Size = UDim2.new(1, -6, 0, 23)
     Row.BackgroundTransparency = 1
-    Row.Parent = ContentFrame
+    Row.Parent = ContentScroll
     
     local RowBtn = Instance.new("TextButton")
     RowBtn.Size = UDim2.new(1, 0, 1, 0)
@@ -935,9 +939,9 @@ end)
 
 -- 10. WalkSpeed Integrated Row (Toggle + Adjuster Pill)
 local SpeedRow = Instance.new("Frame")
-SpeedRow.Size = UDim2.new(1, 0, 0, 23)
+SpeedRow.Size = UDim2.new(1, -6, 0, 23)
 SpeedRow.BackgroundTransparency = 1
-SpeedRow.Parent = ContentFrame
+SpeedRow.Parent = ContentScroll
 
 local SpeedToggleBtn = Instance.new("TextButton")
 SpeedToggleBtn.Size = UDim2.new(0.55, 0, 1, 0)
@@ -1053,13 +1057,21 @@ end)
 -- 11. Infinite Jump
 AddToggleRow("Infinite Jump", "InfiniteJump")
 
--- Footer Branding
+-- Footer Branding (PERMANENTLY PINNED AT THE BOTTOM)
 local Footer = Instance.new("Frame")
 Footer.Name = "Footer"
 Footer.Size = UDim2.new(1, 0, 0, 36)
-Footer.Position = UDim2.new(0, 0, 1, -38)
-Footer.BackgroundTransparency = 1
+Footer.Position = UDim2.new(0, 0, 1, -36)
+Footer.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
+Footer.BorderSizePixel = 0
 Footer.Parent = MainFrame
+
+local FooterLine = Instance.new("Frame")
+FooterLine.Size = UDim2.new(1, -24, 0, 1)
+FooterLine.Position = UDim2.new(0, 12, 0, 0)
+FooterLine.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+FooterLine.BorderSizePixel = 0
+FooterLine.Parent = Footer
 
 local FooterTitle = Instance.new("TextLabel")
 FooterTitle.Size = UDim2.new(1, 0, 0, 14)
