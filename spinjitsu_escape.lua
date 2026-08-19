@@ -4,7 +4,7 @@
     Game Link: https://www.roblox.com/games/131910189515331/1-Spinjitsu-Escape
     Author: Made by Junejo (junejo18146)
     Repository: junejo18146/ultrascripthub
-    Theme: Unified Junejo Executive Dark UI (#0F0F11) - Ultra Compact 200px Box
+    Theme: Unified Junejo Executive Dark UI (#0F0F11) - Solid Matte Black Compact Standard
     Status: Unlocked Direct Standalone Execution
 --]]
 
@@ -15,7 +15,6 @@ local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
 local CoreGui = game:GetService("CoreGui")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
 
 local VirtualInputManager
 pcall(function()
@@ -24,7 +23,7 @@ end)
 
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
--- Safe UI Parent getter
+-- Safe UI Parent getter (Delta, Arceus X, Fluxus, PC/Mobile compatible)
 local function GetUIContainer()
     local success, res = pcall(function()
         if gethui then return gethui() end
@@ -37,7 +36,7 @@ end
 
 local UIContainer = GetUIContainer()
 
--- Cleanup any previous UI instances immediately
+-- Cleanup previous UI instances
 for _, name in ipairs({"JunejoSpinjitsuEscapeUI", "JunejoHubUI_Spinjitsu", "JunejoSpinjitsuMain", "JunejoHubUI"}) do
     if CoreGui:FindFirstChild(name) then CoreGui[name]:Destroy() end
     if LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild(name) then
@@ -48,12 +47,7 @@ end
 -- Feature States
 local Toggles = {
     AutoSpinjitsu = false,
-    AutoBreakWalls = false,
-    AutoStageWins = false,
-    AutoCollectRewards = false,
-    AutoUpgrade = false,
     AutoHatch = false,
-    AutoEquipBest = false,
     AutoRebirth = false,
     Fly = false,
     WalkSpeedBoost = false,
@@ -64,7 +58,7 @@ local CustomSpeedValue = 50
 local FlySpeed = 60
 
 --------------------------------------------------------------------
--- HELPER: SAFE CLICK & FIRE UTILITIES
+-- HELPER: SAFE BUTTON FIRE
 --------------------------------------------------------------------
 local function SafeFireButton(btn)
     if not btn or not btn:IsA("GuiButton") then return end
@@ -98,7 +92,7 @@ LocalPlayer.Idled:Connect(function()
 end)
 
 --------------------------------------------------------------------
--- 1. BULLETPROOF INFINITE JUMP (WORKING - UNTOUCHED)
+-- 1. BULLETPROOF INFINITE JUMP (PC & MOBILE COMPATIBLE)
 --------------------------------------------------------------------
 UserInputService.JumpRequest:Connect(function()
     if Toggles.InfiniteJump and LocalPlayer.Character then
@@ -130,7 +124,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 --------------------------------------------------------------------
--- 2. BULLETPROOF WALKSPEED BOOST ENGINE (WORKING - UNTOUCHED)
+-- 2. BULLETPROOF WALKSPEED BOOST ENGINE (DUAL ENGINE)
 --------------------------------------------------------------------
 local function UpdateCharacterSpeed()
     pcall(function()
@@ -192,7 +186,7 @@ RunService.RenderStepped:Connect(function(dt)
 end)
 
 --------------------------------------------------------------------
--- 3. BULLETPROOF 3D FLY SYSTEM (WORKING - UNTOUCHED)
+-- 3. BULLETPROOF 3D FLY SYSTEM (PC & MOBILE TOUCH COMPATIBLE)
 --------------------------------------------------------------------
 local flyBodyGyro, flyBodyVelocity, flyConnection
 
@@ -298,7 +292,7 @@ LocalPlayer.CharacterAdded:Connect(function()
 end)
 
 --------------------------------------------------------------------
--- 4. AUTO HATCH / PETS ENGINE (WORKING - UNTOUCHED)
+-- 4. AUTO HATCH / PETS ENGINE (WORKING ENGINE)
 --------------------------------------------------------------------
 task.spawn(function()
     while true do
@@ -352,7 +346,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 5. UPGRADED MULTI-LAYER AUTO SPINJITSU (POWER FARMING)
+-- 5. AUTO SPINJITSU ENGINE (MULTI-LAYER FAST POWER TRAINER)
 --------------------------------------------------------------------
 task.spawn(function()
     while true do
@@ -395,7 +389,7 @@ task.spawn(function()
                     end
                 end)
 
-                -- Layer 3: Comprehensive Remote Invoker
+                -- Layer 3: Remote Invoker
                 local spinKeywords = {"spin", "jitsu", "train", "click", "power", "addpower", "spinjitsu", "swing", "use", "hit", "attack", "gain", "addjitsu"}
                 for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
                     if not Toggles.AutoSpinjitsu then break end
@@ -428,351 +422,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 6. UPGRADED AUTO BREAK WALLS ENGINE (PROXIMITY & TOUCH TRANSDUCER)
---------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        task.wait(0.1)
-        if Toggles.AutoBreakWalls then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                if not hrp then return end
-
-                local wallKeywords = {"wall", "obstacle", "door", "barrier", "gate", "break", "smash", "glass", "block", "target", "stage"}
-
-                -- Layer 1: Remotes for damaging / breaking walls
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if not Toggles.AutoBreakWalls then break end
-                    if remote:IsA("RemoteEvent") then
-                        local rName = remote.Name:lower()
-                        if rName:find("break") or rName:find("wall") or rName:find("hit") or rName:find("smash") or rName:find("damage") or rName:find("destroy") then
-                            remote:FireServer()
-                            remote:FireServer(1)
-                            remote:FireServer(true)
-                            remote:FireServer("Wall")
-                        end
-                    elseif remote:IsA("RemoteFunction") then
-                        local rfName = remote.Name:lower()
-                        if rfName:find("break") or rfName:find("wall") or rfName:find("smash") then
-                            pcall(function() remote:InvokeServer() end)
-                            pcall(function() remote:InvokeServer(1) end)
-                        end
-                    end
-                end
-
-                -- Layer 2: Workspace Wall Collision & Touch Transmitter Sweeper
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if not Toggles.AutoBreakWalls then break end
-                    if obj:IsA("BasePart") and obj.CanTouch then
-                        local objName = obj.Name:lower()
-                        local parentName = obj.Parent and obj.Parent.Name:lower() or ""
-                        local isWall = false
-                        for _, kw in ipairs(wallKeywords) do
-                            if objName:find(kw) or parentName:find(kw) then
-                                isWall = true
-                                break
-                            end
-                        end
-
-                        if isWall and (obj.Position - hrp.Position).Magnitude <= 80 then
-                            if firetouchinterest then
-                                firetouchinterest(hrp, obj, 0)
-                                task.wait()
-                                firetouchinterest(hrp, obj, 1)
-                            end
-                        end
-                    elseif obj:IsA("ProximityPrompt") then
-                        local pText = (obj.ActionText .. " " .. obj.ObjectText .. " " .. (obj.Parent and obj.Parent.Name or "")):lower()
-                        for _, kw in ipairs(wallKeywords) do
-                            if pText:find(kw) then
-                                if fireproximityprompt then
-                                    fireproximityprompt(obj)
-                                end
-                                break
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
---------------------------------------------------------------------
--- 7. UPGRADED AUTO STAGE & WINS ENGINE (SEQUENTIAL ZONE & REMOTES)
---------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        task.wait(0.3)
-        if Toggles.AutoStageWins then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                if not hrp then return end
-
-                local winKeywords = {"win", "finish", "stage", "door", "end", "portal", "checkpoint", "goal", "zone", "claimwin", "completewin", "nextstage"}
-
-                -- Layer 1: Remotes for Win claims & Stage completion
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if not Toggles.AutoStageWins then break end
-                    if remote:IsA("RemoteEvent") then
-                        local rName = remote.Name:lower()
-                        for _, kw in ipairs(winKeywords) do
-                            if rName:find(kw) then
-                                remote:FireServer()
-                                remote:FireServer(1)
-                                remote:FireServer(true)
-                                remote:FireServer("Win")
-                                remote:FireServer("Finish")
-                                break
-                            end
-                        end
-                    elseif remote:IsA("RemoteFunction") then
-                        local rfName = remote.Name:lower()
-                        for _, kw in ipairs(winKeywords) do
-                            if rfName:find(kw) then
-                                pcall(function() remote:InvokeServer() end)
-                                pcall(function() remote:InvokeServer(1) end)
-                                pcall(function() remote:InvokeServer("Win") end)
-                                break
-                            end
-                        end
-                    end
-                end
-
-                -- Layer 2: Workspace Finish Pads & Win Gates
-                for _, part in ipairs(Workspace:GetDescendants()) do
-                    if not Toggles.AutoStageWins then break end
-                    if part:IsA("BasePart") and part.CanTouch then
-                        local pName = part.Name:lower()
-                        local parName = part.Parent and part.Parent.Name:lower() or ""
-                        if pName:find("finish") or pName:find("win") or pName:find("endpad") or pName:find("goal") or pName:find("nextstage") or pName:find("checkpoint") or parName:find("finish") or parName:find("win") then
-                            if firetouchinterest then
-                                firetouchinterest(hrp, part, 0)
-                                task.wait()
-                                firetouchinterest(hrp, part, 1)
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
---------------------------------------------------------------------
--- 8. UPGRADED AUTO COLLECT REWARDS & GIFTS ENGINE (UI + REMOTES)
---------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        task.wait(1.0)
-        if Toggles.AutoCollectRewards then
-            pcall(function()
-                local rewardKeywords = {"reward", "gift", "daily", "claim", "free", "chest", "bonus", "time", "spinwheel", "freegift", "playtime"}
-
-                -- Layer 1: PlayerGui Button Clicker
-                if LocalPlayer:FindFirstChild("PlayerGui") then
-                    for _, gui in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
-                        if not Toggles.AutoCollectRewards then break end
-                        if gui:IsA("GuiButton") then
-                            local gName = gui.Name:lower()
-                            local gText = (gui:IsA("TextButton") and gui.Text or ""):lower()
-                            local parName = gui.Parent and gui.Parent.Name:lower() or ""
-                            
-                            for _, kw in ipairs(rewardKeywords) do
-                                if gName:find(kw) or gText:find(kw) or parName:find(kw) then
-                                    SafeFireButton(gui)
-                                    break
-                                end
-                            end
-                        end
-                    end
-                end
-
-                -- Layer 2: ReplicatedStorage Remotes
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if not Toggles.AutoCollectRewards then break end
-                    if remote:IsA("RemoteEvent") then
-                        local rName = remote.Name:lower()
-                        for _, kw in ipairs(rewardKeywords) do
-                            if rName:find(kw) then
-                                remote:FireServer()
-                                remote:FireServer(true)
-                                for i = 1, 15 do
-                                    remote:FireServer(i)
-                                    remote:FireServer(tostring(i))
-                                end
-                                break
-                            end
-                        end
-                    elseif remote:IsA("RemoteFunction") then
-                        local rfName = remote.Name:lower()
-                        for _, kw in ipairs(rewardKeywords) do
-                            if rfName:find(kw) then
-                                pcall(function() remote:InvokeServer() end)
-                                for i = 1, 15 do
-                                    pcall(function() remote:InvokeServer(i) end)
-                                end
-                                break
-                            end
-                        end
-                    end
-                end
-
-                -- Layer 3: Workspace Chests & Reward Drops
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                for _, prompt in ipairs(Workspace:GetDescendants()) do
-                    if not Toggles.AutoCollectRewards then break end
-                    if prompt:IsA("ProximityPrompt") then
-                        local pText = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. (prompt.Parent and prompt.Parent.Name or "")):lower()
-                        for _, kw in ipairs(rewardKeywords) do
-                            if pText:find(kw) then
-                                if fireproximityprompt then
-                                    fireproximityprompt(prompt)
-                                end
-                                break
-                            end
-                        end
-                    elseif prompt:IsA("BasePart") and hrp and firetouchinterest then
-                        local pName = prompt.Name:lower()
-                        if pName:find("chest") or pName:find("reward") or pName:find("drop") or pName:find("coin") then
-                            firetouchinterest(hrp, prompt, 0)
-                            task.wait()
-                            firetouchinterest(hrp, prompt, 1)
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
---------------------------------------------------------------------
--- 9. UPGRADED AUTO UPGRADE SPINJITSU ENGINE (UI + REMOTES)
---------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        task.wait(0.8)
-        if Toggles.AutoUpgrade then
-            pcall(function()
-                local upgradeKeywords = {"upgrade", "buyupgrade", "spinup", "jitsuupgrade", "powerupgrade", "speedupgrade", "statupgrade", "upgradeall", "buy"}
-
-                -- Layer 1: PlayerGui Button Clicker
-                if LocalPlayer:FindFirstChild("PlayerGui") then
-                    for _, gui in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
-                        if not Toggles.AutoUpgrade then break end
-                        if gui:IsA("GuiButton") then
-                            local gName = gui.Name:lower()
-                            local gText = (gui:IsA("TextButton") and gui.Text or ""):lower()
-                            local parName = gui.Parent and gui.Parent.Name:lower() or ""
-                            
-                            if gName:find("upgrade") or gText:find("upgrade") or (parName:find("upgrade") and (gName:find("buy") or gText:find("buy"))) then
-                                SafeFireButton(gui)
-                            end
-                        end
-                    end
-                end
-
-                -- Layer 2: Remotes Invocation
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if not Toggles.AutoUpgrade then break end
-                    if remote:IsA("RemoteEvent") then
-                        local rName = remote.Name:lower()
-                        for _, kw in ipairs(upgradeKeywords) do
-                            if rName:find(kw) then
-                                remote:FireServer()
-                                remote:FireServer("All")
-                                remote:FireServer("Power")
-                                remote:FireServer("Speed")
-                                remote:FireServer("Jitsu")
-                                for tier = 1, 10 do
-                                    remote:FireServer(tier)
-                                end
-                                break
-                            end
-                        end
-                    elseif remote:IsA("RemoteFunction") then
-                        local rfName = remote.Name:lower()
-                        for _, kw in ipairs(upgradeKeywords) do
-                            if rfName:find(kw) then
-                                pcall(function() remote:InvokeServer() end)
-                                pcall(function() remote:InvokeServer("All") end)
-                                pcall(function() remote:InvokeServer("Power") end)
-                                for tier = 1, 10 do
-                                    pcall(function() remote:InvokeServer(tier) end)
-                                end
-                                break
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
---------------------------------------------------------------------
--- 10. UPGRADED AUTO EQUIP BEST PET ENGINE (UI + REMOTES)
---------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        task.wait(1.5)
-        if Toggles.AutoEquipBest then
-            pcall(function()
-                local equipKeywords = {"equipbest", "equipall", "bestpet", "autoequip", "equipthebest", "petequipbest", "equip_best"}
-
-                -- Layer 1: PlayerGui Button Clicker (Equip Best button in Pet frames)
-                if LocalPlayer:FindFirstChild("PlayerGui") then
-                    for _, gui in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
-                        if not Toggles.AutoEquipBest then break end
-                        if gui:IsA("GuiButton") then
-                            local gName = gui.Name:lower()
-                            local gText = (gui:IsA("TextButton") and gui.Text or ""):lower()
-                            for _, kw in ipairs(equipKeywords) do
-                                if gName:find(kw) or gText:find("equip best") or gText:find("equip best pet") then
-                                    SafeFireButton(gui)
-                                    break
-                                end
-                            end
-                        end
-                    end
-                end
-
-                -- Layer 2: ReplicatedStorage Remotes
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if not Toggles.AutoEquipBest then break end
-                    if remote:IsA("RemoteEvent") then
-                        local rName = remote.Name:lower()
-                        for _, kw in ipairs(equipKeywords) do
-                            if rName:find(kw) then
-                                remote:FireServer()
-                                remote:FireServer(true)
-                                remote:FireServer("Best")
-                                remote:FireServer("All")
-                                break
-                            end
-                        end
-                    elseif remote:IsA("RemoteFunction") then
-                        local rfName = remote.Name:lower()
-                        for _, kw in ipairs(equipKeywords) do
-                            if rfName:find(kw) then
-                                pcall(function() remote:InvokeServer() end)
-                                pcall(function() remote:InvokeServer(true) end)
-                                pcall(function() remote:InvokeServer("Best") end)
-                                break
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
---------------------------------------------------------------------
--- 11. UPGRADED AUTO REBIRTH ENGINE (UI + WORKSPACE + REMOTES)
+-- 6. AUTO REBIRTH ENGINE (MULTI-LAYER PRESTIGE ENGINE)
 --------------------------------------------------------------------
 task.spawn(function()
     while true do
@@ -855,7 +505,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- ULTRA-COMPACT 200PX FRAME WITH MIDDLE SCROLL & PINNED FOOTER
+-- UNIFIED JUNEJO EXECUTIVE UI (100% SOLID MATTE BLACK #0F0F11)
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoSpinjitsuEscapeUI"
@@ -870,11 +520,11 @@ else
     ScreenGui.Parent = UIContainer
 end
 
--- Main Container Frame (Fixed 280px Width x 202px Height)
+-- Main Container Frame (Clean Compact Size: 290px x 222px)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 202)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -101)
+MainFrame.Size = UDim2.new(0, 290, 0, 222)
+MainFrame.Position = UDim2.new(0.5, -145, 0.5, -111)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BackgroundTransparency = 0
 MainFrame.BorderSizePixel = 0
@@ -891,10 +541,10 @@ MainStroke.Color = Color3.fromRGB(35, 35, 42)
 MainStroke.Thickness = 1
 MainStroke.Parent = MainFrame
 
--- Header Bar (Fixed at top - Height 30px)
+-- Header Bar
 local Header = Instance.new("Frame")
 Header.Name = "Header"
-Header.Size = UDim2.new(1, 0, 0, 30)
+Header.Size = UDim2.new(1, 0, 0, 32)
 Header.BackgroundTransparency = 1
 Header.Parent = MainFrame
 
@@ -905,31 +555,26 @@ TitleLabel.Position = UDim2.new(0, 12, 0, 0)
 TitleLabel.BackgroundTransparency = 1
 TitleLabel.Text = "+1 SPINJITSU ESCAPE"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleLabel.TextSize = 11
+TitleLabel.TextSize = 12
 TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.Parent = Header
 
 local CloseBtn = Instance.new("TextButton")
 CloseBtn.Name = "CloseButton"
-CloseBtn.Size = UDim2.new(0, 22, 0, 22)
-CloseBtn.Position = UDim2.new(1, -26, 0, 4)
+CloseBtn.Size = UDim2.new(0, 24, 0, 24)
+CloseBtn.Position = UDim2.new(1, -28, 0, 4)
 CloseBtn.BackgroundTransparency = 1
 CloseBtn.Text = "X"
 CloseBtn.TextColor3 = Color3.fromRGB(160, 160, 160)
-CloseBtn.TextSize = 12
+CloseBtn.TextSize = 13
 CloseBtn.Font = Enum.Font.GothamBold
 CloseBtn.Parent = Header
 
 CloseBtn.MouseButton1Click:Connect(function()
     StopFly()
     Toggles.AutoSpinjitsu = false
-    Toggles.AutoBreakWalls = false
-    Toggles.AutoStageWins = false
-    Toggles.AutoCollectRewards = false
-    Toggles.AutoUpgrade = false
     Toggles.AutoHatch = false
-    Toggles.AutoEquipBest = false
     Toggles.AutoRebirth = false
     Toggles.WalkSpeedBoost = false
     Toggles.InfiniteJump = false
@@ -940,8 +585,8 @@ end)
 
 -- Header Separation Line
 local HeaderLine = Instance.new("Frame")
-HeaderLine.Size = UDim2.new(1, -20, 0, 1)
-HeaderLine.Position = UDim2.new(0, 10, 0, 30)
+HeaderLine.Size = UDim2.new(1, -24, 0, 1)
+HeaderLine.Position = UDim2.new(0, 12, 0, 32)
 HeaderLine.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
 HeaderLine.BorderSizePixel = 0
 HeaderLine.Parent = MainFrame
@@ -975,30 +620,25 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Middle Scrollable Area (Height 136px - strictly shows 5 rows, rest scrollable)
-local ContentScroll = Instance.new("ScrollingFrame")
-ContentScroll.Name = "ContentScroll"
-ContentScroll.Size = UDim2.new(1, -16, 0, 136)
-ContentScroll.Position = UDim2.new(0, 8, 0, 34)
-ContentScroll.BackgroundTransparency = 1
-ContentScroll.BorderSizePixel = 0
-ContentScroll.ScrollBarThickness = 2
-ContentScroll.ScrollBarImageColor3 = Color3.fromRGB(55, 55, 68)
-ContentScroll.CanvasSize = UDim2.new(0, 0, 0, 298)
-ContentScroll.ClipsDescendants = true
-ContentScroll.Parent = MainFrame
+-- Content Area (Exact 6 rows)
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Name = "ContentFrame"
+ContentFrame.Size = UDim2.new(1, -24, 0, 148)
+ContentFrame.Position = UDim2.new(0, 12, 0, 38)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.Parent = MainFrame
 
 local UIList = Instance.new("UIListLayout")
 UIList.SortOrder = Enum.SortOrder.LayoutOrder
-UIList.Padding = UDim.new(0, 3)
-UIList.Parent = ContentScroll
+UIList.Padding = UDim.new(0, 4)
+UIList.Parent = ContentFrame
 
--- Helper function to add tight solid toggle rows inside Scroll Frame
+-- Helper function to add tight solid toggle rows
 local function AddToggleRow(text, configKey, callback)
     local Row = Instance.new("Frame")
-    Row.Size = UDim2.new(1, -4, 0, 23)
+    Row.Size = UDim2.new(1, 0, 0, 23)
     Row.BackgroundTransparency = 1
-    Row.Parent = ContentScroll
+    Row.Parent = ContentFrame
     
     local RowBtn = Instance.new("TextButton")
     RowBtn.Size = UDim2.new(1, 0, 1, 0)
@@ -1008,12 +648,11 @@ local function AddToggleRow(text, configKey, callback)
     RowBtn.Parent = Row
     
     local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(1, -26, 1, 0)
-    Label.Position = UDim2.new(0, 2, 0, 0)
+    Label.Size = UDim2.new(1, -28, 1, 0)
     Label.BackgroundTransparency = 1
     Label.Text = text
     Label.TextColor3 = Color3.fromRGB(240, 240, 240)
-    Label.TextSize = 11
+    Label.TextSize = 12
     Label.Font = Enum.Font.GothamBold
     Label.TextXAlignment = Enum.TextXAlignment.Left
     Label.Parent = Row
@@ -1057,37 +696,22 @@ end
 -- 1. Auto Spinjitsu
 AddToggleRow("Auto Spinjitsu", "AutoSpinjitsu")
 
--- 2. Auto Break Walls
-AddToggleRow("Auto Break Walls", "AutoBreakWalls")
-
--- 3. Auto Stage & Wins
-AddToggleRow("Auto Stage & Wins", "AutoStageWins")
-
--- 4. Auto Collect Rewards
-AddToggleRow("Auto Collect Rewards", "AutoCollectRewards")
-
--- 5. Auto Upgrade Spinjitsu
-AddToggleRow("Auto Upgrade Spinjitsu", "AutoUpgrade")
-
--- 6. Auto Hatch Eggs
+-- 2. Auto Hatch Eggs
 AddToggleRow("Auto Hatch Eggs", "AutoHatch")
 
--- 7. Auto Equip Best Pet
-AddToggleRow("Auto Equip Best Pet", "AutoEquipBest")
-
--- 8. Auto Rebirth
+-- 3. Auto Rebirth
 AddToggleRow("Auto Rebirth", "AutoRebirth")
 
--- 9. Fly Mode
+-- 4. Fly Mode
 AddToggleRow("Fly Mode", "Fly", function(enabled)
     if enabled then StartFly() else StopFly() end
 end)
 
--- 10. WalkSpeed Integrated Row (Toggle + Adjuster Pill)
+-- 5. WalkSpeed Integrated Row (Toggle + Adjuster Pill)
 local SpeedRow = Instance.new("Frame")
-SpeedRow.Size = UDim2.new(1, -4, 0, 23)
+SpeedRow.Size = UDim2.new(1, 0, 0, 23)
 SpeedRow.BackgroundTransparency = 1
-SpeedRow.Parent = ContentScroll
+SpeedRow.Parent = ContentFrame
 
 local SpeedToggleBtn = Instance.new("TextButton")
 SpeedToggleBtn.Size = UDim2.new(0.55, 0, 1, 0)
@@ -1098,11 +722,10 @@ SpeedToggleBtn.Parent = SpeedRow
 
 local SpeedLabel = Instance.new("TextLabel")
 SpeedLabel.Size = UDim2.new(1, -26, 1, 0)
-SpeedLabel.Position = UDim2.new(0, 2, 0, 0)
 SpeedLabel.BackgroundTransparency = 1
 SpeedLabel.Text = "WalkSpeed"
 SpeedLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
-SpeedLabel.TextSize = 11
+SpeedLabel.TextSize = 12
 SpeedLabel.Font = Enum.Font.GothamBold
 SpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
 SpeedLabel.Parent = SpeedToggleBtn
@@ -1160,18 +783,18 @@ CtrlStroke.Thickness = 1
 CtrlStroke.Parent = SpeedControlFrame
 
 local MinusBtn = Instance.new("TextButton")
-MinusBtn.Size = UDim2.new(0, 20, 1, 0)
+MinusBtn.Size = UDim2.new(0, 22, 1, 0)
 MinusBtn.Position = UDim2.new(0, 0, 0, 0)
 MinusBtn.BackgroundTransparency = 1
 MinusBtn.Text = "-"
 MinusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
-MinusBtn.TextSize = 13
+MinusBtn.TextSize = 14
 MinusBtn.Font = Enum.Font.GothamBold
 MinusBtn.Parent = SpeedControlFrame
 
 local SpeedDisplay = Instance.new("TextLabel")
-SpeedDisplay.Size = UDim2.new(1, -40, 1, 0)
-SpeedDisplay.Position = UDim2.new(0, 20, 0, 0)
+SpeedDisplay.Size = UDim2.new(1, -44, 1, 0)
+SpeedDisplay.Position = UDim2.new(0, 22, 0, 0)
 SpeedDisplay.BackgroundTransparency = 1
 SpeedDisplay.Text = tostring(CustomSpeedValue)
 SpeedDisplay.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -1180,12 +803,12 @@ SpeedDisplay.Font = Enum.Font.GothamBold
 SpeedDisplay.Parent = SpeedControlFrame
 
 local PlusBtn = Instance.new("TextButton")
-PlusBtn.Size = UDim2.new(0, 20, 1, 0)
-PlusBtn.Position = UDim2.new(1, -20, 0, 0)
+PlusBtn.Size = UDim2.new(0, 22, 1, 0)
+PlusBtn.Position = UDim2.new(1, -22, 0, 0)
 PlusBtn.BackgroundTransparency = 1
 PlusBtn.Text = "+"
 PlusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
-PlusBtn.TextSize = 13
+PlusBtn.TextSize = 14
 PlusBtn.Font = Enum.Font.GothamBold
 PlusBtn.Parent = SpeedControlFrame
 
@@ -1201,35 +824,34 @@ PlusBtn.MouseButton1Click:Connect(function()
     UpdateCharacterSpeed()
 end)
 
--- 11. Infinite Jump
+-- 6. Infinite Jump
 AddToggleRow("Infinite Jump", "InfiniteJump")
 
--- Footer Branding (PERMANENTLY PINNED AT THE BOTTOM - Height 30px)
+-- Footer Branding (PERMANENTLY PINNED AT THE BOTTOM)
 local Footer = Instance.new("Frame")
 Footer.Name = "Footer"
-Footer.Size = UDim2.new(1, 0, 0, 30)
-Footer.Position = UDim2.new(0, 0, 1, -30)
-Footer.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
-Footer.BorderSizePixel = 0
+Footer.Size = UDim2.new(1, 0, 0, 36)
+Footer.Position = UDim2.new(0, 0, 1, -38)
+Footer.BackgroundTransparency = 1
 Footer.Parent = MainFrame
 
 local FooterTitle = Instance.new("TextLabel")
-FooterTitle.Size = UDim2.new(1, 0, 0, 13)
-FooterTitle.Position = UDim2.new(0, 0, 0, 2)
+FooterTitle.Size = UDim2.new(1, 0, 0, 14)
+FooterTitle.Position = UDim2.new(0, 0, 0, 4)
 FooterTitle.BackgroundTransparency = 1
 FooterTitle.Text = "ULTRA SCRIPT HUB"
 FooterTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-FooterTitle.TextSize = 10
+FooterTitle.TextSize = 11
 FooterTitle.Font = Enum.Font.GothamBold
 FooterTitle.Parent = Footer
 
 local FooterSub = Instance.new("TextLabel")
-FooterSub.Size = UDim2.new(1, 0, 0, 11)
-FooterSub.Position = UDim2.new(0, 0, 0, 15)
+FooterSub.Size = UDim2.new(1, 0, 0, 12)
+FooterSub.Position = UDim2.new(0, 0, 0, 18)
 FooterSub.BackgroundTransparency = 1
 FooterSub.Text = "Made by Junejo"
 FooterSub.TextColor3 = Color3.fromRGB(136, 136, 153)
-FooterSub.TextSize = 8.5
+FooterSub.TextSize = 9
 FooterSub.Font = Enum.Font.GothamMedium
 FooterSub.Parent = Footer
 
