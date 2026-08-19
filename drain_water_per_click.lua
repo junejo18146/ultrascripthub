@@ -40,8 +40,7 @@ end
 
 -- Feature States
 local Toggles = {
-    AutoDrainClick = false,
-    AutoUpgrade = false,
+    AutoDrain = false,
     AutoRebirth = false,
     AutoCollectCash = false,
     Fly = false,
@@ -264,12 +263,12 @@ LocalPlayer.CharacterAdded:Connect(function()
 end)
 
 --------------------------------------------------------------------
--- 4. 5-LAYER AUTO DRAIN / CLICK ENGINE (HYPER-SPEED FARMER)
+-- 4. 5-LAYER AUTO DRAIN ENGINE (HYPER-SPEED WATER FARMER)
 --------------------------------------------------------------------
 task.spawn(function()
     while true do
         task.wait(0.05)
-        if Toggles.AutoDrainClick then
+        if Toggles.AutoDrain then
             pcall(function()
                 local char = LocalPlayer.Character
                 local hum = char and char:FindFirstChildOfClass("Humanoid")
@@ -308,7 +307,7 @@ task.spawn(function()
                 -- Layer 4: ReplicatedStorage Remote Sweeper for Drain & Click Events
                 local drainKeywords = {"drain", "click", "tap", "water", "pump", "addwater", "drainthewater", "minewater", "collectwater", "drainevent", "drainwater", "hit", "swing", "use"}
                 for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if not Toggles.AutoDrainClick then break end
+                    if not Toggles.AutoDrain then break end
                     if remote:IsA("RemoteEvent") then
                         local rName = remote.Name:lower()
                         for _, kw in ipairs(drainKeywords) do
@@ -332,7 +331,7 @@ task.spawn(function()
 
                 -- Layer 5: Workspace ClickDetectors & ProximityPrompts on Water / Draining spots
                 for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if not Toggles.AutoDrainClick then break end
+                    if not Toggles.AutoDrain then break end
                     if obj:IsA("ClickDetector") then
                         local objName = obj.Parent and obj.Parent.Name:lower() or ""
                         for _, kw in ipairs(drainKeywords) do
@@ -361,75 +360,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 5. AUTO UPGRADE ENGINE (PUMPS, DRAIN POWER, CAPACITY, MULTIPLIERS)
---------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        task.wait(1.0)
-        if Toggles.AutoUpgrade then
-            pcall(function()
-                local upgradeKeywords = {"upgrade", "buyupgrade", "upgradepump", "upgradedrain", "capacity", "drainpower", "power", "pump", "bucket", "stats", "boost", "speedupgrade"}
-                
-                -- Layer 1: ReplicatedStorage Upgrade Remotes
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if not Toggles.AutoUpgrade then break end
-                    if remote:IsA("RemoteEvent") then
-                        local rName = remote.Name:lower()
-                        for _, kw in ipairs(upgradeKeywords) do
-                            if rName:find(kw) then
-                                remote:FireServer()
-                                remote:FireServer(1)
-                                remote:FireServer("All")
-                                remote:FireServer(true)
-                                break
-                            end
-                        end
-                    elseif remote:IsA("RemoteFunction") then
-                        local rfName = remote.Name:lower()
-                        for _, kw in ipairs(upgradeKeywords) do
-                            if rfName:find(kw) then
-                                pcall(function() remote:InvokeServer() end)
-                                pcall(function() remote:InvokeServer(1) end)
-                                break
-                            end
-                        end
-                    end
-                end
-
-                -- Layer 2: Workspace Upgrade Prompts & Touch Pads
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                for _, prompt in ipairs(Workspace:GetDescendants()) do
-                    if not Toggles.AutoUpgrade then break end
-                    if prompt:IsA("ProximityPrompt") then
-                        local pText = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. (prompt.Parent and prompt.Parent.Name or "")):lower()
-                        for _, kw in ipairs(upgradeKeywords) do
-                            if pText:find(kw) then
-                                if fireproximityprompt then
-                                    fireproximityprompt(prompt)
-                                end
-                                break
-                            end
-                        end
-                    elseif prompt:IsA("BasePart") and hrp and firetouchinterest then
-                        local partName = prompt.Name:lower()
-                        for _, kw in ipairs(upgradeKeywords) do
-                            if partName:find(kw) then
-                                firetouchinterest(hrp, prompt, 0)
-                                task.wait()
-                                firetouchinterest(hrp, prompt, 1)
-                                break
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
---------------------------------------------------------------------
--- 6. AUTO REBIRTH ENGINE (PERMANENT MULTIPLIER GROWTH)
+-- 5. AUTO REBIRTH ENGINE (PERMANENT MULTIPLIER GROWTH)
 --------------------------------------------------------------------
 task.spawn(function()
     while true do
@@ -496,7 +427,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 7. 5-LAYER AUTO COLLECT CASH & AUTO SELL ENGINE
+-- 6. 5-LAYER AUTO COLLECT CASH & AUTO SELL ENGINE
 --------------------------------------------------------------------
 task.spawn(function()
     while true do
@@ -623,7 +554,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- UNIFIED JUNEJO EXECUTIVE UI (290x270px Compact Dark UI)
+-- UNIFIED JUNEJO EXECUTIVE UI (290x250px Compact Dark UI)
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoDrainWaterUI"
@@ -638,11 +569,11 @@ else
     ScreenGui.Parent = UIContainer
 end
 
--- Main Container Frame (Width: 290px, Height: 270px)
+-- Main Container Frame (Width: 290px, Height: 250px)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 290, 0, 270)
-MainFrame.Position = UDim2.new(0.5, -145, 0.5, -135)
+MainFrame.Size = UDim2.new(0, 290, 0, 250)
+MainFrame.Position = UDim2.new(0.5, -145, 0.5, -125)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -725,7 +656,7 @@ end)
 -- Content Frame
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -28, 0, 180)
+ContentFrame.Size = UDim2.new(1, -28, 0, 158)
 ContentFrame.Position = UDim2.new(0, 14, 0, 36)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
@@ -798,19 +729,16 @@ local function AddToggleRow(text, configKey, callback)
     return Row
 end
 
--- 1. Auto Drain / Click
-AddToggleRow("Auto Drain / Click", "AutoDrainClick", nil)
+-- 1. Auto Drain
+AddToggleRow("Auto Drain", "AutoDrain", nil)
 
--- 2. Auto Upgrade
-AddToggleRow("Auto Upgrade", "AutoUpgrade", nil)
-
--- 3. Auto Rebirth
+-- 2. Auto Rebirth
 AddToggleRow("Auto Rebirth", "AutoRebirth", nil)
 
--- 4. Auto Collect Cash
+-- 3. Auto Collect Cash
 AddToggleRow("Auto Collect Cash", "AutoCollectCash", nil)
 
--- 5. Fly Mode (3D Smooth Fly)
+-- 4. Fly Mode (3D Smooth Fly)
 AddToggleRow("Fly Mode", "Fly", function(state)
     if state then
         StartFly()
@@ -819,7 +747,7 @@ AddToggleRow("Fly Mode", "Fly", function(state)
     end
 end)
 
--- 6. WalkSpeed Boost
+-- 5. WalkSpeed Boost
 AddToggleRow("WalkSpeed Boost", "WalkSpeedBoost", function(state)
     UpdateCharacterSpeed()
 end)
@@ -896,7 +824,7 @@ PlusBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- 7. Infinite Jump
+-- 6. Infinite Jump
 AddToggleRow("Infinite Jump", "InfiniteJump", nil)
 
 -- Footer Branding
