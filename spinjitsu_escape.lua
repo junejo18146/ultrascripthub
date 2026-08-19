@@ -15,6 +15,12 @@ local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
 local CoreGui = game:GetService("CoreGui")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+
+local VirtualInputManager
+pcall(function()
+    VirtualInputManager = game:GetService("VirtualInputManager")
+end)
 
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
@@ -58,6 +64,29 @@ local CustomSpeedValue = 50
 local FlySpeed = 60
 
 --------------------------------------------------------------------
+-- HELPER: SAFE CLICK & FIRE UTILITIES
+--------------------------------------------------------------------
+local function SafeFireButton(btn)
+    if not btn or not btn:IsA("GuiButton") then return end
+    pcall(function()
+        if firesignal then
+            firesignal(btn.MouseButton1Click)
+            firesignal(btn.Activated)
+        end
+    end)
+    pcall(function()
+        if getconnections then
+            for _, conn in ipairs(getconnections(btn.MouseButton1Click)) do
+                conn:Fire()
+            end
+            for _, conn in ipairs(getconnections(btn.Activated)) do
+                conn:Fire()
+            end
+        end
+    end)
+end
+
+--------------------------------------------------------------------
 -- ANTI-AFK SYSTEM (Prevents 20-minute idle disconnect)
 --------------------------------------------------------------------
 LocalPlayer.Idled:Connect(function()
@@ -69,7 +98,7 @@ LocalPlayer.Idled:Connect(function()
 end)
 
 --------------------------------------------------------------------
--- 1. BULLETPROOF INFINITE JUMP (PC & MOBILE COMPATIBLE)
+-- 1. BULLETPROOF INFINITE JUMP (WORKING - UNTOUCHED)
 --------------------------------------------------------------------
 UserInputService.JumpRequest:Connect(function()
     if Toggles.InfiniteJump and LocalPlayer.Character then
@@ -101,7 +130,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 --------------------------------------------------------------------
--- 2. BULLETPROOF WALKSPEED BOOST ENGINE (DUAL ENGINE)
+-- 2. BULLETPROOF WALKSPEED BOOST ENGINE (WORKING - UNTOUCHED)
 --------------------------------------------------------------------
 local function UpdateCharacterSpeed()
     pcall(function()
@@ -163,7 +192,7 @@ RunService.RenderStepped:Connect(function(dt)
 end)
 
 --------------------------------------------------------------------
--- 3. BULLETPROOF 3D FLY SYSTEM (PC & MOBILE TOUCH COMPATIBLE)
+-- 3. BULLETPROOF 3D FLY SYSTEM (WORKING - UNTOUCHED)
 --------------------------------------------------------------------
 local flyBodyGyro, flyBodyVelocity, flyConnection
 
@@ -269,294 +298,7 @@ LocalPlayer.CharacterAdded:Connect(function()
 end)
 
 --------------------------------------------------------------------
--- 4. AUTO SPINJITSU ENGINE (AUTOMATIC JITSU / SPIN TRAINING)
---------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        task.wait(0.08)
-        if Toggles.AutoSpinjitsu then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hum = char and char:FindFirstChildOfClass("Humanoid")
-                local backpack = LocalPlayer:FindFirstChild("Backpack")
-
-                -- Auto equip spin tool
-                if backpack and char and hum then
-                    local currentTool = char:FindFirstChildOfClass("Tool")
-                    if not currentTool then
-                        for _, tool in ipairs(backpack:GetChildren()) do
-                            if tool:IsA("Tool") then
-                                hum:EquipTool(tool)
-                                break
-                            end
-                        end
-                    end
-                end
-
-                -- Activate tool
-                if char then
-                    local activeTool = char:FindFirstChildOfClass("Tool")
-                    if activeTool then
-                        activeTool:Activate()
-                    end
-                end
-
-                -- Virtual tap / click emulation
-                pcall(function()
-                    VirtualUser:CaptureController()
-                    VirtualUser:Button1Down(Vector2.new(500, 500))
-                    task.wait(0.01)
-                    VirtualUser:Button1Up(Vector2.new(500, 500))
-                end)
-
-                -- Remote sweeper for training / spin
-                local spinKeywords = {"spin", "jitsu", "train", "click", "power", "addpower", "spinjitsu", "swing", "use"}
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if not Toggles.AutoSpinjitsu then break end
-                    if remote:IsA("RemoteEvent") then
-                        local rName = remote.Name:lower()
-                        for _, kw in ipairs(spinKeywords) do
-                            if rName:find(kw) then
-                                remote:FireServer()
-                                remote:FireServer(1)
-                                remote:FireServer(true)
-                                break
-                            end
-                        end
-                    elseif remote:IsA("RemoteFunction") then
-                        local rfName = remote.Name:lower()
-                        for _, kw in ipairs(spinKeywords) do
-                            if rfName:find(kw) then
-                                pcall(function() remote:InvokeServer() end)
-                                break
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
---------------------------------------------------------------------
--- 5. AUTO BREAK WALLS ENGINE
---------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        task.wait(0.15)
-        if Toggles.AutoBreakWalls then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                if not hrp then return end
-
-                local wallKeywords = {"wall", "obstacle", "door", "barrier", "gate", "break", "smash"}
-
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if not Toggles.AutoBreakWalls then break end
-                    if remote:IsA("RemoteEvent") then
-                        local rName = remote.Name:lower()
-                        if rName:find("break") or rName:find("wall") or rName:find("hit") or rName:find("smash") or rName:find("damage") then
-                            remote:FireServer()
-                            remote:FireServer(1)
-                        end
-                    end
-                end
-
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if not Toggles.AutoBreakWalls then break end
-                    if obj:IsA("BasePart") and obj.CanTouch and (obj.Position - hrp.Position).Magnitude <= 35 then
-                        local objName = obj.Name:lower()
-                        for _, kw in ipairs(wallKeywords) do
-                            if objName:find(kw) then
-                                if firetouchinterest then
-                                    firetouchinterest(hrp, obj, 0)
-                                    task.wait()
-                                    firetouchinterest(hrp, obj, 1)
-                                end
-                                break
-                            end
-                        end
-                    elseif obj:IsA("ProximityPrompt") then
-                        local pText = (obj.ActionText .. " " .. obj.ObjectText .. " " .. (obj.Parent and obj.Parent.Name or "")):lower()
-                        for _, kw in ipairs(wallKeywords) do
-                            if pText:find(kw) then
-                                if fireproximityprompt then
-                                    fireproximityprompt(obj)
-                                end
-                                break
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
---------------------------------------------------------------------
--- 6. AUTO STAGE & AUTO WINS ENGINE
---------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        task.wait(0.5)
-        if Toggles.AutoStageWins then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                if not hrp then return end
-
-                local winKeywords = {"win", "finish", "stage", "door", "end", "portal", "checkpoint", "goal", "zone"}
-
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if not Toggles.AutoStageWins then break end
-                    if remote:IsA("RemoteEvent") then
-                        local rName = remote.Name:lower()
-                        for _, kw in ipairs(winKeywords) do
-                            if rName:find(kw) then
-                                remote:FireServer()
-                                remote:FireServer(1)
-                                remote:FireServer(true)
-                                break
-                            end
-                        end
-                    elseif remote:IsA("RemoteFunction") then
-                        local rfName = remote.Name:lower()
-                        for _, kw in ipairs(winKeywords) do
-                            if rfName:find(kw) then
-                                pcall(function() remote:InvokeServer() end)
-                                break
-                            end
-                        end
-                    end
-                end
-
-                for _, part in ipairs(Workspace:GetDescendants()) do
-                    if not Toggles.AutoStageWins then break end
-                    if part:IsA("BasePart") and part.CanTouch then
-                        local pName = part.Name:lower()
-                        if pName:find("finish") or pName:find("win") or pName:find("endpad") or pName:find("goal") or pName:find("nextstage") then
-                            if firetouchinterest then
-                                firetouchinterest(hrp, part, 0)
-                                task.wait()
-                                firetouchinterest(hrp, part, 1)
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
---------------------------------------------------------------------
--- 7. AUTO COLLECT REWARDS & GIFTS ENGINE
---------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        task.wait(1.5)
-        if Toggles.AutoCollectRewards then
-            pcall(function()
-                local rewardKeywords = {"reward", "gift", "daily", "claim", "free", "chest", "bonus", "time", "spinwheel"}
-
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if not Toggles.AutoCollectRewards then break end
-                    if remote:IsA("RemoteEvent") then
-                        local rName = remote.Name:lower()
-                        for _, kw in ipairs(rewardKeywords) do
-                            if rName:find(kw) then
-                                for i = 1, 12 do
-                                    remote:FireServer(i)
-                                end
-                                remote:FireServer()
-                                break
-                            end
-                        end
-                    elseif remote:IsA("RemoteFunction") then
-                        local rfName = remote.Name:lower()
-                        for _, kw in ipairs(rewardKeywords) do
-                            if rfName:find(kw) then
-                                pcall(function() remote:InvokeServer() end)
-                                for i = 1, 12 do
-                                    pcall(function() remote:InvokeServer(i) end)
-                                end
-                                break
-                            end
-                        end
-                    end
-                end
-
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                for _, prompt in ipairs(Workspace:GetDescendants()) do
-                    if not Toggles.AutoCollectRewards then break end
-                    if prompt:IsA("ProximityPrompt") then
-                        local pText = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. (prompt.Parent and prompt.Parent.Name or "")):lower()
-                        for _, kw in ipairs(rewardKeywords) do
-                            if pText:find(kw) then
-                                if fireproximityprompt then
-                                    fireproximityprompt(prompt)
-                                end
-                                break
-                            end
-                        end
-                    elseif prompt:IsA("BasePart") and hrp and firetouchinterest then
-                        local pName = prompt.Name:lower()
-                        if pName:find("chest") or pName:find("reward") or pName:find("drop") or pName:find("coin") then
-                            firetouchinterest(hrp, prompt, 0)
-                            task.wait()
-                            firetouchinterest(hrp, prompt, 1)
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
---------------------------------------------------------------------
--- 8. AUTO UPGRADE SPINJITSU ENGINE
---------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        task.wait(1.0)
-        if Toggles.AutoUpgrade then
-            pcall(function()
-                local upgradeKeywords = {"upgrade", "buyupgrade", "spinup", "jitsuupgrade", "powerupgrade", "speedupgrade"}
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if not Toggles.AutoUpgrade then break end
-                    if remote:IsA("RemoteEvent") then
-                        local rName = remote.Name:lower()
-                        for _, kw in ipairs(upgradeKeywords) do
-                            if rName:find(kw) then
-                                for tier = 1, 10 do
-                                    remote:FireServer(tier)
-                                end
-                                remote:FireServer("All")
-                                remote:FireServer()
-                                break
-                            end
-                        end
-                    elseif remote:IsA("RemoteFunction") then
-                        local rfName = remote.Name:lower()
-                        for _, kw in ipairs(upgradeKeywords) do
-                            if rfName:find(kw) then
-                                pcall(function() remote:InvokeServer() end)
-                                for tier = 1, 10 do
-                                    pcall(function() remote:InvokeServer(tier) end)
-                                end
-                                break
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
---------------------------------------------------------------------
--- 9. AUTO HATCH / PETS ENGINE
+-- 4. AUTO HATCH / PETS ENGINE (WORKING - UNTOUCHED)
 --------------------------------------------------------------------
 task.spawn(function()
     while true do
@@ -610,30 +352,71 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 10. AUTO EQUIP BEST PET ENGINE
+-- 5. UPGRADED MULTI-LAYER AUTO SPINJITSU (POWER FARMING)
 --------------------------------------------------------------------
 task.spawn(function()
     while true do
-        task.wait(2.0)
-        if Toggles.AutoEquipBest then
+        task.wait(0.04)
+        if Toggles.AutoSpinjitsu then
             pcall(function()
-                local equipKeywords = {"equipbest", "equipall", "bestpet", "autoequip", "equipthebest"}
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if not Toggles.AutoEquipBest then break end
-                    if remote:IsA("RemoteEvent") then
-                        local rName = remote.Name:lower()
-                        for _, kw in ipairs(equipKeywords) do
-                            if rName:find(kw) then
-                                remote:FireServer()
-                                remote:FireServer(true)
+                local char = LocalPlayer.Character
+                local hum = char and char:FindFirstChildOfClass("Humanoid")
+                local backpack = LocalPlayer:FindFirstChild("Backpack")
+
+                -- Layer 1: Equip and continuous tool activate
+                if backpack and char and hum then
+                    local currentTool = char:FindFirstChildOfClass("Tool")
+                    if not currentTool then
+                        for _, tool in ipairs(backpack:GetChildren()) do
+                            if tool:IsA("Tool") then
+                                hum:EquipTool(tool)
                                 break
                             end
                         end
-                    elseif remote:IsA("RemoteFunction") then
-                        local rfName = remote.Name:lower()
-                        for _, kw in ipairs(equipKeywords) do
-                            if rfName:find(kw) then
-                                pcall(function() remote:InvokeServer() end)
+                    end
+                end
+
+                if char then
+                    local activeTool = char:FindFirstChildOfClass("Tool")
+                    if activeTool then
+                        activeTool:Activate()
+                    end
+                end
+
+                -- Layer 2: Native Virtual Input & Screen click
+                pcall(function()
+                    if VirtualInputManager then
+                        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+                        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+                    else
+                        VirtualUser:CaptureController()
+                        VirtualUser:Button1Down(Vector2.new(500, 500))
+                        VirtualUser:Button1Up(Vector2.new(500, 500))
+                    end
+                end)
+
+                -- Layer 3: Comprehensive Remote Invoker
+                local spinKeywords = {"spin", "jitsu", "train", "click", "power", "addpower", "spinjitsu", "swing", "use", "hit", "attack", "gain", "addjitsu"}
+                for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
+                    if not Toggles.AutoSpinjitsu then break end
+                    if obj:IsA("RemoteEvent") then
+                        local oName = obj.Name:lower()
+                        for _, kw in ipairs(spinKeywords) do
+                            if oName:find(kw) then
+                                obj:FireServer()
+                                obj:FireServer(1)
+                                obj:FireServer(true)
+                                obj:FireServer(LocalPlayer)
+                                obj:FireServer("Spin")
+                                break
+                            end
+                        end
+                    elseif obj:IsA("RemoteFunction") then
+                        local ofName = obj.Name:lower()
+                        for _, kw in ipairs(spinKeywords) do
+                            if ofName:find(kw) then
+                                pcall(function() obj:InvokeServer() end)
+                                pcall(function() obj:InvokeServer(1) end)
                                 break
                             end
                         end
@@ -645,15 +428,374 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 11. AUTO REBIRTH ENGINE
+-- 6. UPGRADED AUTO BREAK WALLS ENGINE (PROXIMITY & TOUCH TRANSDUCER)
+--------------------------------------------------------------------
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        if Toggles.AutoBreakWalls then
+            pcall(function()
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                if not hrp then return end
+
+                local wallKeywords = {"wall", "obstacle", "door", "barrier", "gate", "break", "smash", "glass", "block", "target", "stage"}
+
+                -- Layer 1: Remotes for damaging / breaking walls
+                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
+                    if not Toggles.AutoBreakWalls then break end
+                    if remote:IsA("RemoteEvent") then
+                        local rName = remote.Name:lower()
+                        if rName:find("break") or rName:find("wall") or rName:find("hit") or rName:find("smash") or rName:find("damage") or rName:find("destroy") then
+                            remote:FireServer()
+                            remote:FireServer(1)
+                            remote:FireServer(true)
+                            remote:FireServer("Wall")
+                        end
+                    elseif remote:IsA("RemoteFunction") then
+                        local rfName = remote.Name:lower()
+                        if rfName:find("break") or rfName:find("wall") or rfName:find("smash") then
+                            pcall(function() remote:InvokeServer() end)
+                            pcall(function() remote:InvokeServer(1) end)
+                        end
+                    end
+                end
+
+                -- Layer 2: Workspace Wall Collision & Touch Transmitter Sweeper
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    if not Toggles.AutoBreakWalls then break end
+                    if obj:IsA("BasePart") and obj.CanTouch then
+                        local objName = obj.Name:lower()
+                        local parentName = obj.Parent and obj.Parent.Name:lower() or ""
+                        local isWall = false
+                        for _, kw in ipairs(wallKeywords) do
+                            if objName:find(kw) or parentName:find(kw) then
+                                isWall = true
+                                break
+                            end
+                        end
+
+                        if isWall and (obj.Position - hrp.Position).Magnitude <= 80 then
+                            if firetouchinterest then
+                                firetouchinterest(hrp, obj, 0)
+                                task.wait()
+                                firetouchinterest(hrp, obj, 1)
+                            end
+                        end
+                    elseif obj:IsA("ProximityPrompt") then
+                        local pText = (obj.ActionText .. " " .. obj.ObjectText .. " " .. (obj.Parent and obj.Parent.Name or "")):lower()
+                        for _, kw in ipairs(wallKeywords) do
+                            if pText:find(kw) then
+                                if fireproximityprompt then
+                                    fireproximityprompt(obj)
+                                end
+                                break
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+--------------------------------------------------------------------
+-- 7. UPGRADED AUTO STAGE & WINS ENGINE (SEQUENTIAL ZONE & REMOTES)
+--------------------------------------------------------------------
+task.spawn(function()
+    while true do
+        task.wait(0.3)
+        if Toggles.AutoStageWins then
+            pcall(function()
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                if not hrp then return end
+
+                local winKeywords = {"win", "finish", "stage", "door", "end", "portal", "checkpoint", "goal", "zone", "claimwin", "completewin", "nextstage"}
+
+                -- Layer 1: Remotes for Win claims & Stage completion
+                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
+                    if not Toggles.AutoStageWins then break end
+                    if remote:IsA("RemoteEvent") then
+                        local rName = remote.Name:lower()
+                        for _, kw in ipairs(winKeywords) do
+                            if rName:find(kw) then
+                                remote:FireServer()
+                                remote:FireServer(1)
+                                remote:FireServer(true)
+                                remote:FireServer("Win")
+                                remote:FireServer("Finish")
+                                break
+                            end
+                        end
+                    elseif remote:IsA("RemoteFunction") then
+                        local rfName = remote.Name:lower()
+                        for _, kw in ipairs(winKeywords) do
+                            if rfName:find(kw) then
+                                pcall(function() remote:InvokeServer() end)
+                                pcall(function() remote:InvokeServer(1) end)
+                                pcall(function() remote:InvokeServer("Win") end)
+                                break
+                            end
+                        end
+                    end
+                end
+
+                -- Layer 2: Workspace Finish Pads & Win Gates
+                for _, part in ipairs(Workspace:GetDescendants()) do
+                    if not Toggles.AutoStageWins then break end
+                    if part:IsA("BasePart") and part.CanTouch then
+                        local pName = part.Name:lower()
+                        local parName = part.Parent and part.Parent.Name:lower() or ""
+                        if pName:find("finish") or pName:find("win") or pName:find("endpad") or pName:find("goal") or pName:find("nextstage") or pName:find("checkpoint") or parName:find("finish") or parName:find("win") then
+                            if firetouchinterest then
+                                firetouchinterest(hrp, part, 0)
+                                task.wait()
+                                firetouchinterest(hrp, part, 1)
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+--------------------------------------------------------------------
+-- 8. UPGRADED AUTO COLLECT REWARDS & GIFTS ENGINE (UI + REMOTES)
+--------------------------------------------------------------------
+task.spawn(function()
+    while true do
+        task.wait(1.0)
+        if Toggles.AutoCollectRewards then
+            pcall(function()
+                local rewardKeywords = {"reward", "gift", "daily", "claim", "free", "chest", "bonus", "time", "spinwheel", "freegift", "playtime"}
+
+                -- Layer 1: PlayerGui Button Clicker
+                if LocalPlayer:FindFirstChild("PlayerGui") then
+                    for _, gui in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
+                        if not Toggles.AutoCollectRewards then break end
+                        if gui:IsA("GuiButton") then
+                            local gName = gui.Name:lower()
+                            local gText = (gui:IsA("TextButton") and gui.Text or ""):lower()
+                            local parName = gui.Parent and gui.Parent.Name:lower() or ""
+                            
+                            for _, kw in ipairs(rewardKeywords) do
+                                if gName:find(kw) or gText:find(kw) or parName:find(kw) then
+                                    SafeFireButton(gui)
+                                    break
+                                end
+                            end
+                        end
+                    end
+                end
+
+                -- Layer 2: ReplicatedStorage Remotes
+                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
+                    if not Toggles.AutoCollectRewards then break end
+                    if remote:IsA("RemoteEvent") then
+                        local rName = remote.Name:lower()
+                        for _, kw in ipairs(rewardKeywords) do
+                            if rName:find(kw) then
+                                remote:FireServer()
+                                remote:FireServer(true)
+                                for i = 1, 15 do
+                                    remote:FireServer(i)
+                                    remote:FireServer(tostring(i))
+                                end
+                                break
+                            end
+                        end
+                    elseif remote:IsA("RemoteFunction") then
+                        local rfName = remote.Name:lower()
+                        for _, kw in ipairs(rewardKeywords) do
+                            if rfName:find(kw) then
+                                pcall(function() remote:InvokeServer() end)
+                                for i = 1, 15 do
+                                    pcall(function() remote:InvokeServer(i) end)
+                                end
+                                break
+                            end
+                        end
+                    end
+                end
+
+                -- Layer 3: Workspace Chests & Reward Drops
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                for _, prompt in ipairs(Workspace:GetDescendants()) do
+                    if not Toggles.AutoCollectRewards then break end
+                    if prompt:IsA("ProximityPrompt") then
+                        local pText = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. (prompt.Parent and prompt.Parent.Name or "")):lower()
+                        for _, kw in ipairs(rewardKeywords) do
+                            if pText:find(kw) then
+                                if fireproximityprompt then
+                                    fireproximityprompt(prompt)
+                                end
+                                break
+                            end
+                        end
+                    elseif prompt:IsA("BasePart") and hrp and firetouchinterest then
+                        local pName = prompt.Name:lower()
+                        if pName:find("chest") or pName:find("reward") or pName:find("drop") or pName:find("coin") then
+                            firetouchinterest(hrp, prompt, 0)
+                            task.wait()
+                            firetouchinterest(hrp, prompt, 1)
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+--------------------------------------------------------------------
+-- 9. UPGRADED AUTO UPGRADE SPINJITSU ENGINE (UI + REMOTES)
+--------------------------------------------------------------------
+task.spawn(function()
+    while true do
+        task.wait(0.8)
+        if Toggles.AutoUpgrade then
+            pcall(function()
+                local upgradeKeywords = {"upgrade", "buyupgrade", "spinup", "jitsuupgrade", "powerupgrade", "speedupgrade", "statupgrade", "upgradeall", "buy"}
+
+                -- Layer 1: PlayerGui Button Clicker
+                if LocalPlayer:FindFirstChild("PlayerGui") then
+                    for _, gui in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
+                        if not Toggles.AutoUpgrade then break end
+                        if gui:IsA("GuiButton") then
+                            local gName = gui.Name:lower()
+                            local gText = (gui:IsA("TextButton") and gui.Text or ""):lower()
+                            local parName = gui.Parent and gui.Parent.Name:lower() or ""
+                            
+                            if gName:find("upgrade") or gText:find("upgrade") or (parName:find("upgrade") and (gName:find("buy") or gText:find("buy"))) then
+                                SafeFireButton(gui)
+                            end
+                        end
+                    end
+                end
+
+                -- Layer 2: Remotes Invocation
+                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
+                    if not Toggles.AutoUpgrade then break end
+                    if remote:IsA("RemoteEvent") then
+                        local rName = remote.Name:lower()
+                        for _, kw in ipairs(upgradeKeywords) do
+                            if rName:find(kw) then
+                                remote:FireServer()
+                                remote:FireServer("All")
+                                remote:FireServer("Power")
+                                remote:FireServer("Speed")
+                                remote:FireServer("Jitsu")
+                                for tier = 1, 10 do
+                                    remote:FireServer(tier)
+                                end
+                                break
+                            end
+                        end
+                    elseif remote:IsA("RemoteFunction") then
+                        local rfName = remote.Name:lower()
+                        for _, kw in ipairs(upgradeKeywords) do
+                            if rfName:find(kw) then
+                                pcall(function() remote:InvokeServer() end)
+                                pcall(function() remote:InvokeServer("All") end)
+                                pcall(function() remote:InvokeServer("Power") end)
+                                for tier = 1, 10 do
+                                    pcall(function() remote:InvokeServer(tier) end)
+                                end
+                                break
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+--------------------------------------------------------------------
+-- 10. UPGRADED AUTO EQUIP BEST PET ENGINE (UI + REMOTES)
 --------------------------------------------------------------------
 task.spawn(function()
     while true do
         task.wait(1.5)
+        if Toggles.AutoEquipBest then
+            pcall(function()
+                local equipKeywords = {"equipbest", "equipall", "bestpet", "autoequip", "equipthebest", "petequipbest", "equip_best"}
+
+                -- Layer 1: PlayerGui Button Clicker (Equip Best button in Pet frames)
+                if LocalPlayer:FindFirstChild("PlayerGui") then
+                    for _, gui in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
+                        if not Toggles.AutoEquipBest then break end
+                        if gui:IsA("GuiButton") then
+                            local gName = gui.Name:lower()
+                            local gText = (gui:IsA("TextButton") and gui.Text or ""):lower()
+                            for _, kw in ipairs(equipKeywords) do
+                                if gName:find(kw) or gText:find("equip best") or gText:find("equip best pet") then
+                                    SafeFireButton(gui)
+                                    break
+                                end
+                            end
+                        end
+                    end
+                end
+
+                -- Layer 2: ReplicatedStorage Remotes
+                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
+                    if not Toggles.AutoEquipBest then break end
+                    if remote:IsA("RemoteEvent") then
+                        local rName = remote.Name:lower()
+                        for _, kw in ipairs(equipKeywords) do
+                            if rName:find(kw) then
+                                remote:FireServer()
+                                remote:FireServer(true)
+                                remote:FireServer("Best")
+                                remote:FireServer("All")
+                                break
+                            end
+                        end
+                    elseif remote:IsA("RemoteFunction") then
+                        local rfName = remote.Name:lower()
+                        for _, kw in ipairs(equipKeywords) do
+                            if rfName:find(kw) then
+                                pcall(function() remote:InvokeServer() end)
+                                pcall(function() remote:InvokeServer(true) end)
+                                pcall(function() remote:InvokeServer("Best") end)
+                                break
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+--------------------------------------------------------------------
+-- 11. UPGRADED AUTO REBIRTH ENGINE (UI + WORKSPACE + REMOTES)
+--------------------------------------------------------------------
+task.spawn(function()
+    while true do
+        task.wait(1.0)
         if Toggles.AutoRebirth then
             pcall(function()
-                local rebirthKeywords = {"rebirth", "prestige", "dorebirth", "buyrebirth", "claimrebirth", "performrebirth"}
-                
+                local rebirthKeywords = {"rebirth", "prestige", "dorebirth", "buyrebirth", "claimrebirth", "performrebirth", "doprestige"}
+
+                -- Layer 1: PlayerGui Button Clicker
+                if LocalPlayer:FindFirstChild("PlayerGui") then
+                    for _, gui in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
+                        if not Toggles.AutoRebirth then break end
+                        if gui:IsA("GuiButton") then
+                            local gName = gui.Name:lower()
+                            local gText = (gui:IsA("TextButton") and gui.Text or ""):lower()
+                            if gName:find("rebirth") or gText:find("rebirth") then
+                                SafeFireButton(gui)
+                            end
+                        end
+                    end
+                end
+
+                -- Layer 2: ReplicatedStorage Remotes
                 for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
                     if not Toggles.AutoRebirth then break end
                     if remote:IsA("RemoteEvent") then
@@ -663,6 +805,7 @@ task.spawn(function()
                                 remote:FireServer()
                                 remote:FireServer(1)
                                 remote:FireServer(true)
+                                remote:FireServer("Rebirth")
                                 break
                             end
                         end
@@ -672,12 +815,14 @@ task.spawn(function()
                             if rfName:find(kw) then
                                 pcall(function() remote:InvokeServer() end)
                                 pcall(function() remote:InvokeServer(1) end)
+                                pcall(function() remote:InvokeServer(true) end)
                                 break
                             end
                         end
                     end
                 end
 
+                -- Layer 3: Workspace Rebirth Pads & Prompts
                 local char = LocalPlayer.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
                 for _, prompt in ipairs(Workspace:GetDescendants()) do
