@@ -4,7 +4,7 @@
     Author: Made by Junejo (junejo18146)
     Repository: junejo18146/ultrascripthub
     Theme: Unified Junejo Executive Dark UI (#0F0F11) - Solid Matte Black Standard
-    Status: Standalone Dedicated Executable - Enhanced High-Power Auto Clean Engine
+    Status: Standalone Dedicated Executable - Instant Auto Clean & Placement Engine
 --]]
 
 local Players = game:GetService("Players")
@@ -46,7 +46,7 @@ end
 
 -- Feature States
 local Toggles = {
-    AutoCleanHouse = false,
+    AutoClean = false,
     WalkSpeedBoost = false,
     InfiniteJump = false
 }
@@ -145,253 +145,116 @@ RunService.Stepped:Connect(function()
 end)
 
 --------------------------------------------------------------------
--- 3. ULTRA 8-LAYER HIGH-POWER AUTO CLEAN HOUSE ENGINE
+-- 3. MASTER AUTO CLEAN & AUTO-PLACE HOUSE ENGINE
 --------------------------------------------------------------------
+task.spawn(function()
+    while true do
+        task.wait(0.12)
+        if Toggles.AutoClean then
+            pcall(function()
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                local hum = char and char:FindFirstChildOfClass("Humanoid")
+                local bp = LocalPlayer:FindFirstChild("Backpack")
 
--- Layer A: Auto-Equip Cleaning Tools (Sponge, Mop, Spray, Washer, etc.)
-local function AutoEquipAllCleaningTools()
-    pcall(function()
-        local char = LocalPlayer.Character
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        local bp = LocalPlayer:FindFirstChild("Backpack")
-        if not hum or not bp then return end
-
-        for _, tool in ipairs(bp:GetChildren()) do
-            if tool:IsA("Tool") then
-                hum:EquipTool(tool)
-            end
-        end
-    end)
-end
-
--- Layer B: Force Tool Activation & Direct Tool Remotes
-local function FireEquippedTools()
-    pcall(function()
-        local char = LocalPlayer.Character
-        if not char then return end
-
-        for _, item in ipairs(char:GetChildren()) do
-            if item:IsA("Tool") then
-                -- Direct Lua tool activation
-                pcall(function() item:Activate() end)
-
-                -- Check and fire nested tool remotes
-                for _, sub in ipairs(item:GetDescendants()) do
-                    if sub:IsA("RemoteEvent") then
-                        pcall(function()
-                            sub:FireServer()
-                            sub:FireServer(true)
-                            sub:FireServer(1)
-                            sub:FireServer(Vector3.new(0, 0, 0))
-                        end)
-                    elseif sub:IsA("RemoteFunction") then
-                        task.spawn(function()
-                            pcall(function() sub:InvokeServer() end)
-                        end)
-                    end
-                end
-            end
-        end
-    end)
-end
-
--- Layer C: Sweep & Fire All ProximityPrompts across the Map
-local function SweepAllProximityPrompts()
-    pcall(function()
-        local char = LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-
-        for _, desc in ipairs(Workspace:GetDescendants()) do
-            if desc:IsA("ProximityPrompt") and desc.Enabled then
-                local pParent = desc.Parent
-                local pPos = nil
-                if pParent:IsA("BasePart") then
-                    pPos = pParent.Position
-                elseif pParent:IsA("Model") and pParent.PrimaryPart then
-                    pPos = pParent.PrimaryPart.Position
-                end
-
-                -- Trigger nearby prompt or universal trigger
-                if pPos and hrp and (pPos - hrp.Position).Magnitude <= (desc.MaxActivationDistance or 35) then
-                    pcall(function()
-                        if fireproximityprompt then
-                            fireproximityprompt(desc)
-                        else
-                            desc:InputHoldBegin()
-                            task.wait(0.02)
-                            desc:InputHoldEnd()
-                        end
-                    end)
-                end
-            end
-        end
-    end)
-end
-
--- Layer D: Sweep & Fire All ClickDetectors
-local function SweepAllClickDetectors()
-    pcall(function()
-        local char = LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-
-        for _, cd in ipairs(Workspace:GetDescendants()) do
-            if cd:IsA("ClickDetector") then
-                local part = cd.Parent
-                if part and part:IsA("BasePart") and hrp and (part.Position - hrp.Position).Magnitude <= (cd.MaxActivationDistance or 35) then
-                    pcall(function()
-                        if fireclickdetector then
-                            fireclickdetector(cd)
-                        end
-                    end)
-                end
-            end
-        end
-    end)
-end
-
--- Layer E: Find Stains/Dirt Objects in Workspace & Apply Touch + CFrame Focus
-local function SweepWorkspaceDirtAndStains()
-    pcall(function()
-        local char = LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
-
-        local tool = char:FindFirstChildOfClass("Tool")
-        local handle = tool and (tool:FindFirstChild("Handle") or tool:FindFirstChildWhichIsA("BasePart"))
-
-        local keywords = {"dirt", "stain", "mess", "clean", "spot", "trash", "wash", "sponge", "scrub", "wipe", "mop", "rubbish", "dust", "grime"}
-
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            if obj:IsA("BasePart") then
-                local lowerName = string.lower(obj.Name)
-                local isDirt = false
-
-                for _, kw in ipairs(keywords) do
-                    if string.find(lowerName, kw) then
-                        isDirt = true
-                        break
-                    end
-                end
-
-                -- Check if parent model is named dirt/stain
-                if not isDirt and obj.Parent and obj.Parent:IsA("Model") then
-                    local pName = string.lower(obj.Parent.Name)
-                    for _, kw in ipairs(keywords) do
-                        if string.find(pName, kw) then
-                            isDirt = true
-                            break
+                -- 1. Auto-Equip Tools from Backpack
+                if bp and hum then
+                    for _, tool in ipairs(bp:GetChildren()) do
+                        if tool:IsA("Tool") then
+                            hum:EquipTool(tool)
                         end
                     end
                 end
 
-                if isDirt then
-                    -- Trigger touch interest if within 40 studs
-                    if (obj.Position - hrp.Position).Magnitude <= 40 then
-                        if firetouchinterest and handle then
-                            pcall(function()
-                                firetouchinterest(handle, obj, 0)
-                                task.wait()
-                                firetouchinterest(handle, obj, 1)
-                            end)
-                        elseif firetouchinterest then
-                            pcall(function()
+                -- 2. Activate any equipped tool
+                if char then
+                    for _, tool in ipairs(char:GetChildren()) do
+                        if tool:IsA("Tool") then
+                            pcall(function() tool:Activate() end)
+                        end
+                    end
+                end
+
+                -- 3. Clean all Dirt / Stain / Grime Decals, Textures & Parts
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    if not Toggles.AutoClean then break end
+                    if obj:IsA("Texture") or obj:IsA("Decal") then
+                        local n = obj.Name:lower()
+                        local parentN = obj.Parent and obj.Parent.Name:lower() or ""
+                        if n:find("dirt") or n:find("stain") or n:find("clean") or n:find("grime") or n:find("mess") or n:find("spot") or n:find("dust") or n:find("mud") or parentN:find("dirt") or parentN:find("stain") then
+                            obj.Transparency = 1
+                        end
+                    elseif obj:IsA("BasePart") then
+                        local n = obj.Name:lower()
+                        if n:find("dirt") or n:find("stain") or n:find("clean") or n:find("grime") or n:find("mess") or n:find("spot") or n:find("dust") or n:find("rubbish") or n:find("trash") then
+                            obj.Transparency = 1
+                            if firetouchinterest and hrp then
                                 firetouchinterest(hrp, obj, 0)
                                 task.wait()
                                 firetouchinterest(hrp, obj, 1)
+                            end
+                        end
+                    end
+                end
+
+                -- 4. Bypass & Fire ALL ProximityPrompts across the entire house (Pickup / Place / Clean)
+                for _, prompt in ipairs(Workspace:GetDescendants()) do
+                    if not Toggles.AutoClean then break end
+                    if prompt:IsA("ProximityPrompt") and prompt.Enabled then
+                        pcall(function()
+                            prompt.RequiresLineOfSight = false
+                            prompt.MaxActivationDistance = 999999
+                            prompt.HoldDuration = 0
+                            if fireproximityprompt then
+                                fireproximityprompt(prompt, 0)
+                            else
+                                prompt:InputHoldBegin()
+                                task.wait(0.01)
+                                prompt:InputHoldEnd()
+                            end
+                        end)
+                    elseif prompt:IsA("ClickDetector") then
+                        pcall(function()
+                            prompt.MaxActivationDistance = 999999
+                            if fireclickdetector then
+                                fireclickdetector(prompt)
+                            end
+                        end)
+                    end
+                end
+
+                -- 5. Send Universal E-Key & Mouse Click Inputs
+                pcall(function()
+                    if VirtualInputManager then
+                        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+                        task.wait(0.015)
+                        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+                    end
+                    if VirtualUser then
+                        VirtualUser:Button1Down(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
+                        task.wait(0.015)
+                        VirtualUser:Button1Up(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
+                    end
+                end)
+
+                -- 6. Remote Event Sweeper (Clean, Place, Pickup, Task)
+                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
+                    if remote:IsA("RemoteEvent") then
+                        local rn = remote.Name:lower()
+                        if rn:find("clean") or rn:find("wash") or rn:find("place") or rn:find("pickup") or rn:find("interact") or rn:find("item") or rn:find("task") or rn:find("stain") or rn:find("dirt") then
+                            pcall(function()
+                                remote:FireServer()
+                                remote:FireServer(true)
+                                remote:FireServer(1)
+                                if hrp then
+                                    remote:FireServer(hrp.Position)
+                                end
                             end)
                         end
                     end
                 end
-            end
+            end)
         end
-    end)
-end
-
--- Layer F: Scan & Fire All Cleaning Remotes in ReplicatedStorage & Workspace
-local function FireAllGlobalCleanRemotes()
-    pcall(function()
-        local char = LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-
-        local keywords = {
-            "clean", "wash", "dirt", "stain", "sponge", "mop", "spray", "water", 
-            "spraydirt", "cleandirt", "washhouse", "scrub", "wipe", "task", "job", "action"
-        }
-
-        local function checkAndFireRemote(obj)
-            if obj:IsA("RemoteEvent") then
-                local lowerName = string.lower(obj.Name)
-                for _, kw in ipairs(keywords) do
-                    if string.find(lowerName, kw) then
-                        pcall(function()
-                            obj:FireServer()
-                            obj:FireServer(true)
-                            obj:FireServer(1)
-                            if hrp then
-                                obj:FireServer(hrp.Position)
-                                obj:FireServer(hrp.CFrame)
-                            end
-                        end)
-                        break
-                    end
-                end
-            elseif obj:IsA("RemoteFunction") then
-                local lowerName = string.lower(obj.Name)
-                for _, kw in ipairs(keywords) do
-                    if string.find(lowerName, kw) then
-                        task.spawn(function()
-                            pcall(function()
-                                obj:InvokeServer()
-                                obj:InvokeServer(true)
-                            end)
-                        end)
-                        break
-                    end
-                end
-            end
-        end
-
-        for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
-            checkAndFireRemote(obj)
-        end
-
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
-                checkAndFireRemote(obj)
-            end
-        end
-    end)
-end
-
--- Layer G: Simulated Hardware Click & Screen Touch
-local function SimulateCleanClicks()
-    pcall(function()
-        if VirtualUser then
-            VirtualUser:Button1Down(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
-            task.wait(0.015)
-            VirtualUser:Button1Up(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
-        end
-        if VirtualInputManager then
-            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-            task.wait(0.015)
-            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
-        end
-    end)
-end
-
--- Dedicated Multi-Threaded Auto Clean Master Runner
-task.spawn(function()
-    while true do
-        if Toggles.AutoCleanHouse then
-            AutoEquipAllCleaningTools()
-            FireEquippedTools()
-            SweepWorkspaceDirtAndStains()
-            SweepAllProximityPrompts()
-            SweepAllClickDetectors()
-            FireAllGlobalCleanRemotes()
-            SimulateCleanClicks()
-        end
-        task.wait(0.05)
     end
 end)
 
@@ -725,8 +588,8 @@ local function CreateSpeedControlRow(order, titleText, initialVal, onToggleCallb
 end
 
 -- ATTACH FEATURE ROWS
-CreateToggleRow(1, "Auto Clean House", false, function(v)
-    Toggles.AutoCleanHouse = v
+CreateToggleRow(1, "Auto Clean", false, function(v)
+    Toggles.AutoClean = v
 end)
 
 CreateSpeedControlRow(2, "WalkSpeed Boost", false, function(v)
