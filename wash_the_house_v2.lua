@@ -3,7 +3,7 @@
     Target Game: Wash the House (Roblox)
     Author: Made by Junejo (junejo18146)
     Repository: junejo18146/ultrascripthub
-    Theme: Classic Junejo Executive Dark UI (#0F0F11) - Ultra Clean Layout
+    Theme: Unified Junejo Executive Dark UI (#0F0F11) - Exact Classic Standard
     Status: Standalone Dedicated Executable
 --]]
 
@@ -35,8 +35,8 @@ end
 
 local UIContainer = GetUIContainer()
 
--- Cleanup previous UI instances of this script
-for _, name in ipairs({"JunejoWashTheHouseV2UI", "JunejoWashHouseV2", "JunejoWashTheHouse_V2", "JunejoWashHouseUI"}) do
+-- Cleanup previous UI instances
+for _, name in ipairs({"JunejoWashTheHouseV2UI", "JunejoWashHouseV2", "JunejoWashTheHouse_V2", "JunejoWashHouseUI", "JunejoHubUI"}) do
     if CoreGui:FindFirstChild(name) then CoreGui[name]:Destroy() end
     if LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild(name) then
         LocalPlayer.PlayerGui[name]:Destroy()
@@ -212,7 +212,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 4. CLASSIC JUNEJO EXECUTIVE UI (EXACT ORIGINAL TEMPLATE)
+-- 4. EXACT JUNEJO ULTRA SCRIPT HUB CLASSIC UI
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoWashTheHouseV2UI"
@@ -227,11 +227,11 @@ else
     ScreenGui.Parent = UIContainer
 end
 
--- Main Container Frame (280px width, 195px height)
+-- Main Container Frame (280px width, 185px height)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 195)
-MainFrame.Position = UDim2.new(0.5, -140, 0.45, -97)
+MainFrame.Size = UDim2.new(0, 280, 0, 185)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -92)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -313,17 +313,17 @@ end)
 -- Content Frame
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -28, 0, 100)
-ContentFrame.Position = UDim2.new(0, 14, 0, 38)
+ContentFrame.Size = UDim2.new(1, -28, 0, 95)
+ContentFrame.Position = UDim2.new(0, 14, 0, 36)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
 
 local UIList = Instance.new("UIListLayout")
 UIList.SortOrder = Enum.SortOrder.LayoutOrder
-UIList.Padding = UDim.new(0, 5)
+UIList.Padding = UDim.new(0, 4)
 UIList.Parent = ContentFrame
 
--- Helper function to add classic Junejo toggle rows
+-- Helper function to add classic Junejo toggle rows (Full row clickable, transparent row, square checkbox)
 local function AddToggleRow(text, configKey)
     local Row = Instance.new("Frame")
     Row.Size = UDim2.new(1, 0, 0, 24)
