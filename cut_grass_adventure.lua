@@ -15,6 +15,7 @@ local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
 local CoreGui = game:GetService("CoreGui")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ProximityPromptService = game:GetService("ProximityPromptService")
 
 local VirtualInputManager
 pcall(function()
@@ -64,6 +65,25 @@ LocalPlayer.Idled:Connect(function()
         task.wait(1)
         VirtualUser:Button2Up(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
     end)
+end)
+
+--------------------------------------------------------------------
+-- INSTANT PROXIMITY PROMPT AUTO-EXECUTION HOOK (Zero Delay, No Popups)
+--------------------------------------------------------------------
+ProximityPromptService.PromptShown:Connect(function(prompt, inputType)
+    if Toggles.AutoCollect or Toggles.RemoveGrass or Toggles.AutoSell then
+        pcall(function()
+            prompt.HoldDuration = 0
+            if fireproximityprompt then
+                fireproximityprompt(prompt)
+                fireproximityprompt(prompt, 0)
+            else
+                prompt:InputHoldBegin()
+                task.wait(0.005)
+                prompt:InputHoldEnd()
+            end
+        end)
+    end
 end)
 
 --------------------------------------------------------------------
@@ -333,14 +353,13 @@ task.spawn(function()
                         local objText = prompt.ObjectText:lower()
                         if pn:find("grass") or pn:find("cut") or pn:find("remove") or pn:find("farm") or actText:find("cut") or actText:find("remove") or actText:find("harvest") or objText:find("grass") then
                             pcall(function()
-                                prompt.RequiresLineOfSight = false
-                                prompt.MaxActivationDistance = 999999
                                 prompt.HoldDuration = 0
                                 if fireproximityprompt then
+                                    fireproximityprompt(prompt)
                                     fireproximityprompt(prompt, 0)
                                 else
                                     prompt:InputHoldBegin()
-                                    task.wait(0.01)
+                                    task.wait(0.005)
                                     prompt:InputHoldEnd()
                                 end
                             end)
@@ -353,11 +372,11 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 5. MASTER AUTO COLLECT ENGINE (Magnetic Instant Coins & Drops)
+-- 5. MASTER AUTO COLLECT ENGINE (Direct Silent Instant Collection)
 --------------------------------------------------------------------
 task.spawn(function()
     while true do
-        task.wait(0.1)
+        task.wait(0.06)
         if Toggles.AutoCollect then
             pcall(function()
                 local char = LocalPlayer.Character
@@ -370,44 +389,75 @@ task.spawn(function()
                     local n = obj.Name:lower()
                     local parentN = obj.Parent and obj.Parent.Name:lower() or ""
 
-                    if n:find("coin") or n:find("gem") or n:find("drop") or n:find("loot") or n:find("reward") or n:find("orb") or n:find("star") or n:find("chest") or n:find("shard") or n:find("pickup") or parentN:find("coin") or parentN:find("drop") or parentN:find("loot") or parentN:find("reward") then
-                        if obj:IsA("BasePart") then
-                            if firetouchinterest then
-                                firetouchinterest(hrp, obj, 0)
-                                task.wait()
-                                firetouchinterest(hrp, obj, 1)
-                            else
-                                obj.CFrame = hrp.CFrame
-                            end
-                        end
-                    end
-                end
+                    -- Detect any coin, drop, loot or object with Pickup prompt
+                    local isDrop = n:find("coin") or n:find("gem") or n:find("drop") or n:find("loot") or n:find("reward") or n:find("orb") or n:find("star") or n:find("chest") or n:find("shard") or n:find("pickup") or parentN:find("coin") or parentN:find("drop") or parentN:find("loot") or parentN:find("reward")
 
-                -- 2. Trigger ProximityPrompts on all collectable drops
-                for _, prompt in ipairs(Workspace:GetDescendants()) do
-                    if not Toggles.AutoCollect then break end
-                    if prompt:IsA("ProximityPrompt") and prompt.Enabled then
-                        local pn = prompt.Parent and prompt.Parent.Name:lower() or ""
-                        local actText = prompt.ActionText:lower()
-                        local objText = prompt.ObjectText:lower()
-                        if pn:find("coin") or pn:find("drop") or pn:find("collect") or pn:find("pickup") or pn:find("loot") or actText:find("collect") or actText:find("pickup") or objText:find("coin") or objText:find("gem") or objText:find("loot") then
+                    if isDrop and obj:IsA("BasePart") then
+                        -- Snap drop directly to player HumanoidRootPart position
+                        pcall(function()
+                            obj.CFrame = hrp.CFrame
+                            obj.CanCollide = false
+                        end)
+
+                        -- Instant Touch Collection
+                        if firetouchinterest then
+                            firetouchinterest(hrp, obj, 0)
+                            task.wait()
+                            firetouchinterest(hrp, obj, 1)
+                        end
+
+                        -- Trigger internal ProximityPrompt if attached
+                        local prompt = obj:FindFirstChildOfClass("ProximityPrompt")
+                        if prompt and prompt.Enabled then
                             pcall(function()
-                                prompt.RequiresLineOfSight = false
-                                prompt.MaxActivationDistance = 999999
                                 prompt.HoldDuration = 0
                                 if fireproximityprompt then
+                                    fireproximityprompt(prompt)
                                     fireproximityprompt(prompt, 0)
                                 else
                                     prompt:InputHoldBegin()
-                                    task.wait(0.01)
+                                    task.wait(0.005)
                                     prompt:InputHoldEnd()
+                                end
+                            end)
+                        end
+                    elseif obj:IsA("ProximityPrompt") and obj.Enabled then
+                        local actText = obj.ActionText:lower()
+                        local objText = obj.ObjectText:lower()
+                        if actText:find("pickup") or actText:find("collect") or actText:find("take") or objText:find("coin") or objText:find("drop") or parentN:find("drop") or parentN:find("coin") or parentN:find("loot") then
+                            pcall(function()
+                                obj.HoldDuration = 0
+                                if obj.Parent and obj.Parent:IsA("BasePart") then
+                                    obj.Parent.CFrame = hrp.CFrame
+                                    if firetouchinterest then
+                                        firetouchinterest(hrp, obj.Parent, 0)
+                                        task.wait()
+                                        firetouchinterest(hrp, obj.Parent, 1)
+                                    end
+                                end
+                                if fireproximityprompt then
+                                    fireproximityprompt(obj)
+                                    fireproximityprompt(obj, 0)
+                                else
+                                    obj:InputHoldBegin()
+                                    task.wait(0.005)
+                                    obj:InputHoldEnd()
                                 end
                             end)
                         end
                     end
                 end
 
-                -- 3. Remote Sweeper for Collect / Pickup
+                -- 2. Hardware / Virtual E-Key & Touch Trigger for Pickup Prompts
+                pcall(function()
+                    if VirtualInputManager then
+                        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+                        task.wait(0.01)
+                        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+                    end
+                end)
+
+                -- 3. Direct Remote Sweeper for Collect / Pickup
                 for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
                     if not Toggles.AutoCollect then break end
                     if remote:IsA("RemoteEvent") then
@@ -492,10 +542,9 @@ task.spawn(function()
                         local actText = prompt.ActionText:lower()
                         if pn:find("sell") or actText:find("sell") then
                             pcall(function()
-                                prompt.RequiresLineOfSight = false
-                                prompt.MaxActivationDistance = 999999
                                 prompt.HoldDuration = 0
                                 if fireproximityprompt then
+                                    fireproximityprompt(prompt)
                                     fireproximityprompt(prompt, 0)
                                 else
                                     prompt:InputHoldBegin()
