@@ -238,25 +238,48 @@ local function StartFly()
 end
 
 --------------------------------------------------------------------
--- 4. MASTER AUTO WIN & ESCAPE ENGINE (Instant Wins & Teleport)
+-- 4. BULLETPROOF AUTO WIN ENGINE (Smooth Single-Target Top Win Farm)
 --------------------------------------------------------------------
-local function GetWinPads()
-    local winPads = {}
+local function GetHighestWinPad()
+    local highestPad = nil
+    local highestY = -math.huge
+    
+    -- Priority 1: Exact matches for Win / Finish / Goal parts
     for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj:IsA("BasePart") and not obj:IsDescendantOf(LocalPlayer.Character or Workspace) then
+        if obj:IsA("BasePart") and not obj:IsDescendantOf(LocalPlayer.Character or Workspace) and not obj.Parent:IsA("Tool") then
             local n = obj.Name:lower()
             local parentN = obj.Parent and obj.Parent.Name:lower() or ""
-            if n:find("win") or n:find("finish") or n:find("end") or n:find("goal") or n:find("escape") or n:find("trophy") or n:find("top") or parentN:find("win") or parentN:find("finish") or parentN:find("escape") then
-                table.insert(winPads, obj)
+            if n == "win" or n == "winpad" or n == "finish" or n == "finishline" or n == "goal" or n == "end" or n == "escape" or n == "winner" or n == "trophy" or parentN == "win" or parentN == "finish" or parentN == "goal" then
+                if obj.Position.Y > highestY then
+                    highestY = obj.Position.Y
+                    highestPad = obj
+                end
             end
         end
     end
-    return winPads
+    
+    -- Priority 2: Substring matches for win/finish
+    if not highestPad then
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if obj:IsA("BasePart") and not obj:IsDescendantOf(LocalPlayer.Character or Workspace) and not obj.Parent:IsA("Tool") then
+                local n = obj.Name:lower()
+                local parentN = obj.Parent and obj.Parent.Name:lower() or ""
+                if (n:find("win") or n:find("finish") or n:find("escape") or parentN:find("win") or parentN:find("finish")) and not (n:find("gui") or n:find("ui") or n:find("shop") or n:find("door") or n:find("wall")) then
+                    if obj.Position.Y > highestY then
+                        highestY = obj.Position.Y
+                        highestPad = obj
+                    end
+                end
+            end
+        end
+    end
+    
+    return highestPad
 end
 
 task.spawn(function()
     while true do
-        task.wait(0.2)
+        task.wait(0.35)
         if Toggles.AutoWin then
             pcall(function()
                 local char = LocalPlayer.Character
@@ -264,46 +287,40 @@ task.spawn(function()
                 local hum = char and char:FindFirstChildOfClass("Humanoid")
                 if not hrp or not hum or hum.Health <= 0 then return end
 
-                local winPads = GetWinPads()
+                local winPad = GetHighestWinPad()
+                
+                -- 1. Smooth Single Teleport to Highest Win Platform
+                if winPad then
+                    local targetCFrame = winPad.CFrame + Vector3.new(0, 3.5, 0)
+                    
+                    -- Smoothly position on win pad
+                    hrp.CFrame = targetCFrame
+                    hrp.Velocity = Vector3.new(0, 0, 0)
 
-                -- 1. Teleport & Touch Win Platforms / Pads
-                if #winPads > 0 then
-                    for _, pad in ipairs(winPads) do
-                        if not Toggles.AutoWin then break end
-                        
-                        -- Teleport directly onto win pad
+                    -- Trigger physical touch
+                    if firetouchinterest then
+                        firetouchinterest(hrp, winPad, 0)
+                        task.wait(0.04)
+                        firetouchinterest(hrp, winPad, 1)
+                    end
+
+                    -- Trigger ProximityPrompt if attached
+                    local prompt = winPad:FindFirstChildOfClass("ProximityPrompt") or (winPad.Parent and winPad.Parent:FindFirstChildOfClass("ProximityPrompt"))
+                    if prompt and prompt.Enabled then
                         pcall(function()
-                            hrp.CFrame = pad.CFrame + Vector3.new(0, 3, 0)
-                            hrp.Velocity = Vector3.new(0, 0, 0)
+                            prompt.HoldDuration = 0
+                            if fireproximityprompt then
+                                fireproximityprompt(prompt)
+                                fireproximityprompt(prompt, 0)
+                            else
+                                prompt:InputHoldBegin()
+                                prompt:InputHoldEnd()
+                            end
                         end)
-
-                        -- Fire touch interest
-                        if firetouchinterest then
-                            firetouchinterest(hrp, pad, 0)
-                            task.wait(0.02)
-                            firetouchinterest(hrp, pad, 1)
-                        end
-
-                        -- Trigger ProximityPrompt if on the win pad
-                        local prompt = pad:FindFirstChildOfClass("ProximityPrompt") or (pad.Parent and pad.Parent:FindFirstChildOfClass("ProximityPrompt"))
-                        if prompt and prompt.Enabled then
-                            pcall(function()
-                                prompt.HoldDuration = 0
-                                if fireproximityprompt then
-                                    fireproximityprompt(prompt)
-                                    fireproximityprompt(prompt, 0)
-                                else
-                                    prompt:InputHoldBegin()
-                                    task.wait(0.01)
-                                    prompt:InputHoldEnd()
-                                end
-                            end)
-                        end
-                        task.wait(0.05)
                     end
                 end
 
-                -- 2. Remote Event Sweeper for Wins / Finish / Escape
+                -- 2. Global Remote Sweeper for Win / Finish / Escape
                 for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
                     if not Toggles.AutoWin then break end
                     if remote:IsA("RemoteEvent") then
@@ -317,6 +334,9 @@ task.spawn(function()
                                 remote:FireServer("Finish")
                                 if hrp then
                                     remote:FireServer(hrp.Position)
+                                end
+                                if winPad then
+                                    remote:FireServer(winPad)
                                 end
                             end)
                         end
