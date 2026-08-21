@@ -243,8 +243,9 @@ end
 -- Helper to collect all win, finish, stage, wall, gate and trophy parts
 local function CollectAllWinTargets()
     local targets = {}
+    local char = LocalPlayer.Character
     for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj:IsA("BasePart") and not obj:IsDescendantOf(LocalPlayer.Character or Workspace) and not obj.Parent:IsA("Tool") then
+        if obj:IsA("BasePart") and (not char or not obj:IsDescendantOf(char)) and not obj.Parent:IsA("Tool") then
             local n = obj.Name:lower()
             local parentN = obj.Parent and obj.Parent.Name:lower() or ""
 
@@ -354,7 +355,7 @@ task.spawn(function()
                     if not Toggles.AutoWin then break end
                     if obj:IsA("TouchTransmitter") and obj.Parent and obj.Parent:IsA("BasePart") then
                         local part = obj.Parent
-                        if not part:IsDescendantOf(char) then
+                        if not char or not part:IsDescendantOf(char) then
                             pcall(function()
                                 if firetouchinterest then
                                     firetouchinterest(hrp, part, 0)
