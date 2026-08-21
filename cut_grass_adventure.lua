@@ -420,7 +420,7 @@ task.spawn(function()
                         pcall(function()
                             prompt.HoldDuration = 0
                             prompt.RequiresLineOfSight = false
-                            prompt.MaxActivationDistance = 12 -- Keep normal to eliminate black boxes!
+                            prompt.MaxActivationDistance = 12
 
                             if fireproximityprompt then
                                 fireproximityprompt(prompt)
@@ -478,28 +478,99 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 6. MASTER AUTO SELL ENGINE (Automatic Coin/Grass Sell Loop)
+-- 6. BULLETPROOF 4-LAYER AUTO SELL ENGINE (Micro-Snap + Remote + UI)
 --------------------------------------------------------------------
+local function FindSellZonePart()
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("BasePart") then
+            local n = obj.Name:lower()
+            local parentN = obj.Parent and obj.Parent.Name:lower() or ""
+            if n == "sell" or n == "sellpad" or n == "sellzone" or n == "sellarea" or n == "sellring" or n == "sellcircle" or n == "sellpoint" or parentN == "sell" or parentN == "sellpad" or parentN == "sellzone" then
+                return obj
+            end
+        end
+    end
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and not obj:IsDescendantOf(LocalPlayer.Character or Workspace) and not obj.Parent:IsA("Tool") then
+            local n = obj.Name:lower()
+            if (n:find("sell") or n:find("deposit") or n:find("exchange")) and not n:find("cutter") and not n:find("tool") and not n:find("buy") then
+                return obj
+            end
+        end
+    end
+    return nil
+end
+
 task.spawn(function()
     while true do
-        task.wait(0.25)
+        task.wait(0.5)
         if Toggles.AutoSell then
             pcall(function()
                 local char = LocalPlayer.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                local hum = char and char:FindFirstChildOfClass("Humanoid")
+                if not hrp or not hum or hum.Health <= 0 then return end
 
-                -- 1. Remote Event Sweeper for Selling
+                local sellPad = FindSellZonePart()
+
+                -- Layer 1: Seamless Micro-Teleport Sell (Bypasses server distance check)
+                if sellPad and not Toggles.Fly then
+                    local originalCFrame = hrp.CFrame
+                    local targetCFrame = sellPad.CFrame + Vector3.new(0, 3.5, 0)
+                    
+                    hrp.CFrame = targetCFrame
+                    
+                    if firetouchinterest then
+                        firetouchinterest(hrp, sellPad, 0)
+                        task.wait(0.02)
+                        firetouchinterest(hrp, sellPad, 1)
+                    end
+                    
+                    -- Trigger any sell prompt attached to the pad
+                    local prompt = sellPad:FindFirstChildOfClass("ProximityPrompt") or (sellPad.Parent and sellPad.Parent:FindFirstChildOfClass("ProximityPrompt"))
+                    if prompt and prompt.Enabled then
+                        pcall(function()
+                            prompt.HoldDuration = 0
+                            if fireproximityprompt then
+                                fireproximityprompt(prompt)
+                                fireproximityprompt(prompt, 0)
+                            else
+                                prompt:InputHoldBegin()
+                                prompt:InputHoldEnd()
+                            end
+                        end)
+                    end
+
+                    task.wait(0.05)
+                    -- Return player seamlessly
+                    if hrp and (hrp.Position - targetCFrame.Position).Magnitude < 10 then
+                        hrp.CFrame = originalCFrame
+                    end
+                elseif sellPad and firetouchinterest then
+                    -- If flying or stationary, trigger touch directly
+                    firetouchinterest(hrp, sellPad, 0)
+                    task.wait(0.01)
+                    firetouchinterest(hrp, sellPad, 1)
+                end
+
+                -- Layer 2: Global Sell Remote Events Sweeper
                 for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
                     if not Toggles.AutoSell then break end
                     if remote:IsA("RemoteEvent") then
                         local rn = remote.Name:lower()
-                        if rn:find("sell") or rn:find("convert") or rn:find("deposit") or rn:find("exchange") or rn:find("cashin") then
+                        if rn:find("sell") or rn:find("convert") or rn:find("deposit") or rn:find("exchange") or rn:find("cashin") or rn:find("tradein") then
                             pcall(function()
                                 remote:FireServer()
                                 remote:FireServer(true)
                                 remote:FireServer("Sell")
                                 remote:FireServer("All")
+                                remote:FireServer("Loot")
+                                remote:FireServer("Grass")
+                                remote:FireServer("Coins")
                                 remote:FireServer(1)
+                                if sellPad then
+                                    remote:FireServer(sellPad)
+                                end
                             end)
                         end
                     elseif remote:IsA("RemoteFunction") then
@@ -507,46 +578,27 @@ task.spawn(function()
                         if rn:find("sell") or rn:find("convert") or rn:find("exchange") then
                             pcall(function()
                                 remote:InvokeServer()
+                                remote:InvokeServer("All")
                             end)
                         end
                     end
                 end
 
-                -- 2. Sell Zone Touch Interest Detection
-                if hrp then
-                    for _, obj in ipairs(Workspace:GetDescendants()) do
+                -- Layer 3: UI Button Sell Trigger (If game has on-screen Sell Button)
+                if LocalPlayer:FindFirstChild("PlayerGui") then
+                    for _, gui in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
                         if not Toggles.AutoSell then break end
-                        if obj:IsA("BasePart") then
-                            local n = obj.Name:lower()
-                            if n:find("sell") or n:find("sellpad") or n:find("sellzone") or n:find("sellarea") or n:find("sellring") or n:find("sellcircle") then
-                                if firetouchinterest then
-                                    firetouchinterest(hrp, obj, 0)
-                                    task.wait()
-                                    firetouchinterest(hrp, obj, 1)
-                                end
+                        if gui:IsA("TextButton") or gui:IsA("ImageButton") then
+                            local tn = gui.Text and gui.Text:lower() or ""
+                            local gn = gui.Name:lower()
+                            if (tn:find("sell") or gn:find("sell")) and not (tn:find("buy") or gn:find("buy") or gn:find("close")) then
+                                pcall(function()
+                                    if firesignal then
+                                        firesignal(gui.MouseButton1Click)
+                                        firesignal(gui.Activated)
+                                    end
+                                end)
                             end
-                        end
-                    end
-                end
-
-                -- 3. Sell ProximityPrompt Trigger
-                for _, prompt in ipairs(Workspace:GetDescendants()) do
-                    if not Toggles.AutoSell then break end
-                    if prompt:IsA("ProximityPrompt") and prompt.Enabled then
-                        local pn = prompt.Parent and prompt.Parent.Name:lower() or ""
-                        local actText = prompt.ActionText:lower()
-                        if pn:find("sell") or actText:find("sell") then
-                            pcall(function()
-                                prompt.HoldDuration = 0
-                                if fireproximityprompt then
-                                    fireproximityprompt(prompt)
-                                    fireproximityprompt(prompt, 0)
-                                else
-                                    prompt:InputHoldBegin()
-                                    task.wait(0.01)
-                                    prompt:InputHoldEnd()
-                                end
-                            end)
                         end
                     end
                 end
