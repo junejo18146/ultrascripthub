@@ -45,7 +45,7 @@ for _, name in ipairs({"JunejoCutGrassAdventureUI", "JunejoCutGrassUI", "JunejoH
     end
 end
 
--- Reset all bloated proximity prompts across the map to fix screen clutter
+-- Reset any bloated proximity prompts across the map
 for _, p in ipairs(Workspace:GetDescendants()) do
     if p:IsA("ProximityPrompt") then
         pcall(function()
@@ -56,15 +56,12 @@ for _, p in ipairs(Workspace:GetDescendants()) do
     end
 end
 
--- Feature States
+-- Feature States (Only Requested 4 Features)
 local Toggles = {
     RemoveGrass = false,
-    AutoCollect = false,
-    AutoSell = false,
     AutoRebirth = false,
     Fly = false,
-    Speed = false,
-    InfiniteJump = false
+    Speed = false
 }
 
 --------------------------------------------------------------------
@@ -79,53 +76,7 @@ LocalPlayer.Idled:Connect(function()
 end)
 
 --------------------------------------------------------------------
--- INSTANT PROXIMITY PROMPT AUTO-EXECUTION HOOK (Zero Delay, No Popups)
---------------------------------------------------------------------
-ProximityPromptService.PromptShown:Connect(function(prompt, inputType)
-    if Toggles.AutoCollect or Toggles.RemoveGrass or Toggles.AutoSell then
-        pcall(function()
-            prompt.HoldDuration = 0
-            if fireproximityprompt then
-                fireproximityprompt(prompt)
-                fireproximityprompt(prompt, 0)
-                fireproximityprompt(prompt, 1)
-                fireproximityprompt(prompt, 0, true)
-            else
-                prompt:InputHoldBegin()
-                task.wait(0.005)
-                prompt:InputHoldEnd()
-            end
-        end)
-    end
-end)
-
---------------------------------------------------------------------
--- 1. INFINITE JUMP ENGINE
---------------------------------------------------------------------
-UserInputService.JumpRequest:Connect(function()
-    if Toggles.InfiniteJump and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-        pcall(function()
-            LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
-        end)
-    end
-end)
-
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not gameProcessed and Toggles.InfiniteJump and input.KeyCode == Enum.KeyCode.Space then
-        pcall(function()
-            local char = LocalPlayer.Character
-            local hum = char and char:FindFirstChildOfClass("Humanoid")
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            if hum and hrp then
-                hum:ChangeState(Enum.HumanoidStateType.Jumping)
-                hrp.Velocity = Vector3.new(hrp.Velocity.X, 50, hrp.Velocity.Z)
-            end
-        end)
-    end
-end)
-
---------------------------------------------------------------------
--- 2. WALKSPEED BOOST ENGINE (50 Speed)
+-- 1. WALKSPEED BOOST ENGINE (50 Speed)
 --------------------------------------------------------------------
 local function UpdateCharacterSpeed()
     pcall(function()
@@ -172,7 +123,7 @@ RunService.Stepped:Connect(function()
 end)
 
 --------------------------------------------------------------------
--- 3. 3D FLY SYSTEM (PC & Mobile Touch Compatible)
+-- 2. 3D FLY SYSTEM (PC & Mobile Touch Compatible)
 --------------------------------------------------------------------
 local flyBodyGyro, flyBodyVelocity, flyConnection
 
@@ -272,7 +223,7 @@ local function StartFly()
 end
 
 --------------------------------------------------------------------
--- 4. MASTER REMOVE GRASS ENGINE (Instant Clear & Auto Harvest)
+-- 3. MASTER REMOVE GRASS ENGINE (Instant Clear & Auto Harvest)
 --------------------------------------------------------------------
 task.spawn(function()
     while true do
@@ -356,120 +307,27 @@ task.spawn(function()
                         end
                     end
                 end
-            end)
-        end
-    end
-end)
 
---------------------------------------------------------------------
--- 5. MASTER AUTO COLLECT ENGINE (Direct Auto Magnet, No Popups)
---------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        task.wait(0.05)
-        if Toggles.AutoCollect then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                if not hrp then return end
-
-                -- 1. Scan Workspace for Coins, Gems, Relics (Silver Spoon, Medallion), Drops & Loot
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if not Toggles.AutoCollect then break end
-
-                    local dropPart = nil
-                    local prompt = nil
-
-                    if obj:IsA("ProximityPrompt") and obj.Enabled then
-                        prompt = obj
-                        if obj.Parent and obj.Parent:IsA("BasePart") then
-                            dropPart = obj.Parent
-                        elseif obj.Parent and obj.Parent:FindFirstChildWhichIsA("BasePart") then
-                            dropPart = obj.Parent:FindFirstChildWhichIsA("BasePart")
-                        end
-                    elseif obj:IsA("BasePart") then
-                        local n = obj.Name:lower()
-                        local parentN = obj.Parent and obj.Parent.Name:lower() or ""
-
-                        local isLoot = n:find("coin") or n:find("gem") or n:find("drop") or n:find("loot") or n:find("spoon") or n:find("medallion") or n:find("reward") or n:find("orb") or n:find("star") or n:find("chest") or n:find("shard") or n:find("pickup") or parentN:find("coin") or parentN:find("drop") or parentN:find("loot") or parentN:find("item") or parentN:find("reward")
-
-                        if isLoot then
-                            dropPart = obj
-                            prompt = obj:FindFirstChildOfClass("ProximityPrompt") or (obj.Parent and obj.Parent:FindFirstChildOfClass("ProximityPrompt"))
-                        end
-                    end
-
-                    -- Snap physical drop to player position for instant pickup
-                    if dropPart then
-                        pcall(function()
-                            dropPart.CFrame = hrp.CFrame
-                            dropPart.CanCollide = false
-                            dropPart.Velocity = Vector3.new(0, 0, 0)
-                        end)
-
-                        -- Instant Touch Collection
-                        if firetouchinterest then
-                            firetouchinterest(hrp, dropPart, 0)
-                            task.wait()
-                            firetouchinterest(hrp, dropPart, 1)
-                        end
-                    end
-
-                    -- Trigger Prompt if present
-                    if prompt and prompt.Enabled then
-                        pcall(function()
-                            prompt.HoldDuration = 0
-                            prompt.RequiresLineOfSight = false
-                            prompt.MaxActivationDistance = 12
-
-                            if fireproximityprompt then
-                                fireproximityprompt(prompt)
-                                fireproximityprompt(prompt, 0)
-                                fireproximityprompt(prompt, 1)
-                                fireproximityprompt(prompt, 0, true)
-                            else
-                                prompt:InputHoldBegin()
-                                task.wait(0.005)
-                                prompt:InputHoldEnd()
-                            end
-                        end)
-                    end
-                end
-
-                -- 2. Hardware / Virtual E-Key Trigger
-                pcall(function()
-                    if VirtualInputManager then
-                        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
-                        task.wait(0.01)
-                        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
-                    end
-                end)
-
-                -- 3. Remote Sweeper for Collect / Pickup / Claim / Loot
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if not Toggles.AutoCollect then break end
-                    if remote:IsA("RemoteEvent") then
-                        local rn = remote.Name:lower()
-                        if rn:find("collect") or rn:find("pickup") or rn:find("coin") or rn:find("drop") or rn:find("loot") or rn:find("claim") or rn:find("reward") or rn:find("grab") or rn:find("item") then
+                -- 6. ProximityPrompt Auto-Trigger on Grass Plots
+                for _, prompt in ipairs(Workspace:GetDescendants()) do
+                    if not Toggles.RemoveGrass then break end
+                    if prompt:IsA("ProximityPrompt") and prompt.Enabled then
+                        local pn = prompt.Parent and prompt.Parent.Name:lower() or ""
+                        local actText = prompt.ActionText:lower()
+                        local objText = prompt.ObjectText:lower()
+                        if pn:find("grass") or pn:find("cut") or pn:find("remove") or pn:find("farm") or actText:find("cut") or actText:find("remove") or actText:find("harvest") or objText:find("grass") then
                             pcall(function()
-                                remote:FireServer()
-                                remote:FireServer(true)
-                                remote:FireServer(1)
-                                remote:FireServer("Coin")
-                                remote:FireServer("Drop")
-                                remote:FireServer("All")
-                                if hrp then
-                                    remote:FireServer(hrp.Position)
+                                prompt.HoldDuration = 0
+                                if fireproximityprompt then
+                                    fireproximityprompt(prompt)
+                                    fireproximityprompt(prompt, 0)
+                                else
+                                    prompt:InputHoldBegin()
+                                    task.wait(0.005)
+                                    prompt:InputHoldEnd()
                                 end
                             end)
                         end
-                    elseif remote:IsA("RemoteFunction") then
-                        local rn = remote.Name:lower()
-                        if rn:find("collect") or rn:find("pickup") or rn:find("loot") or rn:find("claim") then
-                            pcall(function()
-                                remote:InvokeServer()
-                            end)
-                        end
                     end
                 end
             end)
@@ -478,137 +336,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 6. BULLETPROOF 4-LAYER AUTO SELL ENGINE (Micro-Snap + Remote + UI)
---------------------------------------------------------------------
-local function FindSellZonePart()
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj:IsA("BasePart") then
-            local n = obj.Name:lower()
-            local parentN = obj.Parent and obj.Parent.Name:lower() or ""
-            if n == "sell" or n == "sellpad" or n == "sellzone" or n == "sellarea" or n == "sellring" or n == "sellcircle" or n == "sellpoint" or parentN == "sell" or parentN == "sellpad" or parentN == "sellzone" then
-                return obj
-            end
-        end
-    end
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj:IsA("BasePart") and not obj:IsDescendantOf(LocalPlayer.Character or Workspace) and not obj.Parent:IsA("Tool") then
-            local n = obj.Name:lower()
-            if (n:find("sell") or n:find("deposit") or n:find("exchange")) and not n:find("cutter") and not n:find("tool") and not n:find("buy") then
-                return obj
-            end
-        end
-    end
-    return nil
-end
-
-task.spawn(function()
-    while true do
-        task.wait(0.5)
-        if Toggles.AutoSell then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                local hum = char and char:FindFirstChildOfClass("Humanoid")
-                if not hrp or not hum or hum.Health <= 0 then return end
-
-                local sellPad = FindSellZonePart()
-
-                -- Layer 1: Seamless Micro-Teleport Sell (Bypasses server distance check)
-                if sellPad and not Toggles.Fly then
-                    local originalCFrame = hrp.CFrame
-                    local targetCFrame = sellPad.CFrame + Vector3.new(0, 3.5, 0)
-                    
-                    hrp.CFrame = targetCFrame
-                    
-                    if firetouchinterest then
-                        firetouchinterest(hrp, sellPad, 0)
-                        task.wait(0.02)
-                        firetouchinterest(hrp, sellPad, 1)
-                    end
-                    
-                    -- Trigger any sell prompt attached to the pad
-                    local prompt = sellPad:FindFirstChildOfClass("ProximityPrompt") or (sellPad.Parent and sellPad.Parent:FindFirstChildOfClass("ProximityPrompt"))
-                    if prompt and prompt.Enabled then
-                        pcall(function()
-                            prompt.HoldDuration = 0
-                            if fireproximityprompt then
-                                fireproximityprompt(prompt)
-                                fireproximityprompt(prompt, 0)
-                            else
-                                prompt:InputHoldBegin()
-                                prompt:InputHoldEnd()
-                            end
-                        end)
-                    end
-
-                    task.wait(0.05)
-                    -- Return player seamlessly
-                    if hrp and (hrp.Position - targetCFrame.Position).Magnitude < 10 then
-                        hrp.CFrame = originalCFrame
-                    end
-                elseif sellPad and firetouchinterest then
-                    -- If flying or stationary, trigger touch directly
-                    firetouchinterest(hrp, sellPad, 0)
-                    task.wait(0.01)
-                    firetouchinterest(hrp, sellPad, 1)
-                end
-
-                -- Layer 2: Global Sell Remote Events Sweeper
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if not Toggles.AutoSell then break end
-                    if remote:IsA("RemoteEvent") then
-                        local rn = remote.Name:lower()
-                        if rn:find("sell") or rn:find("convert") or rn:find("deposit") or rn:find("exchange") or rn:find("cashin") or rn:find("tradein") then
-                            pcall(function()
-                                remote:FireServer()
-                                remote:FireServer(true)
-                                remote:FireServer("Sell")
-                                remote:FireServer("All")
-                                remote:FireServer("Loot")
-                                remote:FireServer("Grass")
-                                remote:FireServer("Coins")
-                                remote:FireServer(1)
-                                if sellPad then
-                                    remote:FireServer(sellPad)
-                                end
-                            end)
-                        end
-                    elseif remote:IsA("RemoteFunction") then
-                        local rn = remote.Name:lower()
-                        if rn:find("sell") or rn:find("convert") or rn:find("exchange") then
-                            pcall(function()
-                                remote:InvokeServer()
-                                remote:InvokeServer("All")
-                            end)
-                        end
-                    end
-                end
-
-                -- Layer 3: UI Button Sell Trigger (If game has on-screen Sell Button)
-                if LocalPlayer:FindFirstChild("PlayerGui") then
-                    for _, gui in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
-                        if not Toggles.AutoSell then break end
-                        if gui:IsA("TextButton") or gui:IsA("ImageButton") then
-                            local tn = gui.Text and gui.Text:lower() or ""
-                            local gn = gui.Name:lower()
-                            if (tn:find("sell") or gn:find("sell")) and not (tn:find("buy") or gn:find("buy") or gn:find("close")) then
-                                pcall(function()
-                                    if firesignal then
-                                        firesignal(gui.MouseButton1Click)
-                                        firesignal(gui.Activated)
-                                    end
-                                end)
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
---------------------------------------------------------------------
--- 7. MASTER AUTO REBIRTH ENGINE
+-- 4. MASTER AUTO REBIRTH ENGINE
 --------------------------------------------------------------------
 task.spawn(function()
     while true do
@@ -643,7 +371,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 8. EXACT JUNEJO ULTRA SCRIPT HUB CLASSIC UI
+-- 5. EXACT JUNEJO ULTRA SCRIPT HUB CLASSIC UI (4 FEATURES ONLY)
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoCutGrassAdventureUI"
@@ -658,11 +386,11 @@ else
     ScreenGui.Parent = UIContainer
 end
 
--- Main Container Frame (280px width, 278px height for 7 features)
+-- Main Container Frame (280px width, 195px height for 4 features)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 278)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -139)
+MainFrame.Size = UDim2.new(0, 280, 0, 195)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -97)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -742,10 +470,10 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Content Frame
+-- Content Frame (Height 108px for 4 items)
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -28, 0, 192)
+ContentFrame.Size = UDim2.new(1, -28, 0, 108)
 ContentFrame.Position = UDim2.new(0, 14, 0, 36)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
@@ -824,14 +552,11 @@ local function AddToggleRow(text, configKey)
     end)
 end
 
--- Add the 7 official requested toggle rows
+-- Exactly the 4 requested toggle rows
 AddToggleRow("Remove Grass", "RemoveGrass")
-AddToggleRow("Auto Collect", "AutoCollect")
-AddToggleRow("Auto Sell", "AutoSell")
 AddToggleRow("Auto Rebirth", "AutoRebirth")
 AddToggleRow("Fly Mode", "Fly")
 AddToggleRow("WalkSpeed Boost (50)", "Speed")
-AddToggleRow("Infinite Jump", "InfiniteJump")
 
 -- Footer Frame
 local Footer = Instance.new("Frame")
