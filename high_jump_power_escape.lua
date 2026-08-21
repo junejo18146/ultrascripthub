@@ -279,12 +279,10 @@ local function GetFurthestFinishPad()
     local maxDist = -math.huge
 
     for _, part in ipairs(allTargets) do
-        -- Calculate 3D distance magnitude from origin (0,0,0) or track length
         local dist = part.Position.Magnitude
         local n = part.Name:lower()
         local pn = part.Parent and part.Parent.Name:lower() or ""
 
-        -- Boost priority for explicit win/finish/trophy pads
         if n:find("win") or n:find("finish") or n:find("trophy") or pn:find("win") or pn:find("finish") or pn:find("trophy") then
             dist = dist + 1000
         end
@@ -418,31 +416,117 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 5. MASTER AUTO REBIRTH ENGINE
+-- 5. BULLETPROOF 4-LAYER AUTO REBIRTH ENGINE
 --------------------------------------------------------------------
+local function ClickGuiButton(btn)
+    pcall(function()
+        if firesignal then
+            firesignal(btn.MouseButton1Click)
+            firesignal(btn.MouseButton1Down)
+            firesignal(btn.MouseButton1Up)
+            firesignal(btn.Activated)
+        end
+    end)
+    pcall(function()
+        if getconnections then
+            for _, conn in pairs(getconnections(btn.MouseButton1Click)) do
+                conn:Fire()
+            end
+            for _, conn in pairs(getconnections(btn.Activated)) do
+                conn:Fire()
+            end
+        end
+    end)
+end
+
 task.spawn(function()
     while true do
-        task.wait(0.5)
+        task.wait(0.35)
         if Toggles.AutoRebirth then
             pcall(function()
-                -- Remote Event Sweeper for Rebirth & Prestige
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+                -- Layer 1: Global Remote Event Sweeper with all argument combinations
                 for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
                     if not Toggles.AutoRebirth then break end
                     if remote:IsA("RemoteEvent") then
                         local rn = remote.Name:lower()
-                        if rn:find("rebirth") or rn:find("prestige") or rn:find("buyrebirth") or rn:find("dorebirth") or rn:find("rankup") or rn:find("ascend") then
+                        if rn:find("rebirth") or rn:find("prestige") or rn:find("buyrebirth") or rn:find("dorebirth") or rn:find("rankup") or rn:find("ascend") or rn:find("reset") or rn:find("evolution") or rn:find("tierup") then
                             pcall(function()
                                 remote:FireServer()
                                 remote:FireServer(1)
                                 remote:FireServer(true)
+                                remote:FireServer("Rebirth")
+                                remote:FireServer("Buy")
+                                remote:FireServer("All")
+                                remote:FireServer(LocalPlayer)
+                                remote:FireServer({})
                             end)
                         end
                     elseif remote:IsA("RemoteFunction") then
                         local rn = remote.Name:lower()
-                        if rn:find("rebirth") or rn:find("prestige") or rn:find("buyrebirth") then
+                        if rn:find("rebirth") or rn:find("prestige") or rn:find("buyrebirth") or rn:find("dorebirth") then
                             pcall(function()
                                 remote:InvokeServer()
                                 remote:InvokeServer(1)
+                                remote:InvokeServer("Rebirth")
+                                remote:InvokeServer(true)
+                            end)
+                        end
+                    end
+                end
+
+                -- Layer 2: PlayerGui UI Rebirth / Buy / Confirm Auto-Clicker
+                if LocalPlayer:FindFirstChild("PlayerGui") then
+                    for _, gui in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
+                        if not Toggles.AutoRebirth then break end
+                        if gui:IsA("TextButton") or gui:IsA("ImageButton") then
+                            local tn = gui.Text and gui.Text:lower() or ""
+                            local gn = gui.Name:lower()
+                            local parentN = gui.Parent and gui.Parent.Name:lower() or ""
+
+                            local isRebirthBtn = (
+                                tn:find("rebirth") or tn:find("prestige") or tn:find("re-birth") or 
+                                gn:find("rebirth") or gn:find("prestige") or gn:find("buyrebirth") or 
+                                parentN:find("rebirth") or parentN:find("prestige")
+                            )
+
+                            local isConfirmBtn = (
+                                (tn == "yes" or tn == "confirm" or tn == "buy" or tn == "ok" or tn:find("accept")) and 
+                                (parentN:find("rebirth") or parentN:find("prompt") or parentN:find("confirm") or parentN:find("popup"))
+                            )
+
+                            if (isRebirthBtn or isConfirmBtn) and not (tn:find("robux") or gn:find("robux") or tn:find("pass") or gn:find("pass") or tn:find("close")) then
+                                ClickGuiButton(gui)
+                            end
+                        end
+                    end
+                end
+
+                -- Layer 3: Workspace Rebirth Pads & NPC ProximityPrompts
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    if not Toggles.AutoRebirth then break end
+                    local n = obj.Name:lower()
+                    local parentN = obj.Parent and obj.Parent.Name:lower() or ""
+
+                    if n:find("rebirth") or parentN:find("rebirth") then
+                        if obj:IsA("BasePart") and hrp and firetouchinterest then
+                            pcall(function()
+                                firetouchinterest(hrp, obj, 0)
+                                task.wait(0.01)
+                                firetouchinterest(hrp, obj, 1)
+                            end)
+                        elseif obj:IsA("ProximityPrompt") and obj.Enabled then
+                            pcall(function()
+                                obj.HoldDuration = 0
+                                if fireproximityprompt then
+                                    fireproximityprompt(obj)
+                                    fireproximityprompt(obj, 0)
+                                else
+                                    obj:InputHoldBegin()
+                                    obj:InputHoldEnd()
+                                end
                             end)
                         end
                     end
