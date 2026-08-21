@@ -45,9 +45,8 @@ for _, name in ipairs({"JunejoHighJumpPowerEscapeUI", "JunejoJumpPowerEscapeUI",
     end
 end
 
--- Feature States
+-- Feature States (Auto Win Removed per User Directive)
 local Toggles = {
-    AutoWin = false,
     AutoRebirth = false,
     Fly = false,
     Speed = false,
@@ -238,192 +237,7 @@ local function StartFly()
 end
 
 --------------------------------------------------------------------
--- 4. ULTRA SMOOTH ZERO-VIBRATION AUTO WIN & TROPHY ENGINE
---------------------------------------------------------------------
--- Helper to collect all win, finish, stage, wall, gate and trophy parts
-local function CollectAllWinTargets()
-    local targets = {}
-    local char = LocalPlayer.Character
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj:IsA("BasePart") and (not char or not obj:IsDescendantOf(char)) and not obj.Parent:IsA("Tool") then
-            local n = obj.Name:lower()
-            local parentN = obj.Parent and obj.Parent.Name:lower() or ""
-
-            local isWinPart = (
-                n:find("win") or n:find("finish") or n:find("trophy") or n:find("escape") or 
-                n:find("stage") or n:find("gate") or n:find("goal") or n:find("endpad") or 
-                n:find("finishline") or n:find("checkpoint") or parentN:find("win") or 
-                parentN:find("finish") or parentN:find("trophy") or parentN:find("stage") or
-                parentN:find("escape") or parentN:find("wall") or parentN:find("level")
-            )
-
-            -- Exclude UI / Shop / Door / decorative signs
-            local isExcluded = (
-                n:find("sign") or n:find("gui") or n:find("ui") or n:find("shop") or 
-                n:find("light") or n:find("display") or n:find("text") or n:find("icon")
-            )
-
-            if isWinPart and not isExcluded then
-                table.insert(targets, obj)
-            end
-        end
-    end
-    return targets
-end
-
--- Helper to find the furthest finish pad in the track (End of Escape)
-local function GetFurthestFinishPad()
-    local allTargets = CollectAllWinTargets()
-    if #allTargets == 0 then return nil end
-
-    local bestPad = nil
-    local maxDist = -math.huge
-
-    for _, part in ipairs(allTargets) do
-        local dist = part.Position.Magnitude
-        local n = part.Name:lower()
-        local pn = part.Parent and part.Parent.Name:lower() or ""
-
-        if n:find("win") or n:find("finish") or n:find("trophy") or pn:find("win") or pn:find("finish") or pn:find("trophy") then
-            dist = dist + 1000
-        end
-
-        if dist > maxDist then
-            maxDist = dist
-            bestPad = part
-        end
-    end
-
-    return bestPad
-end
-
-task.spawn(function()
-    while true do
-        task.wait(0.5)
-        if Toggles.AutoWin then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                local hum = char and char:FindFirstChildOfClass("Humanoid")
-                if not hrp or not hum or hum.Health <= 0 then return end
-
-                local furthestPad = GetFurthestFinishPad()
-                local allTargets = CollectAllWinTargets()
-
-                -- 1. Silent Touch Interest Simulation on Furthest Finish Pad (NO CAMERA SHAKE)
-                if furthestPad and firetouchinterest then
-                    pcall(function()
-                        firetouchinterest(hrp, furthestPad, 0)
-                        task.wait(0.02)
-                        firetouchinterest(hrp, furthestPad, 1)
-                    end)
-
-                    local prompt = furthestPad:FindFirstChildOfClass("ProximityPrompt") or (furthestPad.Parent and furthestPad.Parent:FindFirstChildOfClass("ProximityPrompt"))
-                    if prompt and prompt.Enabled then
-                        pcall(function()
-                            prompt.HoldDuration = 0
-                            if fireproximityprompt then
-                                fireproximityprompt(prompt)
-                                fireproximityprompt(prompt, 0)
-                            else
-                                prompt:InputHoldBegin()
-                                prompt:InputHoldEnd()
-                            end
-                        end)
-                    end
-                end
-
-                -- 2. Smooth One-Way Positioning (Only if far away, with cooldown to avoid respawn flicker)
-                if furthestPad and not Toggles.Fly then
-                    local currentDist = (hrp.Position - furthestPad.Position).Magnitude
-                    if currentDist > 25 then
-                        pcall(function()
-                            hrp.CFrame = furthestPad.CFrame + Vector3.new(0, 3.5, 0)
-                            hrp.Velocity = Vector3.new(0, 0, 0)
-                        end)
-                        task.wait(0.3)
-                    end
-                end
-
-                -- 3. Multi-Touch Simulation across all detected Stage & Win Triggers (Silent Background Touch)
-                if firetouchinterest and #allTargets > 0 then
-                    for _, pad in ipairs(allTargets) do
-                        if not Toggles.AutoWin then break end
-                        pcall(function()
-                            firetouchinterest(hrp, pad, 0)
-                            firetouchinterest(hrp, pad, 1)
-                        end)
-                    end
-                end
-
-                -- 4. TouchTransmitter Sweeper (Triggers any Touched event on the character)
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if not Toggles.AutoWin then break end
-                    if obj:IsA("TouchTransmitter") and obj.Parent and obj.Parent:IsA("BasePart") then
-                        local part = obj.Parent
-                        if not char or not part:IsDescendantOf(char) then
-                            pcall(function()
-                                if firetouchinterest then
-                                    firetouchinterest(hrp, part, 0)
-                                    firetouchinterest(hrp, part, 1)
-                                end
-                            end)
-                        end
-                    end
-                end
-
-                -- 5. ReplicatedStorage Deep Remote Sweeper (Win, Trophy, Finish, Escape, Stage, Reward)
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if not Toggles.AutoWin then break end
-                    if remote:IsA("RemoteEvent") then
-                        local rn = remote.Name:lower()
-                        if rn:find("win") or rn:find("trophy") or rn:find("finish") or rn:find("escape") or rn:find("goal") or rn:find("stage") or rn:find("claim") or rn:find("give") or rn:find("add") or rn:find("reward") or rn:find("level") or rn:find("complete") then
-                            pcall(function()
-                                remote:FireServer()
-                                remote:FireServer(true)
-                                remote:FireServer(1)
-                                remote:FireServer("Win")
-                                remote:FireServer("Trophy")
-                                remote:FireServer("Finish")
-                                remote:FireServer("Escape")
-                                remote:FireServer(100)
-                                if hrp then
-                                    remote:FireServer(hrp.Position)
-                                end
-                                if furthestPad then
-                                    remote:FireServer(furthestPad)
-                                end
-                            end)
-                        end
-                    elseif remote:IsA("RemoteFunction") then
-                        local rn = remote.Name:lower()
-                        if rn:find("win") or rn:find("trophy") or rn:find("finish") or rn:find("escape") or rn:find("claim") or rn:find("reward") then
-                            pcall(function()
-                                remote:InvokeServer()
-                                remote:InvokeServer(1)
-                                remote:InvokeServer("Win")
-                            end)
-                        end
-                    end
-                end
-
-                -- 6. Auto Jump simulation (Triggers in-game Jump/Pass verification)
-                pcall(function()
-                    if hum then
-                        hum:ChangeState(Enum.HumanoidStateType.Jumping)
-                    end
-                    if VirtualUser then
-                        VirtualUser:Button1Down(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
-                        VirtualUser:Button1Up(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
-                    end
-                end)
-            end)
-        end
-    end
-end)
-
---------------------------------------------------------------------
--- 5. BULLETPROOF 4-LAYER AUTO REBIRTH ENGINE
+-- 4. BULLETPROOF 4-LAYER AUTO REBIRTH ENGINE
 --------------------------------------------------------------------
 local function ClickGuiButton(btn)
     pcall(function()
@@ -544,7 +358,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 6. EXACT JUNEJO ULTRA SCRIPT HUB CLASSIC UI
+-- 5. EXACT JUNEJO ULTRA SCRIPT HUB CLASSIC UI (4 FEATURES ONLY)
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoHighJumpPowerEscapeUI"
@@ -559,11 +373,11 @@ else
     ScreenGui.Parent = UIContainer
 end
 
--- Main Container Frame (280px width, 222px height for 5 features)
+-- Main Container Frame (280px width, 195px height for 4 features)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 222)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -111)
+MainFrame.Size = UDim2.new(0, 280, 0, 195)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -97)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -648,10 +462,10 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Content Frame (Height 136px for 5 items)
+-- Content Frame (Height 108px for 4 items)
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -28, 0, 136)
+ContentFrame.Size = UDim2.new(1, -28, 0, 108)
 ContentFrame.Position = UDim2.new(0, 14, 0, 36)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.BorderSizePixel = 0
@@ -736,8 +550,7 @@ local function AddToggleRow(text, configKey)
     end)
 end
 
--- Add the 5 requested toggle rows
-AddToggleRow("Auto Win", "AutoWin")
+-- Exactly the 4 requested toggle rows (Auto Win removed)
 AddToggleRow("Auto Rebirth", "AutoRebirth")
 AddToggleRow("Fly Mode", "Fly")
 AddToggleRow("WalkSpeed Boost (50)", "Speed")
