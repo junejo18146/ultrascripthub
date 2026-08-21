@@ -46,7 +46,7 @@ end
 
 -- Feature States
 local Toggles = {
-    AutoCutGrass = false,
+    RemoveGrass = false,
     AutoSell = false,
     AutoRebirth = false,
     Fly = false,
@@ -238,19 +238,19 @@ local function StartFly()
 end
 
 --------------------------------------------------------------------
--- 4. MASTER AUTO CUT GRASS ENGINE (Multi-Layer Fast Harvester)
+-- 4. MASTER REMOVE GRASS ENGINE (Instant Clear & Auto Harvest)
 --------------------------------------------------------------------
 task.spawn(function()
     while true do
         task.wait(0.08)
-        if Toggles.AutoCutGrass then
+        if Toggles.RemoveGrass then
             pcall(function()
                 local char = LocalPlayer.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
                 local hum = char and char:FindFirstChildOfClass("Humanoid")
                 local bp = LocalPlayer:FindFirstChild("Backpack")
 
-                -- 1. Auto-Equip Grass Cutter / Tool
+                -- 1. Auto-Equip Cutter / Tool to register server harvest
                 if bp and hum then
                     for _, tool in ipairs(bp:GetChildren()) do
                         if tool:IsA("Tool") then
@@ -259,7 +259,7 @@ task.spawn(function()
                     end
                 end
 
-                -- 2. Fast Tool Activation & Swings
+                -- 2. Fast Tool Activation
                 if char then
                     for _, tool in ipairs(char:GetChildren()) do
                         if tool:IsA("Tool") then
@@ -268,7 +268,7 @@ task.spawn(function()
                     end
                 end
 
-                -- 3. Virtual Clicks & Swings
+                -- 3. Virtual Swing / Click Emulation
                 pcall(function()
                     if VirtualUser then
                         VirtualUser:Button1Down(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
@@ -277,31 +277,33 @@ task.spawn(function()
                     end
                 end)
 
-                -- 4. Grass Collision / Touch Interest Engine
-                if hrp then
-                    for _, obj in ipairs(Workspace:GetDescendants()) do
-                        if not Toggles.AutoCutGrass then break end
+                -- 4. Instant Grass Removal, Transparency, Collision Disabling & Touch Sweep
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    if not Toggles.RemoveGrass then break end
+                    local n = obj.Name:lower()
+                    local parentN = obj.Parent and obj.Parent.Name:lower() or ""
+
+                    if n:find("grass") or n:find("plant") or n:find("crop") or n:find("leaf") or n:find("blade") or n:find("bush") or n:find("weed") or parentN:find("grass") then
                         if obj:IsA("BasePart") then
-                            local n = obj.Name:lower()
-                            if n:find("grass") or n:find("plant") or n:find("crop") or n:find("leaf") or n:find("blade") or n:find("bush") then
-                                if (obj.Position - hrp.Position).Magnitude <= 35 then
-                                    if firetouchinterest then
-                                        firetouchinterest(hrp, obj, 0)
-                                        task.wait()
-                                        firetouchinterest(hrp, obj, 1)
-                                    end
-                                end
+                            obj.Transparency = 1
+                            obj.CanCollide = false
+                            if hrp and firetouchinterest then
+                                firetouchinterest(hrp, obj, 0)
+                                task.wait()
+                                firetouchinterest(hrp, obj, 1)
                             end
+                        elseif obj:IsA("Texture") or obj:IsA("Decal") then
+                            obj.Transparency = 1
                         end
                     end
                 end
 
-                -- 5. Remote Event Sweeper for Cut / Swing / Farm
+                -- 5. Remote Event Sweeper for Grass Removal / Cut / Harvest
                 for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if not Toggles.AutoCutGrass then break end
+                    if not Toggles.RemoveGrass then break end
                     if remote:IsA("RemoteEvent") then
                         local rn = remote.Name:lower()
-                        if rn:find("cut") or rn:find("swing") or rn:find("harvest") or rn:find("slash") or rn:find("mow") or rn:find("grass") or rn:find("farm") or rn:find("gain") or rn:find("click") or rn:find("hit") or rn:find("train") then
+                        if rn:find("cut") or rn:find("remove") or rn:find("clear") or rn:find("swing") or rn:find("harvest") or rn:find("slash") or rn:find("mow") or rn:find("grass") or rn:find("farm") or rn:find("gain") or rn:find("click") or rn:find("hit") or rn:find("train") then
                             pcall(function()
                                 remote:FireServer()
                                 remote:FireServer(true)
@@ -313,7 +315,7 @@ task.spawn(function()
                         end
                     elseif remote:IsA("RemoteFunction") then
                         local rn = remote.Name:lower()
-                        if rn:find("cut") or rn:find("swing") or rn:find("harvest") or rn:find("grass") then
+                        if rn:find("cut") or rn:find("remove") or rn:find("clear") or rn:find("swing") or rn:find("harvest") or rn:find("grass") then
                             pcall(function()
                                 remote:InvokeServer()
                             end)
@@ -323,12 +325,12 @@ task.spawn(function()
 
                 -- 6. ProximityPrompt Auto-Trigger on Grass Plots
                 for _, prompt in ipairs(Workspace:GetDescendants()) do
-                    if not Toggles.AutoCutGrass then break end
+                    if not Toggles.RemoveGrass then break end
                     if prompt:IsA("ProximityPrompt") and prompt.Enabled then
                         local pn = prompt.Parent and prompt.Parent.Name:lower() or ""
                         local actText = prompt.ActionText:lower()
                         local objText = prompt.ObjectText:lower()
-                        if pn:find("grass") or pn:find("cut") or pn:find("farm") or actText:find("cut") or actText:find("harvest") or objText:find("grass") then
+                        if pn:find("grass") or pn:find("cut") or pn:find("remove") or pn:find("farm") or actText:find("cut") or actText:find("remove") or actText:find("harvest") or objText:find("grass") then
                             pcall(function()
                                 prompt.RequiresLineOfSight = false
                                 prompt.MaxActivationDistance = 999999
@@ -452,6 +454,7 @@ task.spawn(function()
                         if rn:find("rebirth") or rn:find("prestige") or rn:find("buyrebirth") then
                             pcall(function()
                                 remote:InvokeServer()
+                                remote:InvokeServer(1)
                             end)
                         end
                     end
@@ -643,8 +646,8 @@ local function AddToggleRow(text, configKey)
     end)
 end
 
--- Add the 6 official requested toggle rows
-AddToggleRow("Auto Cut Grass", "AutoCutGrass")
+-- Add the 6 official requested toggle rows (Remove Grass updated)
+AddToggleRow("Remove Grass", "RemoveGrass")
 AddToggleRow("Auto Sell", "AutoSell")
 AddToggleRow("Auto Rebirth", "AutoRebirth")
 AddToggleRow("Fly Mode", "Fly")
