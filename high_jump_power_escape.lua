@@ -238,48 +238,69 @@ local function StartFly()
 end
 
 --------------------------------------------------------------------
--- 4. BULLETPROOF AUTO WIN ENGINE (Smooth Single-Target Top Win Farm)
+-- 4. MASTER AUTO WIN & TROPHY FARM ENGINE (Comprehensive Multi-Tier)
 --------------------------------------------------------------------
-local function GetHighestWinPad()
-    local highestPad = nil
-    local highestY = -math.huge
-    
-    -- Priority 1: Exact matches for Win / Finish / Goal parts
+-- Helper to collect all win, finish, stage, wall, gate and trophy parts
+local function CollectAllWinTargets()
+    local targets = {}
     for _, obj in ipairs(Workspace:GetDescendants()) do
         if obj:IsA("BasePart") and not obj:IsDescendantOf(LocalPlayer.Character or Workspace) and not obj.Parent:IsA("Tool") then
             local n = obj.Name:lower()
             local parentN = obj.Parent and obj.Parent.Name:lower() or ""
-            if n == "win" or n == "winpad" or n == "finish" or n == "finishline" or n == "goal" or n == "end" or n == "escape" or n == "winner" or n == "trophy" or parentN == "win" or parentN == "finish" or parentN == "goal" then
-                if obj.Position.Y > highestY then
-                    highestY = obj.Position.Y
-                    highestPad = obj
-                end
+
+            local isWinPart = (
+                n:find("win") or n:find("finish") or n:find("trophy") or n:find("escape") or 
+                n:find("stage") or n:find("gate") or n:find("goal") or n:find("endpad") or 
+                n:find("finishline") or n:find("checkpoint") or parentN:find("win") or 
+                parentN:find("finish") or parentN:find("trophy") or parentN:find("stage") or
+                parentN:find("escape") or parentN:find("wall") or parentN:find("level")
+            )
+
+            -- Exclude UI / Shop / Door / decorative signs
+            local isExcluded = (
+                n:find("sign") or n:find("gui") or n:find("ui") or n:find("shop") or 
+                n:find("light") or n:find("display") or n:find("text") or n:find("icon")
+            )
+
+            if isWinPart and not isExcluded then
+                table.insert(targets, obj)
             end
         end
     end
-    
-    -- Priority 2: Substring matches for win/finish
-    if not highestPad then
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            if obj:IsA("BasePart") and not obj:IsDescendantOf(LocalPlayer.Character or Workspace) and not obj.Parent:IsA("Tool") then
-                local n = obj.Name:lower()
-                local parentN = obj.Parent and obj.Parent.Name:lower() or ""
-                if (n:find("win") or n:find("finish") or n:find("escape") or parentN:find("win") or parentN:find("finish")) and not (n:find("gui") or n:find("ui") or n:find("shop") or n:find("door") or n:find("wall")) then
-                    if obj.Position.Y > highestY then
-                        highestY = obj.Position.Y
-                        highestPad = obj
-                    end
-                end
-            end
+    return targets
+end
+
+-- Helper to find the furthest finish pad in the track (End of Escape)
+local function GetFurthestFinishPad()
+    local allTargets = CollectAllWinTargets()
+    if #allTargets == 0 then return nil end
+
+    local bestPad = nil
+    local maxDist = -math.huge
+
+    for _, part in ipairs(allTargets) do
+        -- Calculate 3D distance magnitude from origin (0,0,0) or track length
+        local dist = part.Position.Magnitude
+        local n = part.Name:lower()
+        local pn = part.Parent and part.Parent.Name:lower() or ""
+
+        -- Boost priority for explicit win/finish/trophy pads
+        if n:find("win") or n:find("finish") or n:find("trophy") or pn:find("win") or pn:find("finish") or pn:find("trophy") then
+            dist = dist + 1000
+        end
+
+        if dist > maxDist then
+            maxDist = dist
+            bestPad = part
         end
     end
-    
-    return highestPad
+
+    return bestPad
 end
 
 task.spawn(function()
     while true do
-        task.wait(0.35)
+        task.wait(0.2)
         if Toggles.AutoWin then
             pcall(function()
                 local char = LocalPlayer.Character
@@ -287,25 +308,24 @@ task.spawn(function()
                 local hum = char and char:FindFirstChildOfClass("Humanoid")
                 if not hrp or not hum or hum.Health <= 0 then return end
 
-                local winPad = GetHighestWinPad()
-                
-                -- 1. Smooth Single Teleport to Highest Win Platform
-                if winPad then
-                    local targetCFrame = winPad.CFrame + Vector3.new(0, 3.5, 0)
-                    
-                    -- Smoothly position on win pad
-                    hrp.CFrame = targetCFrame
-                    hrp.Velocity = Vector3.new(0, 0, 0)
+                local furthestPad = GetFurthestFinishPad()
+                local allTargets = CollectAllWinTargets()
 
-                    -- Trigger physical touch
+                -- 1. Direct Teleport to the Furthest Escape / Win / Trophy Platform
+                if furthestPad then
+                    pcall(function()
+                        hrp.CFrame = furthestPad.CFrame + Vector3.new(0, 3.5, 0)
+                        hrp.Velocity = Vector3.new(0, 0, 0)
+                    end)
+
                     if firetouchinterest then
-                        firetouchinterest(hrp, winPad, 0)
-                        task.wait(0.04)
-                        firetouchinterest(hrp, winPad, 1)
+                        firetouchinterest(hrp, furthestPad, 0)
+                        task.wait(0.02)
+                        firetouchinterest(hrp, furthestPad, 1)
                     end
 
-                    -- Trigger ProximityPrompt if attached
-                    local prompt = winPad:FindFirstChildOfClass("ProximityPrompt") or (winPad.Parent and winPad.Parent:FindFirstChildOfClass("ProximityPrompt"))
+                    -- Trigger any ProximityPrompt attached
+                    local prompt = furthestPad:FindFirstChildOfClass("ProximityPrompt") or (furthestPad.Parent and furthestPad.Parent:FindFirstChildOfClass("ProximityPrompt"))
                     if prompt and prompt.Enabled then
                         pcall(function()
                             prompt.HoldDuration = 0
@@ -320,36 +340,78 @@ task.spawn(function()
                     end
                 end
 
-                -- 2. Global Remote Sweeper for Win / Finish / Escape
+                -- 2. Multi-Touch Simulation across all detected Stage & Win Triggers (Silent Background Touch)
+                if firetouchinterest and #allTargets > 0 then
+                    for _, pad in ipairs(allTargets) do
+                        if not Toggles.AutoWin then break end
+                        pcall(function()
+                            firetouchinterest(hrp, pad, 0)
+                            firetouchinterest(hrp, pad, 1)
+                        end)
+                    end
+                end
+
+                -- 3. TouchTransmitter Sweeper (Triggers any Touched event on the character)
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    if not Toggles.AutoWin then break end
+                    if obj:IsA("TouchTransmitter") and obj.Parent and obj.Parent:IsA("BasePart") then
+                        local part = obj.Parent
+                        if not part:IsDescendantOf(char) then
+                            pcall(function()
+                                if firetouchinterest then
+                                    firetouchinterest(hrp, part, 0)
+                                    firetouchinterest(hrp, part, 1)
+                                end
+                            end)
+                        end
+                    end
+                end
+
+                -- 4. ReplicatedStorage Deep Remote Sweeper (Win, Trophy, Finish, Escape, Stage, Reward)
                 for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
                     if not Toggles.AutoWin then break end
                     if remote:IsA("RemoteEvent") then
                         local rn = remote.Name:lower()
-                        if rn:find("win") or rn:find("finish") or rn:find("escape") or rn:find("goal") or rn:find("reward") or rn:find("claim") or rn:find("trophy") or rn:find("stage") or rn:find("level") then
+                        if rn:find("win") or rn:find("trophy") or rn:find("finish") or rn:find("escape") or rn:find("goal") or rn:find("stage") or rn:find("claim") or rn:find("give") or rn:find("add") or rn:find("reward") or rn:find("level") or rn:find("complete") then
                             pcall(function()
                                 remote:FireServer()
                                 remote:FireServer(true)
                                 remote:FireServer(1)
                                 remote:FireServer("Win")
+                                remote:FireServer("Trophy")
                                 remote:FireServer("Finish")
+                                remote:FireServer("Escape")
+                                remote:FireServer(100)
                                 if hrp then
                                     remote:FireServer(hrp.Position)
                                 end
-                                if winPad then
-                                    remote:FireServer(winPad)
+                                if furthestPad then
+                                    remote:FireServer(furthestPad)
                                 end
                             end)
                         end
                     elseif remote:IsA("RemoteFunction") then
                         local rn = remote.Name:lower()
-                        if rn:find("win") or rn:find("finish") or rn:find("escape") or rn:find("claim") then
+                        if rn:find("win") or rn:find("trophy") or rn:find("finish") or rn:find("escape") or rn:find("claim") or rn:find("reward") then
                             pcall(function()
                                 remote:InvokeServer()
                                 remote:InvokeServer(1)
+                                remote:InvokeServer("Win")
                             end)
                         end
                     end
                 end
+
+                -- 5. Auto Jump simulation (Triggers in-game Jump/Pass verification)
+                pcall(function()
+                    if hum then
+                        hum:ChangeState(Enum.HumanoidStateType.Jumping)
+                    end
+                    if VirtualUser then
+                        VirtualUser:Button1Down(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
+                        VirtualUser:Button1Up(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
+                    end
+                end)
             end)
         end
     end
