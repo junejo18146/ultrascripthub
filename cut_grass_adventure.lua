@@ -47,7 +47,7 @@ end
 -- Feature States
 local Toggles = {
     RemoveGrass = false,
-    AutoCollectCoins = false,
+    AutoCollect = false,
     AutoSell = false,
     AutoRebirth = false,
     Fly = false,
@@ -353,24 +353,24 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 5. MASTER AUTO COLLECT COINS & LOOT DROPS (Magnetic Collector)
+-- 5. MASTER AUTO COLLECT ENGINE (Magnetic Instant Coins & Drops)
 --------------------------------------------------------------------
 task.spawn(function()
     while true do
         task.wait(0.1)
-        if Toggles.AutoCollectCoins then
+        if Toggles.AutoCollect then
             pcall(function()
                 local char = LocalPlayer.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
                 if not hrp then return end
 
-                -- 1. Scan Workspace for Coin Drops, Orbs, Gems, Loot Drops
+                -- 1. Scan Workspace for Coins, Gems, Drops, Orbs, Loot & Collectibles
                 for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if not Toggles.AutoCollectCoins then break end
+                    if not Toggles.AutoCollect then break end
                     local n = obj.Name:lower()
                     local parentN = obj.Parent and obj.Parent.Name:lower() or ""
 
-                    if n:find("coin") or n:find("gem") or n:find("drop") or n:find("loot") or n:find("reward") or n:find("orb") or n:find("star") or parentN:find("coin") or parentN:find("drop") or parentN:find("loot") then
+                    if n:find("coin") or n:find("gem") or n:find("drop") or n:find("loot") or n:find("reward") or n:find("orb") or n:find("star") or n:find("chest") or n:find("shard") or n:find("pickup") or parentN:find("coin") or parentN:find("drop") or parentN:find("loot") or parentN:find("reward") then
                         if obj:IsA("BasePart") then
                             if firetouchinterest then
                                 firetouchinterest(hrp, obj, 0)
@@ -383,14 +383,14 @@ task.spawn(function()
                     end
                 end
 
-                -- 2. Trigger ProximityPrompts on coins / drops
+                -- 2. Trigger ProximityPrompts on all collectable drops
                 for _, prompt in ipairs(Workspace:GetDescendants()) do
-                    if not Toggles.AutoCollectCoins then break end
+                    if not Toggles.AutoCollect then break end
                     if prompt:IsA("ProximityPrompt") and prompt.Enabled then
                         local pn = prompt.Parent and prompt.Parent.Name:lower() or ""
                         local actText = prompt.ActionText:lower()
                         local objText = prompt.ObjectText:lower()
-                        if pn:find("coin") or pn:find("drop") or pn:find("collect") or pn:find("pickup") or actText:find("collect") or actText:find("pickup") or objText:find("coin") or objText:find("gem") then
+                        if pn:find("coin") or pn:find("drop") or pn:find("collect") or pn:find("pickup") or pn:find("loot") or actText:find("collect") or actText:find("pickup") or objText:find("coin") or objText:find("gem") or objText:find("loot") then
                             pcall(function()
                                 prompt.RequiresLineOfSight = false
                                 prompt.MaxActivationDistance = 999999
@@ -407,18 +407,19 @@ task.spawn(function()
                     end
                 end
 
-                -- 3. Remote Sweeper for Coin / Drop Pickup
+                -- 3. Remote Sweeper for Collect / Pickup
                 for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if not Toggles.AutoCollectCoins then break end
+                    if not Toggles.AutoCollect then break end
                     if remote:IsA("RemoteEvent") then
                         local rn = remote.Name:lower()
-                        if rn:find("collect") or rn:find("pickup") or rn:find("coin") or rn:find("drop") or rn:find("loot") or rn:find("claim") or rn:find("reward") then
+                        if rn:find("collect") or rn:find("pickup") or rn:find("coin") or rn:find("drop") or rn:find("loot") or rn:find("claim") or rn:find("reward") or rn:find("grab") then
                             pcall(function()
                                 remote:FireServer()
                                 remote:FireServer(true)
                                 remote:FireServer(1)
                                 remote:FireServer("Coin")
                                 remote:FireServer("Drop")
+                                remote:FireServer("All")
                                 if hrp then
                                     remote:FireServer(hrp.Position)
                                 end
@@ -727,9 +728,9 @@ local function AddToggleRow(text, configKey)
     end)
 end
 
--- Add the 7 official requested toggle rows
+-- Add the 7 official requested toggle rows (Explicit "Auto Collect")
 AddToggleRow("Remove Grass", "RemoveGrass")
-AddToggleRow("Auto Collect Coins", "AutoCollectCoins")
+AddToggleRow("Auto Collect", "AutoCollect")
 AddToggleRow("Auto Sell", "AutoSell")
 AddToggleRow("Auto Rebirth", "AutoRebirth")
 AddToggleRow("Fly Mode", "Fly")
