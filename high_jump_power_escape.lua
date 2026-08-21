@@ -238,7 +238,7 @@ local function StartFly()
 end
 
 --------------------------------------------------------------------
--- 4. MASTER AUTO WIN & TROPHY FARM ENGINE (Comprehensive Multi-Tier)
+-- 4. ULTRA SMOOTH ZERO-VIBRATION AUTO WIN & TROPHY ENGINE
 --------------------------------------------------------------------
 -- Helper to collect all win, finish, stage, wall, gate and trophy parts
 local function CollectAllWinTargets()
@@ -299,7 +299,7 @@ end
 
 task.spawn(function()
     while true do
-        task.wait(0.2)
+        task.wait(0.5)
         if Toggles.AutoWin then
             pcall(function()
                 local char = LocalPlayer.Character
@@ -310,20 +310,14 @@ task.spawn(function()
                 local furthestPad = GetFurthestFinishPad()
                 local allTargets = CollectAllWinTargets()
 
-                -- 1. Direct Teleport to the Furthest Escape / Win / Trophy Platform
-                if furthestPad then
+                -- 1. Silent Touch Interest Simulation on Furthest Finish Pad (NO CAMERA SHAKE)
+                if furthestPad and firetouchinterest then
                     pcall(function()
-                        hrp.CFrame = furthestPad.CFrame + Vector3.new(0, 3.5, 0)
-                        hrp.Velocity = Vector3.new(0, 0, 0)
-                    end)
-
-                    if firetouchinterest then
                         firetouchinterest(hrp, furthestPad, 0)
                         task.wait(0.02)
                         firetouchinterest(hrp, furthestPad, 1)
-                    end
+                    end)
 
-                    -- Trigger any ProximityPrompt attached
                     local prompt = furthestPad:FindFirstChildOfClass("ProximityPrompt") or (furthestPad.Parent and furthestPad.Parent:FindFirstChildOfClass("ProximityPrompt"))
                     if prompt and prompt.Enabled then
                         pcall(function()
@@ -339,7 +333,19 @@ task.spawn(function()
                     end
                 end
 
-                -- 2. Multi-Touch Simulation across all detected Stage & Win Triggers (Silent Background Touch)
+                -- 2. Smooth One-Way Positioning (Only if far away, with cooldown to avoid respawn flicker)
+                if furthestPad and not Toggles.Fly then
+                    local currentDist = (hrp.Position - furthestPad.Position).Magnitude
+                    if currentDist > 25 then
+                        pcall(function()
+                            hrp.CFrame = furthestPad.CFrame + Vector3.new(0, 3.5, 0)
+                            hrp.Velocity = Vector3.new(0, 0, 0)
+                        end)
+                        task.wait(0.3)
+                    end
+                end
+
+                -- 3. Multi-Touch Simulation across all detected Stage & Win Triggers (Silent Background Touch)
                 if firetouchinterest and #allTargets > 0 then
                     for _, pad in ipairs(allTargets) do
                         if not Toggles.AutoWin then break end
@@ -350,7 +356,7 @@ task.spawn(function()
                     end
                 end
 
-                -- 3. TouchTransmitter Sweeper (Triggers any Touched event on the character)
+                -- 4. TouchTransmitter Sweeper (Triggers any Touched event on the character)
                 for _, obj in ipairs(Workspace:GetDescendants()) do
                     if not Toggles.AutoWin then break end
                     if obj:IsA("TouchTransmitter") and obj.Parent and obj.Parent:IsA("BasePart") then
@@ -366,7 +372,7 @@ task.spawn(function()
                     end
                 end
 
-                -- 4. ReplicatedStorage Deep Remote Sweeper (Win, Trophy, Finish, Escape, Stage, Reward)
+                -- 5. ReplicatedStorage Deep Remote Sweeper (Win, Trophy, Finish, Escape, Stage, Reward)
                 for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
                     if not Toggles.AutoWin then break end
                     if remote:IsA("RemoteEvent") then
@@ -401,7 +407,7 @@ task.spawn(function()
                     end
                 end
 
-                -- 5. Auto Jump simulation (Triggers in-game Jump/Pass verification)
+                -- 6. Auto Jump simulation (Triggers in-game Jump/Pass verification)
                 pcall(function()
                     if hum then
                         hum:ChangeState(Enum.HumanoidStateType.Jumping)
