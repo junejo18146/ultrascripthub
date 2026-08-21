@@ -47,6 +47,7 @@ end
 -- Feature States
 local Toggles = {
     RemoveGrass = false,
+    AutoCollectCoins = false,
     AutoSell = false,
     AutoRebirth = false,
     Fly = false,
@@ -352,11 +353,90 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 5. MASTER AUTO SELL ENGINE (Infinite Cash Loop)
+-- 5. MASTER AUTO COLLECT COINS & LOOT DROPS (Magnetic Collector)
 --------------------------------------------------------------------
 task.spawn(function()
     while true do
-        task.wait(0.3)
+        task.wait(0.1)
+        if Toggles.AutoCollectCoins then
+            pcall(function()
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                if not hrp then return end
+
+                -- 1. Scan Workspace for Coin Drops, Orbs, Gems, Loot Drops
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    if not Toggles.AutoCollectCoins then break end
+                    local n = obj.Name:lower()
+                    local parentN = obj.Parent and obj.Parent.Name:lower() or ""
+
+                    if n:find("coin") or n:find("gem") or n:find("drop") or n:find("loot") or n:find("reward") or n:find("orb") or n:find("star") or parentN:find("coin") or parentN:find("drop") or parentN:find("loot") then
+                        if obj:IsA("BasePart") then
+                            if firetouchinterest then
+                                firetouchinterest(hrp, obj, 0)
+                                task.wait()
+                                firetouchinterest(hrp, obj, 1)
+                            else
+                                obj.CFrame = hrp.CFrame
+                            end
+                        end
+                    end
+                end
+
+                -- 2. Trigger ProximityPrompts on coins / drops
+                for _, prompt in ipairs(Workspace:GetDescendants()) do
+                    if not Toggles.AutoCollectCoins then break end
+                    if prompt:IsA("ProximityPrompt") and prompt.Enabled then
+                        local pn = prompt.Parent and prompt.Parent.Name:lower() or ""
+                        local actText = prompt.ActionText:lower()
+                        local objText = prompt.ObjectText:lower()
+                        if pn:find("coin") or pn:find("drop") or pn:find("collect") or pn:find("pickup") or actText:find("collect") or actText:find("pickup") or objText:find("coin") or objText:find("gem") then
+                            pcall(function()
+                                prompt.RequiresLineOfSight = false
+                                prompt.MaxActivationDistance = 999999
+                                prompt.HoldDuration = 0
+                                if fireproximityprompt then
+                                    fireproximityprompt(prompt, 0)
+                                else
+                                    prompt:InputHoldBegin()
+                                    task.wait(0.01)
+                                    prompt:InputHoldEnd()
+                                end
+                            end)
+                        end
+                    end
+                end
+
+                -- 3. Remote Sweeper for Coin / Drop Pickup
+                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
+                    if not Toggles.AutoCollectCoins then break end
+                    if remote:IsA("RemoteEvent") then
+                        local rn = remote.Name:lower()
+                        if rn:find("collect") or rn:find("pickup") or rn:find("coin") or rn:find("drop") or rn:find("loot") or rn:find("claim") or rn:find("reward") then
+                            pcall(function()
+                                remote:FireServer()
+                                remote:FireServer(true)
+                                remote:FireServer(1)
+                                remote:FireServer("Coin")
+                                remote:FireServer("Drop")
+                                if hrp then
+                                    remote:FireServer(hrp.Position)
+                                end
+                            end)
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+--------------------------------------------------------------------
+-- 6. MASTER AUTO SELL ENGINE (Automatic Coin/Grass Sell Loop)
+--------------------------------------------------------------------
+task.spawn(function()
+    while true do
+        task.wait(0.25)
         if Toggles.AutoSell then
             pcall(function()
                 local char = LocalPlayer.Character
@@ -373,6 +453,7 @@ task.spawn(function()
                                 remote:FireServer(true)
                                 remote:FireServer("Sell")
                                 remote:FireServer("All")
+                                remote:FireServer(1)
                             end)
                         end
                     elseif remote:IsA("RemoteFunction") then
@@ -430,7 +511,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 6. MASTER AUTO REBIRTH ENGINE
+-- 7. MASTER AUTO REBIRTH ENGINE
 --------------------------------------------------------------------
 task.spawn(function()
     while true do
@@ -465,7 +546,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 7. EXACT JUNEJO ULTRA SCRIPT HUB CLASSIC UI
+-- 8. EXACT JUNEJO ULTRA SCRIPT HUB CLASSIC UI
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoCutGrassAdventureUI"
@@ -480,11 +561,11 @@ else
     ScreenGui.Parent = UIContainer
 end
 
--- Main Container Frame (280px width, 250px height)
+-- Main Container Frame (280px width, 278px height for 7 features)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 250)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -125)
+MainFrame.Size = UDim2.new(0, 280, 0, 278)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -139)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -567,7 +648,7 @@ end)
 -- Content Frame
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -28, 0, 164)
+ContentFrame.Size = UDim2.new(1, -28, 0, 192)
 ContentFrame.Position = UDim2.new(0, 14, 0, 36)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
@@ -646,8 +727,9 @@ local function AddToggleRow(text, configKey)
     end)
 end
 
--- Add the 6 official requested toggle rows (Remove Grass updated)
+-- Add the 7 official requested toggle rows
 AddToggleRow("Remove Grass", "RemoveGrass")
+AddToggleRow("Auto Collect Coins", "AutoCollectCoins")
 AddToggleRow("Auto Sell", "AutoSell")
 AddToggleRow("Auto Rebirth", "AutoRebirth")
 AddToggleRow("Fly Mode", "Fly")
