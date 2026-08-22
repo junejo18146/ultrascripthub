@@ -4,7 +4,7 @@
     Author: Made by Junejo (junejo18146)
     Repository: junejo18146/ultrascripthub
     Theme: Unified Junejo Executive Dark UI (#0F0F11) - Exact Classic Standard
-    Status: Standalone Dedicated Executable
+    Status: Standalone Dedicated Executable (Enhanced Multi-Layer Auto Win & Auto Rebirth Engine)
 --]]
 
 local Players = game:GetService("Players")
@@ -237,67 +237,7 @@ local function StartFly()
 end
 
 --------------------------------------------------------------------
--- 4. BULLETPROOF AUTO WIN / INSTANT FINISH ENGINE
---------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        task.wait(0.35)
-        if Toggles.AutoWin then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                if not hrp then return end
-
-                -- Layer 1: Workspace Finish Parts, End Gates, Win Touch Triggers
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if not Toggles.AutoWin then break end
-                    if obj:IsA("BasePart") then
-                        local n = obj.Name:lower()
-                        local pName = obj.Parent and obj.Parent.Name:lower() or ""
-                        if n:find("finish") or n:find("win") or n:find("endzone") or n:find("checkpoint") or n:find("gate") or n:find("goal") or pName:find("finish") or pName:find("win") or pName:find("end") then
-                            if firetouchinterest then
-                                pcall(function()
-                                    firetouchinterest(hrp, obj, 0)
-                                    task.wait(0.01)
-                                    firetouchinterest(hrp, obj, 1)
-                                end)
-                            end
-                        end
-                    end
-                end
-
-                -- Layer 2: ReplicatedStorage Win & Escape Remote Sweeper
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if not Toggles.AutoWin then break end
-                    if remote:IsA("RemoteEvent") then
-                        local rn = remote.Name:lower()
-                        if rn:find("win") or rn:find("finish") or rn:find("escape") or rn:find("claimwin") or rn:find("addwin") or rn:find("racewin") or rn:find("complete") then
-                            pcall(function()
-                                remote:FireServer()
-                                remote:FireServer(1)
-                                remote:FireServer(true)
-                                remote:FireServer("Win")
-                                remote:FireServer("Claim")
-                            end)
-                        end
-                    elseif remote:IsA("RemoteFunction") then
-                        local rn = remote.Name:lower()
-                        if rn:find("win") or rn:find("finish") or rn:find("escape") or rn:find("claimwin") then
-                            pcall(function()
-                                remote:InvokeServer()
-                                remote:InvokeServer(1)
-                                remote:InvokeServer(true)
-                            end)
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
---------------------------------------------------------------------
--- 5. BULLETPROOF 4-LAYER AUTO REBIRTH ENGINE
+-- HELPER: GUI BUTTON CLICK SIMULATOR
 --------------------------------------------------------------------
 local function ClickGuiButton(btn)
     pcall(function()
@@ -318,39 +258,191 @@ local function ClickGuiButton(btn)
             end
         end
     end)
+    pcall(function()
+        if VirtualInputManager and btn.AbsolutePosition and btn.AbsoluteSize then
+            local center = btn.AbsolutePosition + (btn.AbsoluteSize / 2)
+            VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, true, game, 1)
+            task.wait(0.02)
+            VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, false, game, 1)
+        end
+    end)
 end
 
+--------------------------------------------------------------------
+-- 4. BULLETPROOF 5-LAYER AUTO WIN / INSTANT FINISH ENGINE
+--------------------------------------------------------------------
 task.spawn(function()
     while true do
-        task.wait(0.35)
+        task.wait(0.2)
+        if Toggles.AutoWin then
+            pcall(function()
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                local hum = char and char:FindFirstChildOfClass("Humanoid")
+                if not hrp or not hum then return end
+
+                -- Layer 1: Workspace Finish Parts, Win Pads, End Zones & Stage Teleports
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    if not Toggles.AutoWin then break end
+                    if obj:IsA("BasePart") then
+                        local n = obj.Name:lower()
+                        local pName = obj.Parent and obj.Parent.Name:lower() or ""
+                        local isFinish = (
+                            n:find("finish") or n:find("win") or n:find("endzone") or 
+                            n:find("checkpoint") or n:find("gate") or n:find("goal") or 
+                            n:find("trophy") or n:find("target") or n:find("flag") or
+                            pName:find("finish") or pName:find("win") or pName:find("end") or 
+                            pName:find("race") or pName:find("gate") or pName:find("zone")
+                        )
+
+                        local hasTouch = obj:FindFirstChildOfClass("TouchTransmitter") or obj:FindFirstChild("TouchInterest")
+
+                        if isFinish or hasTouch then
+                            -- Touch Simulation
+                            if firetouchinterest then
+                                pcall(function()
+                                    firetouchinterest(hrp, obj, 0)
+                                    task.wait(0.01)
+                                    firetouchinterest(hrp, obj, 1)
+                                end)
+                            end
+
+                            -- Direct Safe Position Touch (Instant Step)
+                            if isFinish and (n:find("finish") or n:find("win") or n:find("goal") or pName:find("finish") or pName:find("win")) then
+                                pcall(function()
+                                    hrp.CFrame = obj.CFrame + Vector3.new(0, 3, 0)
+                                end)
+                            end
+                        end
+                    elseif obj:IsA("ProximityPrompt") and obj.Enabled then
+                        local n = obj.Name:lower()
+                        local pName = obj.Parent and obj.Parent.Name:lower() or ""
+                        if n:find("win") or n:find("finish") or n:find("claim") or pName:find("win") or pName:find("finish") then
+                            pcall(function()
+                                obj.HoldDuration = 0
+                                if fireproximityprompt then
+                                    fireproximityprompt(obj)
+                                    fireproximityprompt(obj, 0)
+                                else
+                                    obj:InputHoldBegin()
+                                    obj:InputHoldEnd()
+                                end
+                            end)
+                        end
+                    end
+                end
+
+                -- Layer 2: Auto Tool / Web Shooter Activate (Increases Speed & Momentum)
+                pcall(function()
+                    for _, tool in ipairs(LocalPlayer.Backpack:GetChildren()) do
+                        if tool:IsA("Tool") then
+                            tool.Parent = char
+                            task.wait(0.05)
+                            tool:Activate()
+                        end
+                    end
+                    for _, tool in ipairs(char:GetChildren()) do
+                        if tool:IsA("Tool") then
+                            tool:Activate()
+                        end
+                    end
+                end)
+
+                -- Layer 3: ReplicatedStorage Win & Race Remote Events Sweeper
+                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
+                    if not Toggles.AutoWin then break end
+                    if remote:IsA("RemoteEvent") then
+                        local rn = remote.Name:lower()
+                        if (rn:find("win") or rn:find("finish") or rn:find("escape") or 
+                            rn:find("claimwin") or rn:find("addwin") or rn:find("racewin") or 
+                            rn:find("complete") or rn:find("zone") or rn:find("stage") or 
+                            rn:find("pass") or rn:find("swing") or rn:find("train") or 
+                            rn:find("addspeed") or rn:find("speed")) and not (rn:find("rebirth") or rn:find("buy")) then
+                            pcall(function()
+                                remote:FireServer()
+                                remote:FireServer(1)
+                                remote:FireServer(true)
+                                remote:FireServer("Win")
+                                remote:FireServer("Claim")
+                                remote:FireServer("Complete")
+                                remote:FireServer(LocalPlayer)
+                            end)
+                        end
+                    elseif remote:IsA("RemoteFunction") then
+                        local rn = remote.Name:lower()
+                        if rn:find("win") or rn:find("finish") or rn:find("escape") or rn:find("claimwin") or rn:find("racewin") then
+                            pcall(function()
+                                remote:InvokeServer()
+                                remote:InvokeServer(1)
+                                remote:InvokeServer(true)
+                                remote:InvokeServer("Win")
+                            end)
+                        end
+                    end
+                end
+
+                -- Layer 4: PlayerGui Win Claim / Next Stage Button Auto Clicker
+                if LocalPlayer:FindFirstChild("PlayerGui") then
+                    for _, gui in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
+                        if not Toggles.AutoWin then break end
+                        if gui:IsA("TextButton") or gui:IsA("ImageButton") then
+                            local tn = gui.Text and gui.Text:lower() or ""
+                            local gn = gui.Name:lower()
+                            local parentN = gui.Parent and gui.Parent.Name:lower() or ""
+
+                            if (tn:find("claim") or tn:find("collect") or tn:find("next") or tn:find("win") or
+                                gn:find("claim") or gn:find("collect") or gn:find("winbtn") or parentN:find("win")) and 
+                                not (tn:find("robux") or gn:find("robux") or tn:find("shop") or gn:find("shop") or tn:find("rebirth")) then
+                                ClickGuiButton(gui)
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+--------------------------------------------------------------------
+-- 5. BULLETPROOF 5-LAYER AUTO REBIRTH ENGINE
+--------------------------------------------------------------------
+task.spawn(function()
+    while true do
+        task.wait(0.25)
         if Toggles.AutoRebirth then
             pcall(function()
                 local char = LocalPlayer.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
 
-                -- Layer 1: Global Remote Event Sweeper with all argument combinations
+                -- Layer 1: Global ReplicatedStorage Remote Sweeper (All Names & Combos)
                 for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
                     if not Toggles.AutoRebirth then break end
                     if remote:IsA("RemoteEvent") then
                         local rn = remote.Name:lower()
-                        if rn:find("rebirth") or rn:find("prestige") or rn:find("buyrebirth") or rn:find("dorebirth") or rn:find("rankup") or rn:find("ascend") or rn:find("reset") or rn:find("evolution") or rn:find("tierup") then
+                        if rn:find("rebirth") or rn:find("prestige") or rn:find("buyrebirth") or 
+                           rn:find("dorebirth") or rn:find("rankup") or rn:find("ascend") or 
+                           rn:find("reset") or rn:find("evolution") or rn:find("tierup") or 
+                           rn:find("upgraderebirth") or rn:find("prestigerequest") then
                             pcall(function()
                                 remote:FireServer()
                                 remote:FireServer(1)
+                                remote:FireServer("1")
                                 remote:FireServer(true)
                                 remote:FireServer("Rebirth")
                                 remote:FireServer("Buy")
                                 remote:FireServer("All")
                                 remote:FireServer(LocalPlayer)
+                                remote:FireServer(LocalPlayer.Name)
                                 remote:FireServer({})
                             end)
                         end
                     elseif remote:IsA("RemoteFunction") then
                         local rn = remote.Name:lower()
-                        if rn:find("rebirth") or rn:find("prestige") or rn:find("buyrebirth") or rn:find("dorebirth") then
+                        if rn:find("rebirth") or rn:find("prestige") or rn:find("buyrebirth") or rn:find("dorebirth") or rn:find("ascend") then
                             pcall(function()
                                 remote:InvokeServer()
                                 remote:InvokeServer(1)
+                                remote:InvokeServer("1")
                                 remote:InvokeServer("Rebirth")
                                 remote:InvokeServer(true)
                             end)
@@ -358,7 +450,7 @@ task.spawn(function()
                     end
                 end
 
-                -- Layer 2: PlayerGui UI Rebirth / Buy / Confirm Auto-Clicker
+                -- Layer 2: PlayerGui UI Rebirth / Prestige / Confirm Modal Deep Scanner
                 if LocalPlayer:FindFirstChild("PlayerGui") then
                     for _, gui in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
                         if not Toggles.AutoRebirth then break end
@@ -366,19 +458,21 @@ task.spawn(function()
                             local tn = gui.Text and gui.Text:lower() or ""
                             local gn = gui.Name:lower()
                             local parentN = gui.Parent and gui.Parent.Name:lower() or ""
+                            local grandParentN = gui.Parent and gui.Parent.Parent and gui.Parent.Parent.Name:lower() or ""
 
                             local isRebirthBtn = (
-                                tn:find("rebirth") or tn:find("prestige") or tn:find("re-birth") or 
-                                gn:find("rebirth") or gn:find("prestige") or gn:find("buyrebirth") or 
-                                parentN:find("rebirth") or parentN:find("prestige")
+                                tn:find("rebirth") or tn:find("prestige") or tn:find("re-birth") or tn:find("ascend") or tn:find("evolve") or
+                                gn:find("rebirth") or gn:find("prestige") or gn:find("buyrebirth") or gn:find("dorebirth") or
+                                parentN:find("rebirth") or parentN:find("prestige") or grandParentN:find("rebirth") or grandParentN:find("prestige")
                             )
 
                             local isConfirmBtn = (
-                                (tn == "yes" or tn == "confirm" or tn == "buy" or tn == "ok" or tn:find("accept")) and 
-                                (parentN:find("rebirth") or parentN:find("prompt") or parentN:find("confirm") or parentN:find("popup"))
+                                (tn == "yes" or tn == "confirm" or tn == "buy" or tn == "ok" or tn:find("accept") or tn:find("rebirth")) and 
+                                (parentN:find("rebirth") or parentN:find("prompt") or parentN:find("confirm") or parentN:find("popup") or parentN:find("modal") or
+                                 grandParentN:find("rebirth") or grandParentN:find("confirm") or grandParentN:find("popup"))
                             )
 
-                            if (isRebirthBtn or isConfirmBtn) and not (tn:find("robux") or gn:find("robux") or tn:find("pass") or gn:find("pass") or tn:find("close")) then
+                            if (isRebirthBtn or isConfirmBtn) and not (tn:find("robux") or gn:find("robux") or tn:find("pass") or gn:find("pass") or tn:find("close") or gn:find("close")) then
                                 ClickGuiButton(gui)
                             end
                         end
@@ -391,7 +485,7 @@ task.spawn(function()
                     local n = obj.Name:lower()
                     local parentN = obj.Parent and obj.Parent.Name:lower() or ""
 
-                    if n:find("rebirth") or parentN:find("rebirth") then
+                    if n:find("rebirth") or parentN:find("rebirth") or n:find("prestige") or parentN:find("prestige") then
                         if obj:IsA("BasePart") and hrp and firetouchinterest then
                             pcall(function()
                                 firetouchinterest(hrp, obj, 0)
