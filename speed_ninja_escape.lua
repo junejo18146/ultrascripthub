@@ -5,7 +5,7 @@
     Author: Made by Junejo (junejo18146)
     Repository: junejo18146/ultrascripthub
     Theme: Unified Junejo Executive Dark UI (#0F0F11) - Exact Classic Standard
-    Status: Standalone Dedicated Executable (5 Clean Features - No Auto Rebirth)
+    Status: Standalone Dedicated Executable (Smooth Free-Movement Infinite Wins V2)
 --]]
 
 local Players = game:GetService("Players")
@@ -274,106 +274,78 @@ local function ClickGuiButton(btn)
 end
 
 --------------------------------------------------------------------
--- 4. BULLETPROOF INFINITE WINS ENGINE (Zero Screen Vibration)
+-- 4. SMOOTH INFINITE WINS ENGINE (100% FREE PLAYER MOVEMENT - NO STUCK / NO FREEZE)
 --------------------------------------------------------------------
-local function ApplyNoClip(char)
-    if not char then return end
-    for _, part in ipairs(char:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.CanCollide = false
-        end
-    end
-end
+local cachedWinGates = {}
+local lastGateScan = 0
 
-local function FindKeyboardWinGates()
-    local gates = {}
-    pcall(function()
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            if obj:IsA("BasePart") then
-                local n = obj.Name:lower()
-                local pName = obj.Parent and obj.Parent.Name:lower() or ""
+local function GetKeyboardWinGates()
+    if os.time() - lastGateScan > 5 or #cachedWinGates == 0 then
+        cachedWinGates = {}
+        pcall(function()
+            for _, obj in ipairs(Workspace:GetDescendants()) do
+                if obj:IsA("BasePart") then
+                    local n = obj.Name:lower()
+                    local pName = obj.Parent and obj.Parent.Name:lower() or ""
 
-                local isWinPart = false
-                for _, child in ipairs(obj:GetChildren()) do
-                    if child:IsA("BillboardGui") or child:IsA("SurfaceGui") then
-                        for _, txt in ipairs(child:GetDescendants()) do
-                            if txt:IsA("TextLabel") then
-                                local t = txt.Text:lower()
-                                if t:find("win") or t:find("trophy") or t:find("finish") or t:find("escape") then
-                                    isWinPart = true
-                                    break
+                    local isWinPart = false
+                    for _, child in ipairs(obj:GetChildren()) do
+                        if child:IsA("BillboardGui") or child:IsA("SurfaceGui") then
+                            for _, txt in ipairs(child:GetDescendants()) do
+                                if txt:IsA("TextLabel") then
+                                    local t = txt.Text:lower()
+                                    if t:find("win") or t:find("trophy") or t:find("finish") or t:find("escape") then
+                                        isWinPart = true
+                                        break
+                                    end
                                 end
                             end
                         end
                     end
-                end
 
-                if not isWinPart then
-                    if (n:find("win") or n:find("finish") or n:find("escape") or n:find("gate") or 
-                        pName:find("win") or pName:find("finish") or pName:find("gates") or pName:find("escape")) and obj.Transparency < 1 then
-                        isWinPart = true
+                    if not isWinPart then
+                        if (n:find("win") or n:find("finish") or n:find("escape") or n:find("gate") or 
+                            pName:find("win") or pName:find("finish") or pName:find("gates") or pName:find("escape")) and obj.Transparency < 1 then
+                            isWinPart = true
+                        end
+                    end
+
+                    if isWinPart and obj.Size.Magnitude > 1 then
+                        table.insert(cachedWinGates, obj)
                     end
                 end
-
-                if isWinPart and obj.Size.Magnitude > 1 then
-                    table.insert(gates, obj)
-                end
             end
-        end
-    end)
-    return gates
+        end)
+        lastGateScan = os.time()
+    end
+    return cachedWinGates
 end
 
 task.spawn(function()
     while true do
-        task.wait(0.25)
+        task.wait(0.15)
         if Toggles.InfiniteWins then
             pcall(function()
                 local char = LocalPlayer.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                local hum = char and char:FindFirstChildOfClass("Humanoid")
-                if not hrp or not hum then return end
+                if not hrp then return end
 
-                ApplyNoClip(char)
-
-                -- Layer 1: Win Gates & Keyboard Finish Touch
-                local winGates = FindKeyboardWinGates()
-
-                if #winGates > 0 then
-                    table.sort(winGates, function(a, b)
-                        return a.Position.Z < b.Position.Z
-                    end)
-
+                -- Layer 1: Virtual Touch on Win Gates WITHOUT changing player CFrame or freezing velocity
+                local winGates = GetKeyboardWinGates()
+                if firetouchinterest and #winGates > 0 then
                     for _, gate in ipairs(winGates) do
                         if not Toggles.InfiniteWins then break end
                         pcall(function()
                             if gate and gate.Parent then
-                                hrp.CFrame = gate.CFrame + Vector3.new(0, 3, 0)
-                                hrp.Velocity = Vector3.new(0, 0, 0)
-                                
-                                if firetouchinterest then
-                                    firetouchinterest(hrp, gate, 0)
-                                    task.wait(0.02)
-                                    firetouchinterest(hrp, gate, 1)
-                                end
+                                firetouchinterest(hrp, gate, 0)
+                                task.wait(0.01)
+                                firetouchinterest(hrp, gate, 1)
                             end
                         end)
-                        task.wait(0.2)
-                    end
-                else
-                    -- Layer 2: Forward Runway Sweep
-                    local lookDir = hrp.CFrame.LookVector
-                    for i = 1, 10 do
-                        if not Toggles.InfiniteWins then break end
-                        ApplyNoClip(char)
-                        hrp.CFrame = hrp.CFrame + (lookDir * 50) + Vector3.new(0, 1, 0)
-                        hrp.Velocity = Vector3.new(0, 0, 0)
-                        hum:ChangeState(Enum.HumanoidStateType.Jumping)
-                        task.wait(0.12)
                     end
                 end
 
-                -- Layer 3: Remote Events Win Sweeper
+                -- Layer 2: Direct ReplicatedStorage Remote Events Sweeper
                 for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
                     if not Toggles.InfiniteWins then break end
                     if remote:IsA("RemoteEvent") then
@@ -403,7 +375,7 @@ task.spawn(function()
                     end
                 end
 
-                -- Layer 4: Auto Claim Win Buttons in PlayerGui
+                -- Layer 3: Auto Claim GUI Win Buttons in PlayerGui
                 if LocalPlayer:FindFirstChild("PlayerGui") then
                     for _, gui in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
                         if not Toggles.InfiniteWins then break end
