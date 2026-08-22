@@ -4,7 +4,7 @@
     Author: Made by Junejo (junejo18146)
     Repository: junejo18146/ultrascripthub
     Theme: Unified Junejo Executive Dark UI (#0F0F11) - Exact Classic Standard
-    Status: Standalone Dedicated Executable (V3 Level-Track Auto Win & UI-Hook Auto Rebirth)
+    Status: Standalone Dedicated Executable (V4 Smooth Anti-Shake Auto Win & Multi-Hook Auto Rebirth)
 --]]
 
 local Players = game:GetService("Players")
@@ -273,30 +273,36 @@ local function ClickGuiButton(btn)
 end
 
 --------------------------------------------------------------------
--- 4. ULTRA LEVEL-CROSSING AUTO WIN ENGINE (Sequential Track Walker)
+-- 4. ULTRA SMOOTH ANTI-SHAKE AUTO WIN & LEVEL CROSSING ENGINE
 --------------------------------------------------------------------
--- Gathers all track checkpoints, win pads, stage steps in chronological order
-local function GetSortedTrackWaypoints()
-    local waypoints = {}
-    pcall(function()
-        local char = LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        local origin = hrp and hrp.Position or Vector3.new(0, 0, 0)
+-- Helper: Safe NoClip to prevent character collisions & camera jitter during Auto Win
+local function ApplyNoClip(char)
+    if not char then return end
+    for _, part in ipairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = false
+        end
+    end
+end
 
+-- Find the legitimate Win Gates / Track Finish Zones along the runway
+local function FindTrackWinGates()
+    local gates = {}
+    pcall(function()
         for _, obj in ipairs(Workspace:GetDescendants()) do
             if obj:IsA("BasePart") then
                 local n = obj.Name:lower()
                 local pName = obj.Parent and obj.Parent.Name:lower() or ""
-                local grandP = obj.Parent and obj.Parent.Parent and obj.Parent.Parent.Name:lower() or ""
 
-                local hasWinSign = false
+                -- Look for parts with Win Billboard labels (+X Wins, 100 Wins, Finish)
+                local isWinGate = false
                 for _, child in ipairs(obj:GetChildren()) do
                     if child:IsA("BillboardGui") or child:IsA("SurfaceGui") then
                         for _, txt in ipairs(child:GetDescendants()) do
                             if txt:IsA("TextLabel") then
                                 local t = txt.Text:lower()
-                                if t:find("win") or t:find("stage") or t:find("level") or t:find("area") or t:find("+") or t:find("x") then
-                                    hasWinSign = true
+                                if t:find("win") or t:find("trophy") or t:find("finish") then
+                                    isWinGate = true
                                     break
                                 end
                             end
@@ -304,36 +310,26 @@ local function GetSortedTrackWaypoints()
                     end
                 end
 
-                local isTrackPart = (
-                    hasWinSign or
-                    n:find("win") or n:find("level") or n:find("stage") or n:find("checkpoint") or 
-                    n:find("gate") or n:find("finish") or n:find("endzone") or n:find("platform") or 
-                    n:find("area") or n:find("step") or n:find("pad") or n:find("trophy") or
-                    pName:find("track") or pName:find("stage") or pName:find("level") or 
-                    pName:find("race") or pName:find("obstacle") or pName:find("gates") or 
-                    pName:find("win") or pName:find("pads") or pName:find("checkpoints") or
-                    grandP:find("track") or grandP:find("stage") or grandP:find("race")
-                )
+                if not isWinGate then
+                    if (n == "wingate" or n == "winpad" or n == "finishpart" or n == "finishline" or n == "finish" or 
+                        pName == "wingates" or pName == "winpads" or pName == "gates" or pName == "finish") and obj.Transparency < 1 then
+                        isWinGate = true
+                    end
+                end
 
-                if isTrackPart and obj.Transparency < 1 and obj.Size.Magnitude > 1 then
-                    table.insert(waypoints, obj)
+                if isWinGate and obj.Size.Magnitude > 1 then
+                    table.insert(gates, obj)
                 end
             end
         end
-
-        -- Sort waypoints by distance from start position to ensure smooth sequential level clearing
-        table.sort(waypoints, function(a, b)
-            local distA = (a.Position - origin).Magnitude
-            local distB = (b.Position - origin).Magnitude
-            return distA < distB
-        end)
     end)
-    return waypoints
+    return gates
 end
 
+-- Auto Win Runner Task (Completely smooth, Zero Screen Vibration)
 task.spawn(function()
     while true do
-        task.wait(0.1)
+        task.wait(0.3)
         if Toggles.AutoWin then
             pcall(function()
                 local char = LocalPlayer.Character
@@ -341,53 +337,56 @@ task.spawn(function()
                 local hum = char and char:FindFirstChildOfClass("Humanoid")
                 if not hrp or not hum then return end
 
-                local waypoints = GetSortedTrackWaypoints()
+                -- Enable NoClip during run
+                ApplyNoClip(char)
 
-                -- If track parts found, rapidly traverse through each level milestone
-                if #waypoints > 0 then
-                    for _, pad in ipairs(waypoints) do
+                -- Layer 1: Find real Win Gates
+                local winGates = FindTrackWinGates()
+
+                if #winGates > 0 then
+                    -- Sort gates by position forward
+                    table.sort(winGates, function(a, b)
+                        return a.Position.Z < b.Position.Z
+                    end)
+
+                    -- Cross each win gate cleanly with proper timing
+                    for _, gate in ipairs(winGates) do
                         if not Toggles.AutoWin then break end
                         pcall(function()
-                            if pad and pad.Parent then
-                                -- Instant safe step right above the level pad
-                                hrp.CFrame = pad.CFrame + Vector3.new(0, 3.5, 0)
+                            if gate and gate.Parent then
+                                hrp.CFrame = gate.CFrame + Vector3.new(0, 3, 0)
                                 hrp.Velocity = Vector3.new(0, 0, 0)
-
-                                -- Fire Touch on the level pad
+                                
                                 if firetouchinterest then
-                                    firetouchinterest(hrp, pad, 0)
-                                    task.wait(0.01)
-                                    firetouchinterest(hrp, pad, 1)
-                                end
-
-                                -- Check for child TouchInterest
-                                for _, child in ipairs(pad:GetChildren()) do
-                                    if child:IsA("TouchTransmitter") or child.Name:lower():find("touch") then
-                                        if firetouchinterest then
-                                            firetouchinterest(hrp, pad, 0)
-                                            firetouchinterest(hrp, pad, 1)
-                                        end
-                                    end
+                                    firetouchinterest(hrp, gate, 0)
+                                    task.wait(0.02)
+                                    firetouchinterest(hrp, gate, 1)
                                 end
                             end
                         end)
-                        task.wait(0.06) -- Fast sequential level crossing
+                        task.wait(0.25) -- Smooth delay to prevent jitter and let server register win
                     end
                 else
-                    -- Fallback: Sweep forward in LookVector steps along the race course
-                    for step = 1, 15 do
+                    -- Layer 2: Smooth Runway Glide Forward along track
+                    local lookDir = hrp.CFrame.LookVector
+                    for i = 1, 10 do
                         if not Toggles.AutoWin then break end
-                        hrp.CFrame = hrp.CFrame * CFrame.new(0, 1, -60)
-                        task.wait(0.05)
+                        ApplyNoClip(char)
+                        hrp.CFrame = hrp.CFrame + (lookDir * 50) + Vector3.new(0, 1, 0)
+                        hrp.Velocity = Vector3.new(0, 0, 0)
+                        
+                        -- Jump emulation to trigger web swing
+                        hum:ChangeState(Enum.HumanoidStateType.Jumping)
+                        task.wait(0.15)
                     end
                 end
 
-                -- Layer 2: Fire all Web Swing Tools to gain momentum & speed
+                -- Layer 3: Auto-Equip & Activate Web Swing Tools
                 pcall(function()
                     for _, tool in ipairs(LocalPlayer.Backpack:GetChildren()) do
                         if tool:IsA("Tool") then
                             tool.Parent = char
-                            task.wait(0.02)
+                            task.wait(0.05)
                             tool:Activate()
                         end
                     end
@@ -398,15 +397,14 @@ task.spawn(function()
                     end
                 end)
 
-                -- Layer 3: ReplicatedStorage Win & Level Complete Remotes Sweeper
+                -- Layer 4: ReplicatedStorage Win Remote Events
                 for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
                     if not Toggles.AutoWin then break end
                     if remote:IsA("RemoteEvent") then
                         local rn = remote.Name:lower()
                         if (rn:find("win") or rn:find("finish") or rn:find("escape") or 
                             rn:find("claimwin") or rn:find("addwin") or rn:find("racewin") or 
-                            rn:find("complete") or rn:find("zone") or rn:find("stage") or 
-                            rn:find("level") or rn:find("pass") or rn:find("swing")) and 
+                            rn:find("complete") or rn:find("stage") or rn:find("pass")) and 
                             not (rn:find("rebirth") or rn:find("buy")) then
                             pcall(function()
                                 remote:FireServer()
@@ -414,7 +412,6 @@ task.spawn(function()
                                 remote:FireServer(true)
                                 remote:FireServer("Win")
                                 remote:FireServer("Claim")
-                                remote:FireServer("Complete")
                                 remote:FireServer(LocalPlayer)
                             end)
                         end
@@ -430,7 +427,7 @@ task.spawn(function()
                     end
                 end
 
-                -- Layer 4: PlayerGui Auto Claim Win / Next Level Button
+                -- Layer 5: Auto Claim Win / Next Level Buttons in PlayerGui
                 if LocalPlayer:FindFirstChild("PlayerGui") then
                     for _, gui in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
                         if not Toggles.AutoWin then break end
@@ -453,67 +450,62 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 5. ULTRA EXACT UI-HOOK AUTO REBIRTH ENGINE
+-- 5. MULTI-HOOK AUTO REBIRTH ENGINE (Screenshots Matched)
 --------------------------------------------------------------------
 task.spawn(function()
     while true do
-        task.wait(0.2)
+        task.wait(0.3)
         if Toggles.AutoRebirth then
             pcall(function()
                 local char = LocalPlayer.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
 
-                -- Layer 1: Dedicated Hook for Left Sidebar Rebirth Button (Shown in Screenshot)
+                -- Layer 1: Direct Hook for Left Sidebar Rebirth Button
                 if LocalPlayer:FindFirstChild("PlayerGui") then
                     for _, gui in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
                         if not Toggles.AutoRebirth then break end
-                        if gui:IsA("TextButton") or gui:IsA("ImageButton") or gui:IsA("Frame") then
-                            local gn = gui.Name:lower()
-                            local isRebirthElement = false
+                        
+                        -- Match Rebirth Button by Name, Text, or Child Text ("Rebirth", "57%", "100%")
+                        local isRebirthButton = false
+                        local gn = gui.Name:lower()
 
-                            -- Check text inside button or child labels
-                            if gui:IsA("TextButton") and gui.Text:lower():find("rebirth") then
-                                isRebirthElement = true
+                        if gui:IsA("TextButton") or gui:IsA("ImageButton") then
+                            local tn = gui.Text and gui.Text:lower() or ""
+                            if tn:find("rebirth") or gn:find("rebirth") or gn:find("re-birth") then
+                                isRebirthButton = true
                             end
 
-                            -- Check child labels (like "Rebirth" or "57%" / "100%")
                             for _, child in ipairs(gui:GetChildren()) do
                                 if child:IsA("TextLabel") then
                                     local ct = child.Text:lower()
                                     if ct:find("rebirth") or ct:find("%") then
-                                        isRebirthElement = true
+                                        isRebirthButton = true
                                     end
                                 end
                             end
 
-                            if gn:find("rebirth") or gn:find("re-birth") or isRebirthElement then
-                                local clickTarget = gui:IsA("GuiButton") and gui or gui:FindFirstChildOfClass("TextButton") or gui:FindFirstChildOfClass("ImageButton")
-                                if clickTarget and not (clickTarget.Name:lower():find("robux") or clickTarget.Name:lower():find("close")) then
-                                    ClickGuiButton(clickTarget)
-                                end
+                            if isRebirthButton and not (gn:find("robux") or gn:find("close") or gn:find("pass")) then
+                                ClickGuiButton(gui)
                             end
 
-                            -- Layer 2: Confirm Dialog / Modal Button Clicker ("Yes", "Confirm", "Rebirth", "Buy")
-                            if gui:IsA("TextButton") or gui:IsA("ImageButton") then
-                                local tn = gui.Text and gui.Text:lower() or ""
-                                local pName = gui.Parent and gui.Parent.Name:lower() or ""
-                                local gpName = gui.Parent and gui.Parent.Parent and gui.Parent.Parent.Name:lower() or ""
+                            -- Layer 2: Confirm Dialog / Modal Clicker ("Yes", "Confirm", "Rebirth", "Buy", "Ok")
+                            local pName = gui.Parent and gui.Parent.Name:lower() or ""
+                            local gpName = gui.Parent and gui.Parent.Parent and gui.Parent.Parent.Name:lower() or ""
 
-                                local isConfirm = (
-                                    (tn == "yes" or tn == "confirm" or tn == "rebirth" or tn == "ok" or tn:find("accept") or tn:find("buy")) and
-                                    (pName:find("rebirth") or pName:find("prompt") or pName:find("popup") or pName:find("confirm") or 
-                                     gpName:find("rebirth") or gpName:find("prompt") or gpName:find("popup") or gpName:find("dialog"))
-                                )
+                            local isConfirm = (
+                                (tn == "yes" or tn == "confirm" or tn == "rebirth" or tn == "ok" or tn:find("accept") or tn:find("buy")) and
+                                (pName:find("rebirth") or pName:find("prompt") or pName:find("popup") or pName:find("confirm") or 
+                                 gpName:find("rebirth") or gpName:find("prompt") or gpName:find("popup") or gpName:find("dialog"))
+                            )
 
-                                if isConfirm and not (tn:find("robux") or gn:find("robux") or tn:find("pass")) then
-                                    ClickGuiButton(gui)
-                                end
+                            if isConfirm and not (tn:find("robux") or gn:find("robux") or tn:find("pass")) then
+                                ClickGuiButton(gui)
                             end
                         end
                     end
                 end
 
-                -- Layer 3: Direct Rebirth Remote Sweeper (All Argument Combos)
+                -- Layer 3: Direct Rebirth Remote Event & Function Sweeper
                 for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
                     if not Toggles.AutoRebirth then break end
                     if remote:IsA("RemoteEvent") then
@@ -537,7 +529,7 @@ task.spawn(function()
                         end
                     elseif remote:IsA("RemoteFunction") then
                         local rn = remote.Name:lower()
-                        if rn:find("rebirth") or rn:find("prestige") or rn:find("buyrebirth") or rn:find("dorebirth") then
+                        if rn:find("rebirth") or rn:find("prestige") or rn:find("buyrebirth") or rn:find("dorebirth") or rn:find("ascend") then
                             pcall(function()
                                 remote:InvokeServer()
                                 remote:InvokeServer(1)
