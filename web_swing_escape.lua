@@ -4,7 +4,7 @@
     Author: Made by Junejo (junejo18146)
     Repository: junejo18146/ultrascripthub
     Theme: Unified Junejo Executive Dark UI (#0F0F11) - Exact Classic Standard
-    Status: Standalone Dedicated Executable (V5 Enhanced Rebirth-Ready Hook with Requirement Notifications)
+    Status: Standalone Dedicated Executable (4 Features Standard)
 --]]
 
 local Players = game:GetService("Players")
@@ -14,8 +14,6 @@ local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
 local CoreGui = game:GetService("CoreGui")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local StarterGui = game:GetService("StarterGui")
-local ProximityPromptService = game:GetService("ProximityPromptService")
 
 local VirtualInputManager
 pcall(function()
@@ -45,10 +43,9 @@ for _, name in ipairs({"JunejoWebSwingEscapeUI", "JunejoWebSwingUI", "JunejoHubU
     end
 end
 
--- Feature States
+-- Feature States (Auto Rebirth Removed per User Directive)
 local Toggles = {
     AutoWin = false,
-    AutoRebirth = false,
     Fly = false,
     Speed = false,
     InfiniteJump = false
@@ -274,7 +271,7 @@ local function ClickGuiButton(btn)
 end
 
 --------------------------------------------------------------------
--- 4. ULTRA SMOOTH ANTI-SHAKE AUTO WIN ENGINE (CONFIRMED WORKING - PRESERVED)
+-- 4. ULTRA SMOOTH ANTI-SHAKE AUTO WIN ENGINE (WORKING & PRESERVED)
 --------------------------------------------------------------------
 local function ApplyNoClip(char)
     if not char then return end
@@ -438,177 +435,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 5. ADVANCED AUTO REBIRTH ENGINE (READY! Detection + Requirement Banner)
---------------------------------------------------------------------
-local lastRebirthNotifTime = 0
-
-local function NotifyRebirthStatus(title, text)
-    if os.time() - lastRebirthNotifTime >= 5 then
-        lastRebirthNotifTime = os.time()
-        pcall(function()
-            StarterGui:SetCore("SendNotification", {
-                Title = title,
-                Text = text,
-                Duration = 4
-            })
-        end)
-    end
-end
-
-task.spawn(function()
-    while true do
-        task.wait(0.25)
-        if Toggles.AutoRebirth then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-
-                local isReadyToRebirth = false
-                local currentProgressText = "In Progress"
-                local foundRebirthBtn = nil
-
-                -- Scan PlayerGui for Left Sidebar Rebirth Button & Badge status
-                if LocalPlayer:FindFirstChild("PlayerGui") then
-                    for _, gui in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
-                        if gui:IsA("TextButton") or gui:IsA("ImageButton") or gui:IsA("Frame") then
-                            local gn = gui.Name:lower()
-                            local hasRebirthText = false
-
-                            if gui:IsA("TextButton") and gui.Text:lower():find("rebirth") then
-                                hasRebirthText = true
-                            end
-
-                            -- Check child labels for "READY!", "Rebirth", "%"
-                            for _, child in ipairs(gui:GetChildren()) do
-                                if child:IsA("TextLabel") then
-                                    local ct = child.Text:lower()
-                                    if ct:find("ready") then
-                                        isReadyToRebirth = true
-                                        hasRebirthText = true
-                                    elseif ct:find("rebirth") then
-                                        hasRebirthText = true
-                                    elseif ct:find("%") then
-                                        currentProgressText = child.Text
-                                        hasRebirthText = true
-                                    end
-                                end
-                            end
-
-                            if gn:find("rebirth") or gn:find("re-birth") or hasRebirthText then
-                                local btn = gui:IsA("GuiButton") and gui or gui:FindFirstChildOfClass("TextButton") or gui:FindFirstChildOfClass("ImageButton")
-                                if btn and not (btn.Name:lower():find("robux") or btn.Name:lower():find("close")) then
-                                    foundRebirthBtn = btn
-                                end
-                            end
-                        end
-                    end
-                end
-
-                -- Read Level & Speed Status if available at bottom GUI
-                local levelSpeedInfo = ""
-                if LocalPlayer:FindFirstChild("PlayerGui") then
-                    for _, lbl in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
-                        if lbl:IsA("TextLabel") then
-                            local t = lbl.Text:lower()
-                            if t:find("level") or t:find("/") then
-                                if #lbl.Text <= 25 then
-                                    levelSpeedInfo = lbl.Text
-                                end
-                            end
-                        end
-                    end
-                end
-
-                -- TRIGGER REBIRTH: If READY! is detected or button is available
-                if isReadyToRebirth or foundRebirthBtn then
-                    -- 1. Click the Left Sidebar Rebirth Button
-                    if foundRebirthBtn then
-                        ClickGuiButton(foundRebirthBtn)
-                    end
-
-                    -- 2. Click any opened Rebirth Confirmation Dialogs/Modals
-                    if LocalPlayer:FindFirstChild("PlayerGui") then
-                        for _, modalBtn in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
-                            if modalBtn:IsA("TextButton") or modalBtn:IsA("ImageButton") then
-                                local tn = modalBtn.Text and modalBtn.Text:lower() or ""
-                                local pName = modalBtn.Parent and modalBtn.Parent.Name:lower() or ""
-                                local gpName = modalBtn.Parent and modalBtn.Parent.Parent and modalBtn.Parent.Parent.Name:lower() or ""
-
-                                local isConfirm = (
-                                    (tn == "yes" or tn == "confirm" or tn == "rebirth" or tn == "ok" or tn:find("accept") or tn:find("buy")) and
-                                    (pName:find("rebirth") or pName:find("prompt") or pName:find("popup") or pName:find("confirm") or 
-                                     gpName:find("rebirth") or gpName:find("prompt") or gpName:find("popup") or gpName:find("dialog") or gpName:find("modal"))
-                                )
-
-                                if isConfirm and not (tn:find("robux") or modalBtn.Name:lower():find("robux") or tn:find("pass")) then
-                                    ClickGuiButton(modalBtn)
-                                end
-                            end
-                        end
-                    end
-
-                    -- 3. Touch the 3D Rebirth Pads in Workspace (The Red Pads with "Rebirth to Earn...")
-                    for _, pad in ipairs(Workspace:GetDescendants()) do
-                        if pad:IsA("BasePart") then
-                            local n = pad.Name:lower()
-                            local pName = pad.Parent and pad.Parent.Name:lower() or ""
-                            local isRebirthPad = (
-                                n:find("rebirth") or pName:find("rebirth") or 
-                                (pad.BrickColor and pad.BrickColor.Name:lower():find("red") and pName:find("spawn"))
-                            )
-
-                            if isRebirthPad and hrp and firetouchinterest then
-                                pcall(function()
-                                    firetouchinterest(hrp, pad, 0)
-                                    task.wait(0.01)
-                                    firetouchinterest(hrp, pad, 1)
-                                end)
-                            end
-                        end
-                    end
-
-                    -- 4. Fire ReplicatedStorage Rebirth Remotes
-                    for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                        if remote:IsA("RemoteEvent") then
-                            local rn = remote.Name:lower()
-                            if rn:find("rebirth") or rn:find("prestige") or rn:find("buyrebirth") or 
-                               rn:find("dorebirth") or rn:find("rankup") or rn:find("ascend") then
-                                pcall(function()
-                                    remote:FireServer()
-                                    remote:FireServer(1)
-                                    remote:FireServer("1")
-                                    remote:FireServer(true)
-                                    remote:FireServer("Rebirth")
-                                    remote:FireServer(LocalPlayer)
-                                end)
-                            end
-                        elseif remote:IsA("RemoteFunction") then
-                            local rn = remote.Name:lower()
-                            if rn:find("rebirth") or rn:find("prestige") or rn:find("dorebirth") then
-                                pcall(function()
-                                    remote:InvokeServer()
-                                    remote:InvokeServer(1)
-                                    remote:InvokeServer("Rebirth")
-                                end)
-                            end
-                        end
-                    end
-                else
-                    -- Rebirth is NOT ready: Show user notification with progress/missing stats
-                    local detailMsg = "Rebirth not ready yet (" .. currentProgressText .. ")"
-                    if levelSpeedInfo ~= "" then
-                        detailMsg = detailMsg .. " | " .. levelSpeedInfo
-                    end
-                    detailMsg = detailMsg .. " - Need 100% or READY! to Rebirth."
-                    NotifyRebirthStatus("Auto Rebirth Status", detailMsg)
-                end
-            end)
-        end
-    end
-end)
-
---------------------------------------------------------------------
--- 6. EXACT JUNEJO ULTRA SCRIPT HUB CLASSIC UI (5 FEATURES)
+-- 5. EXACT JUNEJO ULTRA SCRIPT HUB CLASSIC UI (4 FEATURES ONLY)
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoWebSwingEscapeUI"
@@ -623,11 +450,11 @@ else
     ScreenGui.Parent = UIContainer
 end
 
--- Main Container Frame (280px width, 222px height for 5 features)
+-- Main Container Frame (280px width, 195px height for 4 features)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 222)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -111)
+MainFrame.Size = UDim2.new(0, 280, 0, 195)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -97)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -712,10 +539,10 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Content Frame (Height 136px for 5 items)
+-- Content Frame (Height 108px for 4 items)
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -28, 0, 136)
+ContentFrame.Size = UDim2.new(1, -28, 0, 108)
 ContentFrame.Position = UDim2.new(0, 14, 0, 36)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.BorderSizePixel = 0
@@ -800,9 +627,8 @@ local function AddToggleRow(text, configKey)
     end)
 end
 
--- Exactly the 5 requested toggle rows
+-- Exactly the 4 requested toggle rows (Auto Rebirth removed)
 AddToggleRow("Auto Win", "AutoWin")
-AddToggleRow("Auto Rebirth", "AutoRebirth")
 AddToggleRow("Fly Mode", "Fly")
 AddToggleRow("WalkSpeed Boost (50)", "Speed")
 AddToggleRow("Infinite Jump", "InfiniteJump")
