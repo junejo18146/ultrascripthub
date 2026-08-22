@@ -5,7 +5,7 @@
     Author: Made by Junejo (junejo18146)
     Repository: junejo18146/ultrascripthub
     Theme: Unified Junejo Executive Dark UI (#0F0F11) - Exact Classic Standard
-    Status: Standalone Dedicated Executable
+    Status: Standalone Dedicated Executable (5 Features Standard)
 --]]
 
 local Players = game:GetService("Players")
@@ -15,7 +15,6 @@ local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
 local CoreGui = game:GetService("CoreGui")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local StarterGui = game:GetService("StarterGui")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 
 local VirtualInputManager
@@ -46,11 +45,10 @@ for _, name in ipairs({"JunejoNinjaKeyboardUI", "JunejoSpeedNinjaUI", "JunejoKey
     end
 end
 
--- Feature States
+-- Feature States (Auto Rebirth Removed per User Directive)
 local Toggles = {
     InfiniteWins = false,
     AutoTrain = false,
-    AutoRebirth = false,
     Fly = false,
     Speed = false,
     InfiniteJump = false
@@ -495,8 +493,7 @@ task.spawn(function()
                         end
                     elseif remote:IsA("RemoteFunction") then
                         local rn = remote.Name:lower()
-                        if rn:find("train") or rn:find("addspeed") or rn:find("step") or 
-                           rn:find("gainspeed") then
+                        if rn:find("train") or rn:find("addspeed") or rn:find("step") or rn:find("gainspeed") then
                             pcall(function()
                                 remote:InvokeServer()
                                 remote:InvokeServer(1)
@@ -511,130 +508,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 6. BULLETPROOF AUTO REBIRTH ENGINE (Multi-Layer Rebirth Trigger)
---------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        task.wait(0.3)
-        if Toggles.AutoRebirth then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-
-                -- Layer 1: PlayerGui Sidebar & Rebirth GUI Button Clicker
-                if LocalPlayer:FindFirstChild("PlayerGui") then
-                    for _, gui in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
-                        if not Toggles.AutoRebirth then break end
-                        if gui:IsA("TextButton") or gui:IsA("ImageButton") then
-                            local tn = gui.Text and gui.Text:lower() or ""
-                            local gn = gui.Name:lower()
-                            local pName = gui.Parent and gui.Parent.Name:lower() or ""
-                            local gpName = gui.Parent and gui.Parent.Parent and gui.Parent.Parent.Name:lower() or ""
-
-                            local isRebirthBtn = (
-                                tn:find("rebirth") or tn:find("prestige") or tn:find("re-birth") or tn:find("ascend") or
-                                gn:find("rebirth") or gn:find("prestige") or gn:find("buyrebirth") or gn:find("dorebirth") or
-                                pName:find("rebirth") or pName:find("prestige") or gpName:find("rebirth") or gpName:find("prestige")
-                            )
-
-                            for _, child in ipairs(gui:GetChildren()) do
-                                if child:IsA("TextLabel") then
-                                    local ct = child.Text:lower()
-                                    if ct:find("rebirth") or ct:find("ready") or ct:find("%") then
-                                        isRebirthBtn = true
-                                    end
-                                end
-                            end
-
-                            if isRebirthBtn and not (gn:find("robux") or gn:find("close") or gn:find("pass")) then
-                                ClickGuiButton(gui)
-                            end
-
-                            -- Layer 2: Confirm Dialog / Modal Clicker ("Yes", "Confirm", "Rebirth", "Buy", "Ok")
-                            local isConfirm = (
-                                (tn == "yes" or tn == "confirm" or tn == "rebirth" or tn == "ok" or tn:find("accept") or tn:find("buy")) and
-                                (pName:find("rebirth") or pName:find("prompt") or pName:find("popup") or pName:find("confirm") or 
-                                 gpName:find("rebirth") or gpName:find("prompt") or gpName:find("popup") or gpName:find("dialog") or gpName:find("modal"))
-                            )
-
-                            if isConfirm and not (tn:find("robux") or gn:find("robux") or tn:find("pass")) then
-                                ClickGuiButton(gui)
-                            end
-                        end
-                    end
-                end
-
-                -- Layer 3: Direct Rebirth Remote Sweeper
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if not Toggles.AutoRebirth then break end
-                    if remote:IsA("RemoteEvent") then
-                        local rn = remote.Name:lower()
-                        if rn:find("rebirth") or rn:find("prestige") or rn:find("buyrebirth") or 
-                           rn:find("dorebirth") or rn:find("rankup") or rn:find("ascend") or 
-                           rn:find("reset") or rn:find("evolution") or rn:find("tierup") or 
-                           rn:find("upgraderebirth") or rn:find("prestigerequest") then
-                            pcall(function()
-                                remote:FireServer()
-                                remote:FireServer(1)
-                                remote:FireServer("1")
-                                remote:FireServer(true)
-                                remote:FireServer("Rebirth")
-                                remote:FireServer("Buy")
-                                remote:FireServer("All")
-                                remote:FireServer(LocalPlayer)
-                                remote:FireServer(LocalPlayer.Name)
-                                remote:FireServer({})
-                            end)
-                        end
-                    elseif remote:IsA("RemoteFunction") then
-                        local rn = remote.Name:lower()
-                        if rn:find("rebirth") or rn:find("prestige") or rn:find("buyrebirth") or 
-                           rn:find("dorebirth") or rn:find("ascend") then
-                            pcall(function()
-                                remote:InvokeServer()
-                                remote:InvokeServer(1)
-                                remote:InvokeServer("1")
-                                remote:InvokeServer("Rebirth")
-                                remote:InvokeServer(true)
-                            end)
-                        end
-                    end
-                end
-
-                -- Layer 4: Workspace Rebirth Pads & NPC Prompts
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if not Toggles.AutoRebirth then break end
-                    local n = obj.Name:lower()
-                    local parentN = obj.Parent and obj.Parent.Name:lower() or ""
-
-                    if n:find("rebirth") or parentN:find("rebirth") or n:find("prestige") or parentN:find("prestige") then
-                        if obj:IsA("BasePart") and hrp and firetouchinterest then
-                            pcall(function()
-                                firetouchinterest(hrp, obj, 0)
-                                task.wait(0.01)
-                                firetouchinterest(hrp, obj, 1)
-                            end)
-                        elseif obj:IsA("ProximityPrompt") and obj.Enabled then
-                            pcall(function()
-                                obj.HoldDuration = 0
-                                if fireproximityprompt then
-                                    fireproximityprompt(obj)
-                                    fireproximityprompt(obj, 0)
-                                else
-                                    obj:InputHoldBegin()
-                                    obj:InputHoldEnd()
-                                end
-                            end)
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
---------------------------------------------------------------------
--- 7. EXACT JUNEJO ULTRA SCRIPT HUB CLASSIC UI (6 FEATURES STANDARD)
+-- 6. EXACT JUNEJO ULTRA SCRIPT HUB CLASSIC UI (5 FEATURES STANDARD)
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoNinjaKeyboardUI"
@@ -649,11 +523,11 @@ else
     ScreenGui.Parent = UIContainer
 end
 
--- Main Container Frame (280px width, 250px height for 6 features)
+-- Main Container Frame (280px width, 222px height for 5 features)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 250)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -125)
+MainFrame.Size = UDim2.new(0, 280, 0, 222)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -111)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -738,10 +612,10 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Content Frame (Height 164px for 6 items)
+-- Content Frame (Height 136px for 5 items)
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -28, 0, 164)
+ContentFrame.Size = UDim2.new(1, -28, 0, 136)
 ContentFrame.Position = UDim2.new(0, 14, 0, 36)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.BorderSizePixel = 0
@@ -826,10 +700,9 @@ local function AddToggleRow(text, configKey)
     end)
 end
 
--- Exactly the 6 features
+-- Exactly the 5 requested features (Auto Rebirth removed)
 AddToggleRow("Infinite Wins", "InfiniteWins")
 AddToggleRow("Auto Train", "AutoTrain")
-AddToggleRow("Auto Rebirth", "AutoRebirth")
 AddToggleRow("Fly Mode", "Fly")
 AddToggleRow("WalkSpeed Boost (50)", "Speed")
 AddToggleRow("Infinite Jump", "InfiniteJump")
