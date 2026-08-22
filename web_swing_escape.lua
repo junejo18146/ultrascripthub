@@ -4,7 +4,7 @@
     Author: Made by Junejo (junejo18146)
     Repository: junejo18146/ultrascripthub
     Theme: Unified Junejo Executive Dark UI (#0F0F11) - Exact Classic Standard
-    Status: Standalone Dedicated Executable (V4 Smooth Anti-Shake Auto Win & Multi-Hook Auto Rebirth)
+    Status: Standalone Dedicated Executable (V5 Enhanced Rebirth-Ready Hook with Requirement Notifications)
 --]]
 
 local Players = game:GetService("Players")
@@ -14,6 +14,7 @@ local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
 local CoreGui = game:GetService("CoreGui")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StarterGui = game:GetService("StarterGui")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 
 local VirtualInputManager
@@ -273,9 +274,8 @@ local function ClickGuiButton(btn)
 end
 
 --------------------------------------------------------------------
--- 4. ULTRA SMOOTH ANTI-SHAKE AUTO WIN & LEVEL CROSSING ENGINE
+-- 4. ULTRA SMOOTH ANTI-SHAKE AUTO WIN ENGINE (CONFIRMED WORKING - PRESERVED)
 --------------------------------------------------------------------
--- Helper: Safe NoClip to prevent character collisions & camera jitter during Auto Win
 local function ApplyNoClip(char)
     if not char then return end
     for _, part in ipairs(char:GetDescendants()) do
@@ -285,7 +285,6 @@ local function ApplyNoClip(char)
     end
 end
 
--- Find the legitimate Win Gates / Track Finish Zones along the runway
 local function FindTrackWinGates()
     local gates = {}
     pcall(function()
@@ -294,7 +293,6 @@ local function FindTrackWinGates()
                 local n = obj.Name:lower()
                 local pName = obj.Parent and obj.Parent.Name:lower() or ""
 
-                -- Look for parts with Win Billboard labels (+X Wins, 100 Wins, Finish)
                 local isWinGate = false
                 for _, child in ipairs(obj:GetChildren()) do
                     if child:IsA("BillboardGui") or child:IsA("SurfaceGui") then
@@ -326,7 +324,6 @@ local function FindTrackWinGates()
     return gates
 end
 
--- Auto Win Runner Task (Completely smooth, Zero Screen Vibration)
 task.spawn(function()
     while true do
         task.wait(0.3)
@@ -337,19 +334,15 @@ task.spawn(function()
                 local hum = char and char:FindFirstChildOfClass("Humanoid")
                 if not hrp or not hum then return end
 
-                -- Enable NoClip during run
                 ApplyNoClip(char)
 
-                -- Layer 1: Find real Win Gates
                 local winGates = FindTrackWinGates()
 
                 if #winGates > 0 then
-                    -- Sort gates by position forward
                     table.sort(winGates, function(a, b)
                         return a.Position.Z < b.Position.Z
                     end)
 
-                    -- Cross each win gate cleanly with proper timing
                     for _, gate in ipairs(winGates) do
                         if not Toggles.AutoWin then break end
                         pcall(function()
@@ -364,10 +357,9 @@ task.spawn(function()
                                 end
                             end
                         end)
-                        task.wait(0.25) -- Smooth delay to prevent jitter and let server register win
+                        task.wait(0.25)
                     end
                 else
-                    -- Layer 2: Smooth Runway Glide Forward along track
                     local lookDir = hrp.CFrame.LookVector
                     for i = 1, 10 do
                         if not Toggles.AutoWin then break end
@@ -375,13 +367,11 @@ task.spawn(function()
                         hrp.CFrame = hrp.CFrame + (lookDir * 50) + Vector3.new(0, 1, 0)
                         hrp.Velocity = Vector3.new(0, 0, 0)
                         
-                        -- Jump emulation to trigger web swing
                         hum:ChangeState(Enum.HumanoidStateType.Jumping)
                         task.wait(0.15)
                     end
                 end
 
-                -- Layer 3: Auto-Equip & Activate Web Swing Tools
                 pcall(function()
                     for _, tool in ipairs(LocalPlayer.Backpack:GetChildren()) do
                         if tool:IsA("Tool") then
@@ -397,7 +387,6 @@ task.spawn(function()
                     end
                 end)
 
-                -- Layer 4: ReplicatedStorage Win Remote Events
                 for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
                     if not Toggles.AutoWin then break end
                     if remote:IsA("RemoteEvent") then
@@ -427,7 +416,6 @@ task.spawn(function()
                     end
                 end
 
-                -- Layer 5: Auto Claim Win / Next Level Buttons in PlayerGui
                 if LocalPlayer:FindFirstChild("PlayerGui") then
                     for _, gui in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
                         if not Toggles.AutoWin then break end
@@ -450,123 +438,169 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 5. MULTI-HOOK AUTO REBIRTH ENGINE (Screenshots Matched)
+-- 5. ADVANCED AUTO REBIRTH ENGINE (READY! Detection + Requirement Banner)
 --------------------------------------------------------------------
+local lastRebirthNotifTime = 0
+
+local function NotifyRebirthStatus(title, text)
+    if os.time() - lastRebirthNotifTime >= 5 then
+        lastRebirthNotifTime = os.time()
+        pcall(function()
+            StarterGui:SetCore("SendNotification", {
+                Title = title,
+                Text = text,
+                Duration = 4
+            })
+        end)
+    end
+end
+
 task.spawn(function()
     while true do
-        task.wait(0.3)
+        task.wait(0.25)
         if Toggles.AutoRebirth then
             pcall(function()
                 local char = LocalPlayer.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
 
-                -- Layer 1: Direct Hook for Left Sidebar Rebirth Button
+                local isReadyToRebirth = false
+                local currentProgressText = "In Progress"
+                local foundRebirthBtn = nil
+
+                -- Scan PlayerGui for Left Sidebar Rebirth Button & Badge status
                 if LocalPlayer:FindFirstChild("PlayerGui") then
                     for _, gui in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
-                        if not Toggles.AutoRebirth then break end
-                        
-                        -- Match Rebirth Button by Name, Text, or Child Text ("Rebirth", "57%", "100%")
-                        local isRebirthButton = false
-                        local gn = gui.Name:lower()
+                        if gui:IsA("TextButton") or gui:IsA("ImageButton") or gui:IsA("Frame") then
+                            local gn = gui.Name:lower()
+                            local hasRebirthText = false
 
-                        if gui:IsA("TextButton") or gui:IsA("ImageButton") then
-                            local tn = gui.Text and gui.Text:lower() or ""
-                            if tn:find("rebirth") or gn:find("rebirth") or gn:find("re-birth") then
-                                isRebirthButton = true
+                            if gui:IsA("TextButton") and gui.Text:lower():find("rebirth") then
+                                hasRebirthText = true
                             end
 
+                            -- Check child labels for "READY!", "Rebirth", "%"
                             for _, child in ipairs(gui:GetChildren()) do
                                 if child:IsA("TextLabel") then
                                     local ct = child.Text:lower()
-                                    if ct:find("rebirth") or ct:find("%") then
-                                        isRebirthButton = true
+                                    if ct:find("ready") then
+                                        isReadyToRebirth = true
+                                        hasRebirthText = true
+                                    elseif ct:find("rebirth") then
+                                        hasRebirthText = true
+                                    elseif ct:find("%") then
+                                        currentProgressText = child.Text
+                                        hasRebirthText = true
                                     end
                                 end
                             end
 
-                            if isRebirthButton and not (gn:find("robux") or gn:find("close") or gn:find("pass")) then
-                                ClickGuiButton(gui)
+                            if gn:find("rebirth") or gn:find("re-birth") or hasRebirthText then
+                                local btn = gui:IsA("GuiButton") and gui or gui:FindFirstChildOfClass("TextButton") or gui:FindFirstChildOfClass("ImageButton")
+                                if btn and not (btn.Name:lower():find("robux") or btn.Name:lower():find("close")) then
+                                    foundRebirthBtn = btn
+                                end
                             end
+                        end
+                    end
+                end
 
-                            -- Layer 2: Confirm Dialog / Modal Clicker ("Yes", "Confirm", "Rebirth", "Buy", "Ok")
-                            local pName = gui.Parent and gui.Parent.Name:lower() or ""
-                            local gpName = gui.Parent and gui.Parent.Parent and gui.Parent.Parent.Name:lower() or ""
+                -- Read Level & Speed Status if available at bottom GUI
+                local levelSpeedInfo = ""
+                if LocalPlayer:FindFirstChild("PlayerGui") then
+                    for _, lbl in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
+                        if lbl:IsA("TextLabel") then
+                            local t = lbl.Text:lower()
+                            if t:find("level") or t:find("/") then
+                                if #lbl.Text <= 25 then
+                                    levelSpeedInfo = lbl.Text
+                                end
+                            end
+                        end
+                    end
+                end
 
-                            local isConfirm = (
-                                (tn == "yes" or tn == "confirm" or tn == "rebirth" or tn == "ok" or tn:find("accept") or tn:find("buy")) and
-                                (pName:find("rebirth") or pName:find("prompt") or pName:find("popup") or pName:find("confirm") or 
-                                 gpName:find("rebirth") or gpName:find("prompt") or gpName:find("popup") or gpName:find("dialog"))
+                -- TRIGGER REBIRTH: If READY! is detected or button is available
+                if isReadyToRebirth or foundRebirthBtn then
+                    -- 1. Click the Left Sidebar Rebirth Button
+                    if foundRebirthBtn then
+                        ClickGuiButton(foundRebirthBtn)
+                    end
+
+                    -- 2. Click any opened Rebirth Confirmation Dialogs/Modals
+                    if LocalPlayer:FindFirstChild("PlayerGui") then
+                        for _, modalBtn in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
+                            if modalBtn:IsA("TextButton") or modalBtn:IsA("ImageButton") then
+                                local tn = modalBtn.Text and modalBtn.Text:lower() or ""
+                                local pName = modalBtn.Parent and modalBtn.Parent.Name:lower() or ""
+                                local gpName = modalBtn.Parent and modalBtn.Parent.Parent and modalBtn.Parent.Parent.Name:lower() or ""
+
+                                local isConfirm = (
+                                    (tn == "yes" or tn == "confirm" or tn == "rebirth" or tn == "ok" or tn:find("accept") or tn:find("buy")) and
+                                    (pName:find("rebirth") or pName:find("prompt") or pName:find("popup") or pName:find("confirm") or 
+                                     gpName:find("rebirth") or gpName:find("prompt") or gpName:find("popup") or gpName:find("dialog") or gpName:find("modal"))
+                                )
+
+                                if isConfirm and not (tn:find("robux") or modalBtn.Name:lower():find("robux") or tn:find("pass")) then
+                                    ClickGuiButton(modalBtn)
+                                end
+                            end
+                        end
+                    end
+
+                    -- 3. Touch the 3D Rebirth Pads in Workspace (The Red Pads with "Rebirth to Earn...")
+                    for _, pad in ipairs(Workspace:GetDescendants()) do
+                        if pad:IsA("BasePart") then
+                            local n = pad.Name:lower()
+                            local pName = pad.Parent and pad.Parent.Name:lower() or ""
+                            local isRebirthPad = (
+                                n:find("rebirth") or pName:find("rebirth") or 
+                                (pad.BrickColor and pad.BrickColor.Name:lower():find("red") and pName:find("spawn"))
                             )
 
-                            if isConfirm and not (tn:find("robux") or gn:find("robux") or tn:find("pass")) then
-                                ClickGuiButton(gui)
+                            if isRebirthPad and hrp and firetouchinterest then
+                                pcall(function()
+                                    firetouchinterest(hrp, pad, 0)
+                                    task.wait(0.01)
+                                    firetouchinterest(hrp, pad, 1)
+                                end)
                             end
                         end
                     end
-                end
 
-                -- Layer 3: Direct Rebirth Remote Event & Function Sweeper
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if not Toggles.AutoRebirth then break end
-                    if remote:IsA("RemoteEvent") then
-                        local rn = remote.Name:lower()
-                        if rn:find("rebirth") or rn:find("prestige") or rn:find("buyrebirth") or 
-                           rn:find("dorebirth") or rn:find("rankup") or rn:find("ascend") or 
-                           rn:find("reset") or rn:find("evolution") or rn:find("tierup") or 
-                           rn:find("upgraderebirth") or rn:find("prestigerequest") then
-                            pcall(function()
-                                remote:FireServer()
-                                remote:FireServer(1)
-                                remote:FireServer("1")
-                                remote:FireServer(true)
-                                remote:FireServer("Rebirth")
-                                remote:FireServer("Buy")
-                                remote:FireServer("All")
-                                remote:FireServer(LocalPlayer)
-                                remote:FireServer(LocalPlayer.Name)
-                                remote:FireServer({})
-                            end)
-                        end
-                    elseif remote:IsA("RemoteFunction") then
-                        local rn = remote.Name:lower()
-                        if rn:find("rebirth") or rn:find("prestige") or rn:find("buyrebirth") or rn:find("dorebirth") or rn:find("ascend") then
-                            pcall(function()
-                                remote:InvokeServer()
-                                remote:InvokeServer(1)
-                                remote:InvokeServer("1")
-                                remote:InvokeServer("Rebirth")
-                                remote:InvokeServer(true)
-                            end)
+                    -- 4. Fire ReplicatedStorage Rebirth Remotes
+                    for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
+                        if remote:IsA("RemoteEvent") then
+                            local rn = remote.Name:lower()
+                            if rn:find("rebirth") or rn:find("prestige") or rn:find("buyrebirth") or 
+                               rn:find("dorebirth") or rn:find("rankup") or rn:find("ascend") then
+                                pcall(function()
+                                    remote:FireServer()
+                                    remote:FireServer(1)
+                                    remote:FireServer("1")
+                                    remote:FireServer(true)
+                                    remote:FireServer("Rebirth")
+                                    remote:FireServer(LocalPlayer)
+                                end)
+                            end
+                        elseif remote:IsA("RemoteFunction") then
+                            local rn = remote.Name:lower()
+                            if rn:find("rebirth") or rn:find("prestige") or rn:find("dorebirth") then
+                                pcall(function()
+                                    remote:InvokeServer()
+                                    remote:InvokeServer(1)
+                                    remote:InvokeServer("Rebirth")
+                                end)
+                            end
                         end
                     end
-                end
-
-                -- Layer 4: Workspace Rebirth Pads & NPC Prompts
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if not Toggles.AutoRebirth then break end
-                    local n = obj.Name:lower()
-                    local parentN = obj.Parent and obj.Parent.Name:lower() or ""
-
-                    if n:find("rebirth") or parentN:find("rebirth") or n:find("prestige") or parentN:find("prestige") then
-                        if obj:IsA("BasePart") and hrp and firetouchinterest then
-                            pcall(function()
-                                firetouchinterest(hrp, obj, 0)
-                                task.wait(0.01)
-                                firetouchinterest(hrp, obj, 1)
-                            end)
-                        elseif obj:IsA("ProximityPrompt") and obj.Enabled then
-                            pcall(function()
-                                obj.HoldDuration = 0
-                                if fireproximityprompt then
-                                    fireproximityprompt(obj)
-                                    fireproximityprompt(obj, 0)
-                                else
-                                    obj:InputHoldBegin()
-                                    obj:InputHoldEnd()
-                                end
-                            end)
-                        end
+                else
+                    -- Rebirth is NOT ready: Show user notification with progress/missing stats
+                    local detailMsg = "Rebirth not ready yet (" .. currentProgressText .. ")"
+                    if levelSpeedInfo ~= "" then
+                        detailMsg = detailMsg .. " | " .. levelSpeedInfo
                     end
+                    detailMsg = detailMsg .. " - Need 100% or READY! to Rebirth."
+                    NotifyRebirthStatus("Auto Rebirth Status", detailMsg)
                 end
             end)
         end
