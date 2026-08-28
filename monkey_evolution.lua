@@ -5,7 +5,7 @@
     Author: Made by Junejo (junejo18146)
     Repository: junejo18146/ultrascripthub
     Theme: Unified Junejo Executive Dark UI (#0F0F11) - Flat Borderless Rows Standard
-    Status: Complete Standalone Executable (6 Core Features)
+    Status: Dedicated Streamlined Executable (5 Core Verified Features)
 --]]
 
 local Players = game:GetService("Players")
@@ -24,11 +24,10 @@ while not LocalPlayer do
     LocalPlayer = Players.LocalPlayer
 end
 
--- 6 Core Feature Toggles
+-- 5 Core Verified Feature Toggles
 local Toggles = {
     AutoRebirth = false,
     AutoClick = false,
-    AutoHatchEggs = false,
     Fly = false,
     WalkSpeed = false,
     InfiniteJump = false
@@ -123,7 +122,7 @@ local function ClickGuiButton(btn)
 end
 
 --------------------------------------------------------------------
--- GUI CREATION (JUNEJO ULTRA SCRIPT HUB - EXACT 6-ROW COMPACT SPEC)
+-- GUI CREATION (JUNEJO ULTRA SCRIPT HUB - EXACT 5-ROW COMPACT SPEC)
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoMonkeyEvolutionUI"
@@ -132,11 +131,11 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999999
 ScreenGui.IgnoreGuiInset = true
 
--- Main Container Frame (Fixed Compact Standard 280px, Height: 250px for 6 rows)
+-- Main Container Frame (Fixed Compact Standard 280px, Height: 220px for 5 rows)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 250)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -125)
+MainFrame.Size = UDim2.new(0, 280, 0, 220)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -110)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -215,10 +214,10 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Content Frame (Height: 168px for 6 rows with 4px gap)
+-- Content Frame (Height: 140px for 5 rows with 4px gap)
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -28, 0, 168)
+ContentFrame.Size = UDim2.new(1, -28, 0, 140)
 ContentFrame.Position = UDim2.new(0, 14, 0, 36)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
@@ -294,10 +293,9 @@ local function AddToggleRow(text, configKey, onToggleCallback)
     end)
 end
 
--- Generate 6 User-Specified Active Toggle Rows
+-- Generate 5 Active Toggle Rows (Streamlined & 100% Working)
 AddToggleRow("Auto Rebirth", "AutoRebirth")
 AddToggleRow("Auto Click (+1 Power)", "AutoClick")
-AddToggleRow("Auto Hatch Eggs", "AutoHatchEggs")
 AddToggleRow("Fly Mode", "Fly", function(enabled)
     if enabled then
         StartFlying()
@@ -605,58 +603,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 5. AUTO HATCH EGGS ENGINE (Instant Open)
---------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        task.wait(0.2)
-        if Toggles.AutoHatchEggs then
-            pcall(function()
-                -- Layer 1: Egg Hatch Remote Sweeper
-                for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if not Toggles.AutoHatchEggs then break end
-                    local nameLower = obj.Name:lower()
-                    if nameLower:find("hatch") or nameLower:find("buyegg") or nameLower:find("openegg") or 
-                       nameLower:find("purchaseegg") or nameLower:find("egghatch") or nameLower:find("eggopen") or 
-                       nameLower:find("monkeyegg") or nameLower:find("petegg") then
-                        if obj:IsA("RemoteEvent") then
-                            pcall(function()
-                                obj:FireServer()
-                                obj:FireServer("Basic Egg")
-                                obj:FireServer("Egg")
-                                obj:FireServer(1)
-                                obj:FireServer(1, false)
-                                obj:FireServer(true)
-                            end)
-                        elseif obj:IsA("RemoteFunction") then
-                            pcall(function()
-                                obj:InvokeServer()
-                                obj:InvokeServer("Basic Egg")
-                                obj:InvokeServer(1)
-                            end)
-                        end
-                    end
-                end
-
-                -- Layer 2: Workspace Egg Stands / ProximityPrompts
-                for _, prompt in ipairs(Workspace:GetDescendants()) do
-                    if not Toggles.AutoHatchEggs then break end
-                    if prompt:IsA("ProximityPrompt") and prompt.Enabled then
-                        local promptName = prompt.Name:lower() .. (prompt.ObjectText or ""):lower() .. (prompt.ActionText or ""):lower()
-                        if promptName:find("hatch") or promptName:find("egg") or promptName:find("open") or promptName:find("buy") then
-                            if fireproximityprompt then
-                                fireproximityprompt(prompt, 0)
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
---------------------------------------------------------------------
--- 6. SMART AUTO REBIRTH WITH REQUIREMENTS CHECKER & NOTIFIER
+-- 5. SMART AUTO REBIRTH WITH REQUIREMENTS CHECKER & NOTIFIER
 --------------------------------------------------------------------
 local lastRebirthNotify = 0
 
