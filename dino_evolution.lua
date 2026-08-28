@@ -552,7 +552,7 @@ end
 --------------------------------------------------------------------
 task.spawn(function()
     while true do
-        task.wait(0.05)
+        task.wait(0.04)
         if Toggles.AutoClick then
             pcall(function()
                 local char = LocalPlayer.Character
@@ -605,53 +605,90 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 5. FIXED INFINITE WINS ENGINE (FAST TROPHY INCREMENT - ZERO BLINK)
+-- 5. MASTER PROVEN INFINITE WINS ENGINE (GATES, RUNWAY & REMOTES)
 --------------------------------------------------------------------
-local cachedTrackParts = {}
-local lastTrackScan = 0
+local cachedWinTargets = {}
+local lastWinScan = 0
 
-local function GetRunwayWinObjects()
-    if os.time() - lastTrackScan > 4 or #cachedTrackParts == 0 then
-        cachedTrackParts = {}
+local function GetWorkspaceWinTargets()
+    if os.time() - lastWinScan > 3 or #cachedWinTargets == 0 then
+        cachedWinTargets = {}
         pcall(function()
             for _, obj in ipairs(Workspace:GetDescendants()) do
                 if obj:IsA("BasePart") and not obj:IsDescendantOf(LocalPlayer.Character or Workspace) then
                     local n = obj.Name:lower()
                     local pName = obj.Parent and obj.Parent.Name:lower() or ""
+                    local isWinPart = false
 
-                    -- Match finish gates, win pads, trophies, checkpoints
-                    if n:find("win") or n:find("finish") or n:find("trophy") or n:find("gate") or 
-                       n:find("goal") or n:find("stage") or n:find("checkpoint") or n:find("endpad") or 
-                       pName:find("win") or pName:find("finish") or pName:find("trophy") or pName:find("gates") or 
-                       pName:find("stages") or pName:find("runway") or pName:find("track") then
-                        if obj.Size.Magnitude > 0.4 then
-                            table.insert(cachedTrackParts, obj)
+                    -- Check BillboardGui / SurfaceGui text indicators
+                    for _, child in ipairs(obj:GetChildren()) do
+                        if child:IsA("BillboardGui") or child:IsA("SurfaceGui") then
+                            for _, txt in ipairs(child:GetDescendants()) do
+                                if txt:IsA("TextLabel") then
+                                    local t = txt.Text:lower()
+                                    if t:find("win") or t:find("trophy") or t:find("finish") or t:find("goal") or t:find("gate") or t:find("stage") then
+                                        isWinPart = true
+                                        break
+                                    end
+                                end
+                            end
                         end
+                    end
+
+                    -- Check Part or Folder name indicators
+                    if not isWinPart then
+                        if n:find("win") or n:find("finish") or n:find("goal") or n:find("gate") or 
+                           n:find("trophy") or n:find("stage") or n:find("checkpoint") or n:find("endzone") or 
+                           pName:find("win") or pName:find("finish") or pName:find("gates") or pName:find("stages") or 
+                           pName:find("runway") or pName:find("course") or pName:find("track") then
+                            isWinPart = true
+                        end
+                    end
+
+                    if isWinPart and obj.Size.Magnitude > 0.3 then
+                        table.insert(cachedWinTargets, obj)
                     end
                 end
             end
         end)
-        lastTrackScan = os.time()
+        lastWinScan = os.time()
     end
-    return cachedTrackParts
+    return cachedWinTargets
 end
 
 task.spawn(function()
     while true do
-        task.wait(0.08)
+        task.wait(0.1)
         if Toggles.InfiniteWins then
             pcall(function()
                 local char = LocalPlayer.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                if not hrp then return end
 
-                -- Layer 1: High-Speed Trophy & Win Remotes Sweeper
+                -- Layer 1: Virtual Touch on Win Gates, Runway Endpoints & Trophies
+                local winTargets = GetWorkspaceWinTargets()
+                if firetouchinterest and #winTargets > 0 then
+                    for _, targetPart in ipairs(winTargets) do
+                        if not Toggles.InfiniteWins then break end
+                        pcall(function()
+                            if targetPart and targetPart.Parent then
+                                firetouchinterest(hrp, targetPart, 0)
+                                task.wait(0.01)
+                                firetouchinterest(hrp, targetPart, 1)
+                            end
+                        end)
+                    end
+                end
+
+                -- Layer 2: Comprehensive Server Remote Events & Remote Functions
                 for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
                     if not Toggles.InfiniteWins then break end
                     local nameLower = obj.Name:lower()
                     if nameLower:find("win") or nameLower:find("trophy") or nameLower:find("claimwin") or 
-                       nameLower:find("givewin") or nameLower:find("addwin") or nameLower:find("stagewin") or 
-                       nameLower:find("dinowin") or nameLower:find("passgate") or nameLower:find("finish") or 
-                       nameLower:find("reward") or nameLower:find("claimtrophy") or nameLower:find("addtrophy") then
+                       nameLower:find("givewin") or nameLower:find("addwin") or nameLower:find("passgate") or 
+                       nameLower:find("wingate") or nameLower:find("stagewin") or nameLower:find("finish") or 
+                       nameLower:find("reward") or nameLower:find("claimreward") or nameLower:find("reachgoal") or 
+                       nameLower:find("endrun") or nameLower:find("dinowin") or nameLower:find("addtrophy") then
                         if obj:IsA("RemoteEvent") then
                             pcall(function()
                                 obj:FireServer()
@@ -662,7 +699,6 @@ task.spawn(function()
                                 obj:FireServer("Claim")
                                 obj:FireServer("Stage1")
                                 obj:FireServer(1, true)
-                                obj:FireServer(10)
                                 obj:FireServer(100)
                             end)
                         elseif obj:IsA("RemoteFunction") then
@@ -674,21 +710,6 @@ task.spawn(function()
                                 obj:InvokeServer("Trophy")
                             end)
                         end
-                    end
-                end
-
-                -- Layer 2: Targeted Touch on Win / Finish Track Parts (Debounced)
-                if hrp and firetouchinterest then
-                    local trackParts = GetRunwayWinObjects()
-                    for _, part in ipairs(trackParts) do
-                        if not Toggles.InfiniteWins then break end
-                        pcall(function()
-                            if part and part.Parent then
-                                firetouchinterest(hrp, part, 0)
-                                task.wait(0.01)
-                                firetouchinterest(hrp, part, 1)
-                            end
-                        end)
                     end
                 end
 
