@@ -307,7 +307,7 @@ local function AddToggleRow(text, configKey, onToggleCallback)
     end)
 end
 
--- Generate 6 Active Toggle Rows (Hatch & Fight removed per directive)
+-- Generate 6 Active Toggle Rows
 AddToggleRow("Auto Rebirth", "AutoRebirth")
 AddToggleRow("Auto Click (+1 Power)", "AutoClick")
 AddToggleRow("Infinite Wins", "InfiniteWins")
@@ -630,92 +630,53 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 5. ADVANCED MULTI-LAYER INFINITE WINS ENGINE (FIXED & FULL AUTO)
+-- 5. FIXED & SMOOTH INFINITE WINS ENGINE (ZERO BLINKING / FAST WINS GAIN)
 --------------------------------------------------------------------
-local cachedWinParts = {}
-local lastWinScan = 0
+local cachedWinPads = {}
+local lastWinPadScan = 0
 
-local function GetDinoWinTargets()
-    if os.time() - lastWinScan > 3 or #cachedWinParts == 0 then
-        cachedWinParts = {}
+-- Function to find genuine Win Pads / Finish Gates without causing camera/screen flicker
+local function GetGenuineWinPads()
+    if os.time() - lastWinPadScan > 6 or #cachedWinPads == 0 then
+        cachedWinPads = {}
         pcall(function()
             for _, obj in ipairs(Workspace:GetDescendants()) do
                 if obj:IsA("BasePart") and not obj:IsDescendantOf(LocalPlayer.Character or Workspace) then
                     local n = obj.Name:lower()
                     local pName = obj.Parent and obj.Parent.Name:lower() or ""
-                    local isWinPart = false
 
-                    -- Check BillboardGui / SurfaceGui text
-                    for _, child in ipairs(obj:GetChildren()) do
-                        if child:IsA("BillboardGui") or child:IsA("SurfaceGui") then
-                            for _, txt in ipairs(child:GetDescendants()) do
-                                if txt:IsA("TextLabel") then
-                                    local t = txt.Text:lower()
-                                    if t:find("win") or t:find("trophy") or t:find("finish") or t:find("goal") or 
-                                       t:find("gate") or t:find("stage") or t:find("victory") or t:find("m") then
-                                        isWinPart = true
-                                        break
-                                    end
-                                end
-                            end
+                    -- Look strictly for genuine win platforms / finish lines
+                    if n == "win" or n == "finish" or n == "winpad" or n == "finishline" or 
+                       n == "trophy" or n == "winzone" or n == "endpart" or n == "endzone" or
+                       pName:find("win") or pName:find("finish") then
+                        if obj.Size.Magnitude > 0.5 then
+                            table.insert(cachedWinPads, obj)
                         end
-                    end
-
-                    -- Check Part or Folder name
-                    if not isWinPart then
-                        if n:find("win") or n:find("finish") or n:find("goal") or n:find("gate") or 
-                           n:find("trophy") or n:find("stage") or n:find("checkpoint") or n:find("endzone") or 
-                           n:find("endpad") or n:find("touchwin") or n:find("winpad") or 
-                           pName:find("win") or pName:find("finish") or pName:find("gates") or pName:find("stages") or 
-                           pName:find("runway") or pName:find("track") or pName:find("evolution") or pName:find("course") then
-                            isWinPart = true
-                        end
-                    end
-
-                    if isWinPart and obj.Size.Magnitude > 0.3 then
-                        table.insert(cachedWinParts, obj)
                     end
                 end
             end
         end)
-        lastWinScan = os.time()
+        lastWinPadScan = os.time()
     end
-    return cachedWinParts
+    return cachedWinPads
 end
 
 task.spawn(function()
     while true do
-        task.wait(0.1)
+        task.wait(0.08)
         if Toggles.InfiniteWins then
             pcall(function()
                 local char = LocalPlayer.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                if not hrp then return end
 
-                -- Layer 1: Virtual Touch on ALL Win Gates / Runway Endpoints
-                local winTargets = GetDinoWinTargets()
-                if firetouchinterest and #winTargets > 0 then
-                    for _, targetPart in ipairs(winTargets) do
-                        if not Toggles.InfiniteWins then break end
-                        pcall(function()
-                            if targetPart and targetPart.Parent then
-                                firetouchinterest(hrp, targetPart, 0)
-                                task.wait(0.01)
-                                firetouchinterest(hrp, targetPart, 1)
-                            end
-                        end)
-                    end
-                end
-
-                -- Layer 2: Comprehensive Server Remote Events & Remote Functions
+                -- Layer 1: High-Speed Server Win Remotes (Direct & Instant Win Increment)
                 for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
                     if not Toggles.InfiniteWins then break end
                     local nameLower = obj.Name:lower()
-                    if nameLower:find("win") or nameLower:find("claimwin") or nameLower:find("givewin") or 
-                       nameLower:find("addwin") or nameLower:find("passgate") or nameLower:find("wingate") or 
-                       nameLower:find("stagewin") or nameLower:find("finish") or nameLower:find("reward") or 
-                       nameLower:find("claimreward") or nameLower:find("reachgoal") or nameLower:find("endrun") or 
-                       nameLower:find("dinowin") or nameLower:find("claimstage") or nameLower:find("stagecomplete") then
+                    if nameLower == "win" or nameLower == "claimwin" or nameLower == "givewin" or 
+                       nameLower == "addwin" or nameLower == "stagewin" or nameLower == "dinowin" or 
+                       nameLower == "passgate" or nameLower == "finishrun" or nameLower == "claimreward" or
+                       nameLower:find("win") or nameLower:find("givewin") or nameLower:find("addwin") then
                         if obj:IsA("RemoteEvent") then
                             pcall(function()
                                 obj:FireServer()
@@ -723,11 +684,8 @@ task.spawn(function()
                                 obj:FireServer(true)
                                 obj:FireServer("Win")
                                 obj:FireServer("Claim")
-                                obj:FireServer("Stage1")
-                                obj:FireServer("All")
                                 obj:FireServer(1, true)
-                                obj:FireServer(100)
-                                obj:FireServer(1000)
+                                obj:FireServer(10)
                             end)
                         elseif obj:IsA("RemoteFunction") then
                             pcall(function()
@@ -735,40 +693,32 @@ task.spawn(function()
                                 obj:InvokeServer(1)
                                 obj:InvokeServer(true)
                                 obj:InvokeServer("Win")
-                                obj:InvokeServer("Claim")
                             end)
                         end
                     end
                 end
 
-                -- Layer 3: Victory / Next Stage / Claim GUI Auto-Clicker
-                if LocalPlayer:FindFirstChild("PlayerGui") then
-                    for _, gui in ipairs(LocalPlayer.PlayerGui:GetChildren()) do
-                        if gui:IsA("ScreenGui") and gui.Name ~= "JunejoDinoEvolutionUI" then
-                            for _, btn in ipairs(gui:GetDescendants()) do
-                                if btn:IsA("TextButton") or btn:IsA("ImageButton") then
-                                    local bName = btn.Name:lower()
-                                    local bText = (btn:IsA("TextButton") and btn.Text or ""):lower()
-                                    local parentName = btn.Parent and btn.Parent.Name:lower() or ""
-
-                                    if bName:find("claimwin") or bName:find("winclaim") or bName:find("collectwin") or 
-                                       bName:find("nextstage") or bName:find("claim") or bName:find("victory") or 
-                                       bText:find("claim win") or bText:find("collect win") or bText:find("claim") or 
-                                       bText:find("victory") or bText:find("next") or parentName:find("win") then
-                                        ClickGuiButton(btn)
-                                    end
-                                end
+                -- Layer 2: Targeted Touch on Genuine Win Pads (Debounced to prevent screen flicker)
+                if hrp and firetouchinterest then
+                    local winPads = GetGenuineWinPads()
+                    for _, pad in ipairs(winPads) do
+                        if not Toggles.InfiniteWins then break end
+                        pcall(function()
+                            if pad and pad.Parent then
+                                firetouchinterest(hrp, pad, 0)
+                                task.wait(0.02)
+                                firetouchinterest(hrp, pad, 1)
                             end
-                        end
+                        end)
                     end
                 end
 
-                -- Layer 4: ProximityPrompts for Win Chests / Trophies / Gates
+                -- Layer 3: Targeted Proximity Prompts on Finish Trophies
                 for _, prompt in ipairs(Workspace:GetDescendants()) do
+                    if not Toggles.InfiniteWins then break end
                     if prompt:IsA("ProximityPrompt") and prompt.Enabled then
-                        local promptName = prompt.Name:lower() .. (prompt.ObjectText or ""):lower() .. (prompt.ActionText or ""):lower()
-                        if promptName:find("win") or promptName:find("trophy") or promptName:find("claim") or 
-                           promptName:find("finish") or promptName:find("gate") or promptName:find("stage") then
+                        local pText = (prompt.ObjectText or ""):lower() .. (prompt.ActionText or ""):lower() .. prompt.Name:lower()
+                        if pText:find("win") or pText:find("claim win") or pText:find("trophy") then
                             if fireproximityprompt then
                                 fireproximityprompt(prompt, 0)
                             end
