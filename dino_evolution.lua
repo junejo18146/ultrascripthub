@@ -18,11 +18,6 @@ local StarterGui = game:GetService("StarterGui")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 
-local VirtualInputManager
-pcall(function()
-    VirtualInputManager = game:GetService("VirtualInputManager")
-end)
-
 local LocalPlayer = Players.LocalPlayer
 while not LocalPlayer do
     task.wait()
@@ -100,7 +95,7 @@ pcall(function()
 end)
 
 --------------------------------------------------------------------
--- HELPER: UNIVERSAL GUI CLICK SIMULATOR
+-- SAFE GUI BUTTON CLICKER (SAFE FROM UI INTERCEPTION)
 --------------------------------------------------------------------
 local function ClickGuiButton(btn)
     if not btn then return end
@@ -123,14 +118,6 @@ local function ClickGuiButton(btn)
             for _, conn in pairs(getconnections(btn.Activated)) do
                 conn:Fire()
             end
-        end
-    end)
-    pcall(function()
-        if VirtualInputManager and btn.AbsolutePosition and btn.AbsoluteSize then
-            local center = btn.AbsolutePosition + (btn.AbsoluteSize / 2)
-            VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, true, game, 1)
-            task.wait(0.01)
-            VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, false, game, 1)
         end
     end)
 end
@@ -561,17 +548,17 @@ StopFlying = function()
 end
 
 --------------------------------------------------------------------
--- 4. AUTO CLICK / TRAIN ENGINE (+1 Strength / Power Fast Pulse)
+-- 4. AUTO CLICK / TRAIN (+1 Strength - SAFE NO-SCREEN-CLICK ENGINE)
 --------------------------------------------------------------------
 task.spawn(function()
     while true do
-        task.wait(0.04)
+        task.wait(0.05)
         if Toggles.AutoClick then
             pcall(function()
                 local char = LocalPlayer.Character
                 local backpack = LocalPlayer:FindFirstChild("Backpack")
 
-                -- Auto equip training / power items
+                -- Auto equip training tool
                 if backpack then
                     for _, item in ipairs(backpack:GetChildren()) do
                         if item:IsA("Tool") then
@@ -580,7 +567,7 @@ task.spawn(function()
                     end
                 end
 
-                -- Auto activate equipped tools
+                -- Direct Tool activation without touching screen UI
                 if char then
                     for _, item in ipairs(char:GetChildren()) do
                         if item:IsA("Tool") then
@@ -589,19 +576,7 @@ task.spawn(function()
                     end
                 end
 
-                -- Virtual tap / mouse clicker
-                if VirtualUser then
-                    VirtualUser:CaptureController()
-                    VirtualUser:ClickButton1(Vector2.new(500, 500))
-                end
-
-                if VirtualInputManager then
-                    VirtualInputManager:SendMouseButtonEvent(500, 500, 0, true, game, 0)
-                    task.wait(0.01)
-                    VirtualInputManager:SendMouseButtonEvent(500, 500, 0, false, game, 0)
-                end
-
-                -- Click / Train / Power Remote Sweeper
+                -- Direct Click / Train / Power Remote Sweeper
                 for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
                     if not Toggles.AutoClick then break end
                     local nameLower = obj.Name:lower()
@@ -630,35 +605,35 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 5. FIXED & SMOOTH INFINITE WINS ENGINE (ZERO BLINKING / FAST WINS GAIN)
+-- 5. FIXED INFINITE WINS ENGINE (FAST TROPHY INCREMENT - ZERO BLINK)
 --------------------------------------------------------------------
-local cachedWinPads = {}
-local lastWinPadScan = 0
+local cachedTrackParts = {}
+local lastTrackScan = 0
 
--- Function to find genuine Win Pads / Finish Gates without causing camera/screen flicker
-local function GetGenuineWinPads()
-    if os.time() - lastWinPadScan > 6 or #cachedWinPads == 0 then
-        cachedWinPads = {}
+local function GetRunwayWinObjects()
+    if os.time() - lastTrackScan > 4 or #cachedTrackParts == 0 then
+        cachedTrackParts = {}
         pcall(function()
             for _, obj in ipairs(Workspace:GetDescendants()) do
                 if obj:IsA("BasePart") and not obj:IsDescendantOf(LocalPlayer.Character or Workspace) then
                     local n = obj.Name:lower()
                     local pName = obj.Parent and obj.Parent.Name:lower() or ""
 
-                    -- Look strictly for genuine win platforms / finish lines
-                    if n == "win" or n == "finish" or n == "winpad" or n == "finishline" or 
-                       n == "trophy" or n == "winzone" or n == "endpart" or n == "endzone" or
-                       pName:find("win") or pName:find("finish") then
-                        if obj.Size.Magnitude > 0.5 then
-                            table.insert(cachedWinPads, obj)
+                    -- Match finish gates, win pads, trophies, checkpoints
+                    if n:find("win") or n:find("finish") or n:find("trophy") or n:find("gate") or 
+                       n:find("goal") or n:find("stage") or n:find("checkpoint") or n:find("endpad") or 
+                       pName:find("win") or pName:find("finish") or pName:find("trophy") or pName:find("gates") or 
+                       pName:find("stages") or pName:find("runway") or pName:find("track") then
+                        if obj.Size.Magnitude > 0.4 then
+                            table.insert(cachedTrackParts, obj)
                         end
                     end
                 end
             end
         end)
-        lastWinPadScan = os.time()
+        lastTrackScan = os.time()
     end
-    return cachedWinPads
+    return cachedTrackParts
 end
 
 task.spawn(function()
@@ -669,23 +644,26 @@ task.spawn(function()
                 local char = LocalPlayer.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
 
-                -- Layer 1: High-Speed Server Win Remotes (Direct & Instant Win Increment)
+                -- Layer 1: High-Speed Trophy & Win Remotes Sweeper
                 for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
                     if not Toggles.InfiniteWins then break end
                     local nameLower = obj.Name:lower()
-                    if nameLower == "win" or nameLower == "claimwin" or nameLower == "givewin" or 
-                       nameLower == "addwin" or nameLower == "stagewin" or nameLower == "dinowin" or 
-                       nameLower == "passgate" or nameLower == "finishrun" or nameLower == "claimreward" or
-                       nameLower:find("win") or nameLower:find("givewin") or nameLower:find("addwin") then
+                    if nameLower:find("win") or nameLower:find("trophy") or nameLower:find("claimwin") or 
+                       nameLower:find("givewin") or nameLower:find("addwin") or nameLower:find("stagewin") or 
+                       nameLower:find("dinowin") or nameLower:find("passgate") or nameLower:find("finish") or 
+                       nameLower:find("reward") or nameLower:find("claimtrophy") or nameLower:find("addtrophy") then
                         if obj:IsA("RemoteEvent") then
                             pcall(function()
                                 obj:FireServer()
                                 obj:FireServer(1)
                                 obj:FireServer(true)
                                 obj:FireServer("Win")
+                                obj:FireServer("Trophy")
                                 obj:FireServer("Claim")
+                                obj:FireServer("Stage1")
                                 obj:FireServer(1, true)
                                 obj:FireServer(10)
+                                obj:FireServer(100)
                             end)
                         elseif obj:IsA("RemoteFunction") then
                             pcall(function()
@@ -693,32 +671,33 @@ task.spawn(function()
                                 obj:InvokeServer(1)
                                 obj:InvokeServer(true)
                                 obj:InvokeServer("Win")
+                                obj:InvokeServer("Trophy")
                             end)
                         end
                     end
                 end
 
-                -- Layer 2: Targeted Touch on Genuine Win Pads (Debounced to prevent screen flicker)
+                -- Layer 2: Targeted Touch on Win / Finish Track Parts (Debounced)
                 if hrp and firetouchinterest then
-                    local winPads = GetGenuineWinPads()
-                    for _, pad in ipairs(winPads) do
+                    local trackParts = GetRunwayWinObjects()
+                    for _, part in ipairs(trackParts) do
                         if not Toggles.InfiniteWins then break end
                         pcall(function()
-                            if pad and pad.Parent then
-                                firetouchinterest(hrp, pad, 0)
-                                task.wait(0.02)
-                                firetouchinterest(hrp, pad, 1)
+                            if part and part.Parent then
+                                firetouchinterest(hrp, part, 0)
+                                task.wait(0.01)
+                                firetouchinterest(hrp, part, 1)
                             end
                         end)
                     end
                 end
 
-                -- Layer 3: Targeted Proximity Prompts on Finish Trophies
+                -- Layer 3: Proximity Prompts on Finish Trophies & Win Chests
                 for _, prompt in ipairs(Workspace:GetDescendants()) do
                     if not Toggles.InfiniteWins then break end
                     if prompt:IsA("ProximityPrompt") and prompt.Enabled then
                         local pText = (prompt.ObjectText or ""):lower() .. (prompt.ActionText or ""):lower() .. prompt.Name:lower()
-                        if pText:find("win") or pText:find("claim win") or pText:find("trophy") then
+                        if pText:find("win") or pText:find("trophy") or pText:find("claim") or pText:find("finish") then
                             if fireproximityprompt then
                                 fireproximityprompt(prompt, 0)
                             end
@@ -740,7 +719,7 @@ local function GetRebirthRequirementsInfo()
     pcall(function()
         local leaderstats = LocalPlayer:FindFirstChild("leaderstats")
         local strengthVal = leaderstats and (leaderstats:FindFirstChild("Strength") or leaderstats:FindFirstChild("Power") or leaderstats:FindFirstChild("Str"))
-        local winsVal = leaderstats and (leaderstats:FindFirstChild("Wins") or leaderstats:FindFirstChild("Win"))
+        local winsVal = leaderstats and (leaderstats:FindFirstChild("Wins") or leaderstats:FindFirstChild("Win") or leaderstats:FindFirstChild("Trophy") or leaderstats:FindFirstChild("Trophies"))
         local rebirthVal = leaderstats and (leaderstats:FindFirstChild("Rebirth") or leaderstats:FindFirstChild("Rebirths"))
         
         local curStrength = strengthVal and strengthVal.Value or 0
@@ -759,7 +738,7 @@ task.spawn(function()
             pcall(function()
                 local didRebirth = false
 
-                -- Layer 1: In-Game Rebirth GUI Auto-Clicker
+                -- Layer 1: In-Game Rebirth GUI Clicker (Specific to rebirth only)
                 if LocalPlayer:FindFirstChild("PlayerGui") then
                     for _, gui in ipairs(LocalPlayer.PlayerGui:GetChildren()) do
                         if gui:IsA("ScreenGui") and gui.Name ~= "JunejoDinoEvolutionUI" then
@@ -769,9 +748,8 @@ task.spawn(function()
                                     local bText = (btn:IsA("TextButton") and btn.Text or ""):lower()
                                     local parentName = btn.Parent and btn.Parent.Name:lower() or ""
 
-                                    if bName:find("rebirth") or bName:find("evolve") or bName:find("prestige") or 
-                                       bText:find("rebirth") or bText:find("evolve") or bText:find("yes") or 
-                                       bText:find("confirm") or parentName:find("rebirth") then
+                                    if (bName:find("rebirth") or bText:find("rebirth") or parentName:find("rebirth")) and 
+                                       not (bName:find("close") or bText:find("close") or bText:find("x")) then
                                         ClickGuiButton(btn)
                                         didRebirth = true
                                     end
@@ -820,8 +798,8 @@ task.spawn(function()
                     end
                 end
 
-                -- Periodic Status Notification (Every 10 seconds)
-                if os.time() - lastRebirthNotify > 10 then
+                -- Periodic Status Notification (Every 12 seconds)
+                if os.time() - lastRebirthNotify > 12 then
                     lastRebirthNotify = os.time()
                     local reqInfo = GetRebirthRequirementsInfo()
                     pcall(function()
