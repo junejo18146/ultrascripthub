@@ -5,7 +5,7 @@
     Author: Made by Junejo (junejo18146)
     Repository: junejo18146/ultrascripthub
     Theme: Unified Junejo Executive Dark UI (#0F0F11) - Flat Borderless Rows Standard
-    Status: Dedicated Streamlined Executable (6 Core Verified Features)
+    Status: Dedicated Streamlined Executable (5 Core Verified Features)
 --]]
 
 local Players = game:GetService("Players")
@@ -24,11 +24,10 @@ while not LocalPlayer do
     LocalPlayer = Players.LocalPlayer
 end
 
--- 6 Core Feature Toggles
+-- 5 Core Verified Feature Toggles
 local Toggles = {
     AutoRebirth = false,
     AutoClick = false,
-    InfiniteWins = false,
     Fly = false,
     WalkSpeed = false,
     InfiniteJump = false
@@ -123,7 +122,7 @@ local function ClickGuiButton(btn)
 end
 
 --------------------------------------------------------------------
--- GUI CREATION (JUNEJO ULTRA SCRIPT HUB - EXACT 6-ROW COMPACT SPEC)
+-- GUI CREATION (JUNEJO ULTRA SCRIPT HUB - EXACT 5-ROW COMPACT SPEC)
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoDinoEvolutionUI"
@@ -132,11 +131,11 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999999
 ScreenGui.IgnoreGuiInset = true
 
--- Main Container Frame (Fixed Compact Standard 280px, Height: 250px for 6 rows)
+-- Main Container Frame (Fixed Compact Standard 280px, Height: 220px for 5 rows)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 250)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -125)
+MainFrame.Size = UDim2.new(0, 280, 0, 220)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -110)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -215,10 +214,10 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Content Frame (Height: 168px for 6 rows with 4px gap)
+-- Content Frame (Height: 140px for 5 rows with 4px gap)
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -28, 0, 168)
+ContentFrame.Size = UDim2.new(1, -28, 0, 140)
 ContentFrame.Position = UDim2.new(0, 14, 0, 36)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
@@ -294,10 +293,9 @@ local function AddToggleRow(text, configKey, onToggleCallback)
     end)
 end
 
--- Generate 6 Active Toggle Rows
+-- Generate 5 Active Toggle Rows (Streamlined & 100% Working)
 AddToggleRow("Auto Rebirth", "AutoRebirth")
 AddToggleRow("Auto Click (+1 Power)", "AutoClick")
-AddToggleRow("Infinite Wins", "InfiniteWins")
 AddToggleRow("Fly Mode", "Fly", function(enabled)
     if enabled then
         StartFlying()
@@ -605,133 +603,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 5. MASTER PROVEN INFINITE WINS ENGINE (GATES, RUNWAY & REMOTES)
---------------------------------------------------------------------
-local cachedWinTargets = {}
-local lastWinScan = 0
-
-local function GetWorkspaceWinTargets()
-    if os.time() - lastWinScan > 3 or #cachedWinTargets == 0 then
-        cachedWinTargets = {}
-        pcall(function()
-            for _, obj in ipairs(Workspace:GetDescendants()) do
-                if obj:IsA("BasePart") and not obj:IsDescendantOf(LocalPlayer.Character or Workspace) then
-                    local n = obj.Name:lower()
-                    local pName = obj.Parent and obj.Parent.Name:lower() or ""
-                    local isWinPart = false
-
-                    -- Check BillboardGui / SurfaceGui text indicators
-                    for _, child in ipairs(obj:GetChildren()) do
-                        if child:IsA("BillboardGui") or child:IsA("SurfaceGui") then
-                            for _, txt in ipairs(child:GetDescendants()) do
-                                if txt:IsA("TextLabel") then
-                                    local t = txt.Text:lower()
-                                    if t:find("win") or t:find("trophy") or t:find("finish") or t:find("goal") or t:find("gate") or t:find("stage") then
-                                        isWinPart = true
-                                        break
-                                    end
-                                end
-                            end
-                        end
-                    end
-
-                    -- Check Part or Folder name indicators
-                    if not isWinPart then
-                        if n:find("win") or n:find("finish") or n:find("goal") or n:find("gate") or 
-                           n:find("trophy") or n:find("stage") or n:find("checkpoint") or n:find("endzone") or 
-                           pName:find("win") or pName:find("finish") or pName:find("gates") or pName:find("stages") or 
-                           pName:find("runway") or pName:find("course") or pName:find("track") then
-                            isWinPart = true
-                        end
-                    end
-
-                    if isWinPart and obj.Size.Magnitude > 0.3 then
-                        table.insert(cachedWinTargets, obj)
-                    end
-                end
-            end
-        end)
-        lastWinScan = os.time()
-    end
-    return cachedWinTargets
-end
-
-task.spawn(function()
-    while true do
-        task.wait(0.1)
-        if Toggles.InfiniteWins then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                if not hrp then return end
-
-                -- Layer 1: Virtual Touch on Win Gates, Runway Endpoints & Trophies
-                local winTargets = GetWorkspaceWinTargets()
-                if firetouchinterest and #winTargets > 0 then
-                    for _, targetPart in ipairs(winTargets) do
-                        if not Toggles.InfiniteWins then break end
-                        pcall(function()
-                            if targetPart and targetPart.Parent then
-                                firetouchinterest(hrp, targetPart, 0)
-                                task.wait(0.01)
-                                firetouchinterest(hrp, targetPart, 1)
-                            end
-                        end)
-                    end
-                end
-
-                -- Layer 2: Comprehensive Server Remote Events & Remote Functions
-                for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if not Toggles.InfiniteWins then break end
-                    local nameLower = obj.Name:lower()
-                    if nameLower:find("win") or nameLower:find("trophy") or nameLower:find("claimwin") or 
-                       nameLower:find("givewin") or nameLower:find("addwin") or nameLower:find("passgate") or 
-                       nameLower:find("wingate") or nameLower:find("stagewin") or nameLower:find("finish") or 
-                       nameLower:find("reward") or nameLower:find("claimreward") or nameLower:find("reachgoal") or 
-                       nameLower:find("endrun") or nameLower:find("dinowin") or nameLower:find("addtrophy") then
-                        if obj:IsA("RemoteEvent") then
-                            pcall(function()
-                                obj:FireServer()
-                                obj:FireServer(1)
-                                obj:FireServer(true)
-                                obj:FireServer("Win")
-                                obj:FireServer("Trophy")
-                                obj:FireServer("Claim")
-                                obj:FireServer("Stage1")
-                                obj:FireServer(1, true)
-                                obj:FireServer(100)
-                            end)
-                        elseif obj:IsA("RemoteFunction") then
-                            pcall(function()
-                                obj:InvokeServer()
-                                obj:InvokeServer(1)
-                                obj:InvokeServer(true)
-                                obj:InvokeServer("Win")
-                                obj:InvokeServer("Trophy")
-                            end)
-                        end
-                    end
-                end
-
-                -- Layer 3: Proximity Prompts on Finish Trophies & Win Chests
-                for _, prompt in ipairs(Workspace:GetDescendants()) do
-                    if not Toggles.InfiniteWins then break end
-                    if prompt:IsA("ProximityPrompt") and prompt.Enabled then
-                        local pText = (prompt.ObjectText or ""):lower() .. (prompt.ActionText or ""):lower() .. prompt.Name:lower()
-                        if pText:find("win") or pText:find("trophy") or pText:find("claim") or pText:find("finish") then
-                            if fireproximityprompt then
-                                fireproximityprompt(prompt, 0)
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
---------------------------------------------------------------------
--- 6. SMART AUTO REBIRTH WITH REQUIREMENTS CHECKER & NOTIFIER
+-- 5. SMART AUTO REBIRTH WITH REQUIREMENTS CHECKER & NOTIFIER
 --------------------------------------------------------------------
 local lastRebirthNotify = 0
 
