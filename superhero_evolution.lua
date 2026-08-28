@@ -5,7 +5,7 @@
     Author: Made by Junejo (junejo18146)
     Repository: junejo18146/ultrascripthub
     Theme: Unified Junejo Executive Dark UI (#0F0F11) - Flat Borderless Rows Standard
-    Status: Complete Standalone Executable
+    Status: Dedicated Streamlined Executable (5 Verified Core Features)
 --]]
 
 local Players = game:GetService("Players")
@@ -29,13 +29,10 @@ while not LocalPlayer do
     LocalPlayer = Players.LocalPlayer
 end
 
--- 8 Core Feature Toggles
+-- 5 Verified Core Feature Toggles
 local Toggles = {
-    AutoTrain = false,
-    PowerFarm = false,
     AutoRebirth = false,
     AutoWins = false,
-    AutoFightBoss = false,
     Fly = false,
     WalkSpeed = false,
     InfiniteJump = false
@@ -138,7 +135,7 @@ local function ClickGuiButton(btn)
 end
 
 --------------------------------------------------------------------
--- GUI CREATION (IMMEDIATE CREATION - JUNEJO CLASSIC DARK SPEC)
+-- GUI CREATION (JUNEJO ULTRA SCRIPT HUB - EXACT 5-ROW COMPACT SPEC)
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoSuperheroEvolutionUI"
@@ -147,11 +144,11 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999999
 ScreenGui.IgnoreGuiInset = true
 
--- Main Container Frame (Fixed Compact Standard 280px, Height: 310px for 8 rows)
+-- Main Container Frame (Fixed Compact Standard 280px, Height: 220px for 5 rows)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 310)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -155)
+MainFrame.Size = UDim2.new(0, 280, 0, 220)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -110)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -230,10 +227,10 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Content Frame (Height: 226px for 8 rows)
+-- Content Frame (Height: 136px for 5 rows with 4px gap)
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -28, 0, 226)
+ContentFrame.Size = UDim2.new(1, -28, 0, 136)
 ContentFrame.Position = UDim2.new(0, 14, 0, 36)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
@@ -309,12 +306,9 @@ local function AddToggleRow(text, configKey, onToggleCallback)
     end)
 end
 
--- Generate 8 Standard Toggle Rows
-AddToggleRow("Auto Train", "AutoTrain")
-AddToggleRow("+1 Power Farm", "PowerFarm")
+-- Generate 5 Requested Working Toggle Rows
 AddToggleRow("Auto Rebirth", "AutoRebirth")
 AddToggleRow("Auto Wins", "AutoWins")
-AddToggleRow("Auto Fight Boss", "AutoFightBoss")
 AddToggleRow("Fly Mode", "Fly", function(enabled)
     if enabled then
         StartFlying()
@@ -565,117 +559,7 @@ StopFlying = function()
 end
 
 --------------------------------------------------------------------
--- 4. AUTO TRAIN ENGINE (Hyper Power Gain / Tool Auto-Equip / Remotes)
---------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        if Toggles.AutoTrain then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local backpack = LocalPlayer:FindFirstChild("Backpack")
-                
-                -- Auto-Equip training tools/punches/weights
-                if backpack then
-                    for _, item in ipairs(backpack:GetChildren()) do
-                        if item:IsA("Tool") then
-                            item.Parent = char
-                        end
-                    end
-                end
-
-                -- Auto-Activate all equipped tools
-                if char then
-                    for _, item in ipairs(char:GetChildren()) do
-                        if item:IsA("Tool") then
-                            item:Activate()
-                        end
-                    end
-                end
-
-                -- Virtual Tap / Click emulation
-                if VirtualUser then
-                    VirtualUser:CaptureController()
-                    VirtualUser:ClickButton1(Vector2.new(500, 500))
-                end
-
-                if VirtualInputManager then
-                    VirtualInputManager:SendMouseButtonEvent(500, 500, 0, true, game, 0)
-                    task.wait(0.01)
-                    VirtualInputManager:SendMouseButtonEvent(500, 500, 0, false, game, 0)
-                end
-
-                -- Remote scanner & firer for Training / Power events
-                for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if obj:IsA("RemoteEvent") then
-                        local nameLower = obj.Name:lower()
-                        if nameLower:find("train") or nameLower:find("punch") or nameLower:find("workout") or 
-                           nameLower:find("power") or nameLower:find("click") or nameLower:find("tap") or 
-                           nameLower:find("swing") or nameLower:find("gain") then
-                            pcall(function()
-                                obj:FireServer()
-                                obj:FireServer("Train")
-                                obj:FireServer(1)
-                                obj:FireServer(true)
-                            end)
-                        end
-                    elseif obj:IsA("RemoteFunction") then
-                        local nameLower = obj.Name:lower()
-                        if nameLower:find("train") or nameLower:find("punch") or nameLower:find("power") then
-                            pcall(function()
-                                obj:InvokeServer()
-                            end)
-                        end
-                    end
-                end
-            end)
-        end
-        task.wait(0.05)
-    end
-end)
-
---------------------------------------------------------------------
--- 5. +1 POWER FARM ENGINE (ProximityPrompts & Station Sweeper)
---------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        if Toggles.PowerFarm then
-            pcall(function()
-                -- Sweep proximity prompts for workout equipment / dumbbells
-                for _, prompt in ipairs(Workspace:GetDescendants()) do
-                    if prompt:IsA("ProximityPrompt") and prompt.Enabled then
-                        local promptName = prompt.Name:lower() .. (prompt.ObjectText or ""):lower() .. (prompt.ActionText or ""):lower()
-                        if promptName:find("train") or promptName:find("power") or promptName:find("punch") or 
-                           promptName:find("lift") or promptName:find("workout") or promptName:find("dumbbell") or 
-                           promptName:find("click") or promptName:find("collect") then
-                            if fireproximityprompt then
-                                fireproximityprompt(prompt, 0)
-                            end
-                        end
-                    end
-                end
-
-                -- Direct Power Events Pulse
-                for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if obj:IsA("RemoteEvent") then
-                        local nameLower = obj.Name:lower()
-                        if nameLower:find("addpower") or nameLower:find("givepower") or nameLower:find("gainpower") or 
-                           nameLower:find("heropower") or nameLower:find("stat") or nameLower:find("multiplier") then
-                            pcall(function()
-                                obj:FireServer()
-                                obj:FireServer("+1")
-                                obj:FireServer(1)
-                            end)
-                        end
-                    end
-                end
-            end)
-        end
-        task.wait(0.04)
-    end
-end)
-
---------------------------------------------------------------------
--- 6. MULTI-LAYER HYBRID AUTO REBIRTH / EVOLUTION ENGINE
+-- 4. MULTI-LAYER HYBRID AUTO REBIRTH / EVOLUTION ENGINE
 --------------------------------------------------------------------
 task.spawn(function()
     while true do
@@ -769,7 +653,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 7. MULTI-LAYER HYBRID AUTO WINS ENGINE (Gates, Runway & Remotes)
+-- 5. MULTI-LAYER HYBRID AUTO WINS ENGINE (Gates, Runway & Remotes)
 --------------------------------------------------------------------
 local cachedWinParts = {}
 local lastWinScan = 0
@@ -907,90 +791,5 @@ task.spawn(function()
                 end
             end)
         end
-    end
-end)
-
---------------------------------------------------------------------
--- 8. AUTO FIGHT BOSS / ENEMIES ENGINE
---------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        if Toggles.AutoFightBoss then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                
-                -- Auto equip weapons for boss fight
-                local backpack = LocalPlayer:FindFirstChild("Backpack")
-                if backpack then
-                    for _, tool in ipairs(backpack:GetChildren()) do
-                        if tool:IsA("Tool") then
-                            tool.Parent = char
-                        end
-                    end
-                end
-
-                -- Hitbox Expansion & Damage Remote trigger
-                for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if obj:IsA("RemoteEvent") then
-                        local nameLower = obj.Name:lower()
-                        if nameLower:find("attack") or nameLower:find("damage") or nameLower:find("hit") or 
-                           nameLower:find("fight") or nameLower:find("slash") or nameLower:find("punchboss") or 
-                           nameLower:find("attackboss") or nameLower:find("damageboss") then
-                            pcall(function()
-                                obj:FireServer()
-                                obj:FireServer("Boss")
-                                obj:FireServer(1)
-                                obj:FireServer(true)
-                            end)
-                        end
-                    end
-                end
-
-                -- Scan for Enemy / Boss Models
-                if hrp then
-                    local targetEnemy = nil
-                    local shortestDistance = 150
-
-                    for _, enemy in ipairs(Workspace:GetDescendants()) do
-                        if enemy:IsA("Model") and enemy ~= char and enemy:FindFirstChildOfClass("Humanoid") then
-                            local enemyHum = enemy:FindFirstChildOfClass("Humanoid")
-                            local enemyHrp = enemy:FindFirstChild("HumanoidRootPart") or enemy:FindFirstChild("Torso")
-                            
-                            if enemyHum and enemyHum.Health > 0 and enemyHrp and not Players:GetPlayerFromCharacter(enemy) then
-                                local dist = (enemyHrp.Position - hrp.Position).Magnitude
-                                if dist < shortestDistance then
-                                    shortestDistance = dist
-                                    targetEnemy = enemy
-                                end
-                            end
-                        end
-                    end
-
-                    if targetEnemy then
-                        local enemyHrp = targetEnemy:FindFirstChild("HumanoidRootPart") or targetEnemy:FindFirstChild("Torso")
-                        if enemyHrp and char then
-                            -- Swing tools
-                            for _, tool in ipairs(char:GetChildren()) do
-                                if tool:IsA("Tool") then
-                                    tool:Activate()
-                                    local handle = tool:FindFirstChild("Handle")
-                                    if handle and handle:IsA("BasePart") then
-                                        handle.Size = Vector3.new(20, 20, 20)
-                                        handle.CanCollide = false
-                                        if firetouchinterest then
-                                            firetouchinterest(handle, enemyHrp, 0)
-                                            task.wait(0.01)
-                                            firetouchinterest(handle, enemyHrp, 1)
-                                        end
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-        task.wait(0.08)
     end
 end)
