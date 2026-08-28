@@ -102,6 +102,42 @@ pcall(function()
 end)
 
 --------------------------------------------------------------------
+-- HELPER: UNIVERSAL GUI CLICK SIMULATOR
+--------------------------------------------------------------------
+local function ClickGuiButton(btn)
+    if not btn then return end
+    pcall(function()
+        if firesignal then
+            firesignal(btn.MouseButton1Click)
+            firesignal(btn.MouseButton1Down)
+            firesignal(btn.MouseButton1Up)
+            firesignal(btn.Activated)
+        end
+    end)
+    pcall(function()
+        if getconnections then
+            for _, conn in pairs(getconnections(btn.MouseButton1Click)) do
+                conn:Fire()
+            end
+            for _, conn in pairs(getconnections(btn.MouseButton1Down)) do
+                conn:Fire()
+            end
+            for _, conn in pairs(getconnections(btn.Activated)) do
+                conn:Fire()
+            end
+        end
+    end)
+    pcall(function()
+        if VirtualInputManager and btn.AbsolutePosition and btn.AbsoluteSize then
+            local center = btn.AbsolutePosition + (btn.AbsoluteSize / 2)
+            VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, true, game, 1)
+            task.wait(0.01)
+            VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, false, game, 1)
+        end
+    end)
+end
+
+--------------------------------------------------------------------
 -- GUI CREATION (IMMEDIATE CREATION - JUNEJO CLASSIC DARK SPEC)
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
@@ -639,79 +675,89 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 6. AUTO REBIRTH / EVOLUTION ENGINE
+-- 6. MULTI-LAYER HYBRID AUTO REBIRTH / EVOLUTION ENGINE
 --------------------------------------------------------------------
 task.spawn(function()
     while true do
+        task.wait(0.3)
         if Toggles.AutoRebirth then
             pcall(function()
+                -- Layer 1: In-Game PlayerGui Rebirth & Evolve Button Auto-Clicker
+                if LocalPlayer:FindFirstChild("PlayerGui") then
+                    for _, gui in ipairs(LocalPlayer.PlayerGui:GetChildren()) do
+                        if gui:IsA("ScreenGui") and gui.Name ~= "JunejoSuperheroEvolutionUI" then
+                            for _, btn in ipairs(gui:GetDescendants()) do
+                                if btn:IsA("TextButton") or btn:IsA("ImageButton") then
+                                    local bName = btn.Name:lower()
+                                    local bText = (btn:IsA("TextButton") and btn.Text or ""):lower()
+                                    local parentName = btn.Parent and btn.Parent.Name:lower() or ""
+                                    
+                                    if bName:find("rebirth") or bName:find("evolve") or bName:find("evolution") or 
+                                       bName:find("prestige") or bName:find("ascend") or bName:find("rankup") or 
+                                       bName:find("tierup") or bText:find("rebirth") or bText:find("evolve") or 
+                                       bText:find("evolution") or bText:find("prestige") or bText:find("yes") or 
+                                       bText:find("confirm") or parentName:find("rebirth") or parentName:find("evolve") then
+                                        ClickGuiButton(btn)
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+
+                -- Layer 2: All ReplicatedStorage Remote Events & Remote Functions
                 for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if obj:IsA("RemoteEvent") then
-                        local nameLower = obj.Name:lower()
-                        if nameLower:find("rebirth") or nameLower:find("prestige") or nameLower:find("evolve") or 
-                           nameLower:find("evolution") or nameLower:find("ascend") or nameLower:find("dorebirth") or 
-                           nameLower:find("buyrebirth") or nameLower:find("herorebirth") then
+                    if not Toggles.AutoRebirth then break end
+                    local nameLower = obj.Name:lower()
+                    if nameLower:find("rebirth") or nameLower:find("prestige") or nameLower:find("evolve") or 
+                       nameLower:find("evolution") or nameLower:find("ascend") or nameLower:find("dorebirth") or 
+                       nameLower:find("buyrebirth") or nameLower:find("herorebirth") or nameLower:find("superherorebirth") or 
+                       nameLower:find("tier") or nameLower:find("rankup") or nameLower:find("transform") then
+                        if obj:IsA("RemoteEvent") then
                             pcall(function()
                                 obj:FireServer()
                                 obj:FireServer(1)
                                 obj:FireServer(true)
+                                obj:FireServer("Rebirth")
+                                obj:FireServer("Evolve")
+                                obj:FireServer("Buy")
+                                obj:FireServer(1, true)
                             end)
-                        end
-                    elseif obj:IsA("RemoteFunction") then
-                        local nameLower = obj.Name:lower()
-                        if nameLower:find("rebirth") or nameLower:find("evolve") or nameLower:find("evolution") then
+                        elseif obj:IsA("RemoteFunction") then
                             pcall(function()
                                 obj:InvokeServer()
+                                obj:InvokeServer(1)
+                                obj:InvokeServer(true)
+                                obj:InvokeServer("Rebirth")
                             end)
                         end
                     end
                 end
-            end)
-        end
-        task.wait(0.5)
-    end
-end)
 
---------------------------------------------------------------------
--- 7. AUTO WINS ENGINE (Runway, Win Gates & Remote Sweeper)
---------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        if Toggles.AutoWins then
-            pcall(function()
+                -- Layer 3: ProximityPrompts for Rebirth Altars / Stations
+                for _, prompt in ipairs(Workspace:GetDescendants()) do
+                    if prompt:IsA("ProximityPrompt") and prompt.Enabled then
+                        local promptName = prompt.Name:lower() .. (prompt.ObjectText or ""):lower() .. (prompt.ActionText or ""):lower()
+                        if promptName:find("rebirth") or promptName:find("evolve") or promptName:find("prestige") or promptName:find("ascend") then
+                            if fireproximityprompt then
+                                fireproximityprompt(prompt, 0)
+                            end
+                        end
+                    end
+                end
+
+                -- Layer 4: Rebirth Pads / Portals Touch Interest
                 local char = LocalPlayer.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                
-                -- Win Remote Events Sweeper
-                for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if obj:IsA("RemoteEvent") then
-                        local nameLower = obj.Name:lower()
-                        if nameLower:find("win") or nameLower:find("claimwin") or nameLower:find("givewin") or 
-                           nameLower:find("passgate") or nameLower:find("wingate") or nameLower:find("stagewin") or 
-                           nameLower:find("finish") or nameLower:find("reward") then
-                            pcall(function()
-                                obj:FireServer()
-                                obj:FireServer(1)
-                                obj:FireServer(true)
-                            end)
-                        end
-                    end
-                end
-
-                -- Scan for Win Pads, Gates, Finish Lines & Touch Interest
-                if hrp then
+                if hrp and firetouchinterest then
                     for _, part in ipairs(Workspace:GetDescendants()) do
                         if part:IsA("BasePart") then
-                            local partName = part.Name:lower()
-                            if (partName:find("win") or partName:find("finish") or partName:find("gate") or 
-                                partName:find("portal") or partName:find("trophy") or partName:find("checkpoint")) and 
-                               not part:IsDescendantOf(char) then
+                            local pName = part.Name:lower()
+                            if pName:find("rebirthpad") or pName:find("evolvepad") or pName:find("rebirthportal") or pName:find("evolveportal") then
                                 pcall(function()
-                                    if firetouchinterest then
-                                        firetouchinterest(hrp, part, 0)
-                                        task.wait(0.01)
-                                        firetouchinterest(hrp, part, 1)
-                                    end
+                                    firetouchinterest(hrp, part, 0)
+                                    task.wait(0.01)
+                                    firetouchinterest(hrp, part, 1)
                                 end)
                             end
                         end
@@ -719,7 +765,148 @@ task.spawn(function()
                 end
             end)
         end
-        task.wait(0.2)
+    end
+end)
+
+--------------------------------------------------------------------
+-- 7. MULTI-LAYER HYBRID AUTO WINS ENGINE (Gates, Runway & Remotes)
+--------------------------------------------------------------------
+local cachedWinParts = {}
+local lastWinScan = 0
+
+local function GetWorkspaceWinTargets()
+    if os.time() - lastWinScan > 4 or #cachedWinParts == 0 then
+        cachedWinParts = {}
+        pcall(function()
+            for _, obj in ipairs(Workspace:GetDescendants()) do
+                if obj:IsA("BasePart") and not obj:IsDescendantOf(LocalPlayer.Character or Workspace) then
+                    local n = obj.Name:lower()
+                    local pName = obj.Parent and obj.Parent.Name:lower() or ""
+                    local isWinPart = false
+
+                    -- Check BillboardGui / SurfaceGui text indicators
+                    for _, child in ipairs(obj:GetChildren()) do
+                        if child:IsA("BillboardGui") or child:IsA("SurfaceGui") then
+                            for _, txt in ipairs(child:GetDescendants()) do
+                                if txt:IsA("TextLabel") then
+                                    local t = txt.Text:lower()
+                                    if t:find("win") or t:find("trophy") or t:find("finish") or t:find("goal") or t:find("gate") or t:find("stage") then
+                                        isWinPart = true
+                                        break
+                                    end
+                                end
+                            end
+                        end
+                    end
+
+                    -- Check Part or Folder name indicators
+                    if not isWinPart then
+                        if n:find("win") or n:find("finish") or n:find("goal") or n:find("gate") or 
+                           n:find("trophy") or n:find("stage") or n:find("checkpoint") or n:find("endzone") or 
+                           pName:find("win") or pName:find("finish") or pName:find("gates") or pName:find("stages") or 
+                           pName:find("runway") or pName:find("course") or pName:find("track") then
+                            isWinPart = true
+                        end
+                    end
+
+                    if isWinPart and obj.Size.Magnitude > 0.5 then
+                        table.insert(cachedWinParts, obj)
+                    end
+                end
+            end
+        end)
+        lastWinScan = os.time()
+    end
+    return cachedWinParts
+end
+
+task.spawn(function()
+    while true do
+        task.wait(0.12)
+        if Toggles.AutoWins then
+            pcall(function()
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                if not hrp then return end
+
+                -- Layer 1: Virtual Touch on Win Gates / Runway Endpoints
+                local winTargets = GetWorkspaceWinTargets()
+                if firetouchinterest and #winTargets > 0 then
+                    for _, targetPart in ipairs(winTargets) do
+                        if not Toggles.AutoWins then break end
+                        pcall(function()
+                            if targetPart and targetPart.Parent then
+                                firetouchinterest(hrp, targetPart, 0)
+                                task.wait(0.01)
+                                firetouchinterest(hrp, targetPart, 1)
+                            end
+                        end)
+                    end
+                end
+
+                -- Layer 2: All ReplicatedStorage Win / Stage / Reward Remotes
+                for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
+                    if not Toggles.AutoWins then break end
+                    local nameLower = obj.Name:lower()
+                    if nameLower:find("win") or nameLower:find("claimwin") or nameLower:find("givewin") or 
+                       nameLower:find("addwin") or nameLower:find("passgate") or nameLower:find("wingate") or 
+                       nameLower:find("stagewin") or nameLower:find("finish") or nameLower:find("reward") or 
+                       nameLower:find("claimreward") or nameLower:find("reachgoal") or nameLower:find("endrun") then
+                        if obj:IsA("RemoteEvent") then
+                            pcall(function()
+                                obj:FireServer()
+                                obj:FireServer(1)
+                                obj:FireServer(true)
+                                obj:FireServer("Win")
+                                obj:FireServer("Claim")
+                                obj:FireServer("Stage1")
+                                obj:FireServer(1, true)
+                                obj:FireServer(100)
+                            end)
+                        elseif obj:IsA("RemoteFunction") then
+                            pcall(function()
+                                obj:InvokeServer()
+                                obj:InvokeServer(1)
+                                obj:InvokeServer(true)
+                                obj:InvokeServer("Win")
+                            end)
+                        end
+                    end
+                end
+
+                -- Layer 3: In-Game Win / Stage Claim GUI Popups Auto-Clicker
+                if LocalPlayer:FindFirstChild("PlayerGui") then
+                    for _, gui in ipairs(LocalPlayer.PlayerGui:GetChildren()) do
+                        if gui:IsA("ScreenGui") and gui.Name ~= "JunejoSuperheroEvolutionUI" then
+                            for _, btn in ipairs(gui:GetDescendants()) do
+                                if btn:IsA("TextButton") or btn:IsA("ImageButton") then
+                                    local bName = btn.Name:lower()
+                                    local bText = (btn:IsA("TextButton") and btn.Text or ""):lower()
+                                    
+                                    if bName:find("claimwin") or bName:find("winclaim") or bName:find("collectwin") or 
+                                       bName:find("nextstage") or bText:find("claim win") or bText:find("collect win") or 
+                                       bText:find("claim") or bText:find("victory") then
+                                        ClickGuiButton(btn)
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+
+                -- Layer 4: ProximityPrompts for Win Chests / Trophies
+                for _, prompt in ipairs(Workspace:GetDescendants()) do
+                    if prompt:IsA("ProximityPrompt") and prompt.Enabled then
+                        local promptName = prompt.Name:lower() .. (prompt.ObjectText or ""):lower() .. (prompt.ActionText or ""):lower()
+                        if promptName:find("win") or promptName:find("trophy") or promptName:find("claim") or promptName:find("finish") then
+                            if fireproximityprompt then
+                                fireproximityprompt(prompt, 0)
+                            end
+                        end
+                    end
+                end
+            end)
+        end
     end
 end)
 
