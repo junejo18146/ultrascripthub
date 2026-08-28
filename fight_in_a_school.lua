@@ -5,7 +5,7 @@
     Author: Made by Junejo (junejo18146)
     Repository: junejo18146/ultrascripthub
     Theme: Unified Junejo Executive Dark UI (#0F0F11) - Flat Borderless Rows Standard
-    Status: Complete Standalone Executable (7 Core Features)
+    Status: Dedicated Streamlined Executable (4 Core Verified Features)
 --]]
 
 local Players = game:GetService("Players")
@@ -15,7 +15,6 @@ local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
 local CoreGui = game:GetService("CoreGui")
 local StarterGui = game:GetService("StarterGui")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer
 while not LocalPlayer do
@@ -23,12 +22,9 @@ while not LocalPlayer do
     LocalPlayer = Players.LocalPlayer
 end
 
--- 7 Core Feature Toggles
+-- 4 Core Feature Toggles
 local Toggles = {
-    KillAura = false,
     HitboxExpander = false,
-    AutoWeave = false,
-    InstantGetup = false,
     Fly = false,
     WalkSpeed = false,
     InfiniteJump = false
@@ -95,7 +91,7 @@ pcall(function()
 end)
 
 --------------------------------------------------------------------
--- GUI CREATION (JUNEJO ULTRA SCRIPT HUB - EXACT 7-ROW COMPACT SPEC)
+-- GUI CREATION (JUNEJO ULTRA SCRIPT HUB - EXACT 4-ROW COMPACT SPEC)
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoFightInASchoolUI"
@@ -104,11 +100,11 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999999
 ScreenGui.IgnoreGuiInset = true
 
--- Main Container Frame (Fixed Compact Standard 280px, Height: 275px for 7 rows)
+-- Main Container Frame (Fixed Compact Standard 280px, Height: 195px for 4 rows)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 275)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -137)
+MainFrame.Size = UDim2.new(0, 280, 0, 195)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -97)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -187,10 +183,10 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Content Frame (Height: 196px for 7 rows with 4px gap)
+-- Content Frame (Height: 112px for 4 rows with 4px gap)
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -28, 0, 196)
+ContentFrame.Size = UDim2.new(1, -28, 0, 112)
 ContentFrame.Position = UDim2.new(0, 14, 0, 36)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
@@ -266,15 +262,12 @@ local function AddToggleRow(text, configKey, onToggleCallback)
     end)
 end
 
--- Generate 7 User-Specified Toggle Rows
-AddToggleRow("Kill Aura", "KillAura")
+-- Generate 4 Active Toggle Rows (Streamlined Standard)
 AddToggleRow("Hitbox Expander", "HitboxExpander", function(enabled)
     if not enabled then
         RestoreHitboxes()
     end
 end)
-AddToggleRow("Auto Weave", "AutoWeave")
-AddToggleRow("Instant Getup", "InstantGetup")
 AddToggleRow("Fly Mode", "Fly", function(enabled)
     if enabled then
         StartFlying()
@@ -525,105 +518,8 @@ StopFlying = function()
 end
 
 --------------------------------------------------------------------
--- 4. KILL AURA ENGINE (Auto Strikes Nearest Players In Range)
+-- 4. HITBOX EXPANDER ENGINE (Expands Enemy Hitboxes)
 --------------------------------------------------------------------
-local function GetNearestEnemy()
-    local myChar = LocalPlayer.Character
-    local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
-    if not myHrp then return nil end
-
-    local nearestTarget = nil
-    local nearestDist = 28 -- Attack radius in studs
-
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character then
-            local enemyChar = player.Character
-            local enemyHum = enemyChar:FindFirstChildOfClass("Humanoid")
-            local enemyHrp = enemyChar:FindFirstChild("HumanoidRootPart")
-
-            if enemyHum and enemyHum.Health > 0 and enemyHrp then
-                local dist = (enemyHrp.Position - myHrp.Position).Magnitude
-                if dist < nearestDist then
-                    nearestDist = dist
-                    nearestTarget = enemyChar
-                end
-            end
-        end
-    end
-
-    return nearestTarget
-end
-
-task.spawn(function()
-    while true do
-        task.wait(0.06)
-        if Toggles.KillAura then
-            pcall(function()
-                local myChar = LocalPlayer.Character
-                local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
-                local target = GetNearestEnemy()
-
-                if target and myChar and myHrp then
-                    local targetHrp = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
-
-                    -- Auto Activate Combat Tool if present
-                    for _, tool in ipairs(myChar:GetChildren()) do
-                        if tool:IsA("Tool") then
-                            tool:Activate()
-                            local handle = tool:FindFirstChild("Handle")
-                            if handle and targetHrp and firetouchinterest then
-                                firetouchinterest(handle, targetHrp, 0)
-                                task.wait(0.01)
-                                firetouchinterest(handle, targetHrp, 1)
-                            end
-                        end
-                    end
-
-                    -- Fire Combat / Punch / Attack Remotes
-                    for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
-                        if not Toggles.KillAura then break end
-                        local n = obj.Name:lower()
-                        if n:find("punch") or n:find("attack") or n:find("hit") or n:find("damage") or 
-                           n:find("combat") or n:find("strike") or n:find("melee") or n:find("fight") then
-                            if obj:IsA("RemoteEvent") then
-                                pcall(function()
-                                    obj:FireServer()
-                                    obj:FireServer(target)
-                                    obj:FireServer(targetHrp)
-                                    obj:FireServer(1)
-                                    obj:FireServer("Light")
-                                    obj:FireServer("Heavy")
-                                    obj:FireServer(true)
-                                end)
-                            elseif obj:IsA("RemoteFunction") then
-                                pcall(function()
-                                    obj:InvokeServer(target)
-                                    obj:InvokeServer(1)
-                                end)
-                            end
-                        end
-                    end
-
-                    -- Virtual Touch from Character Limbs
-                    if firetouchinterest and targetHrp then
-                        local rArm = myChar:FindFirstChild("RightHand") or myChar:FindFirstChild("Right Arm") or myHrp
-                        if rArm then
-                            firetouchinterest(rArm, targetHrp, 0)
-                            task.wait(0.01)
-                            firetouchinterest(rArm, targetHrp, 1)
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
---------------------------------------------------------------------
--- 5. HITBOX EXPANDER ENGINE (Expands Enemy Hitboxes)
---------------------------------------------------------------------
-local originalSizes = {}
-
 RestoreHitboxes = function()
     pcall(function()
         for _, player in ipairs(Players:GetPlayers()) do
@@ -654,103 +550,6 @@ task.spawn(function()
                             hrp.BrickColor = BrickColor.new("Bright red")
                             hrp.Material = Enum.Material.Neon
                             hrp.CanCollide = false
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
---------------------------------------------------------------------
--- 6. AUTO WEAVE / DODGE ENGINE
---------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        task.wait(0.15)
-        if Toggles.AutoWeave then
-            pcall(function()
-                local myChar = LocalPlayer.Character
-                local hum = myChar and myChar:FindFirstChildOfClass("Humanoid")
-
-                -- Trigger Weave / Dodge Remotes
-                for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if not Toggles.AutoWeave then break end
-                    local n = obj.Name:lower()
-                    if n:find("weave") or n:find("dodge") or n:find("evade") or n:find("sway") or n:find("slip") then
-                        if obj:IsA("RemoteEvent") then
-                            pcall(function()
-                                obj:FireServer()
-                                obj:FireServer(true)
-                                obj:FireServer("Weave")
-                                obj:FireServer("Dodge")
-                            end)
-                        elseif obj:IsA("RemoteFunction") then
-                            pcall(function()
-                                obj:InvokeServer(true)
-                            end)
-                        end
-                    end
-                end
-
-                -- Auto Dodge when enemies get close
-                local enemy = GetNearestEnemy()
-                if enemy and hum then
-                    -- Trigger space weave state safely
-                    hum:ChangeState(Enum.HumanoidStateType.Running)
-                end
-            end)
-        end
-    end
-end)
-
---------------------------------------------------------------------
--- 7. INSTANT GETUP / ANTI-RAGDOLL ENGINE
---------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        task.wait(0.08)
-        if Toggles.InstantGetup then
-            pcall(function()
-                local myChar = LocalPlayer.Character
-                local hum = myChar and myChar:FindFirstChildOfClass("Humanoid")
-                local hrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
-
-                if hum and hrp then
-                    local state = hum:GetState()
-
-                    -- If knocked down, ragdolled, or falling down
-                    if state == Enum.HumanoidStateType.Physics or 
-                       state == Enum.HumanoidStateType.Ragdoll or 
-                       state == Enum.HumanoidStateType.FallingDown or 
-                       state == Enum.HumanoidStateType.PlatformStanding then
-                        
-                        hum:ChangeState(Enum.HumanoidStateType.GettingUp)
-                        task.wait(0.02)
-                        hum:ChangeState(Enum.HumanoidStateType.Running)
-                        hum.PlatformStand = false
-                    end
-
-                    -- Check Ragdoll constraints / attachments
-                    for _, child in ipairs(myChar:GetChildren()) do
-                        if child:IsA("BallSocketConstraint") or child:IsA("HingeConstraint") then
-                            if child.Name:lower():find("ragdoll") then
-                                child.Enabled = false
-                            end
-                        end
-                    end
-
-                    -- Fire StandUp / Recover Remotes
-                    for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
-                        if not Toggles.InstantGetup then break end
-                        local n = obj.Name:lower()
-                        if n:find("getup") or n:find("standup") or n:find("recover") or n:find("unragdoll") then
-                            if obj:IsA("RemoteEvent") then
-                                pcall(function()
-                                    obj:FireServer()
-                                    obj:FireServer(true)
-                                end)
-                            end
                         end
                     end
                 end
