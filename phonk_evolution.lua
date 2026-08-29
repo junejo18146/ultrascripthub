@@ -5,7 +5,7 @@
     Author: Made by Junejo (junejo18146)
     Repository: junejo18146/ultrascripthub
     Theme: Unified Junejo Executive Dark UI (#0F0F11) - Flat Borderless Rows Standard
-    Status: Dedicated Direct Executable (7 Core Verified Features)
+    Status: Dedicated Direct Executable (7 Core Verified Features - V2 Updated)
 --]]
 
 local Players = game:GetService("Players")
@@ -13,6 +13,10 @@ local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
+local VirtualInputManager = nil
+pcall(function()
+    VirtualInputManager = game:GetService("VirtualInputManager")
+end)
 local CoreGui = game:GetService("CoreGui")
 local StarterGui = game:GetService("StarterGui")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -26,9 +30,9 @@ end
 
 -- 7 Core Verified Feature Toggles
 local Toggles = {
-    AutoClick = false,
+    AutoPower = false,
     AutoRebirth = false,
-    AutoWins = false,
+    InfiniteWins = false,
     AutoHatchEggs = false,
     Fly = false,
     WalkSpeed = false,
@@ -296,9 +300,9 @@ local function AddToggleRow(text, configKey, onToggleCallback)
 end
 
 -- Generate 7 Requested Toggle Rows
-AddToggleRow("Auto Click (+1 Phonk)", "AutoClick")
+AddToggleRow("Auto Power (+1)", "AutoPower")
 AddToggleRow("Auto Rebirth / Evolve", "AutoRebirth")
-AddToggleRow("Auto Wins / Fight", "AutoWins")
+AddToggleRow("Infinite Wins", "InfiniteWins")
 AddToggleRow("Auto Hatch Eggs", "AutoHatchEggs")
 AddToggleRow("Fly Mode", "Fly", function(enabled)
     if enabled then
@@ -358,7 +362,7 @@ end
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "ULTRA SCRIPT HUB",
-        Text = "+1 Phonk Evolution Loaded!",
+        Text = "+1 Phonk Evolution Ready!",
         Duration = 4
     })
 end)
@@ -530,17 +534,43 @@ StopFlying = function()
 end
 
 --------------------------------------------------------------------
--- 4. AUTO CLICK (+1 PHONK / POWER) ENGINE
+-- 4. BULLETPROOF AUTO POWER (+1) SCREEN TAP & CLICK ENGINE
 --------------------------------------------------------------------
 task.spawn(function()
     while true do
-        task.wait(0.08)
-        if Toggles.AutoClick then
+        task.wait(0.04)
+        if Toggles.AutoPower then
             pcall(function()
+                local cam = Workspace.CurrentCamera
+                local vpX = (cam and cam.ViewportSize.X > 0) and (cam.ViewportSize.X / 2) or 500
+                local vpY = (cam and cam.ViewportSize.Y > 0) and (cam.ViewportSize.Y / 2) or 400
+
+                -- Layer 1: Hardware-level Screen Mouse Tap Simulation (VIM)
+                if VirtualInputManager then
+                    pcall(function()
+                        VirtualInputManager:SendMouseButtonEvent(vpX, vpY, 0, true, game, 0)
+                        VirtualInputManager:SendMouseButtonEvent(vpX, vpY, 0, false, game, 0)
+                    end)
+                    pcall(function()
+                        VirtualInputManager:SendTouchEvent(1, 0, vpX, vpY)
+                        VirtualInputManager:SendTouchEvent(1, 2, vpX, vpY)
+                    end)
+                end
+
+                -- Layer 2: VirtualUser Native Click Simulation
+                pcall(function()
+                    VirtualUser:CaptureController()
+                    VirtualUser:ClickButton1(Vector2.new(vpX, vpY))
+                end)
+                pcall(function()
+                    VirtualUser:Button1Down(Vector2.new(vpX, vpY), cam.CFrame)
+                    task.wait(0.01)
+                    VirtualUser:Button1Up(Vector2.new(vpX, vpY), cam.CFrame)
+                end)
+
+                -- Layer 3: Tool Auto-Equip & Activate
                 local char = LocalPlayer.Character
                 local backpack = LocalPlayer:FindFirstChild("Backpack")
-                
-                -- Layer 1: Equip workout / phonk tool if not equipped
                 if backpack and char then
                     local equippedTool = char:FindFirstChildOfClass("Tool")
                     if not equippedTool then
@@ -552,52 +582,51 @@ task.spawn(function()
                             end
                         end
                     end
-                    
-                    -- Layer 2: Activate equipped tool directly
                     if equippedTool then
                         equippedTool:Activate()
                     end
                 end
-                
-                -- Layer 3: VirtualUser click / tap pulse
-                VirtualUser:Button1Down(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
-                task.wait(0.01)
-                VirtualUser:Button1Up(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
-                
-                -- Layer 4: Deep Scan and Fire Train / Phonk / Click Remotes
-                local function FireClickRemotes(parent)
-                    if not parent then return end
-                    for _, child in ipairs(parent:GetChildren()) do
-                        if child:IsA("RemoteEvent") then
-                            local name = string.lower(child.Name)
-                            if name:find("click") or name:find("train") or name:find("phonk") or name:find("power") 
-                               or name:find("tap") or name:find("punch") or name:find("workout") or name:find("gain")
-                               or name:find("add") or name:find("attack") or name:find("gym") then
-                                pcall(function() child:FireServer() end)
-                                pcall(function() child:FireServer(1) end)
-                                pcall(function() child:FireServer("Click") end)
-                                pcall(function() child:FireServer("Train") end)
-                            end
-                        elseif child:IsA("RemoteFunction") then
-                            local name = string.lower(child.Name)
-                            if name:find("click") or name:find("train") or name:find("phonk") or name:find("power")
-                               or name:find("tap") or name:find("workout") then
-                                pcall(function() child:InvokeServer() end)
-                                pcall(function() child:InvokeServer(1) end)
+
+                -- Layer 4: ScreenGui Tap Buttons Clicker
+                if LocalPlayer:FindFirstChild("PlayerGui") then
+                    for _, gui in ipairs(LocalPlayer.PlayerGui:GetChildren()) do
+                        if gui:IsA("ScreenGui") and gui.Name ~= "JunejoPhonkEvolutionUI" and gui.Enabled then
+                            for _, btn in ipairs(gui:GetDescendants()) do
+                                if btn:IsA("TextButton") or btn:IsA("ImageButton") then
+                                    local bn = btn.Name:lower()
+                                    local bt = (btn:IsA("TextButton") and btn.Text or ""):lower()
+                                    if bn:find("tap") or bn:find("click") or bn:find("power") or bn:find("train") or
+                                       bt:find("tap") or bt:find("click") or bt:find("power") or bt:find("+1") then
+                                        ClickGuiButton(btn)
+                                    end
+                                end
                             end
                         end
                     end
                 end
-                
-                FireClickRemotes(ReplicatedStorage)
-                if ReplicatedStorage:FindFirstChild("Events") then
-                    FireClickRemotes(ReplicatedStorage.Events)
-                end
-                if ReplicatedStorage:FindFirstChild("Remotes") then
-                    FireClickRemotes(ReplicatedStorage.Remotes)
-                end
-                if ReplicatedStorage:FindFirstChild("Packages") then
-                    FireClickRemotes(ReplicatedStorage.Packages)
+
+                -- Layer 5: Deep ReplicatedStorage Click / Tap / Power Remotes Sweeper
+                for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
+                    if not Toggles.AutoPower then break end
+                    local n = obj.Name:lower()
+                    if n:find("click") or n:find("tap") or n:find("power") or n:find("train") or 
+                       n:find("phonk") or n:find("punch") or n:find("gain") or n:find("add") or 
+                       n:find("give") or n:find("hit") or n:find("workout") then
+                        if not (n:find("rebirth") or n:find("egg") or n:find("buy") or n:find("shop")) then
+                            if obj:IsA("RemoteEvent") then
+                                pcall(function() obj:FireServer() end)
+                                pcall(function() obj:FireServer(1) end)
+                                pcall(function() obj:FireServer(true) end)
+                                pcall(function() obj:FireServer("Click") end)
+                                pcall(function() obj:FireServer("Tap") end)
+                                pcall(function() obj:FireServer("Train") end)
+                                pcall(function() obj:FireServer("Power") end)
+                            elseif obj:IsA("RemoteFunction") then
+                                pcall(function() obj:InvokeServer() end)
+                                pcall(function() obj:InvokeServer(1) end)
+                            end
+                        end
+                    end
                 end
             end)
         end
@@ -609,59 +638,44 @@ end)
 --------------------------------------------------------------------
 task.spawn(function()
     while true do
-        task.wait(1.5)
+        task.wait(1)
         if Toggles.AutoRebirth then
             pcall(function()
-                -- Layer 1: Fire all Rebirth & Evolution RemoteEvents
-                local function FireRebirthRemotes(parent)
-                    if not parent then return end
-                    for _, child in ipairs(parent:GetChildren()) do
-                        if child:IsA("RemoteEvent") then
-                            local name = string.lower(child.Name)
-                            if name:find("rebirth") or name:find("evolve") or name:find("evolution") 
-                               or name:find("prestige") or name:find("ascend") or name:find("transform") then
-                                pcall(function() child:FireServer() end)
-                                pcall(function() child:FireServer(1) end)
-                                pcall(function() child:FireServer("Rebirth") end)
-                                pcall(function() child:FireServer("Evolve") end)
-                            end
-                        elseif child:IsA("RemoteFunction") then
-                            local name = string.lower(child.Name)
-                            if name:find("rebirth") or name:find("evolve") or name:find("evolution")
-                               or name:find("prestige") or name:find("ascend") then
-                                pcall(function() child:InvokeServer() end)
-                                pcall(function() child:InvokeServer(1) end)
-                            end
-                        end
-                    end
-                end
-                
-                FireRebirthRemotes(ReplicatedStorage)
-                if ReplicatedStorage:FindFirstChild("Events") then
-                    FireRebirthRemotes(ReplicatedStorage.Events)
-                end
-                if ReplicatedStorage:FindFirstChild("Remotes") then
-                    FireRebirthRemotes(ReplicatedStorage.Remotes)
-                end
-                if ReplicatedStorage:FindFirstChild("Rebirth") then
-                    FireRebirthRemotes(ReplicatedStorage.Rebirth)
-                end
-
-                -- Layer 2: PlayerGui UI Rebirth Button Scanner
+                -- Layer 1: PlayerGui UI Rebirth Button Scanner
                 local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
                 if playerGui then
                     for _, gui in ipairs(playerGui:GetChildren()) do
-                        if gui:IsA("ScreenGui") and gui.Enabled then
+                        if gui:IsA("ScreenGui") and gui.Name ~= "JunejoPhonkEvolutionUI" and gui.Enabled then
                             for _, descendant in ipairs(gui:GetDescendants()) do
                                 if descendant:IsA("TextButton") or descendant:IsA("ImageButton") then
-                                    local name = string.lower(descendant.Name)
-                                    local text = descendant:IsA("TextButton") and string.lower(descendant.Text) or ""
+                                    local name = descendant.Name:lower()
+                                    local text = descendant:IsA("TextButton") and descendant.Text:lower() or ""
                                     if name:find("rebirth") or name:find("evolve") or name:find("evolution") or
-                                       text:find("rebirth") or text:find("evolve") or text:find("evolution") then
+                                       text:find("rebirth") or text:find("evolve") or text:find("evolution") or
+                                       text:find("yes") or text:find("confirm") then
                                         ClickGuiButton(descendant)
                                     end
                                 end
                             end
+                        end
+                    end
+                end
+
+                -- Layer 2: All ReplicatedStorage Rebirth & Evolution Remotes
+                for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
+                    if not Toggles.AutoRebirth then break end
+                    local n = obj.Name:lower()
+                    if n:find("rebirth") or n:find("evolve") or n:find("evolution") or 
+                       n:find("prestige") or n:find("ascend") or n:find("transform") then
+                        if obj:IsA("RemoteEvent") then
+                            pcall(function() obj:FireServer() end)
+                            pcall(function() obj:FireServer(1) end)
+                            pcall(function() obj:FireServer(true) end)
+                            pcall(function() obj:FireServer("Rebirth") end)
+                            pcall(function() obj:FireServer("Evolve") end)
+                        elseif obj:IsA("RemoteFunction") then
+                            pcall(function() obj:InvokeServer() end)
+                            pcall(function() obj:InvokeServer(1) end)
                         end
                     end
                 end
@@ -671,65 +685,103 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 6. AUTO WINS / AUTO FIGHT ENGINE
+-- 6. SMOOTH INFINITE WINS ENGINE (Zero-Freeze Virtual Touch & Remotes)
 --------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        task.wait(0.2)
-        if Toggles.AutoWins then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                
-                -- Layer 1: Fire Win & Fight Remotes
-                local function FireWinRemotes(parent)
-                    if not parent then return end
-                    for _, child in ipairs(parent:GetChildren()) do
-                        if child:IsA("RemoteEvent") then
-                            local name = string.lower(child.Name)
-                            if name:find("win") or name:find("givewin") or name:find("claimwin") 
-                               or name:find("stagewin") or name:find("bosshit") or name:find("fight")
-                               or name:find("damage") or name:find("hit") or name:find("dungeon") then
-                                pcall(function() child:FireServer() end)
-                                pcall(function() child:FireServer(1) end)
-                                pcall(function() child:FireServer("Win") end)
-                                pcall(function() child:FireServer("Finish") end)
-                            end
-                        elseif child:IsA("RemoteFunction") then
-                            local name = string.lower(child.Name)
-                            if name:find("win") or name:find("claimwin") or name:find("fight") then
-                                pcall(function() child:InvokeServer() end)
-                                pcall(function() child:InvokeServer(1) end)
+local cachedWinGates = {}
+local lastWinScan = 0
+
+local function GetWorkspaceWinGates()
+    if os.time() - lastWinScan > 4 or #cachedWinGates == 0 then
+        cachedWinGates = {}
+        pcall(function()
+            for _, obj in ipairs(Workspace:GetDescendants()) do
+                if obj:IsA("BasePart") and not (LocalPlayer.Character and obj:IsDescendantOf(LocalPlayer.Character)) then
+                    local n = obj.Name:lower()
+                    local pName = obj.Parent and obj.Parent.Name:lower() or ""
+                    local isWinPart = false
+
+                    -- Check BillboardGui / SurfaceGui text indicators
+                    for _, child in ipairs(obj:GetChildren()) do
+                        if child:IsA("BillboardGui") or child:IsA("SurfaceGui") then
+                            for _, txt in ipairs(child:GetDescendants()) do
+                                if txt:IsA("TextLabel") then
+                                    local t = txt.Text:lower()
+                                    if t:find("win") or t:find("trophy") or t:find("finish") or t:find("escape") or t:find("gate") then
+                                        isWinPart = true
+                                        break
+                                    end
+                                end
                             end
                         end
                     end
+
+                    -- Check Part or Folder name indicators
+                    if not isWinPart then
+                        if n:find("win") or n:find("finish") or n:find("escape") or n:find("gate") or 
+                           n:find("trophy") or n:find("stage") or n:find("goal") or n:find("end") or 
+                           pName:find("win") or pName:find("finish") or pName:find("gates") or pName:find("escape") or pName:find("track") then
+                            isWinPart = true
+                        end
+                    end
+
+                    if isWinPart and obj.Size.Magnitude > 0.5 then
+                        table.insert(cachedWinGates, obj)
+                    end
                 end
-                
-                FireWinRemotes(ReplicatedStorage)
-                if ReplicatedStorage:FindFirstChild("Events") then
-                    FireWinRemotes(ReplicatedStorage.Events)
-                end
-                if ReplicatedStorage:FindFirstChild("Remotes") then
-                    FireWinRemotes(ReplicatedStorage.Remotes)
-                end
-                
-                -- Layer 2: Touch Gate / Win / Trophy objects in Workspace
-                if hrp then
-                    for _, obj in ipairs(Workspace:GetDescendants()) do
-                        if obj:IsA("TouchTransmitter") and obj.Parent and obj.Parent:IsA("BasePart") then
-                            local part = obj.Parent
-                            local partName = string.lower(part.Name)
-                            if partName:find("win") or partName:find("finish") or partName:find("gate") 
-                               or partName:find("trophy") or partName:find("reward") or partName:find("goal")
-                               or partName:find("end") or partName:find("checkpoint") then
-                                pcall(function()
-                                    if firetouchinterest then
-                                        firetouchinterest(hrp, part, 0)
-                                        task.wait(0.01)
-                                        firetouchinterest(hrp, part, 1)
-                                    end
-                                end)
+            end
+        end)
+        lastWinScan = os.time()
+    end
+    return cachedWinGates
+end
+
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        if Toggles.InfiniteWins then
+            pcall(function()
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+                -- Layer 1: Virtual Touch on Win Gates / Runway Endpoints without moving player
+                local winGates = GetWorkspaceWinGates()
+                if hrp and firetouchinterest and #winGates > 0 then
+                    for _, gate in ipairs(winGates) do
+                        if not Toggles.InfiniteWins then break end
+                        pcall(function()
+                            if gate and gate.Parent then
+                                firetouchinterest(hrp, gate, 0)
+                                task.wait(0.01)
+                                firetouchinterest(hrp, gate, 1)
                             end
+                        end)
+                    end
+                end
+
+                -- Layer 2: Direct ReplicatedStorage Remote Events Sweeper for Wins
+                for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
+                    if not Toggles.InfiniteWins then break end
+                    local n = obj.Name:lower()
+                    if (n:find("win") or n:find("givewin") or n:find("claimwin") or n:find("addwin") or 
+                        n:find("stagewin") or n:find("finish") or n:find("escape") or n:find("racewin") or 
+                        n:find("complete") or n:find("pass") or n:find("reward") or n:find("bosshit")) and
+                        not (n:find("rebirth") or n:find("buy") or n:find("egg")) then
+                        if obj:IsA("RemoteEvent") then
+                            pcall(function()
+                                obj:FireServer()
+                                obj:FireServer(1)
+                                obj:FireServer(true)
+                                obj:FireServer("Win")
+                                obj:FireServer("Claim")
+                                obj:FireServer("Finish")
+                                obj:FireServer(LocalPlayer)
+                            end)
+                        elseif obj:IsA("RemoteFunction") then
+                            pcall(function()
+                                obj:InvokeServer()
+                                obj:InvokeServer(1)
+                                obj:InvokeServer("Win")
+                            end)
                         end
                     end
                 end
@@ -747,44 +799,31 @@ task.spawn(function()
         if Toggles.AutoHatchEggs then
             pcall(function()
                 -- Layer 1: Fire Hatch & Egg Remotes in ReplicatedStorage
-                local function FireHatchRemotes(parent)
-                    if not parent then return end
-                    for _, child in ipairs(parent:GetChildren()) do
-                        if child:IsA("RemoteEvent") then
-                            local name = string.lower(child.Name)
-                            if name:find("hatch") or name:find("openegg") or name:find("buyegg") 
-                               or name:find("egghatch") or name:find("petegg") or name:find("open") then
-                                pcall(function() child:FireServer("Egg1", 1) end)
-                                pcall(function() child:FireServer("Basic", 1) end)
-                                pcall(function() child:FireServer(1, 1) end)
-                                pcall(function() child:FireServer("Common", 1) end)
-                                pcall(function() child:FireServer("Single") end)
-                                pcall(function() child:FireServer() end)
-                            end
-                        elseif child:IsA("RemoteFunction") then
-                            local name = string.lower(child.Name)
-                            if name:find("hatch") or name:find("openegg") or name:find("buyegg") then
-                                pcall(function() child:InvokeServer("Egg1", 1) end)
-                                pcall(function() child:InvokeServer("Basic", 1) end)
-                                pcall(function() child:InvokeServer(1, 1) end)
-                                pcall(function() child:InvokeServer() end)
-                            end
+                for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
+                    if not Toggles.AutoHatchEggs then break end
+                    local name = obj.Name:lower()
+                    if name:find("hatch") or name:find("openegg") or name:find("buyegg") or 
+                       name:find("egghatch") or name:find("petegg") or name:find("open") then
+                        if obj:IsA("RemoteEvent") then
+                            pcall(function() obj:FireServer("Egg1", 1) end)
+                            pcall(function() obj:FireServer("Basic", 1) end)
+                            pcall(function() obj:FireServer(1, 1) end)
+                            pcall(function() obj:FireServer("Common", 1) end)
+                            pcall(function() obj:FireServer("Single") end)
+                            pcall(function() obj:FireServer() end)
+                        elseif obj:IsA("RemoteFunction") then
+                            pcall(function() obj:InvokeServer("Egg1", 1) end)
+                            pcall(function() obj:InvokeServer("Basic", 1) end)
+                            pcall(function() obj:InvokeServer(1, 1) end)
+                            pcall(function() obj:InvokeServer() end)
                         end
                     end
                 end
                 
-                FireHatchRemotes(ReplicatedStorage)
-                if ReplicatedStorage:FindFirstChild("Events") then
-                    FireHatchRemotes(ReplicatedStorage.Events)
-                end
-                if ReplicatedStorage:FindFirstChild("Remotes") then
-                    FireHatchRemotes(ReplicatedStorage.Remotes)
-                end
-                
                 -- Layer 2: Trigger ProximityPrompts for Eggs
                 for _, prompt in ipairs(Workspace:GetDescendants()) do
-                    if prompt:IsA("ProximityPrompt") then
-                        local promptName = string.lower(prompt.Name .. " " .. (prompt.ObjectText or "") .. " " .. (prompt.ActionText or ""))
+                    if prompt:IsA("ProximityPrompt") and prompt.Enabled then
+                        local promptName = (prompt.Name .. " " .. (prompt.ObjectText or "") .. " " .. (prompt.ActionText or "")):lower()
                         if promptName:find("egg") or promptName:find("hatch") or promptName:find("pet") or promptName:find("open") then
                             pcall(function()
                                 if fireproximityprompt then
