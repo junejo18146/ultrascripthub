@@ -5,7 +5,7 @@
     Author: Made by Junejo (junejo18146)
     Repository: junejo18146/ultrascripthub
     Theme: Unified Junejo Executive Dark UI (#0F0F11) - Flat Borderless Rows Standard
-    Status: Dedicated Direct Executable (7 Core Verified Features - V3 Smart Wins)
+    Status: Dedicated Direct Executable (5 Core Verified Features)
 --]]
 
 local Players = game:GetService("Players")
@@ -28,12 +28,10 @@ while not LocalPlayer do
     LocalPlayer = Players.LocalPlayer
 end
 
--- 7 Core Verified Feature Toggles
+-- 5 Core Verified Feature Toggles
 local Toggles = {
     AutoPower = false,
     AutoRebirth = false,
-    InfiniteWins = false,
-    AutoHatchEggs = false,
     Fly = false,
     WalkSpeed = false,
     InfiniteJump = false
@@ -128,7 +126,7 @@ local function ClickGuiButton(btn)
 end
 
 --------------------------------------------------------------------
--- GUI CREATION (JUNEJO ULTRA SCRIPT HUB - EXACT 7-ROW COMPACT SPEC)
+-- GUI CREATION (JUNEJO ULTRA SCRIPT HUB - EXACT 5-ROW COMPACT SPEC)
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoPhonkEvolutionUI"
@@ -137,11 +135,11 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999999
 ScreenGui.IgnoreGuiInset = true
 
--- Main Container Frame (Fixed Compact Standard 280px, Height: 275px for 7 rows)
+-- Main Container Frame (Fixed Compact Standard 280px, Height: 220px for 5 rows)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 275)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -138)
+MainFrame.Size = UDim2.new(0, 280, 0, 220)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -110)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -220,10 +218,10 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Content Frame (Height: 192px for 7 rows with 4px gap)
+-- Content Frame (Height: 136px for 5 rows with 4px gap)
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -28, 0, 192)
+ContentFrame.Size = UDim2.new(1, -28, 0, 136)
 ContentFrame.Position = UDim2.new(0, 14, 0, 36)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
@@ -299,11 +297,9 @@ local function AddToggleRow(text, configKey, onToggleCallback)
     end)
 end
 
--- Generate 7 Requested Toggle Rows
+-- Generate 5 Core Verified Toggle Rows
 AddToggleRow("Auto Power (+1)", "AutoPower")
 AddToggleRow("Auto Rebirth / Evolve", "AutoRebirth")
-AddToggleRow("Infinite Wins", "InfiniteWins")
-AddToggleRow("Auto Hatch Eggs", "AutoHatchEggs")
 AddToggleRow("Fly Mode", "Fly", function(enabled)
     if enabled then
         StartFlying()
@@ -676,235 +672,6 @@ task.spawn(function()
                         elseif obj:IsA("RemoteFunction") then
                             pcall(function() obj:InvokeServer() end)
                             pcall(function() obj:InvokeServer(1) end)
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
---------------------------------------------------------------------
--- 6. SMART INFINITE WINS ENGINE (Zero-Freeze & Level-Adaptive)
---------------------------------------------------------------------
--- Helper: Auto-Dismiss / Suppress Requirement Popups
-local function AutoDismissErrorPopups()
-    pcall(function()
-        local pGui = LocalPlayer:FindFirstChild("PlayerGui")
-        if not pGui then return end
-        for _, gui in ipairs(pGui:GetChildren()) do
-            if gui:IsA("ScreenGui") and gui.Name ~= "JunejoPhonkEvolutionUI" and gui.Enabled then
-                for _, label in ipairs(gui:GetDescendants()) do
-                    if label:IsA("TextLabel") then
-                        local t = label.Text:lower()
-                        if (t:find("level") or t:find("need") or t:find("require") or t:find("locked") or t:find("unlock")) and 
-                           not (t:find("ultra script hub") or t:find("phonk")) then
-                            -- Close or hide the notification frame
-                            local parentFrame = label:FindFirstAncestorOfClass("Frame")
-                            if parentFrame then
-                                parentFrame.Visible = false
-                            end
-                            for _, btn in ipairs(gui:GetDescendants()) do
-                                if (btn:IsA("TextButton") or btn:IsA("ImageButton")) and (btn.Name:lower():find("close") or btn.Name:lower():find("ok") or btn.Name:lower():find("x")) then
-                                    ClickGuiButton(btn)
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end)
-end
-
-local cachedWinGates = {}
-local lastWinScan = 0
-
-local function GetAdaptiveWinGates()
-    if os.time() - lastWinScan > 3 or #cachedWinGates == 0 then
-        cachedWinGates = {}
-        pcall(function()
-            local starterGates = {}
-            local otherGates = {}
-
-            for _, obj in ipairs(Workspace:GetDescendants()) do
-                if obj:IsA("BasePart") and not (LocalPlayer.Character and obj:IsDescendantOf(LocalPlayer.Character)) then
-                    local n = obj.Name:lower()
-                    local pName = obj.Parent and obj.Parent.Name:lower() or ""
-                    local isWinPart = false
-                    local isStarter = false
-
-                    -- Check BillboardGui / SurfaceGui text indicators
-                    for _, child in ipairs(obj:GetChildren()) do
-                        if child:IsA("BillboardGui") or child:IsA("SurfaceGui") then
-                            for _, txt in ipairs(child:GetDescendants()) do
-                                if txt:IsA("TextLabel") then
-                                    local t = txt.Text:lower()
-                                    if t:find("win") or t:find("trophy") or t:find("finish") or t:find("escape") or t:find("gate") then
-                                        isWinPart = true
-                                        if t:find("1") or t:find("stage 1") or t:find("level 1") or t:find("starter") or t:find("easy") then
-                                            isStarter = true
-                                        end
-                                        break
-                                    end
-                                end
-                            end
-                        end
-                    end
-
-                    -- Check Part or Folder name indicators
-                    if not isWinPart then
-                        if n:find("win") or n:find("finish") or n:find("escape") or n:find("gate") or 
-                           n:find("trophy") or n:find("stage") or n:find("goal") or n:find("end") or 
-                           pName:find("win") or pName:find("finish") or pName:find("gates") or pName:find("escape") or pName:find("track") then
-                            isWinPart = true
-                            if n:find("1") or n:find("start") or pName:find("1") or pName:find("start") then
-                                isStarter = true
-                            end
-                        end
-                    end
-
-                    if isWinPart and obj.Size.Magnitude > 0.5 then
-                        if isStarter then
-                            table.insert(starterGates, obj)
-                        else
-                            table.insert(otherGates, obj)
-                        end
-                    end
-                end
-            end
-
-            -- Priority order: Starter / Stage 1 gates FIRST (guaranteed to give wins without level lock), then others
-            for _, g in ipairs(starterGates) do
-                table.insert(cachedWinGates, g)
-            end
-            for _, g in ipairs(otherGates) do
-                table.insert(cachedWinGates, g)
-            end
-        end)
-        lastWinScan = os.time()
-    end
-    return cachedWinGates
-end
-
-task.spawn(function()
-    while true do
-        task.wait(0.08)
-        if Toggles.InfiniteWins then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-
-                -- Dismiss any level popups immediately
-                AutoDismissErrorPopups()
-
-                -- Layer 1: Adaptive Virtual Touch (Focus on Stage 1 / Starter and current unlocked gates)
-                local winGates = GetAdaptiveWinGates()
-                if hrp and firetouchinterest and #winGates > 0 then
-                    for i = 1, math.min(#winGates, 8) do
-                        if not Toggles.InfiniteWins then break end
-                        local gate = winGates[i]
-                        pcall(function()
-                            if gate and gate.Parent then
-                                firetouchinterest(hrp, gate, 0)
-                                task.wait(0.005)
-                                firetouchinterest(hrp, gate, 1)
-                            end
-                        end)
-                    end
-                end
-
-                -- Layer 2: Direct ReplicatedStorage Remote Events Sweeper for Wins & Stages
-                for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if not Toggles.InfiniteWins then break end
-                    local n = obj.Name:lower()
-                    if (n:find("win") or n:find("givewin") or n:find("claimwin") or n:find("addwin") or 
-                        n:find("stagewin") or n:find("finish") or n:find("escape") or n:find("racewin") or 
-                        n:find("complete") or n:find("pass") or n:find("reward") or n:find("bosshit") or n:find("fight")) and
-                        not (n:find("rebirth") or n:find("buy") or n:find("egg")) then
-                        if obj:IsA("RemoteEvent") then
-                            pcall(function() obj:FireServer() end)
-                            pcall(function() obj:FireServer(1) end)
-                            pcall(function() obj:FireServer("1") end)
-                            pcall(function() obj:FireServer("Stage1") end)
-                            pcall(function() obj:FireServer("Zone1") end)
-                            pcall(function() obj:FireServer("Win") end)
-                            pcall(function() obj:FireServer("Claim") end)
-                            pcall(function() obj:FireServer("Finish") end)
-                            pcall(function() obj:FireServer(LocalPlayer) end)
-                        elseif obj:IsA("RemoteFunction") then
-                            pcall(function() obj:InvokeServer() end)
-                            pcall(function() obj:InvokeServer(1) end)
-                            pcall(function() obj:InvokeServer("Win") end)
-                        end
-                    end
-                end
-
-                -- Layer 3: Direct Boss / Enemy Hit Trigger in Workspace
-                for _, model in ipairs(Workspace:GetChildren()) do
-                    if not Toggles.InfiniteWins then break end
-                    if model:IsA("Model") and model ~= char then
-                        local enemyHum = model:FindFirstChildOfClass("Humanoid")
-                        local enemyHrp = model:FindFirstChild("HumanoidRootPart") or model:FindFirstChild("Head")
-                        if enemyHum and enemyHrp and enemyHum.Health > 0 then
-                            local mName = model.Name:lower()
-                            if mName:find("boss") or mName:find("enemy") or mName:find("dummy") or mName:find("target") or mName:find("phonk") or mName:find("fighter") then
-                                pcall(function()
-                                    if hrp and firetouchinterest then
-                                        firetouchinterest(hrp, enemyHrp, 0)
-                                        task.wait(0.005)
-                                        firetouchinterest(hrp, enemyHrp, 1)
-                                    end
-                                end)
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
---------------------------------------------------------------------
--- 7. AUTO HATCH EGGS ENGINE
---------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        task.wait(0.3)
-        if Toggles.AutoHatchEggs then
-            pcall(function()
-                -- Layer 1: Fire Hatch & Egg Remotes in ReplicatedStorage
-                for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if not Toggles.AutoHatchEggs then break end
-                    local name = obj.Name:lower()
-                    if name:find("hatch") or name:find("openegg") or name:find("buyegg") or 
-                       name:find("egghatch") or name:find("petegg") or name:find("open") then
-                        if obj:IsA("RemoteEvent") then
-                            pcall(function() obj:FireServer("Egg1", 1) end)
-                            pcall(function() obj:FireServer("Basic", 1) end)
-                            pcall(function() obj:FireServer(1, 1) end)
-                            pcall(function() obj:FireServer("Common", 1) end)
-                            pcall(function() obj:FireServer("Single") end)
-                            pcall(function() obj:FireServer() end)
-                        elseif obj:IsA("RemoteFunction") then
-                            pcall(function() obj:InvokeServer("Egg1", 1) end)
-                            pcall(function() obj:InvokeServer("Basic", 1) end)
-                            pcall(function() obj:InvokeServer(1, 1) end)
-                            pcall(function() obj:InvokeServer() end)
-                        end
-                    end
-                end
-                
-                -- Layer 2: Trigger ProximityPrompts for Eggs
-                for _, prompt in ipairs(Workspace:GetDescendants()) do
-                    if prompt:IsA("ProximityPrompt") and prompt.Enabled then
-                        local promptName = (prompt.Name .. " " .. (prompt.ObjectText or "") .. " " .. (prompt.ActionText or "")):lower()
-                        if promptName:find("egg") or promptName:find("hatch") or promptName:find("pet") or promptName:find("open") then
-                            pcall(function()
-                                if fireproximityprompt then
-                                    fireproximityprompt(prompt)
-                                end
-                            end)
                         end
                     end
                 end
