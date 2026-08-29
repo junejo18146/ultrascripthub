@@ -5,7 +5,7 @@
     Author: Made by Junejo (junejo18146)
     Repository: junejo18146/ultrascripthub
     Theme: Unified Junejo Executive Dark UI (#0F0F11) - Flat Borderless Rows Standard
-    Status: Dedicated Direct Executable (7 Core Verified Features - V2 Updated)
+    Status: Dedicated Direct Executable (7 Core Verified Features - V3 Smart Wins)
 --]]
 
 local Players = game:GetService("Players")
@@ -685,20 +685,54 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 6. SMOOTH INFINITE WINS ENGINE (Zero-Freeze Virtual Touch & Remotes)
+-- 6. SMART INFINITE WINS ENGINE (Zero-Freeze & Level-Adaptive)
 --------------------------------------------------------------------
+-- Helper: Auto-Dismiss / Suppress Requirement Popups
+local function AutoDismissErrorPopups()
+    pcall(function()
+        local pGui = LocalPlayer:FindFirstChild("PlayerGui")
+        if not pGui then return end
+        for _, gui in ipairs(pGui:GetChildren()) do
+            if gui:IsA("ScreenGui") and gui.Name ~= "JunejoPhonkEvolutionUI" and gui.Enabled then
+                for _, label in ipairs(gui:GetDescendants()) do
+                    if label:IsA("TextLabel") then
+                        local t = label.Text:lower()
+                        if (t:find("level") or t:find("need") or t:find("require") or t:find("locked") or t:find("unlock")) and 
+                           not (t:find("ultra script hub") or t:find("phonk")) then
+                            -- Close or hide the notification frame
+                            local parentFrame = label:FindFirstAncestorOfClass("Frame")
+                            if parentFrame then
+                                parentFrame.Visible = false
+                            end
+                            for _, btn in ipairs(gui:GetDescendants()) do
+                                if (btn:IsA("TextButton") or btn:IsA("ImageButton")) and (btn.Name:lower():find("close") or btn.Name:lower():find("ok") or btn.Name:lower():find("x")) then
+                                    ClickGuiButton(btn)
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end)
+end
+
 local cachedWinGates = {}
 local lastWinScan = 0
 
-local function GetWorkspaceWinGates()
-    if os.time() - lastWinScan > 4 or #cachedWinGates == 0 then
+local function GetAdaptiveWinGates()
+    if os.time() - lastWinScan > 3 or #cachedWinGates == 0 then
         cachedWinGates = {}
         pcall(function()
+            local starterGates = {}
+            local otherGates = {}
+
             for _, obj in ipairs(Workspace:GetDescendants()) do
                 if obj:IsA("BasePart") and not (LocalPlayer.Character and obj:IsDescendantOf(LocalPlayer.Character)) then
                     local n = obj.Name:lower()
                     local pName = obj.Parent and obj.Parent.Name:lower() or ""
                     local isWinPart = false
+                    local isStarter = false
 
                     -- Check BillboardGui / SurfaceGui text indicators
                     for _, child in ipairs(obj:GetChildren()) do
@@ -708,6 +742,9 @@ local function GetWorkspaceWinGates()
                                     local t = txt.Text:lower()
                                     if t:find("win") or t:find("trophy") or t:find("finish") or t:find("escape") or t:find("gate") then
                                         isWinPart = true
+                                        if t:find("1") or t:find("stage 1") or t:find("level 1") or t:find("starter") or t:find("easy") then
+                                            isStarter = true
+                                        end
                                         break
                                     end
                                 end
@@ -721,13 +758,28 @@ local function GetWorkspaceWinGates()
                            n:find("trophy") or n:find("stage") or n:find("goal") or n:find("end") or 
                            pName:find("win") or pName:find("finish") or pName:find("gates") or pName:find("escape") or pName:find("track") then
                             isWinPart = true
+                            if n:find("1") or n:find("start") or pName:find("1") or pName:find("start") then
+                                isStarter = true
+                            end
                         end
                     end
 
                     if isWinPart and obj.Size.Magnitude > 0.5 then
-                        table.insert(cachedWinGates, obj)
+                        if isStarter then
+                            table.insert(starterGates, obj)
+                        else
+                            table.insert(otherGates, obj)
+                        end
                     end
                 end
+            end
+
+            -- Priority order: Starter / Stage 1 gates FIRST (guaranteed to give wins without level lock), then others
+            for _, g in ipairs(starterGates) do
+                table.insert(cachedWinGates, g)
+            end
+            for _, g in ipairs(otherGates) do
+                table.insert(cachedWinGates, g)
             end
         end)
         lastWinScan = os.time()
@@ -737,51 +789,74 @@ end
 
 task.spawn(function()
     while true do
-        task.wait(0.1)
+        task.wait(0.08)
         if Toggles.InfiniteWins then
             pcall(function()
                 local char = LocalPlayer.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
 
-                -- Layer 1: Virtual Touch on Win Gates / Runway Endpoints without moving player
-                local winGates = GetWorkspaceWinGates()
+                -- Dismiss any level popups immediately
+                AutoDismissErrorPopups()
+
+                -- Layer 1: Adaptive Virtual Touch (Focus on Stage 1 / Starter and current unlocked gates)
+                local winGates = GetAdaptiveWinGates()
                 if hrp and firetouchinterest and #winGates > 0 then
-                    for _, gate in ipairs(winGates) do
+                    for i = 1, math.min(#winGates, 8) do
                         if not Toggles.InfiniteWins then break end
+                        local gate = winGates[i]
                         pcall(function()
                             if gate and gate.Parent then
                                 firetouchinterest(hrp, gate, 0)
-                                task.wait(0.01)
+                                task.wait(0.005)
                                 firetouchinterest(hrp, gate, 1)
                             end
                         end)
                     end
                 end
 
-                -- Layer 2: Direct ReplicatedStorage Remote Events Sweeper for Wins
+                -- Layer 2: Direct ReplicatedStorage Remote Events Sweeper for Wins & Stages
                 for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
                     if not Toggles.InfiniteWins then break end
                     local n = obj.Name:lower()
                     if (n:find("win") or n:find("givewin") or n:find("claimwin") or n:find("addwin") or 
                         n:find("stagewin") or n:find("finish") or n:find("escape") or n:find("racewin") or 
-                        n:find("complete") or n:find("pass") or n:find("reward") or n:find("bosshit")) and
+                        n:find("complete") or n:find("pass") or n:find("reward") or n:find("bosshit") or n:find("fight")) and
                         not (n:find("rebirth") or n:find("buy") or n:find("egg")) then
                         if obj:IsA("RemoteEvent") then
-                            pcall(function()
-                                obj:FireServer()
-                                obj:FireServer(1)
-                                obj:FireServer(true)
-                                obj:FireServer("Win")
-                                obj:FireServer("Claim")
-                                obj:FireServer("Finish")
-                                obj:FireServer(LocalPlayer)
-                            end)
+                            pcall(function() obj:FireServer() end)
+                            pcall(function() obj:FireServer(1) end)
+                            pcall(function() obj:FireServer("1") end)
+                            pcall(function() obj:FireServer("Stage1") end)
+                            pcall(function() obj:FireServer("Zone1") end)
+                            pcall(function() obj:FireServer("Win") end)
+                            pcall(function() obj:FireServer("Claim") end)
+                            pcall(function() obj:FireServer("Finish") end)
+                            pcall(function() obj:FireServer(LocalPlayer) end)
                         elseif obj:IsA("RemoteFunction") then
-                            pcall(function()
-                                obj:InvokeServer()
-                                obj:InvokeServer(1)
-                                obj:InvokeServer("Win")
-                            end)
+                            pcall(function() obj:InvokeServer() end)
+                            pcall(function() obj:InvokeServer(1) end)
+                            pcall(function() obj:InvokeServer("Win") end)
+                        end
+                    end
+                end
+
+                -- Layer 3: Direct Boss / Enemy Hit Trigger in Workspace
+                for _, model in ipairs(Workspace:GetChildren()) do
+                    if not Toggles.InfiniteWins then break end
+                    if model:IsA("Model") and model ~= char then
+                        local enemyHum = model:FindFirstChildOfClass("Humanoid")
+                        local enemyHrp = model:FindFirstChild("HumanoidRootPart") or model:FindFirstChild("Head")
+                        if enemyHum and enemyHrp and enemyHum.Health > 0 then
+                            local mName = model.Name:lower()
+                            if mName:find("boss") or mName:find("enemy") or mName:find("dummy") or mName:find("target") or mName:find("phonk") or mName:find("fighter") then
+                                pcall(function()
+                                    if hrp and firetouchinterest then
+                                        firetouchinterest(hrp, enemyHrp, 0)
+                                        task.wait(0.005)
+                                        firetouchinterest(hrp, enemyHrp, 1)
+                                    end
+                                end)
+                            end
                         end
                     end
                 end
