@@ -1,5 +1,5 @@
 --[[
-    JUNEJO ULTRA SCRIPT HUB - FIGHT IN A SCHOOL V2
+    JUNEJO ULTRA SCRIPT HUB - FIGHT IN A SCHOOL
     Target Game: Fight in a School (Roblox)
     Game Link: https://www.roblox.com/games/17698425045/fight-in-a-school
     Author: Made by Junejo (junejo18146)
@@ -98,7 +98,7 @@ end)
 -- GUI CREATION (JUNEJO ULTRA SCRIPT HUB - EXACT 4-ROW COMPACT SPEC)
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "JunejoSchoolFightV2UI"
+ScreenGui.Name = "JunejoFightInASchoolUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999999
@@ -137,7 +137,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(1, -40, 1, 0)
 TitleLabel.Position = UDim2.new(0, 14, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "FIGHT IN A SCHOOL V2"
+TitleLabel.Text = "FIGHT IN A SCHOOL"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleLabel.TextSize = 13
 TitleLabel.Font = Enum.Font.GothamBold
@@ -335,7 +335,7 @@ end
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "ULTRA SCRIPT HUB",
-        Text = "Fight In A School V2 Loaded!",
+        Text = "Fight In A School Loaded!",
         Duration = 4
     })
 end)
