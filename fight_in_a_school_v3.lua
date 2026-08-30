@@ -6,12 +6,10 @@
     Repository: junejo18146/ultrascripthub
     Theme: Unified Junejo Executive Dark UI (#0F0F11) - Flat Borderless Rows & Slider Standard
     Features Included:
-        1. WalkSpeed Boost + Interactive Slider Bar (16 - 200 Speed)
-        2. Fly Mode (Smooth 3D flight with WASD & Mobile Touch support)
-        3. Infinite Stamina (Never run out of sprint stamina)
-        4. Safe Zone on Hit (Instant emergency teleport away when attacked)
-        5. Anti-Ragdoll (Instantly recovers from stuns, knocks & ragdolls)
-        6. Hitbox Expander (14x14x14 Red Neon hitboxes on enemies)
+        1. Hitbox Expander (14x14x14 Red Neon hitboxes on enemies)
+        2. WalkSpeed Boost + Interactive Slider Bar (16 - 200 Speed)
+        3. Fly Mode (Smooth 3D flight with WASD & Mobile Touch support)
+        4. Safe Zone on Hit (Instant emergency escape teleport away when attacked)
 --]]
 
 local Players = game:GetService("Players")
@@ -28,14 +26,12 @@ while not LocalPlayer do
     LocalPlayer = Players.LocalPlayer
 end
 
--- Feature Toggles & State
+-- 4 Core Feature Toggles & State
 local Toggles = {
+    HitboxExpander = false,
     WalkSpeed = false,
     Fly = false,
-    InfiniteStamina = false,
-    SafeZoneOnHit = false,
-    AntiRagdoll = false,
-    HitboxExpander = false
+    SafeZoneOnHit = false
 }
 
 local SpeedValue = 50
@@ -101,7 +97,7 @@ pcall(function()
 end)
 
 --------------------------------------------------------------------
--- GUI CREATION (JUNEJO ULTRA SCRIPT HUB - EXACT SLIDER + TOGGLES SPEC)
+-- GUI CREATION (JUNEJO ULTRA SCRIPT HUB - EXACT 4-FEATURE COMPACT SPEC)
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoSchoolFightV3UI"
@@ -110,11 +106,11 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999999
 ScreenGui.IgnoreGuiInset = true
 
--- Main Container Frame (Fixed Compact Standard 280px, Height: 265px)
+-- Main Container Frame (Fixed Compact Standard 280px, Height: 228px)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 265)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -132)
+MainFrame.Size = UDim2.new(0, 280, 0, 228)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -114)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -193,10 +189,10 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Content Frame (Height: 185px)
+-- Content Frame (Height: 148px)
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -28, 0, 185)
+ContentFrame.Size = UDim2.new(1, -28, 0, 148)
 ContentFrame.Position = UDim2.new(0, 14, 0, 36)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
@@ -380,7 +376,14 @@ local function AddSliderRow(title, min, max, defaultVal, onValueChanged)
     end)
 end
 
--- 1. WalkSpeed Toggle + Slider
+-- 1. Hitbox Expander
+AddToggleRow("Hitbox Expander", "HitboxExpander", function(enabled)
+    if not enabled then
+        RestoreHitboxes()
+    end
+end)
+
+-- 2. WalkSpeed Boost Toggle + Slider
 AddToggleRow("WalkSpeed Boost", "WalkSpeed", function(enabled)
     UpdateCharacterSpeed()
 end)
@@ -392,7 +395,7 @@ AddSliderRow("Speed Value", 16, 200, 50, function(val)
     end
 end)
 
--- 2. Fly Mode
+-- 3. Fly Mode
 AddToggleRow("Fly Mode", "Fly", function(enabled)
     if enabled then
         StartFlying()
@@ -401,21 +404,8 @@ AddToggleRow("Fly Mode", "Fly", function(enabled)
     end
 end)
 
--- 3. Infinite Stamina
-AddToggleRow("Infinite Stamina", "InfiniteStamina")
-
 -- 4. Safe Zone on Hit
 AddToggleRow("Safe Zone on Hit", "SafeZoneOnHit")
-
--- 5. Anti-Ragdoll
-AddToggleRow("Anti-Ragdoll", "AntiRagdoll")
-
--- 6. Hitbox Expander
-AddToggleRow("Hitbox Expander", "HitboxExpander", function(enabled)
-    if not enabled then
-        RestoreHitboxes()
-    end
-end)
 
 -- Footer Frame (Pinned at bottom, Height: 44px)
 local Footer = Instance.new("Frame")
@@ -480,7 +470,48 @@ LocalPlayer.Idled:Connect(function()
 end)
 
 --------------------------------------------------------------------
--- 1. WALKSPEED BOOST WITH LIVE SLIDER VALUE
+-- 1. HITBOX EXPANDER ENGINE (Expands Enemy Hitboxes)
+--------------------------------------------------------------------
+RestoreHitboxes = function()
+    pcall(function()
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character then
+                local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    hrp.Size = Vector3.new(2, 2, 1)
+                    hrp.Transparency = 1
+                    hrp.CanCollide = false
+                end
+            end
+        end
+    end)
+end
+
+task.spawn(function()
+    while true do
+        task.wait(0.3)
+        if Toggles.HitboxExpander then
+            pcall(function()
+                for _, player in ipairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer and player.Character then
+                        local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+                        local hum = player.Character:FindFirstChildOfClass("Humanoid")
+                        if hrp and hum and hum.Health > 0 then
+                            hrp.Size = Vector3.new(14, 14, 14)
+                            hrp.Transparency = 0.7
+                            hrp.BrickColor = BrickColor.new("Bright red")
+                            hrp.Material = Enum.Material.Neon
+                            hrp.CanCollide = false
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+--------------------------------------------------------------------
+-- 2. WALKSPEED BOOST WITH LIVE SLIDER VALUE
 --------------------------------------------------------------------
 UpdateCharacterSpeed = function()
     pcall(function()
@@ -523,7 +554,7 @@ if LocalPlayer.Character then
 end
 
 --------------------------------------------------------------------
--- 2. SMOOTH 3D FLY MODE (WASD + Mobile Controls)
+-- 3. SMOOTH 3D FLY MODE (WASD + Mobile Controls)
 --------------------------------------------------------------------
 local FlyBodyVelocity = nil
 local FlyBodyGyro = nil
@@ -630,35 +661,6 @@ StopFlying = function()
 end
 
 --------------------------------------------------------------------
--- 3. INFINITE STAMINA ENGINE (Locks Stamina to 100%)
---------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        task.wait(0.2)
-        if Toggles.InfiniteStamina and LocalPlayer.Character then
-            pcall(function()
-                local char = LocalPlayer.Character
-                -- Scan Attributes & Value objects for Stamina / Energy
-                for _, obj in ipairs(char:GetDescendants()) do
-                    if obj:IsA("NumberValue") or obj:IsA("IntValue") then
-                        local n = string.lower(obj.Name)
-                        if string.find(n, "stamina") or string.find(n, "energy") or string.find(n, "sprint") then
-                            obj.Value = 100
-                        end
-                    end
-                end
-                for attr, _ in pairs(char:GetAttributes()) do
-                    local n = string.lower(attr)
-                    if string.find(n, "stamina") or string.find(n, "energy") then
-                        char:SetAttribute(attr, 100)
-                    end
-                end
-            end)
-        end
-    end
-end)
-
---------------------------------------------------------------------
 -- 4. SAFE ZONE ON HIT (Auto Emergency Teleport on Damage)
 --------------------------------------------------------------------
 local lastHealth = 100
@@ -676,7 +678,7 @@ local function BindHealthDamageListener(char)
                     if newHealth < lastHealth and newHealth > 0 then
                         escapeCooldown = true
                         pcall(function()
-                            -- Instant Emergency Teleport to High Safe Sky/Rooftop Position
+                            -- Instant Emergency Teleport to High Safe Position
                             hrp.CFrame = hrp.CFrame + Vector3.new(0, 65, 0)
                             hrp.Velocity = Vector3.zero
                             
@@ -704,68 +706,3 @@ end)
 if LocalPlayer.Character then
     BindHealthDamageListener(LocalPlayer.Character)
 end
-
---------------------------------------------------------------------
--- 5. ANTI-RAGDOLL ENGINE (Instant Knockdown Recovery)
---------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        task.wait(0.15)
-        if Toggles.AntiRagdoll and LocalPlayer.Character and not Toggles.Fly then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hum = char:FindFirstChildOfClass("Humanoid")
-                local hrp = char:FindFirstChild("HumanoidRootPart")
-                if hum and hrp and hum.Health > 0 then
-                    local st = hum:GetState()
-                    if st == Enum.HumanoidStateType.Ragdoll or st == Enum.HumanoidStateType.FallingDown or st == Enum.HumanoidStateType.PlatformStanding then
-                        hum:ChangeState(Enum.HumanoidStateType.GettingUp)
-                        hum:ChangeState(Enum.HumanoidStateType.Running)
-                        hum.PlatformStand = false
-                    end
-                end
-            end)
-        end
-    end
-end)
-
---------------------------------------------------------------------
--- 6. HITBOX EXPANDER ENGINE (Expands Enemy Hitboxes)
---------------------------------------------------------------------
-RestoreHitboxes = function()
-    pcall(function()
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character then
-                local hrp = player.Character:FindFirstChild("HumanoidRootPart")
-                if hrp then
-                    hrp.Size = Vector3.new(2, 2, 1)
-                    hrp.Transparency = 1
-                    hrp.CanCollide = false
-                end
-            end
-        end
-    end)
-end
-
-task.spawn(function()
-    while true do
-        task.wait(0.3)
-        if Toggles.HitboxExpander then
-            pcall(function()
-                for _, player in ipairs(Players:GetPlayers()) do
-                    if player ~= LocalPlayer and player.Character then
-                        local hrp = player.Character:FindFirstChild("HumanoidRootPart")
-                        local hum = player.Character:FindFirstChildOfClass("Humanoid")
-                        if hrp and hum and hum.Health > 0 then
-                            hrp.Size = Vector3.new(14, 14, 14)
-                            hrp.Transparency = 0.7
-                            hrp.BrickColor = BrickColor.new("Bright red")
-                            hrp.Material = Enum.Material.Neon
-                            hrp.CanCollide = false
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
