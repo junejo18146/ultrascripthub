@@ -6,12 +6,10 @@
     Repository: junejo18146/ultrascripthub
     Theme: Unified Junejo Executive Dark UI (#0F0F11) - Flat Borderless Rows Standard
     Features Included:
-        1. Auto Attack (Proximity Kill Aura / Auto Punch nearest player)
-        2. Player ESP (Red Glow Highlight + Distance & Name Overlays)
-        3. Health Bar ESP (Live Dynamic HP Bar & Health Values)
-        4. Noclip (Walk through school walls, doors & lockers)
-        5. Fly Mode (Smooth 3D flight with WASD & Mobile Touch support)
-        6. Auto Target (Auto snap & track nearest enemy player)
+        1. Player ESP (Red Glow Highlight + Distance & Name Overlays)
+        2. Health Bar ESP (Live Dynamic HP Bar & Health Values)
+        3. Noclip (Walk through school walls, doors & lockers)
+        4. Fly Mode (Smooth 3D flight with WASD & Mobile Touch support)
 --]]
 
 local Players = game:GetService("Players")
@@ -28,14 +26,12 @@ while not LocalPlayer do
     LocalPlayer = Players.LocalPlayer
 end
 
--- 6 Core Feature Toggles
+-- 4 Core Feature Toggles
 local Toggles = {
-    AutoAttack = false,
     PlayerESP = false,
     HealthBarESP = false,
     Noclip = false,
-    Fly = false,
-    AutoTarget = false
+    Fly = false
 }
 
 -- Safe UI Parent resolver (Delta Mobile, Arceus X, Fluxus, Codex, PC)
@@ -99,7 +95,7 @@ pcall(function()
 end)
 
 --------------------------------------------------------------------
--- GUI CREATION (JUNEJO ULTRA SCRIPT HUB - EXACT 6-ROW COMPACT SPEC)
+-- GUI CREATION (JUNEJO ULTRA SCRIPT HUB - EXACT 4-ROW COMPACT SPEC)
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoSchoolFightV2UI"
@@ -108,11 +104,11 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999999
 ScreenGui.IgnoreGuiInset = true
 
--- Main Container Frame (Fixed Compact Standard 280px, Height: 244px for 6 rows)
+-- Main Container Frame (Fixed Compact Standard 280px, Height: 195px for 4 rows)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 244)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -122)
+MainFrame.Size = UDim2.new(0, 280, 0, 195)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -97)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -191,10 +187,10 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Content Frame (Height: 164px for 6 rows with 4px gap)
+-- Content Frame (Height: 112px for 4 rows with 4px gap)
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -28, 0, 164)
+ContentFrame.Size = UDim2.new(1, -28, 0, 112)
 ContentFrame.Position = UDim2.new(0, 14, 0, 36)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
@@ -270,9 +266,7 @@ local function AddToggleRow(text, configKey, onToggleCallback)
     end)
 end
 
--- Generate 6 Active Toggle Rows (Requested User Specifications)
-AddToggleRow("Auto Attack", "AutoAttack")
-
+-- Generate 4 Active Toggle Rows
 AddToggleRow("Player ESP", "PlayerESP", function(enabled)
     if not enabled then
         ClearESP()
@@ -294,8 +288,6 @@ AddToggleRow("Fly Mode", "Fly", function(enabled)
         StopFlying()
     end
 end)
-
-AddToggleRow("Auto Target", "AutoTarget")
 
 -- Footer Frame (Pinned at bottom, Height: 44px)
 local Footer = Instance.new("Frame")
@@ -360,94 +352,7 @@ LocalPlayer.Idled:Connect(function()
 end)
 
 --------------------------------------------------------------------
--- 1. AUTO ATTACK ENGINE (Proximity Kill Aura / Auto Punch)
---------------------------------------------------------------------
-local function GetAttackTarget(maxDist)
-    local myChar = LocalPlayer.Character
-    local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
-    if not myHrp then return nil end
-
-    local nearest = nil
-    local shortest = maxDist or 20
-
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character then
-            local enemyHrp = player.Character:FindFirstChild("HumanoidRootPart")
-            local enemyHum = player.Character:FindFirstChildOfClass("Humanoid")
-            if enemyHrp and enemyHum and enemyHum.Health > 0 then
-                local dist = (enemyHrp.Position - myHrp.Position).Magnitude
-                if dist <= shortest then
-                    shortest = dist
-                    nearest = player
-                end
-            end
-        end
-    end
-    return nearest
-end
-
-task.spawn(function()
-    while true do
-        task.wait(0.12)
-        if Toggles.AutoAttack and LocalPlayer.Character then
-            pcall(function()
-                local myChar = LocalPlayer.Character
-                local myHum = myChar and myChar:FindFirstChildOfClass("Humanoid")
-                local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
-                if not myChar or not myHum or myHum.Health <= 0 or not myHrp then return end
-
-                local target = GetAttackTarget(22) -- 22 studs proximity trigger
-                if target and target.Character then
-                    local targetHrp = target.Character:FindFirstChild("HumanoidRootPart")
-                    local targetHum = target.Character:FindFirstChildOfClass("Humanoid")
-                    if not targetHrp or not targetHum or targetHum.Health <= 0 then return end
-
-                    -- 1. Auto equip combat tool if not equipped
-                    local tool = myChar:FindFirstChildOfClass("Tool")
-                    if not tool and LocalPlayer:FindFirstChild("Backpack") then
-                        local backpackTool = LocalPlayer.Backpack:FindFirstChildOfClass("Tool")
-                        if backpackTool then
-                            myHum:EquipTool(backpackTool)
-                            tool = backpackTool
-                        end
-                    end
-
-                    -- 2. Trigger Tool Activate
-                    if tool then
-                        tool:Activate()
-                    end
-
-                    -- 3. VirtualUser Left Click Simulation
-                    VirtualUser:Button1Down(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
-                    task.wait(0.02)
-                    VirtualUser:Button1Up(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
-
-                    -- 4. Dynamic Remote Event Attack Sweep
-                    for _, obj in ipairs(myChar:GetDescendants()) do
-                        if obj:IsA("RemoteEvent") then
-                            pcall(function()
-                                obj:FireServer(target.Character, targetHrp.Position)
-                            end)
-                        end
-                    end
-
-                    local repStorage = game:GetService("ReplicatedStorage")
-                    for _, remoteName in ipairs({"Punch", "Attack", "Hit", "Combat", "Swing", "Damage", "HitEvent", "PunchEvent"}) do
-                        local rem = repStorage:FindFirstChild(remoteName, true)
-                        if rem and rem:IsA("RemoteEvent") then
-                            pcall(function()
-                                rem:FireServer(target.Character, targetHrp)
-                            end)
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
---------------------------------------------------------------------
--- 2. PLAYER ESP ENGINE (Highlight + Name & Distance Billboard)
+-- 1. PLAYER ESP ENGINE (Highlight + Name & Distance Billboard)
 --------------------------------------------------------------------
 local function ApplyPlayerESP(player)
     if player == LocalPlayer then return end
@@ -538,7 +443,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 3. HEALTH BAR ESP ENGINE (Live Visual Health Bar)
+-- 2. HEALTH BAR ESP ENGINE (Live Visual Health Bar)
 --------------------------------------------------------------------
 local function ApplyHealthBarESP(player)
     if player == LocalPlayer then return end
@@ -655,7 +560,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 4. NOCLIP ENGINE (Walk Through School Walls & Doors)
+-- 3. NOCLIP ENGINE (Walk Through School Walls & Doors)
 --------------------------------------------------------------------
 local NoclipConnection = nil
 NoclipConnection = RunService.Stepped:Connect(function()
@@ -671,7 +576,7 @@ NoclipConnection = RunService.Stepped:Connect(function()
 end)
 
 --------------------------------------------------------------------
--- 5. SMOOTH 3D FLY MODE (WASD + Mobile Controls)
+-- 4. SMOOTH 3D FLY MODE (WASD + Mobile Controls)
 --------------------------------------------------------------------
 local FlyBodyVelocity = nil
 local FlyBodyGyro = nil
@@ -776,49 +681,3 @@ StopFlying = function()
         end
     end)
 end
-
---------------------------------------------------------------------
--- 6. AUTO TARGET ENGINE (Auto Snap/Track Nearest Enemy Player)
---------------------------------------------------------------------
-local function GetClosestEnemy()
-    local closestPlayer = nil
-    local shortestDist = 150 -- Max auto target lock radius in studs
-
-    local myChar = LocalPlayer.Character
-    local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
-    if not myHrp then return nil end
-
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character then
-            local enemyHrp = player.Character:FindFirstChild("HumanoidRootPart")
-            local enemyHum = player.Character:FindFirstChildOfClass("Humanoid")
-            if enemyHrp and enemyHum and enemyHum.Health > 0 then
-                local dist = (enemyHrp.Position - myHrp.Position).Magnitude
-                if dist < shortestDist then
-                    shortestDist = dist
-                    closestPlayer = player
-                end
-            end
-        end
-    end
-
-    return closestPlayer
-end
-
-RunService.RenderStepped:Connect(function()
-    if Toggles.AutoTarget and LocalPlayer.Character and not Toggles.Fly then
-        pcall(function()
-            local myHrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            local myHum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-            if not myHrp or not myHum or myHum.Health <= 0 then return end
-
-            local target = GetClosestEnemy()
-            if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-                local targetPos = target.Character.HumanoidRootPart.Position
-                -- Smoothly face towards target on X-Z plane (prevents downward pitch tilt)
-                local aimLookAt = Vector3.new(targetPos.X, myHrp.Position.Y, targetPos.Z)
-                myHrp.CFrame = CFrame.lookAt(myHrp.Position, aimLookAt)
-            end
-        end)
-    end
-end)
