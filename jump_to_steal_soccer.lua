@@ -1,5 +1,5 @@
 --[[
-    JUNEJO ULTRA SCRIPT HUB - JUMP TO STEAL SOCCER PLAYERS (UPDATED)
+    JUNEJO ULTRA SCRIPT HUB - JUMP TO STEAL SOCCER PLAYERS (REVISED)
     Target Game: Jump To Steal Soccer Players (Roblox)
     Author: Made by Junejo (junejo18146)
     Repository: junejo18146/ultrascripthub
@@ -13,6 +13,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
+local VirtualInputManager = nil
+pcall(function() VirtualInputManager = game:GetService("VirtualInputManager") end)
 local StarterGui = game:GetService("StarterGui")
 local CoreGui = game:GetService("CoreGui")
 
@@ -52,11 +54,10 @@ pcall(function()
 end)
 
 --------------------------------------------------------------------
--- CONFIGURATION & STATE (EXACT 6 REQUESTED FEATURES)
+-- CONFIGURATION & STATE (EXACT 5 REQUESTED FEATURES)
 --------------------------------------------------------------------
 local Toggles = {
     SoccerESP = false,
-    AutoCollectCash = false,
     AutoRebirth = false,
     FlyMode = false,
     WalkSpeedBoost = false,
@@ -156,7 +157,7 @@ LocalPlayer.CharacterAdded:Connect(function()
 end)
 
 --------------------------------------------------------------------
--- 3. FLY MODE ENGINE (WASD & MOBILE CONTROLS)
+-- 3. FLY MODE ENGINE (WASD & MOBILE TOUCH CONTROLS)
 --------------------------------------------------------------------
 local Flying = false
 local BodyGyro, BodyVelocity
@@ -190,7 +191,6 @@ local function StartFlying()
                 BodyGyro.cframe = cam.CFrame
 
                 if moveDir.Magnitude > 0 then
-                    -- Fly forward/direction with Camera pitch
                     local flyVector = (cam.CFrame.LookVector * (moveDir.Z * -1)) + (cam.CFrame.RightVector * moveDir.X)
                     if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
                         flyVector = flyVector + Vector3.new(0, 1, 0)
@@ -211,7 +211,6 @@ local function StartFlying()
                 RunService.RenderStepped:Wait()
             end
 
-            -- Cleanup flight
             if BodyGyro then BodyGyro:Destroy() end
             if BodyVelocity then BodyVelocity:Destroy() end
             if hum then hum.PlatformStand = false end
@@ -232,143 +231,148 @@ local function StopFlying()
 end
 
 --------------------------------------------------------------------
--- 4. AUTO COLLECT BASE CASH (AUTOMATIC MONEY HARVESTER)
+-- 4. SUPERCHARGED AUTO REBIRTH (MULTI-METHOD + LIVE SCREEN FEEDBACK)
 --------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        task.wait(0.5)
-        if Toggles.AutoCollectCash then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                if not hrp then return end
+local RebirthStatusLabel = nil
 
-                -- 1. Scan for Cash Collector Pads in Workspace & Plots
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if not Toggles.AutoCollectCash then break end
-                    if obj:IsA("BasePart") then
-                        local name = string.lower(obj.Name)
-                        if string.find(name, "collect") or string.find(name, "cash") or string.find(name, "bank") or string.find(name, "deposit") or string.find(name, "withdraw") or string.find(name, "money") then
-                            -- Check if part belongs to player's base or nearby collector
-                            local dist = (obj.Position - hrp.Position).Magnitude
-                            if dist <= 40 then
-                                if firetouchinterest then
-                                    firetouchinterest(hrp, obj, 0)
-                                    task.wait(0.02)
-                                    firetouchinterest(hrp, obj, 1)
-                                end
-                            end
-                        end
-                    elseif obj:IsA("ProximityPrompt") and obj.Enabled then
-                        local act = string.lower(obj.ActionText .. " " .. obj.ObjectText)
-                        if string.find(act, "collect") or string.find(act, "claim") or string.find(act, "cash") or string.find(act, "money") or string.find(act, "take") then
-                            if fireproximityprompt then
-                                fireproximityprompt(obj, 0)
-                                fireproximityprompt(obj)
-                            end
-                        end
+local function TriggerMultiRebirth()
+    -- Method 1: Remote Events & Functions
+    for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
+        if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
+            local n = string.lower(obj.Name)
+            if string.find(n, "rebirth") or string.find(n, "prestige") or string.find(n, "ascend") then
+                pcall(function()
+                    if obj:IsA("RemoteEvent") then
+                        obj:FireServer()
+                        obj:FireServer(1)
+                        obj:FireServer(true)
+                        obj:FireServer("Rebirth")
+                    else
+                        obj:InvokeServer()
+                        obj:InvokeServer(1)
+                        obj:InvokeServer(true)
                     end
-                end
-
-                -- 2. Fire Collection Remotes in ReplicatedStorage
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if not Toggles.AutoCollectCash then break end
-                    if remote:IsA("RemoteEvent") then
-                        local rName = string.lower(remote.Name)
-                        if string.find(rName, "collect") or string.find(rName, "claimcash") or string.find(rName, "collectmoney") or string.find(rName, "withdraw") then
-                            remote:FireServer()
-                            remote:FireServer(true)
-                        end
-                    end
-                end
-            end)
+                end)
+            end
         end
     end
-end)
 
---------------------------------------------------------------------
--- 5. AUTO REBIRTH (WITH LIVE REQUIREMENTS SCREEN FEEDBACK)
---------------------------------------------------------------------
-local LastRebirthNoticeTime = 0
+    -- Method 2: Physical Rebirth Pads & Proximity Prompts in Workspace
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        local n = string.lower(obj.Name)
+        if string.find(n, "rebirth") then
+            if obj:IsA("BasePart") and hrp and firetouchinterest then
+                pcall(function()
+                    firetouchinterest(hrp, obj, 0)
+                    task.wait(0.02)
+                    firetouchinterest(hrp, obj, 1)
+                end)
+            end
+            if obj:IsA("ProximityPrompt") and obj.Enabled then
+                pcall(function()
+                    if fireproximityprompt then
+                        fireproximityprompt(obj, 0)
+                        fireproximityprompt(obj)
+                    end
+                    if obj.InputHoldBegin then
+                        obj:InputHoldBegin()
+                        task.wait(0.04)
+                        obj:InputHoldEnd()
+                    end
+                end)
+            end
+        end
+    end
 
+    -- Method 3: PlayerGui Rebirth Buttons (firesignal, activate, and screen click)
+    local pGui = LocalPlayer:FindFirstChild("PlayerGui")
+    if pGui then
+        for _, btn in ipairs(pGui:GetDescendants()) do
+            if (btn:IsA("TextButton") or btn:IsA("ImageButton")) and btn.Visible then
+                local bText = btn:IsA("TextButton") and string.lower(btn.Text) or ""
+                local bName = string.lower(btn.Name)
+                if string.find(bName, "rebirth") or string.find(bText, "rebirth") or string.find(bName, "prestige") then
+                    pcall(function()
+                        if firesignal then
+                            firesignal(btn.MouseButton1Click)
+                            firesignal(btn.Activated)
+                        end
+                        if btn.Activate then btn:Activate() end
+                        if VirtualInputManager and btn.AbsoluteSize.X > 0 then
+                            local center = btn.AbsolutePosition + (btn.AbsoluteSize / 2)
+                            VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, true, game, 0)
+                            task.wait(0.02)
+                            VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, false, game, 0)
+                        end
+                    end)
+                end
+            end
+        end
+    end
+end
+
+-- Dedicated Rebirth Monitor Loop
 task.spawn(function()
+    local lastNotificationTick = 0
+
     while true do
         task.wait(1.5)
         if Toggles.AutoRebirth then
             pcall(function()
-                local rebirthSuccess = false
-                local requiredInfo = nil
-
-                -- Check PlayerGui for Rebirth Requirements & Cost
+                -- 1. Scan PlayerGui for requirement texts
+                local foundRequirementText = nil
                 local pGui = LocalPlayer:FindFirstChild("PlayerGui")
                 if pGui then
                     for _, lbl in ipairs(pGui:GetDescendants()) do
                         if lbl:IsA("TextLabel") and lbl.Visible then
                             local txt = string.lower(lbl.Text)
-                            if string.find(txt, "need") or string.find(txt, "cost") or string.find(txt, "require") or string.find(txt, "rebirth for") then
-                                requiredInfo = lbl.Text
+                            if (string.find(txt, "rebirth") or string.find(txt, "need") or string.find(txt, "cost") or string.find(txt, "require") or string.find(txt, "/")) and string.len(lbl.Text) < 60 then
+                                foundRequirementText = lbl.Text
                                 break
                             end
                         end
                     end
-
-                    -- Trigger Rebirth button if visible and active
-                    for _, btn in ipairs(pGui:GetDescendants()) do
-                        if (btn:IsA("TextButton") or btn:IsA("ImageButton")) and btn.Visible then
-                            local txt = btn:IsA("TextButton") and string.lower(btn.Text) or ""
-                            local name = string.lower(btn.Name)
-                            if string.find(name, "rebirth") or string.find(txt, "rebirth") or string.find(name, "prestige") then
-                                if firesignal then
-                                    firesignal(btn.MouseButton1Click)
-                                    firesignal(btn.Activated)
-                                    rebirthSuccess = true
-                                end
-                            end
-                        end
-                    end
                 end
 
-                -- Fire Rebirth Remotes in ReplicatedStorage
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
-                        local name = string.lower(remote.Name)
-                        if string.find(name, "rebirth") or string.find(name, "prestige") or string.find(name, "ascend") then
-                            if remote:IsA("RemoteEvent") then
-                                remote:FireServer()
-                                remote:FireServer(1)
-                                remote:FireServer(true)
-                                rebirthSuccess = true
-                            elseif remote:IsA("RemoteFunction") then
-                                remote:InvokeServer()
-                                rebirthSuccess = true
-                            end
-                        end
-                    end
+                -- 2. Read leaderstats values
+                local leaderstats = LocalPlayer:FindFirstChild("leaderstats")
+                local cashStat = leaderstats and (leaderstats:FindFirstChild("Cash") or leaderstats:FindFirstChild("Money") or leaderstats:FindFirstChild("Coins") or leaderstats:FindFirstChild("Jumps"))
+                local currentStatValue = cashStat and tostring(cashStat.Value) or "N/A"
+
+                -- 3. Trigger Rebirth Execution
+                TriggerMultiRebirth()
+
+                -- 4. Update Screen Status
+                local statusMsg = ""
+                if foundRequirementText then
+                    statusMsg = foundRequirementText
+                else
+                    statusMsg = "Checking Rebirth... (Cash: " .. currentStatValue .. ")"
                 end
 
-                -- Screen Status Notification (Throttle to every 5 seconds)
+                if RebirthStatusLabel then
+                    RebirthStatusLabel.Text = "Status: " .. statusMsg
+                end
+
+                -- Also show StarterGui Notification every 6 seconds so user clearly sees it
                 local now = tick()
-                if now - LastRebirthNoticeTime >= 5 then
-                    LastRebirthNoticeTime = now
-                    
-                    -- Check player stats in leaderstats
-                    local leaderstats = LocalPlayer:FindFirstChild("leaderstats")
-                    local cashStat = leaderstats and (leaderstats:FindFirstChild("Cash") or leaderstats:FindFirstChild("Money") or leaderstats:FindFirstChild("Coins"))
-                    local currentCash = cashStat and tostring(cashStat.Value) or "Grinding..."
-
-                    if requiredInfo then
-                        ShowNotification("Auto Rebirth Status", requiredInfo)
-                    else
-                        ShowNotification("Auto Rebirth Active", "Current Cash: " .. currentCash .. "\nChecking rebirth requirements...")
-                    end
+                if now - lastNotificationTick >= 6 then
+                    lastNotificationTick = now
+                    ShowNotification("Auto Rebirth", statusMsg)
                 end
             end)
+        else
+            if RebirthStatusLabel then
+                RebirthStatusLabel.Text = "Status: Disabled"
+            end
         end
     end
 end)
 
 --------------------------------------------------------------------
--- 6. SOCCER PLAYERS & LUCKY BLOCKS ESP (WALLHACK)
+-- 5. SOCCER PLAYERS & LUCKY BLOCKS ESP (WALLHACK)
 --------------------------------------------------------------------
 local ESPFolder = Instance.new("Folder")
 ESPFolder.Name = "Junejo_SoccerESP"
@@ -392,7 +396,6 @@ local function CreateSoccerESP(item)
     espHolder.Name = id
     espHolder.Parent = ESPFolder
 
-    -- Vibrant Neon Highlight Box
     local hl = Instance.new("Highlight")
     hl.Adornee = item
     hl.FillColor = Color3.fromRGB(0, 230, 118)
@@ -401,7 +404,6 @@ local function CreateSoccerESP(item)
     hl.OutlineTransparency = 0
     hl.Parent = espHolder
 
-    -- Billboard Gui
     local bb = Instance.new("BillboardGui")
     bb.Adornee = adorneePart
     bb.Size = UDim2.new(0, 160, 0, 32)
@@ -420,7 +422,6 @@ local function CreateSoccerESP(item)
     label.Text = item.Name
     label.Parent = bb
 
-    -- Live Distance Updater
     task.spawn(function()
         while espHolder.Parent and item.Parent and adorneePart.Parent do
             task.wait(0.3)
@@ -482,7 +483,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 7. JUNEJO ULTRA SCRIPT HUB - MASTER UI (6 ROWS COMPACT)
+-- 6. JUNEJO ULTRA SCRIPT HUB - MASTER UI (5 ROWS + STATUS BAR)
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoJumpToStealSoccerUI"
@@ -491,7 +492,7 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999999
 ScreenGui.Parent = UIContainer
 
-local TotalFrameHeight = 240
+local TotalFrameHeight = 230
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
@@ -546,7 +547,6 @@ CloseBtn.MouseButton1Click:Connect(function()
     ClearSoccerESP()
     StopFlying()
     Toggles.SoccerESP = false
-    Toggles.AutoCollectCash = false
     Toggles.AutoRebirth = false
     Toggles.FlyMode = false
     Toggles.WalkSpeedBoost = false
@@ -593,10 +593,10 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Content Frame (6 Rows)
+-- Content Frame (5 Rows)
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -24, 0, 164)
+ContentFrame.Size = UDim2.new(1, -24, 0, 150)
 ContentFrame.Position = UDim2.new(0, 12, 0, 38)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
@@ -667,7 +667,7 @@ local function AddToggleRow(text, configKey, callback)
 end
 
 --------------------------------------------------------------------
--- POPULATE EXACT 6 ROWS
+-- POPULATE EXACT 5 ROWS
 --------------------------------------------------------------------
 
 -- 1. Soccer Players ESP
@@ -675,17 +675,31 @@ AddToggleRow("Soccer Players ESP", "SoccerESP", function(enabled)
     if not enabled then ClearSoccerESP() end
 end)
 
--- 2. Auto Collect Base Cash
-AddToggleRow("Auto Collect Base Cash", "AutoCollectCash")
-
--- 3. Auto Rebirth (With Requirement Screen Alerts)
+-- 2. Auto Rebirth
 AddToggleRow("Auto Rebirth", "AutoRebirth", function(enabled)
     if enabled then
-        ShowNotification("Auto Rebirth Enabled", "Checking Rebirth Requirements...")
+        ShowNotification("Auto Rebirth", "Scanning Rebirth requirements & remotes...")
     end
 end)
 
--- 4. Fly Mode
+-- Rebirth Status Sub-Label (Live feedback right inside the GUI)
+local RebirthStatusRow = Instance.new("Frame")
+RebirthStatusRow.Name = "RebirthStatus_Row"
+RebirthStatusRow.Size = UDim2.new(1, 0, 0, 16)
+RebirthStatusRow.BackgroundTransparency = 1
+RebirthStatusRow.Parent = ContentFrame
+
+RebirthStatusLabel = Instance.new("TextLabel")
+RebirthStatusLabel.Size = UDim2.new(1, 0, 1, 0)
+RebirthStatusLabel.BackgroundTransparency = 1
+RebirthStatusLabel.Text = "Status: Disabled"
+RebirthStatusLabel.TextColor3 = Color3.fromRGB(0, 230, 118)
+RebirthStatusLabel.TextSize = 10
+RebirthStatusLabel.Font = Enum.Font.GothamMedium
+RebirthStatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+RebirthStatusLabel.Parent = RebirthStatusRow
+
+-- 3. Fly Mode
 AddToggleRow("Fly Mode", "FlyMode", function(enabled)
     if enabled then
         StartFlying()
@@ -694,7 +708,7 @@ AddToggleRow("Fly Mode", "FlyMode", function(enabled)
     end
 end)
 
--- 5. WalkSpeed Boost with Integrated Adjuster Pill (- / +)
+-- 4. WalkSpeed Boost with Integrated Adjuster Pill (- / +)
 local SpeedRow = Instance.new("Frame")
 SpeedRow.Name = "WalkSpeed_Row"
 SpeedRow.Size = UDim2.new(1, 0, 0, 23)
@@ -811,7 +825,7 @@ PlusBtn.MouseButton1Click:Connect(function()
     UpdateCharacterSpeed()
 end)
 
--- 6. Infinite Jump
+-- 5. Infinite Jump
 AddToggleRow("Infinite Jump", "InfiniteJump")
 
 --------------------------------------------------------------------
