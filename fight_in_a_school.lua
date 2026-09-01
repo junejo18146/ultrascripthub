@@ -4,8 +4,8 @@
     Game Link: https://www.roblox.com/games/17698425045/fight-in-a-school
     Author: Made by Junejo (junejo18146)
     Repository: junejo18146/ultrascripthub
-    Theme: Unified Junejo Executive Dark UI (#0F0F11) - Flat Borderless Rows Standard
-    Status: Dedicated Streamlined Executable (4 Core Verified Features)
+    Theme: Unified Junejo Executive Dark UI (#0F0F11) - Flat & Borderless Standard
+    Status: Direct Standalone Executable
 --]]
 
 local Players = game:GetService("Players")
@@ -14,41 +14,17 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
 local CoreGui = game:GetService("CoreGui")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterGui = game:GetService("StarterGui")
 
-local LocalPlayer = Players.LocalPlayer
-while not LocalPlayer do
-    task.wait()
-    LocalPlayer = Players.LocalPlayer
-end
+local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
--- 4 Core Feature Toggles
-local Toggles = {
-    HitboxExpander = false,
-    Fly = false,
-    WalkSpeed = false,
-    InfiniteJump = false
-}
-
--- Safe UI Parent resolver (Delta Mobile, Arceus X, Fluxus, Codex, PC)
+-- Safe UI Parent getter (Delta, Arceus X, Fluxus, PC/Mobile compatible)
 local function GetSafeUIContainer()
     local container = nil
-    
-    pcall(function()
-        if gethui then
-            container = gethui()
-        end
-    end)
-    
-    if not container then
-        pcall(function()
-            local playerGui = LocalPlayer:FindFirstChild("PlayerGui") or LocalPlayer:WaitForChild("PlayerGui", 3)
-            if playerGui then
-                container = playerGui
-            end
-        end)
+    if gethui then
+        pcall(function() container = gethui() end)
     end
-    
     if not container then
         pcall(function()
             if syn and syn.protect_gui then
@@ -56,62 +32,336 @@ local function GetSafeUIContainer()
             end
         end)
     end
-    
     if not container then
-        pcall(function()
-            container = CoreGui
-        end)
+        pcall(function() container = CoreGui end)
     end
-    
     return container or LocalPlayer:WaitForChild("PlayerGui")
 end
 
 local UIContainer = GetSafeUIContainer()
 
--- Cleanup previous UI instances safely
+-- Cleanup previous UI instances
 pcall(function()
-    local names = {"JunejoFightInASchoolUI", "JunejoSchoolFightUI", "JunejoHubUI"}
+    local names = {"JunejoFightInASchoolUI", "JunejoSchoolHelperUI", "JunejoSchoolFightV3UI", "JunejoHubUI"}
     for _, name in ipairs(names) do
+        if CoreGui and CoreGui:FindFirstChild(name) then CoreGui[name]:Destroy() end
+        if LocalPlayer and LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild(name) then
+            LocalPlayer.PlayerGui[name]:Destroy()
+        end
+        if gethui and gethui():FindFirstChild(name) then gethui()[name]:Destroy() end
+    end
+end)
+
+--------------------------------------------------------------------
+-- CONFIGURATION & STATE (EXACT 5 USER REQUESTED FEATURES)
+--------------------------------------------------------------------
+local Toggles = {
+    HitboxExpander = false,
+    AttackAura = false,
+    PlayerESP = false,
+    WalkSpeedBoost = false,
+    InfiniteJump = false
+}
+
+local CustomSpeedValue = 50
+
+--------------------------------------------------------------------
+-- ANTI-AFK SYSTEM (PREVENTS 20-MINUTE IDLE DISCONNECT)
+--------------------------------------------------------------------
+LocalPlayer.Idled:Connect(function()
+    pcall(function()
+        VirtualUser:Button2Down(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
+        task.wait(1)
+        VirtualUser:Button2Up(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
+    end)
+end)
+
+--------------------------------------------------------------------
+-- 1. INFINITE JUMP ENGINE
+--------------------------------------------------------------------
+UserInputService.JumpRequest:Connect(function()
+    if Toggles.InfiniteJump and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
         pcall(function()
-            if CoreGui and CoreGui:FindFirstChild(name) then
-                CoreGui[name]:Destroy()
-            end
+            LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
         end)
+    end
+end)
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and Toggles.InfiniteJump and input.KeyCode == Enum.KeyCode.Space then
         pcall(function()
-            if LocalPlayer and LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild(name) then
-                LocalPlayer.PlayerGui[name]:Destroy()
-            end
-        end)
-        pcall(function()
-            if gethui and gethui():FindFirstChild(name) then
-                gethui()[name]:Destroy()
+            local char = LocalPlayer.Character
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if hum and hrp then
+                hum:ChangeState(Enum.HumanoidStateType.Jumping)
+                hrp.Velocity = Vector3.new(hrp.Velocity.X, 50, hrp.Velocity.Z)
             end
         end)
     end
 end)
 
 --------------------------------------------------------------------
--- GUI CREATION (JUNEJO ULTRA SCRIPT HUB - EXACT 4-ROW COMPACT SPEC)
+-- 2. BULLETPROOF WALKSPEED BOOST ENGINE
+--------------------------------------------------------------------
+local function UpdateCharacterSpeed()
+    pcall(function()
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            if Toggles.WalkSpeedBoost then
+                hum.WalkSpeed = CustomSpeedValue
+            else
+                hum.WalkSpeed = 16
+            end
+        end
+    end)
+end
+
+local function BindHumanoidSpeedListener(char)
+    if not char then return end
+    local hum = char:WaitForChild("Humanoid", 5)
+    if hum then
+        hum:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+            if Toggles.WalkSpeedBoost and hum.WalkSpeed ~= CustomSpeedValue then
+                hum.WalkSpeed = CustomSpeedValue
+            end
+        end)
+    end
+end
+
+if LocalPlayer.Character then
+    BindHumanoidSpeedListener(LocalPlayer.Character)
+end
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+    task.wait(0.3)
+    BindHumanoidSpeedListener(char)
+    if Toggles.WalkSpeedBoost then
+        UpdateCharacterSpeed()
+    end
+end)
+
+--------------------------------------------------------------------
+-- 3. HITBOX EXPANDER ENGINE (14x14x14 RED NEON HITBOXES)
+--------------------------------------------------------------------
+local OriginalHitboxSizes = {}
+
+local function ExpandHitboxes()
+    pcall(function()
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character then
+                local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+                if hrp and hrp:IsA("BasePart") then
+                    if not OriginalHitboxSizes[player.UserId] then
+                        OriginalHitboxSizes[player.UserId] = hrp.Size
+                    end
+                    hrp.Size = Vector3.new(14, 14, 14)
+                    hrp.Transparency = 0.65
+                    hrp.BrickColor = BrickColor.new("Really red")
+                    hrp.Material = Enum.Material.Neon
+                    hrp.CanCollide = false
+                end
+            end
+        end
+    end)
+end
+
+local function RestoreHitboxes()
+    pcall(function()
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character then
+                local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+                if hrp and hrp:IsA("BasePart") then
+                    local orig = OriginalHitboxSizes[player.UserId] or Vector3.new(2, 2, 1)
+                    hrp.Size = orig
+                    hrp.Transparency = 1
+                    hrp.Material = Enum.Material.Plastic
+                    hrp.CanCollide = false
+                end
+            end
+        end
+    end)
+end
+
+task.spawn(function()
+    while true do
+        task.wait(1)
+        if Toggles.HitboxExpander then
+            ExpandHitboxes()
+        end
+    end
+end)
+
+--------------------------------------------------------------------
+-- 4. ATTACK AURA (AUTO PUNCH / COMBAT REMOTE & CLICK TRIGGER)
+--------------------------------------------------------------------
+task.spawn(function()
+    while true do
+        task.wait(0.12)
+        if Toggles.AttackAura then
+            pcall(function()
+                local char = LocalPlayer.Character
+                local myHrp = char and char:FindFirstChild("HumanoidRootPart")
+                if not myHrp then return end
+
+                for _, enemy in ipairs(Players:GetPlayers()) do
+                    if enemy ~= LocalPlayer and enemy.Character then
+                        local enemyHrp = enemy.Character:FindFirstChild("HumanoidRootPart")
+                        local enemyHum = enemy.Character:FindFirstChildOfClass("Humanoid")
+                        
+                        if enemyHrp and enemyHum and enemyHum.Health > 0 then
+                            local dist = (myHrp.Position - enemyHrp.Position).Magnitude
+                            
+                            -- Range: 15 Studs
+                            if dist <= 15 then
+                                -- Check Combat Remotes
+                                local combatRemote = ReplicatedStorage:FindFirstChild("Combat", true) or 
+                                                     ReplicatedStorage:FindFirstChild("Punch", true) or 
+                                                     ReplicatedStorage:FindFirstChild("Hit", true) or 
+                                                     ReplicatedStorage:FindFirstChild("Attack", true)
+                                
+                                if combatRemote and combatRemote:IsA("RemoteEvent") then
+                                    combatRemote:FireServer("Light", enemyHrp)
+                                    combatRemote:FireServer(enemyHrp)
+                                end
+
+                                -- Check for equipped tool
+                                local tool = char:FindFirstChildWhichIsA("Tool")
+                                if tool then
+                                    tool:Activate()
+                                end
+
+                                -- Virtual Click simulation
+                                VirtualUser:CaptureController()
+                                VirtualUser:Button1Down(Vector2.new(0, 0))
+                                task.wait(0.02)
+                                VirtualUser:Button1Up(Vector2.new(0, 0))
+                                break
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+--------------------------------------------------------------------
+-- 5. PLAYER ESP & HEALTH DISPLAY (WALLHACK)
+--------------------------------------------------------------------
+local ESPFolder = Instance.new("Folder")
+ESPFolder.Name = "Junejo_PlayerESP"
+ESPFolder.Parent = UIContainer
+
+local function ClearPlayerESP()
+    for _, obj in ipairs(ESPFolder:GetChildren()) do
+        obj:Destroy()
+    end
+end
+
+local function CreatePlayerESP(player)
+    if player == LocalPlayer then return end
+    local char = player.Character
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hrp or not hum then return end
+
+    local id = "ESP_" .. tostring(player.UserId)
+    if ESPFolder:FindFirstChild(id) then return end
+
+    local espHolder = Instance.new("Folder")
+    espHolder.Name = id
+    espHolder.Parent = ESPFolder
+
+    -- Red Highlight Box
+    local hl = Instance.new("Highlight")
+    hl.Adornee = char
+    hl.FillColor = Color3.fromRGB(255, 45, 45)
+    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+    hl.FillTransparency = 0.5
+    hl.OutlineTransparency = 0
+    hl.Parent = espHolder
+
+    -- Billboard Gui
+    local bb = Instance.new("BillboardGui")
+    bb.Adornee = hrp
+    bb.Size = UDim2.new(0, 160, 0, 36)
+    bb.StudsOffset = Vector3.new(0, 3.2, 0)
+    bb.AlwaysOnTop = true
+    bb.Parent = espHolder
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.TextColor3 = Color3.fromRGB(255, 60, 60)
+    label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    label.TextStrokeTransparency = 0.2
+    label.TextSize = 11
+    label.Font = Enum.Font.GothamBold
+    label.Text = player.DisplayName
+    label.Parent = bb
+
+    -- Updater Loop
+    task.spawn(function()
+        while espHolder.Parent and player.Parent and char.Parent and hum.Health > 0 do
+            task.wait(0.25)
+            pcall(function()
+                local myChar = LocalPlayer.Character
+                local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
+                if myHrp and hrp.Parent then
+                    local dist = math.floor((myHrp.Position - hrp.Position).Magnitude)
+                    local hp = math.floor(hum.Health)
+                    label.Text = player.DisplayName .. "\n[" .. tostring(dist) .. "m | HP: " .. tostring(hp) .. "]"
+                end
+            end)
+        end
+        espHolder:Destroy()
+    end)
+end
+
+task.spawn(function()
+    while true do
+        task.wait(1.5)
+        if Toggles.PlayerESP then
+            pcall(function()
+                for _, player in ipairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer and player.Character then
+                        CreatePlayerESP(player)
+                    end
+                end
+            end)
+        else
+            ClearPlayerESP()
+        end
+    end
+end)
+
+--------------------------------------------------------------------
+-- 6. JUNEJO ULTRA SCRIPT HUB - OFFICIAL MASTER UI
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoFightInASchoolUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999999
-ScreenGui.IgnoreGuiInset = true
+ScreenGui.Parent = UIContainer
 
--- Main Container Frame (Fixed Compact Standard 280px, Height: 195px for 4 rows)
+-- Total Height calculation:
+-- Header (32) + Line (1) + Spacing (5) + (5 rows * 27) + Footer (36) = ~215px
+local TotalFrameHeight = 215
+
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 195)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -97)
+MainFrame.Size = UDim2.new(0, 280, 0, TotalFrameHeight)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -math.floor(TotalFrameHeight / 2))
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.ClipsDescendants = true
 MainFrame.Parent = ScreenGui
 
--- Corner & Border Stroke
 local MainCorner = Instance.new("UICorner")
 MainCorner.CornerRadius = UDim.new(0, 10)
 MainCorner.Parent = MainFrame
@@ -121,47 +371,65 @@ MainStroke.Color = Color3.fromRGB(35, 35, 42)
 MainStroke.Thickness = 1
 MainStroke.Parent = MainFrame
 
--- Header Frame (Height: 34px)
+-- Header Bar
 local Header = Instance.new("Frame")
 Header.Name = "Header"
-Header.Size = UDim2.new(1, 0, 0, 34)
+Header.Size = UDim2.new(1, 0, 0, 32)
 Header.BackgroundTransparency = 1
-Header.Active = true
 Header.Parent = MainFrame
 
 local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Name = "TitleLabel"
 TitleLabel.Size = UDim2.new(1, -40, 1, 0)
-TitleLabel.Position = UDim2.new(0, 14, 0, 0)
+TitleLabel.Position = UDim2.new(0, 12, 0, 0)
 TitleLabel.BackgroundTransparency = 1
 TitleLabel.Text = "FIGHT IN A SCHOOL"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleLabel.TextSize = 13
+TitleLabel.TextSize = 12
 TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.Parent = Header
 
-local CloseButton = Instance.new("TextButton")
-CloseButton.Size = UDim2.new(0, 34, 0, 34)
-CloseButton.Position = UDim2.new(1, -34, 0, 0)
-CloseButton.BackgroundTransparency = 1
-CloseButton.Text = "X"
-CloseButton.TextColor3 = Color3.fromRGB(160, 160, 170)
-CloseButton.TextSize = 14
-CloseButton.Font = Enum.Font.GothamBold
-CloseButton.Parent = Header
-CloseButton.MouseButton1Click:Connect(function()
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Name = "CloseButton"
+CloseBtn.Size = UDim2.new(0, 24, 0, 24)
+CloseBtn.Position = UDim2.new(1, -28, 0, 4)
+CloseBtn.BackgroundTransparency = 1
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(160, 160, 160)
+CloseBtn.TextSize = 13
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.Parent = Header
+
+CloseBtn.MouseButton1Click:Connect(function()
+    RestoreHitboxes()
+    ClearPlayerESP()
+    Toggles.HitboxExpander = false
+    Toggles.AttackAura = false
+    Toggles.PlayerESP = false
+    Toggles.WalkSpeedBoost = false
+    Toggles.InfiniteJump = false
+    UpdateCharacterSpeed()
     ScreenGui:Destroy()
 end)
 
--- Draggable implementation attached to Header (Prevents click-swallowing on Mobile)
-local dragging = false
-local dragInput, dragStart, startPos
+-- Header Separation Line (Official Junejo Standard)
+local HeaderLine = Instance.new("Frame")
+HeaderLine.Name = "HeaderLine"
+HeaderLine.Size = UDim2.new(1, -24, 0, 1)
+HeaderLine.Position = UDim2.new(0, 12, 0, 32)
+HeaderLine.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+HeaderLine.BorderSizePixel = 0
+HeaderLine.Parent = MainFrame
 
+-- Draggable Functionality
+local dragging, dragInput, dragStart, startPos
 Header.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
         dragStart = input.Position
         startPos = MainFrame.Position
+        
         input.Changed:Connect(function()
             if input.UserInputState == Enum.UserInputState.End then
                 dragging = false
@@ -183,11 +451,11 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Content Frame (Height: 112px for 4 rows with 4px gap)
+-- Content Frame
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -28, 0, 112)
-ContentFrame.Position = UDim2.new(0, 14, 0, 36)
+ContentFrame.Size = UDim2.new(1, -24, 0, 138)
+ContentFrame.Position = UDim2.new(0, 12, 0, 38)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
 
@@ -196,13 +464,11 @@ UIList.SortOrder = Enum.SortOrder.LayoutOrder
 UIList.Padding = UDim.new(0, 4)
 UIList.Parent = ContentFrame
 
--- Forward function declarations
-local StartFlying, StopFlying, UpdateCharacterSpeed, RestoreHitboxes
-
--- Helper function to generate clean, borderless toggle rows
-local function AddToggleRow(text, configKey, onToggleCallback)
+-- Helper function for Toggle Rows (Flat & Borderless)
+local function AddToggleRow(text, configKey, callback)
     local Row = Instance.new("Frame")
-    Row.Size = UDim2.new(1, 0, 0, 24)
+    Row.Name = text .. "_Row"
+    Row.Size = UDim2.new(1, 0, 0, 23)
     Row.BackgroundTransparency = 1
     Row.Parent = ContentFrame
     
@@ -254,306 +520,178 @@ local function AddToggleRow(text, configKey, onToggleCallback)
     RowBtn.MouseButton1Click:Connect(function()
         Toggles[configKey] = not Toggles[configKey]
         CheckMark.BackgroundTransparency = Toggles[configKey] and 0 or 1
-        if onToggleCallback then
-            pcall(function()
-                onToggleCallback(Toggles[configKey])
-            end)
-        end
+        if callback then callback(Toggles[configKey]) end
     end)
 end
 
--- Generate 4 Active Toggle Rows (Streamlined Standard)
+--------------------------------------------------------------------
+-- POPULATE ROWS (EXACT 5 USER REQUESTED FEATURES)
+--------------------------------------------------------------------
+-- 1. Hitbox Expander
 AddToggleRow("Hitbox Expander", "HitboxExpander", function(enabled)
-    if not enabled then
+    if enabled then
+        ExpandHitboxes()
+    else
         RestoreHitboxes()
     end
 end)
-AddToggleRow("Fly Mode", "Fly", function(enabled)
-    if enabled then
-        StartFlying()
-    else
-        StopFlying()
-    end
+
+-- 2. Attack Aura (Auto Punch)
+AddToggleRow("Attack Aura (Auto Punch)", "AttackAura")
+
+-- 3. Player ESP
+AddToggleRow("Player ESP", "PlayerESP", function(enabled)
+    if not enabled then ClearPlayerESP() end
 end)
-AddToggleRow("WalkSpeed Boost (50)", "WalkSpeed", function(enabled)
+
+-- 4. WalkSpeed Boost with Integrated Adjuster Pill (- / +)
+local SpeedRow = Instance.new("Frame")
+SpeedRow.Name = "WalkSpeed_Row"
+SpeedRow.Size = UDim2.new(1, 0, 0, 23)
+SpeedRow.BackgroundTransparency = 1
+SpeedRow.Parent = ContentFrame
+
+local SpeedToggleBtn = Instance.new("TextButton")
+SpeedToggleBtn.Size = UDim2.new(0.55, 0, 1, 0)
+SpeedToggleBtn.BackgroundTransparency = 1
+SpeedToggleBtn.Text = ""
+SpeedToggleBtn.ZIndex = 5
+SpeedToggleBtn.Parent = SpeedRow
+
+local SpeedLabel = Instance.new("TextLabel")
+SpeedLabel.Size = UDim2.new(1, -26, 1, 0)
+SpeedLabel.BackgroundTransparency = 1
+SpeedLabel.Text = "WalkSpeed"
+SpeedLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
+SpeedLabel.TextSize = 12
+SpeedLabel.Font = Enum.Font.GothamBold
+SpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
+SpeedLabel.Parent = SpeedToggleBtn
+
+local SpeedCheckBox = Instance.new("Frame")
+SpeedCheckBox.Size = UDim2.new(0, 18, 0, 18)
+SpeedCheckBox.Position = UDim2.new(1, -18, 0.5, -9)
+SpeedCheckBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+SpeedCheckBox.BorderSizePixel = 0
+SpeedCheckBox.Parent = SpeedToggleBtn
+
+local SpeedCheckCorner = Instance.new("UICorner")
+SpeedCheckCorner.CornerRadius = UDim.new(0, 4)
+SpeedCheckCorner.Parent = SpeedCheckBox
+
+local SpeedCheckStroke = Instance.new("UIStroke")
+SpeedCheckStroke.Color = Color3.fromRGB(45, 45, 55)
+SpeedCheckStroke.Thickness = 1.2
+SpeedCheckStroke.Parent = SpeedCheckBox
+
+local SpeedCheckMark = Instance.new("Frame")
+SpeedCheckMark.Size = UDim2.new(0, 10, 0, 10)
+SpeedCheckMark.Position = UDim2.new(0.5, -5, 0.5, -5)
+SpeedCheckMark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+SpeedCheckMark.BackgroundTransparency = Toggles.WalkSpeedBoost and 0 or 1
+SpeedCheckMark.BorderSizePixel = 0
+SpeedCheckMark.Parent = SpeedCheckBox
+
+local MarkCorner = Instance.new("UICorner")
+MarkCorner.CornerRadius = UDim.new(0, 2)
+MarkCorner.Parent = SpeedCheckMark
+
+SpeedToggleBtn.MouseButton1Click:Connect(function()
+    Toggles.WalkSpeedBoost = not Toggles.WalkSpeedBoost
+    SpeedCheckMark.BackgroundTransparency = Toggles.WalkSpeedBoost and 0 or 1
     UpdateCharacterSpeed()
 end)
+
+-- Pill Controller Frame
+local SpeedControlFrame = Instance.new("Frame")
+SpeedControlFrame.Size = UDim2.new(0.42, 0, 1, 0)
+SpeedControlFrame.Position = UDim2.new(0.58, 0, 0, 0)
+SpeedControlFrame.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+SpeedControlFrame.BorderSizePixel = 0
+SpeedControlFrame.Parent = SpeedRow
+
+local CtrlCorner = Instance.new("UICorner")
+CtrlCorner.CornerRadius = UDim.new(0, 4)
+CtrlCorner.Parent = SpeedControlFrame
+
+local CtrlStroke = Instance.new("UIStroke")
+CtrlStroke.Color = Color3.fromRGB(45, 45, 55)
+CtrlStroke.Thickness = 1
+CtrlStroke.Parent = SpeedControlFrame
+
+local MinusBtn = Instance.new("TextButton")
+MinusBtn.Size = UDim2.new(0, 22, 1, 0)
+MinusBtn.Position = UDim2.new(0, 0, 0, 0)
+MinusBtn.BackgroundTransparency = 1
+MinusBtn.Text = "-"
+MinusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
+MinusBtn.TextSize = 14
+MinusBtn.Font = Enum.Font.GothamBold
+MinusBtn.Parent = SpeedControlFrame
+
+local SpeedDisplay = Instance.new("TextLabel")
+SpeedDisplay.Size = UDim2.new(1, -44, 1, 0)
+SpeedDisplay.Position = UDim2.new(0, 22, 0, 0)
+SpeedDisplay.BackgroundTransparency = 1
+SpeedDisplay.Text = tostring(CustomSpeedValue)
+SpeedDisplay.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedDisplay.TextSize = 11
+SpeedDisplay.Font = Enum.Font.GothamBold
+SpeedDisplay.Parent = SpeedControlFrame
+
+local PlusBtn = Instance.new("TextButton")
+PlusBtn.Size = UDim2.new(0, 22, 1, 0)
+PlusBtn.Position = UDim2.new(1, -22, 0, 0)
+PlusBtn.BackgroundTransparency = 1
+PlusBtn.Text = "+"
+PlusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
+PlusBtn.TextSize = 14
+PlusBtn.Font = Enum.Font.GothamBold
+PlusBtn.Parent = SpeedControlFrame
+
+MinusBtn.MouseButton1Click:Connect(function()
+    CustomSpeedValue = math.max(16, CustomSpeedValue - 10)
+    SpeedDisplay.Text = tostring(CustomSpeedValue)
+    UpdateCharacterSpeed()
+end)
+
+PlusBtn.MouseButton1Click:Connect(function()
+    CustomSpeedValue = math.min(250, CustomSpeedValue + 10)
+    SpeedDisplay.Text = tostring(CustomSpeedValue)
+    UpdateCharacterSpeed()
+end)
+
+-- 5. Infinite Jump
 AddToggleRow("Infinite Jump", "InfiniteJump")
 
--- Footer Frame (Pinned at bottom, Height: 44px)
+--------------------------------------------------------------------
+-- FOOTER (PERMANENT OFFICIAL BRANDING)
+--------------------------------------------------------------------
 local Footer = Instance.new("Frame")
 Footer.Name = "Footer"
-Footer.Size = UDim2.new(1, 0, 0, 44)
-Footer.Position = UDim2.new(0, 0, 1, -44)
+Footer.Size = UDim2.new(1, 0, 0, 36)
+Footer.Position = UDim2.new(0, 0, 1, -38)
 Footer.BackgroundTransparency = 1
 Footer.Parent = MainFrame
 
 local FooterTitle = Instance.new("TextLabel")
-FooterTitle.Size = UDim2.new(1, 0, 0, 16)
-FooterTitle.Position = UDim2.new(0, 0, 0, 5)
+FooterTitle.Size = UDim2.new(1, 0, 0, 14)
+FooterTitle.Position = UDim2.new(0, 0, 0, 4)
 FooterTitle.BackgroundTransparency = 1
 FooterTitle.Text = "ULTRA SCRIPT HUB"
 FooterTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-FooterTitle.TextSize = 13
+FooterTitle.TextSize = 11
 FooterTitle.Font = Enum.Font.GothamBold
 FooterTitle.Parent = Footer
 
 local FooterSub = Instance.new("TextLabel")
-FooterSub.Size = UDim2.new(1, 0, 0, 14)
-FooterSub.Position = UDim2.new(0, 0, 0, 21)
+FooterSub.Size = UDim2.new(1, 0, 0, 12)
+FooterSub.Position = UDim2.new(0, 0, 0, 18)
 FooterSub.BackgroundTransparency = 1
 FooterSub.Text = "Made by Junejo"
 FooterSub.TextColor3 = Color3.fromRGB(136, 136, 153)
-FooterSub.TextSize = 11
+FooterSub.TextSize = 9
 FooterSub.Font = Enum.Font.GothamMedium
 FooterSub.Parent = Footer
 
--- Safely Mount ScreenGui
-local mounted = false
-pcall(function()
-    ScreenGui.Parent = UIContainer
-    mounted = true
-end)
-
-if not mounted or not ScreenGui.Parent then
-    pcall(function()
-        ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-        mounted = true
-    end)
-end
-
--- Success Notification Pop-up
-pcall(function()
-    StarterGui:SetCore("SendNotification", {
-        Title = "ULTRA SCRIPT HUB",
-        Text = "Fight In A School Loaded!",
-        Duration = 4
-    })
-end)
-
---------------------------------------------------------------------
--- ANTI-AFK SYSTEM (Prevents 20-minute idle disconnect)
---------------------------------------------------------------------
-LocalPlayer.Idled:Connect(function()
-    pcall(function()
-        VirtualUser:Button2Down(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
-        task.wait(1)
-        VirtualUser:Button2Up(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
-    end)
-end)
-
---------------------------------------------------------------------
--- 1. INFINITE JUMP ENGINE
---------------------------------------------------------------------
-UserInputService.JumpRequest:Connect(function()
-    if Toggles.InfiniteJump and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-        pcall(function()
-            LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
-        end)
-    end
-end)
-
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not gameProcessed and Toggles.InfiniteJump and input.KeyCode == Enum.KeyCode.Space then
-        pcall(function()
-            local char = LocalPlayer.Character
-            local hum = char and char:FindFirstChildOfClass("Humanoid")
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            if hum and hrp then
-                hum:ChangeState(Enum.HumanoidStateType.Jumping)
-                hrp.Velocity = Vector3.new(hrp.Velocity.X, 50, hrp.Velocity.Z)
-            end
-        end)
-    end
-end)
-
---------------------------------------------------------------------
--- 2. WALKSPEED BOOST ENGINE (50 Speed)
---------------------------------------------------------------------
-UpdateCharacterSpeed = function()
-    pcall(function()
-        local char = LocalPlayer.Character
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        if hum then
-            if Toggles.WalkSpeed then
-                hum.WalkSpeed = 50
-            else
-                hum.WalkSpeed = 16
-            end
-        end
-    end)
-end
-
-local function BindSpeedListener(char)
-    if not char then return end
-    task.spawn(function()
-        local hum = char:WaitForChild("Humanoid", 3)
-        if hum then
-            hum:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
-                if Toggles.WalkSpeed and hum.WalkSpeed ~= 50 then
-                    hum.WalkSpeed = 50
-                end
-            end)
-        end
-    end)
-end
-
-LocalPlayer.CharacterAdded:Connect(function(newChar)
-    task.wait(0.5)
-    BindSpeedListener(newChar)
-    if Toggles.WalkSpeed then
-        UpdateCharacterSpeed()
-    end
-end)
-
-if LocalPlayer.Character then
-    BindSpeedListener(LocalPlayer.Character)
-end
-
---------------------------------------------------------------------
--- 3. SMOOTH 3D FLY MODE (WASD + Mobile Controls)
---------------------------------------------------------------------
-local FlyBodyVelocity = nil
-local FlyBodyGyro = nil
-local FlyConnection = nil
-local FlySpeed = 60
-
-StartFlying = function()
-    pcall(function()
-        local char = LocalPlayer.Character
-        if not char then return end
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        if not hrp or not hum then return end
-
-        if FlyBodyVelocity then FlyBodyVelocity:Destroy() end
-        if FlyBodyGyro then FlyBodyGyro:Destroy() end
-
-        FlyBodyVelocity = Instance.new("BodyVelocity")
-        FlyBodyVelocity.Name = "JunejoFlyVelocity"
-        FlyBodyVelocity.Velocity = Vector3.zero
-        FlyBodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-        FlyBodyVelocity.Parent = hrp
-
-        FlyBodyGyro = Instance.new("BodyGyro")
-        FlyBodyGyro.Name = "JunejoFlyGyro"
-        FlyBodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
-        FlyBodyGyro.P = 10000
-        FlyBodyGyro.D = 100
-        FlyBodyGyro.CFrame = hrp.CFrame
-        FlyBodyGyro.Parent = hrp
-
-        hum.PlatformStand = true
-
-        FlyConnection = RunService.RenderStepped:Connect(function()
-            if not Toggles.Fly or not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                return
-            end
-
-            local cam = Workspace.CurrentCamera
-            local root = LocalPlayer.Character.HumanoidRootPart
-            local moveDir = Vector3.zero
-
-            -- Keyboard input
-            if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-                moveDir = moveDir + cam.CFrame.LookVector
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-                moveDir = moveDir - cam.CFrame.LookVector
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-                moveDir = moveDir - cam.CFrame.RightVector
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-                moveDir = moveDir + cam.CFrame.RightVector
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-                moveDir = moveDir + Vector3.new(0, 1, 0)
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
-                moveDir = moveDir - Vector3.new(0, 1, 0)
-            end
-
-            -- Mobile touch / thumbstick support
-            if moveDir.Magnitude == 0 and hum.MoveDirection.Magnitude > 0 then
-                local camLook = cam.CFrame.LookVector
-                local camRight = cam.CFrame.RightVector
-                local flatLook = Vector3.new(camLook.X, 0, camLook.Z).Unit
-                local flatRight = Vector3.new(camRight.X, 0, camRight.Z).Unit
-                
-                moveDir = (flatLook * hum.MoveDirection.Z * -1) + (flatRight * hum.MoveDirection.X)
-            end
-
-            if moveDir.Magnitude > 0 then
-                FlyBodyVelocity.Velocity = moveDir.Unit * FlySpeed
-            else
-                FlyBodyVelocity.Velocity = Vector3.zero
-            end
-
-            FlyBodyGyro.CFrame = cam.CFrame
-        end)
-    end)
-end
-
-StopFlying = function()
-    pcall(function()
-        if FlyConnection then
-            FlyConnection:Disconnect()
-            FlyConnection = nil
-        end
-        if FlyBodyVelocity then
-            FlyBodyVelocity:Destroy()
-            FlyBodyVelocity = nil
-        end
-        if FlyBodyGyro then
-            FlyBodyGyro:Destroy()
-            FlyBodyGyro = nil
-        end
-        local char = LocalPlayer.Character
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        if hum then
-            hum.PlatformStand = false
-        end
-    end)
-end
-
---------------------------------------------------------------------
--- 4. HITBOX EXPANDER ENGINE (Expands Enemy Hitboxes)
---------------------------------------------------------------------
-RestoreHitboxes = function()
-    pcall(function()
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character then
-                local hrp = player.Character:FindFirstChild("HumanoidRootPart")
-                if hrp then
-                    hrp.Size = Vector3.new(2, 2, 1)
-                    hrp.Transparency = 1
-                    hrp.CanCollide = false
-                end
-            end
-        end
-    end)
-end
-
-task.spawn(function()
-    while true do
-        task.wait(0.3)
-        if Toggles.HitboxExpander then
-            pcall(function()
-                for _, player in ipairs(Players:GetPlayers()) do
-                    if player ~= LocalPlayer and player.Character then
-                        local hrp = player.Character:FindFirstChild("HumanoidRootPart")
-                        local hum = player.Character:FindFirstChildOfClass("Humanoid")
-                        if hrp and hum and hum.Health > 0 then
-                            hrp.Size = Vector3.new(14, 14, 14)
-                            hrp.Transparency = 0.7
-                            hrp.BrickColor = BrickColor.new("Bright red")
-                            hrp.Material = Enum.Material.Neon
-                            hrp.CanCollide = false
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
+print("[JUNEJO SCRIPT HUB] Fight In A School Loaded Successfully!")
