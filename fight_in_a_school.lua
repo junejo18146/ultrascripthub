@@ -53,11 +53,10 @@ pcall(function()
 end)
 
 --------------------------------------------------------------------
--- CONFIGURATION & STATE (EXACT 5 USER REQUESTED FEATURES)
+-- CONFIGURATION & STATE (4 VERIFIED COMBAT FEATURES)
 --------------------------------------------------------------------
 local Toggles = {
     HitboxExpander = false,
-    AttackAura = false,
     PlayerESP = false,
     WalkSpeedBoost = false,
     InfiniteJump = false
@@ -194,61 +193,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 4. ATTACK AURA (AUTO PUNCH / COMBAT REMOTE & CLICK TRIGGER)
---------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        task.wait(0.12)
-        if Toggles.AttackAura then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local myHrp = char and char:FindFirstChild("HumanoidRootPart")
-                if not myHrp then return end
-
-                for _, enemy in ipairs(Players:GetPlayers()) do
-                    if enemy ~= LocalPlayer and enemy.Character then
-                        local enemyHrp = enemy.Character:FindFirstChild("HumanoidRootPart")
-                        local enemyHum = enemy.Character:FindFirstChildOfClass("Humanoid")
-                        
-                        if enemyHrp and enemyHum and enemyHum.Health > 0 then
-                            local dist = (myHrp.Position - enemyHrp.Position).Magnitude
-                            
-                            -- Range: 15 Studs
-                            if dist <= 15 then
-                                -- Check Combat Remotes
-                                local combatRemote = ReplicatedStorage:FindFirstChild("Combat", true) or 
-                                                     ReplicatedStorage:FindFirstChild("Punch", true) or 
-                                                     ReplicatedStorage:FindFirstChild("Hit", true) or 
-                                                     ReplicatedStorage:FindFirstChild("Attack", true)
-                                
-                                if combatRemote and combatRemote:IsA("RemoteEvent") then
-                                    combatRemote:FireServer("Light", enemyHrp)
-                                    combatRemote:FireServer(enemyHrp)
-                                end
-
-                                -- Check for equipped tool
-                                local tool = char:FindFirstChildWhichIsA("Tool")
-                                if tool then
-                                    tool:Activate()
-                                end
-
-                                -- Virtual Click simulation
-                                VirtualUser:CaptureController()
-                                VirtualUser:Button1Down(Vector2.new(0, 0))
-                                task.wait(0.02)
-                                VirtualUser:Button1Up(Vector2.new(0, 0))
-                                break
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
---------------------------------------------------------------------
--- 5. PLAYER ESP & HEALTH DISPLAY (WALLHACK)
+-- 4. PLAYER ESP & HEALTH DISPLAY (WALLHACK)
 --------------------------------------------------------------------
 local ESPFolder = Instance.new("Folder")
 ESPFolder.Name = "Junejo_PlayerESP"
@@ -339,7 +284,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 6. JUNEJO ULTRA SCRIPT HUB - OFFICIAL MASTER UI
+-- 5. JUNEJO ULTRA SCRIPT HUB - OFFICIAL MASTER UI (4 ROWS COMPACT)
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoFightInASchoolUI"
@@ -349,8 +294,8 @@ ScreenGui.DisplayOrder = 999999
 ScreenGui.Parent = UIContainer
 
 -- Total Height calculation:
--- Header (32) + Line (1) + Spacing (5) + (5 rows * 27) + Footer (36) = ~215px
-local TotalFrameHeight = 215
+-- Header (32) + Line (1) + Spacing (5) + (4 rows * 27) + Footer (36) = ~188px
+local TotalFrameHeight = 188
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
@@ -405,7 +350,6 @@ CloseBtn.MouseButton1Click:Connect(function()
     RestoreHitboxes()
     ClearPlayerESP()
     Toggles.HitboxExpander = false
-    Toggles.AttackAura = false
     Toggles.PlayerESP = false
     Toggles.WalkSpeedBoost = false
     Toggles.InfiniteJump = false
@@ -451,10 +395,10 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Content Frame
+-- Content Frame (4 rows)
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -24, 0, 138)
+ContentFrame.Size = UDim2.new(1, -24, 0, 112)
 ContentFrame.Position = UDim2.new(0, 12, 0, 38)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
@@ -525,7 +469,7 @@ local function AddToggleRow(text, configKey, callback)
 end
 
 --------------------------------------------------------------------
--- POPULATE ROWS (EXACT 5 USER REQUESTED FEATURES)
+-- POPULATE ROWS (EXACT 4 REMAINING FEATURES)
 --------------------------------------------------------------------
 -- 1. Hitbox Expander
 AddToggleRow("Hitbox Expander", "HitboxExpander", function(enabled)
@@ -536,15 +480,12 @@ AddToggleRow("Hitbox Expander", "HitboxExpander", function(enabled)
     end
 end)
 
--- 2. Attack Aura (Auto Punch)
-AddToggleRow("Attack Aura (Auto Punch)", "AttackAura")
-
--- 3. Player ESP
+-- 2. Player ESP
 AddToggleRow("Player ESP", "PlayerESP", function(enabled)
     if not enabled then ClearPlayerESP() end
 end)
 
--- 4. WalkSpeed Boost with Integrated Adjuster Pill (- / +)
+-- 3. WalkSpeed Boost with Integrated Adjuster Pill (- / +)
 local SpeedRow = Instance.new("Frame")
 SpeedRow.Name = "WalkSpeed_Row"
 SpeedRow.Size = UDim2.new(1, 0, 0, 23)
@@ -661,7 +602,7 @@ PlusBtn.MouseButton1Click:Connect(function()
     UpdateCharacterSpeed()
 end)
 
--- 5. Infinite Jump
+-- 4. Infinite Jump
 AddToggleRow("Infinite Jump", "InfiniteJump")
 
 --------------------------------------------------------------------
