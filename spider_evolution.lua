@@ -198,71 +198,78 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 3. ULTRA AUTO WINS ENGINE (REMOTES + TOUCH PADS + FINISH LINES)
+-- 3. CLEAN AUTO WINS ENGINE (NO ROBUX POPUPS, PURE WINS FARM)
 --------------------------------------------------------------------
+local function IsBlacklistedForWins(name)
+    local n = string.lower(name)
+    local badKeywords = {
+        "buy", "shop", "gamepass", "pass", "robux", "purchase", 
+        "product", "donate", "2x", "3x", "boost", "prompt", 
+        "price", "store", "pay", "order", "item", "devproduct", "spend"
+    }
+    for _, bad in ipairs(badKeywords) do
+        if string.find(n, bad) then
+            return true
+        end
+    end
+    return false
+end
+
 local function ProcessWins()
     pcall(function()
         local char = LocalPlayer.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
 
-        -- Method 1: ReplicatedStorage Win Remotes / Functions
+        -- 1. Physical Win Pads, Finish Lines, End Gates & Trophies in Workspace
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if not Toggles.AutoWins then break end
+            if obj:IsA("BasePart") then
+                local n = string.lower(obj.Name)
+                local parentName = obj.Parent and string.lower(obj.Parent.Name) or ""
+
+                -- Strictly avoid any shop or gamepass stands!
+                if not IsBlacklistedForWins(n) and not IsBlacklistedForWins(parentName) then
+                    if string.find(n, "win") or string.find(n, "finish") or string.find(n, "goal") or string.find(n, "trophy") or string.find(n, "endpad") or string.find(parentName, "win") or string.find(parentName, "finish") then
+                        if hrp and firetouchinterest then
+                            firetouchinterest(hrp, obj, 0)
+                            task.wait(0.01)
+                            firetouchinterest(hrp, obj, 1)
+                        end
+                    end
+                end
+            end
+            if obj:IsA("ProximityPrompt") and obj.Enabled then
+                local n = string.lower(obj.Name)
+                local parentName = obj.Parent and string.lower(obj.Parent.Name) or ""
+                if not IsBlacklistedForWins(n) and not IsBlacklistedForWins(parentName) then
+                    if string.find(n, "win") or string.find(n, "finish") or string.find(n, "claim") or string.find(parentName, "win") then
+                        if fireproximityprompt then
+                            fireproximityprompt(obj, 0)
+                            fireproximityprompt(obj)
+                        end
+                    end
+                end
+            end
+        end
+
+        -- 2. Pure Game Remotes in ReplicatedStorage (Strictly no shop/gamepass remotes!)
         for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
             if not Toggles.AutoWins then break end
             if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
                 local n = string.lower(obj.Name)
-                if string.find(n, "win") or string.find(n, "victory") or string.find(n, "finish") or string.find(n, "trophy") or string.find(n, "claimwin") or string.find(n, "addwin") or string.find(n, "givewin") then
-                    if obj:IsA("RemoteEvent") then
-                        obj:FireServer()
-                        obj:FireServer(1)
-                        obj:FireServer(true)
-                        obj:FireServer("Win")
-                    elseif obj:IsA("RemoteFunction") then
-                        obj:InvokeServer()
-                        obj:InvokeServer(1)
-                        obj:InvokeServer(true)
-                    end
-                end
-            end
-        end
+                local parentName = obj.Parent and string.lower(obj.Parent.Name) or ""
 
-        -- Method 2: Physical Win Pads, Finish Lines & End Gates in Workspace
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            if not Toggles.AutoWins then break end
-            local n = string.lower(obj.Name)
-            if string.find(n, "win") or string.find(n, "finish") or string.find(n, "victory") or string.find(n, "endpad") or string.find(n, "goal") or string.find(n, "trophy") then
-                if obj:IsA("BasePart") and hrp and firetouchinterest then
-                    firetouchinterest(hrp, obj, 0)
-                    task.wait(0.02)
-                    firetouchinterest(hrp, obj, 1)
-                end
-                if obj:IsA("ProximityPrompt") and obj.Enabled then
-                    if fireproximityprompt then
-                        fireproximityprompt(obj, 0)
-                        fireproximityprompt(obj)
-                    end
-                    if obj.InputHoldBegin then
-                        obj:InputHoldBegin()
-                        task.wait(0.04)
-                        obj:InputHoldEnd()
-                    end
-                end
-            end
-        end
-
-        -- Method 3: PlayerGui Win Buttons / Claim Rewards
-        local pGui = LocalPlayer:FindFirstChild("PlayerGui")
-        if pGui then
-            for _, btn in ipairs(pGui:GetDescendants()) do
-                if not Toggles.AutoWins then break end
-                if (btn:IsA("TextButton") or btn:IsA("ImageButton")) and btn.Visible then
-                    local bText = btn:IsA("TextButton") and string.lower(btn.Text) or ""
-                    local bName = string.lower(btn.Name)
-                    if string.find(bName, "win") or string.find(bText, "win") or (string.find(bName, "claim") and string.find(bText, "win")) then
-                        if firesignal then
-                            firesignal(btn.MouseButton1Click)
-                            firesignal(btn.Activated)
+                if not IsBlacklistedForWins(n) and not IsBlacklistedForWins(parentName) then
+                    if string.find(n, "win") or string.find(n, "finish") or string.find(n, "victory") or string.find(n, "claimwin") or string.find(n, "addwin") or string.find(n, "reachgoal") then
+                        if obj:IsA("RemoteEvent") then
+                            obj:FireServer()
+                            obj:FireServer(1)
+                            obj:FireServer(true)
+                        elseif obj:IsA("RemoteFunction") then
+                            obj:InvokeServer()
+                            obj:InvokeServer(1)
+                            obj:InvokeServer(true)
                         end
-                        if btn.Activate then btn:Activate() end
                     end
                 end
             end
