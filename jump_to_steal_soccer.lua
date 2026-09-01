@@ -1,5 +1,5 @@
 --[[
-    JUNEJO ULTRA SCRIPT HUB - JUMP TO STEAL SOCCER PLAYERS (SOURCE BACKUP)
+    JUNEJO ULTRA SCRIPT HUB - JUMP TO STEAL SOCCER PLAYERS (UPDATED)
     Target Game: Jump To Steal Soccer Players (Roblox)
     Author: Made by Junejo (junejo18146)
     Repository: junejo18146/ultrascripthub
@@ -13,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
+local StarterGui = game:GetService("StarterGui")
 local CoreGui = game:GetService("CoreGui")
 
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
@@ -51,30 +52,32 @@ pcall(function()
 end)
 
 --------------------------------------------------------------------
--- CONFIGURATION & STATE (8 VERIFIED CORE FEATURES)
+-- CONFIGURATION & STATE (EXACT 6 REQUESTED FEATURES)
 --------------------------------------------------------------------
 local Toggles = {
-    AutoSteal = false,
-    AutoTeleportToBase = false,
     SoccerESP = false,
-    Noclip = false,
+    AutoCollectCash = false,
+    AutoRebirth = false,
+    FlyMode = false,
     WalkSpeedBoost = false,
-    InfiniteJump = false,
-    AutoRebirth = false
+    InfiniteJump = false
 }
 
 local CustomSpeedValue = 50
-local SavedBaseCFrame = nil
+local FlySpeed = 50
 
--- Default fallback base coordinate
-task.spawn(function()
-    task.wait(1)
+--------------------------------------------------------------------
+-- NOTIFICATION HELPER
+--------------------------------------------------------------------
+local function ShowNotification(title, text)
     pcall(function()
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            SavedBaseCFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
-        end
+        StarterGui:SetCore("SendNotification", {
+            Title = title,
+            Text = text,
+            Duration = 3.5
+        })
     end)
-end)
+end
 
 --------------------------------------------------------------------
 -- ANTI-AFK SYSTEM (PREVENTS 20-MINUTE IDLE DISCONNECT)
@@ -88,43 +91,7 @@ LocalPlayer.Idled:Connect(function()
 end)
 
 --------------------------------------------------------------------
--- PROXIMITY PROMPT HELPER
---------------------------------------------------------------------
-local function InstantTriggerPrompt(prompt)
-    if not prompt or not prompt.Enabled then return end
-    pcall(function()
-        if fireproximityprompt then
-            fireproximityprompt(prompt, 0)
-            fireproximityprompt(prompt)
-        end
-        if prompt.InputHoldBegin and prompt.InputHoldEnd then
-            prompt:InputHoldBegin()
-            task.wait(0.04)
-            prompt:InputHoldEnd()
-        end
-    end)
-end
-
---------------------------------------------------------------------
--- 1. NOCLIP ENGINE
---------------------------------------------------------------------
-RunService.Stepped:Connect(function()
-    if Toggles.Noclip then
-        pcall(function()
-            local char = LocalPlayer.Character
-            if char then
-                for _, part in ipairs(char:GetDescendants()) do
-                    if part:IsA("BasePart") and part.CanCollide then
-                        part.CanCollide = false
-                    end
-                end
-            end
-        end)
-    end
-end)
-
---------------------------------------------------------------------
--- 2. INFINITE JUMP ENGINE (CLIMB TOWERS EFFORTLESSLY)
+-- 1. INFINITE JUMP ENGINE
 --------------------------------------------------------------------
 UserInputService.JumpRequest:Connect(function()
     if Toggles.InfiniteJump and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
@@ -149,7 +116,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 --------------------------------------------------------------------
--- 3. WALKSPEED BOOST ENGINE (DUAL ENGINE)
+-- 2. WALKSPEED BOOST ENGINE (DUAL ENGINE)
 --------------------------------------------------------------------
 local function UpdateCharacterSpeed()
     pcall(function()
@@ -181,90 +148,136 @@ RunService.RenderStepped:Connect(function(deltaTime)
     end)
 end)
 
---------------------------------------------------------------------
--- 4. AUTO STEAL & AUTO TELEPORT TO BASE ENGINE
---------------------------------------------------------------------
-local function TeleportHome()
-    pcall(function()
-        if SavedBaseCFrame and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            LocalPlayer.Character.HumanoidRootPart.CFrame = SavedBaseCFrame + Vector3.new(0, 3, 0)
-        end
-    end)
-end
-
--- Monitor when player picks up / steals a soccer player or lucky block
-local function BindCharacterCarryingListener(char)
-    if not char then return end
-    char.ChildAdded:Connect(function(child)
-        if Toggles.AutoTeleportToBase and (child:IsA("Tool") or child:IsA("Model")) then
-            task.wait(0.12)
-            TeleportHome()
-        end
-    end)
-end
-
-if LocalPlayer.Character then
-    BindCharacterCarryingListener(LocalPlayer.Character)
-end
-
-LocalPlayer.CharacterAdded:Connect(function(char)
+LocalPlayer.CharacterAdded:Connect(function()
     task.wait(0.4)
-    BindCharacterCarryingListener(char)
     if Toggles.WalkSpeedBoost then
         UpdateCharacterSpeed()
     end
 end)
 
--- Auto Steal Loop
+--------------------------------------------------------------------
+-- 3. FLY MODE ENGINE (WASD & MOBILE CONTROLS)
+--------------------------------------------------------------------
+local Flying = false
+local BodyGyro, BodyVelocity
+
+local function StartFlying()
+    pcall(function()
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if not hrp or not hum then return end
+
+        Flying = true
+        hum.PlatformStand = true
+
+        BodyGyro = Instance.new("BodyGyro")
+        BodyGyro.P = 9e4
+        BodyGyro.maxTorque = Vector3.new(9e9, 9e9, 9e9)
+        BodyGyro.cframe = hrp.CFrame
+        BodyGyro.Parent = hrp
+
+        BodyVelocity = Instance.new("BodyVelocity")
+        BodyVelocity.velocity = Vector3.zero
+        BodyVelocity.maxForce = Vector3.new(9e9, 9e9, 9e9)
+        BodyVelocity.Parent = hrp
+
+        task.spawn(function()
+            while Flying and Toggles.FlyMode and hrp.Parent and hum.Health > 0 do
+                local cam = Workspace.CurrentCamera
+                local moveDir = hum.MoveDirection
+                
+                BodyGyro.cframe = cam.CFrame
+
+                if moveDir.Magnitude > 0 then
+                    -- Fly forward/direction with Camera pitch
+                    local flyVector = (cam.CFrame.LookVector * (moveDir.Z * -1)) + (cam.CFrame.RightVector * moveDir.X)
+                    if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+                        flyVector = flyVector + Vector3.new(0, 1, 0)
+                    end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+                        flyVector = flyVector - Vector3.new(0, 1, 0)
+                    end
+                    BodyVelocity.velocity = flyVector.Unit * FlySpeed
+                else
+                    if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+                        BodyVelocity.velocity = Vector3.new(0, FlySpeed, 0)
+                    elseif UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+                        BodyVelocity.velocity = Vector3.new(0, -FlySpeed, 0)
+                    else
+                        BodyVelocity.velocity = Vector3.zero
+                    end
+                end
+                RunService.RenderStepped:Wait()
+            end
+
+            -- Cleanup flight
+            if BodyGyro then BodyGyro:Destroy() end
+            if BodyVelocity then BodyVelocity:Destroy() end
+            if hum then hum.PlatformStand = false end
+            Flying = false
+        end)
+    end)
+end
+
+local function StopFlying()
+    Flying = false
+    pcall(function()
+        if BodyGyro then BodyGyro:Destroy() end
+        if BodyVelocity then BodyVelocity:Destroy() end
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if hum then hum.PlatformStand = false end
+    end)
+end
+
+--------------------------------------------------------------------
+-- 4. AUTO COLLECT BASE CASH (AUTOMATIC MONEY HARVESTER)
+--------------------------------------------------------------------
 task.spawn(function()
     while true do
-        task.wait(0.15)
-        if Toggles.AutoSteal then
+        task.wait(0.5)
+        if Toggles.AutoCollectCash then
             pcall(function()
                 local char = LocalPlayer.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
                 if not hrp then return end
 
-                local stolen = false
-
-                -- Scan for ProximityPrompts across Workspace
-                for _, prompt in ipairs(Workspace:GetDescendants()) do
-                    if not Toggles.AutoSteal then break end
-                    if prompt:IsA("ProximityPrompt") and prompt.Enabled then
-                        local pPart = prompt.Parent
-                        if pPart and pPart:IsA("BasePart") then
-                            local dist = (pPart.Position - hrp.Position).Magnitude
-                            -- Range: Within prompt distance + 10 studs
-                            if dist <= prompt.MaxActivationDistance + 10 then
-                                local act = string.lower(prompt.ActionText .. " " .. prompt.ObjectText)
-                                if string.find(act, "steal") or string.find(act, "take") or string.find(act, "grab") or string.find(act, "lucky") or string.find(act, "block") or string.find(act, "soccer") or string.find(act, "player") or act == " " or act == "" then
-                                    InstantTriggerPrompt(prompt)
-                                    stolen = true
-                                    
-                                    if Toggles.AutoTeleportToBase then
-                                        task.wait(0.15)
-                                        TeleportHome()
-                                    end
-                                    break
+                -- 1. Scan for Cash Collector Pads in Workspace & Plots
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    if not Toggles.AutoCollectCash then break end
+                    if obj:IsA("BasePart") then
+                        local name = string.lower(obj.Name)
+                        if string.find(name, "collect") or string.find(name, "cash") or string.find(name, "bank") or string.find(name, "deposit") or string.find(name, "withdraw") or string.find(name, "money") then
+                            -- Check if part belongs to player's base or nearby collector
+                            local dist = (obj.Position - hrp.Position).Magnitude
+                            if dist <= 40 then
+                                if firetouchinterest then
+                                    firetouchinterest(hrp, obj, 0)
+                                    task.wait(0.02)
+                                    firetouchinterest(hrp, obj, 1)
                                 end
+                            end
+                        end
+                    elseif obj:IsA("ProximityPrompt") and obj.Enabled then
+                        local act = string.lower(obj.ActionText .. " " .. obj.ObjectText)
+                        if string.find(act, "collect") or string.find(act, "claim") or string.find(act, "cash") or string.find(act, "money") or string.find(act, "take") then
+                            if fireproximityprompt then
+                                fireproximityprompt(obj, 0)
+                                fireproximityprompt(obj)
                             end
                         end
                     end
                 end
 
-                -- Fallback: Scan for Remotes named Steal or Take in ReplicatedStorage
-                if not stolen then
-                    for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                        if remote:IsA("RemoteEvent") then
-                            local name = string.lower(remote.Name)
-                            if string.find(name, "steal") or string.find(name, "take") or string.find(name, "loot") or string.find(name, "claim") then
-                                remote:FireServer()
-                                remote:FireServer(true)
-                                if Toggles.AutoTeleportToBase then
-                                    task.wait(0.15)
-                                    TeleportHome()
-                                end
-                            end
+                -- 2. Fire Collection Remotes in ReplicatedStorage
+                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
+                    if not Toggles.AutoCollectCash then break end
+                    if remote:IsA("RemoteEvent") then
+                        local rName = string.lower(remote.Name)
+                        if string.find(rName, "collect") or string.find(rName, "claimcash") or string.find(rName, "collectmoney") or string.find(rName, "withdraw") then
+                            remote:FireServer()
+                            remote:FireServer(true)
                         end
                     end
                 end
@@ -274,7 +287,88 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 5. SOCCER PLAYERS & LUCKY BLOCKS ESP (WALLHACK)
+-- 5. AUTO REBIRTH (WITH LIVE REQUIREMENTS SCREEN FEEDBACK)
+--------------------------------------------------------------------
+local LastRebirthNoticeTime = 0
+
+task.spawn(function()
+    while true do
+        task.wait(1.5)
+        if Toggles.AutoRebirth then
+            pcall(function()
+                local rebirthSuccess = false
+                local requiredInfo = nil
+
+                -- Check PlayerGui for Rebirth Requirements & Cost
+                local pGui = LocalPlayer:FindFirstChild("PlayerGui")
+                if pGui then
+                    for _, lbl in ipairs(pGui:GetDescendants()) do
+                        if lbl:IsA("TextLabel") and lbl.Visible then
+                            local txt = string.lower(lbl.Text)
+                            if string.find(txt, "need") or string.find(txt, "cost") or string.find(txt, "require") or string.find(txt, "rebirth for") then
+                                requiredInfo = lbl.Text
+                                break
+                            end
+                        end
+                    end
+
+                    -- Trigger Rebirth button if visible and active
+                    for _, btn in ipairs(pGui:GetDescendants()) do
+                        if (btn:IsA("TextButton") or btn:IsA("ImageButton")) and btn.Visible then
+                            local txt = btn:IsA("TextButton") and string.lower(btn.Text) or ""
+                            local name = string.lower(btn.Name)
+                            if string.find(name, "rebirth") or string.find(txt, "rebirth") or string.find(name, "prestige") then
+                                if firesignal then
+                                    firesignal(btn.MouseButton1Click)
+                                    firesignal(btn.Activated)
+                                    rebirthSuccess = true
+                                end
+                            end
+                        end
+                    end
+                end
+
+                -- Fire Rebirth Remotes in ReplicatedStorage
+                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
+                    if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
+                        local name = string.lower(remote.Name)
+                        if string.find(name, "rebirth") or string.find(name, "prestige") or string.find(name, "ascend") then
+                            if remote:IsA("RemoteEvent") then
+                                remote:FireServer()
+                                remote:FireServer(1)
+                                remote:FireServer(true)
+                                rebirthSuccess = true
+                            elseif remote:IsA("RemoteFunction") then
+                                remote:InvokeServer()
+                                rebirthSuccess = true
+                            end
+                        end
+                    end
+                end
+
+                -- Screen Status Notification (Throttle to every 5 seconds)
+                local now = tick()
+                if now - LastRebirthNoticeTime >= 5 then
+                    LastRebirthNoticeTime = now
+                    
+                    -- Check player stats in leaderstats
+                    local leaderstats = LocalPlayer:FindFirstChild("leaderstats")
+                    local cashStat = leaderstats and (leaderstats:FindFirstChild("Cash") or leaderstats:FindFirstChild("Money") or leaderstats:FindFirstChild("Coins"))
+                    local currentCash = cashStat and tostring(cashStat.Value) or "Grinding..."
+
+                    if requiredInfo then
+                        ShowNotification("Auto Rebirth Status", requiredInfo)
+                    else
+                        ShowNotification("Auto Rebirth Active", "Current Cash: " .. currentCash .. "\nChecking rebirth requirements...")
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+--------------------------------------------------------------------
+-- 6. SOCCER PLAYERS & LUCKY BLOCKS ESP (WALLHACK)
 --------------------------------------------------------------------
 local ESPFolder = Instance.new("Folder")
 ESPFolder.Name = "Junejo_SoccerESP"
@@ -301,7 +395,7 @@ local function CreateSoccerESP(item)
     -- Vibrant Neon Highlight Box
     local hl = Instance.new("Highlight")
     hl.Adornee = item
-    hl.FillColor = Color3.fromRGB(0, 230, 118) -- Soccer Field Green
+    hl.FillColor = Color3.fromRGB(0, 230, 118)
     hl.OutlineColor = Color3.fromRGB(255, 255, 255)
     hl.FillTransparency = 0.45
     hl.OutlineTransparency = 0
@@ -356,7 +450,6 @@ local function IsSoccerTarget(obj)
             return true
         end
     end
-    -- Check if object contains a Steal prompt
     if obj:FindFirstChildWhichIsA("ProximityPrompt", true) then
         return true
     end
@@ -389,53 +482,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 6. AUTO REBIRTH ENGINE
---------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        task.wait(1)
-        if Toggles.AutoRebirth then
-            pcall(function()
-                -- 1. Fire Rebirth Remotes in ReplicatedStorage
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if not Toggles.AutoRebirth then break end
-                    if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
-                        local name = string.lower(remote.Name)
-                        if string.find(name, "rebirth") or string.find(name, "prestige") or string.find(name, "ascend") then
-                            if remote:IsA("RemoteEvent") then
-                                remote:FireServer()
-                                remote:FireServer(1)
-                                remote:FireServer(true)
-                            elseif remote:IsA("RemoteFunction") then
-                                remote:InvokeServer()
-                            end
-                        end
-                    end
-                end
-
-                -- 2. Click Rebirth GUI Buttons if visible
-                local pGui = LocalPlayer:FindFirstChild("PlayerGui")
-                if pGui then
-                    for _, btn in ipairs(pGui:GetDescendants()) do
-                        if (btn:IsA("TextButton") or btn:IsA("ImageButton")) and btn.Visible then
-                            local txt = btn:IsA("TextButton") and string.lower(btn.Text) or ""
-                            local name = string.lower(btn.Name)
-                            if string.find(name, "rebirth") or string.find(txt, "rebirth") or string.find(name, "prestige") or string.find(txt, "prestige") then
-                                if firesignal then
-                                    firesignal(btn.MouseButton1Click)
-                                    firesignal(btn.Activated)
-                                end
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
---------------------------------------------------------------------
--- 7. JUNEJO ULTRA SCRIPT HUB - MASTER UI
+-- 7. JUNEJO ULTRA SCRIPT HUB - MASTER UI (6 ROWS COMPACT)
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoJumpToStealSoccerUI"
@@ -444,7 +491,7 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999999
 ScreenGui.Parent = UIContainer
 
-local TotalFrameHeight = 290
+local TotalFrameHeight = 240
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
@@ -497,13 +544,13 @@ CloseBtn.Parent = Header
 
 CloseBtn.MouseButton1Click:Connect(function()
     ClearSoccerESP()
-    Toggles.AutoSteal = false
-    Toggles.AutoTeleportToBase = false
+    StopFlying()
     Toggles.SoccerESP = false
-    Toggles.Noclip = false
+    Toggles.AutoCollectCash = false
+    Toggles.AutoRebirth = false
+    Toggles.FlyMode = false
     Toggles.WalkSpeedBoost = false
     Toggles.InfiniteJump = false
-    Toggles.AutoRebirth = false
     UpdateCharacterSpeed()
     ScreenGui:Destroy()
 end)
@@ -546,10 +593,10 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Content Frame
+-- Content Frame (6 Rows)
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -24, 0, 216)
+ContentFrame.Size = UDim2.new(1, -24, 0, 164)
 ContentFrame.Position = UDim2.new(0, 12, 0, 38)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
@@ -620,77 +667,34 @@ local function AddToggleRow(text, configKey, callback)
 end
 
 --------------------------------------------------------------------
--- POPULATE ROWS (EXACT 8 FEATURES)
+-- POPULATE EXACT 6 ROWS
 --------------------------------------------------------------------
 
--- 1. Auto Steal
-AddToggleRow("Auto Steal", "AutoSteal")
-
--- 2. Auto Teleport to Base
-AddToggleRow("Auto Teleport to Base", "AutoTeleportToBase")
-
--- 3. Set Base Position (1-Click Action Button Row)
-local SetBaseRow = Instance.new("Frame")
-SetBaseRow.Name = "SetBase_Row"
-SetBaseRow.Size = UDim2.new(1, 0, 0, 23)
-SetBaseRow.BackgroundTransparency = 1
-SetBaseRow.Parent = ContentFrame
-
-local SetBaseLabel = Instance.new("TextLabel")
-SetBaseLabel.Size = UDim2.new(1, -75, 1, 0)
-SetBaseLabel.BackgroundTransparency = 1
-SetBaseLabel.Text = "Set Base Position"
-SetBaseLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
-SetBaseLabel.TextSize = 12
-SetBaseLabel.Font = Enum.Font.GothamBold
-SetBaseLabel.TextXAlignment = Enum.TextXAlignment.Left
-SetBaseLabel.Parent = SetBaseRow
-
-local SetBaseBtn = Instance.new("TextButton")
-SetBaseBtn.Size = UDim2.new(0, 70, 0, 20)
-SetBaseBtn.Position = UDim2.new(1, -70, 0.5, -10)
-SetBaseBtn.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-SetBaseBtn.Text = "Set Base"
-SetBaseBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
-SetBaseBtn.TextSize = 11
-SetBaseBtn.Font = Enum.Font.GothamBold
-SetBaseBtn.Parent = SetBaseRow
-
-local SetCorner = Instance.new("UICorner")
-SetCorner.CornerRadius = UDim.new(0, 4)
-SetCorner.Parent = SetBaseBtn
-
-local SetStroke = Instance.new("UIStroke")
-SetStroke.Color = Color3.fromRGB(45, 45, 55)
-SetStroke.Thickness = 1
-SetStroke.Parent = SetBaseBtn
-
-SetBaseBtn.MouseButton1Click:Connect(function()
-    pcall(function()
-        local char = LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            SavedBaseCFrame = hrp.CFrame
-            SetBaseBtn.Text = "Saved!"
-            SetBaseBtn.TextColor3 = Color3.fromRGB(50, 215, 75)
-            SetStroke.Color = Color3.fromRGB(50, 215, 75)
-            task.wait(1.5)
-            SetBaseBtn.Text = "Set Base"
-            SetBaseBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
-            SetStroke.Color = Color3.fromRGB(45, 45, 55)
-        end
-    end)
-end)
-
--- 4. Soccer Players ESP
+-- 1. Soccer Players ESP
 AddToggleRow("Soccer Players ESP", "SoccerESP", function(enabled)
     if not enabled then ClearSoccerESP() end
 end)
 
--- 5. Noclip
-AddToggleRow("Noclip", "Noclip")
+-- 2. Auto Collect Base Cash
+AddToggleRow("Auto Collect Base Cash", "AutoCollectCash")
 
--- 6. WalkSpeed Boost with Integrated Adjuster Pill (- / +)
+-- 3. Auto Rebirth (With Requirement Screen Alerts)
+AddToggleRow("Auto Rebirth", "AutoRebirth", function(enabled)
+    if enabled then
+        ShowNotification("Auto Rebirth Enabled", "Checking Rebirth Requirements...")
+    end
+end)
+
+-- 4. Fly Mode
+AddToggleRow("Fly Mode", "FlyMode", function(enabled)
+    if enabled then
+        StartFlying()
+    else
+        StopFlying()
+    end
+end)
+
+-- 5. WalkSpeed Boost with Integrated Adjuster Pill (- / +)
 local SpeedRow = Instance.new("Frame")
 SpeedRow.Name = "WalkSpeed_Row"
 SpeedRow.Size = UDim2.new(1, 0, 0, 23)
@@ -807,11 +811,8 @@ PlusBtn.MouseButton1Click:Connect(function()
     UpdateCharacterSpeed()
 end)
 
--- 7. Infinite Jump
+-- 6. Infinite Jump
 AddToggleRow("Infinite Jump", "InfiniteJump")
-
--- 8. Auto Rebirth
-AddToggleRow("Auto Rebirth", "AutoRebirth")
 
 --------------------------------------------------------------------
 -- FOOTER (PERMANENT OFFICIAL BRANDING)
