@@ -1,11 +1,11 @@
 --[[
-    JUNEJO ULTRA SCRIPT HUB - JUMP TO STEAL SOCCER PLAYERS (V2 CLEAN)
+    JUNEJO ULTRA SCRIPT HUB - JUMP TO STEAL SOCCER PLAYERS (100% CLEAN)
     Target Game: Jump To Steal Soccer Players (Roblox)
     Author: Made by Junejo (junejo18146)
     Repository: junejo18146/ultrascripthub
     Theme: Unified Junejo Executive Dark UI (#0F0F11) - Flat & Borderless Standard
     Status: Direct Standalone Executable
-    Features (5 Standard Clean Rows):
+    Features (5 Clean Rows):
       1. Soccer Players ESP
       2. Auto Rebirth
       3. Fly Mode
@@ -47,20 +47,20 @@ end
 
 local UIContainer = GetSafeUIContainer()
 
--- Cleanup ALL previous UI instances
+-- AGGRESSIVE CLEANUP: Remove any old lingering UI instances completely
 pcall(function()
-    local names = {
-        "JunejoJumpToStealSoccerUI_v2", 
-        "JunejoJumpToStealSoccerUI", 
-        "JunejoHubUI_Soccer", 
-        "JunejoHubUI"
-    }
-    for _, name in ipairs(names) do
-        if CoreGui and CoreGui:FindFirstChild(name) then CoreGui[name]:Destroy() end
-        if LocalPlayer and LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild(name) then
-            LocalPlayer.PlayerGui[name]:Destroy()
+    local searchLocations = {CoreGui, gethui and gethui(), LocalPlayer:FindFirstChild("PlayerGui")}
+    for _, loc in ipairs(searchLocations) do
+        if loc then
+            for _, child in ipairs(loc:GetChildren()) do
+                if child:IsA("ScreenGui") then
+                    local lowName = string.lower(child.Name)
+                    if string.find(lowName, "junejo") or string.find(lowName, "soccer") or string.find(lowName, "steal") then
+                        child:Destroy()
+                    end
+                end
+            end
         end
-        if gethui and gethui():FindFirstChild(name) then gethui()[name]:Destroy() end
     end
 end)
 
@@ -229,10 +229,10 @@ local function StopFlying()
 end
 
 --------------------------------------------------------------------
--- 4. AUTO REBIRTH (MULTI-ENGINE BACKGROUND LOOP)
+-- 4. AUTO REBIRTH (MULTI-ENGINE BACKGROUND TRIGGER)
 --------------------------------------------------------------------
 local function ExecuteRebirthTriggers()
-    -- Method 1: Remote Events & Functions in ReplicatedStorage
+    -- Remotes in ReplicatedStorage
     for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
         if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
             local n = string.lower(obj.Name)
@@ -254,7 +254,7 @@ local function ExecuteRebirthTriggers()
         end
     end
 
-    -- Method 2: Physical Rebirth Pads & Proximity Prompts in Workspace
+    -- Physical Pads & Proximity Prompts
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
     for _, obj in ipairs(Workspace:GetDescendants()) do
@@ -283,7 +283,7 @@ local function ExecuteRebirthTriggers()
         end
     end
 
-    -- Method 3: PlayerGui Rebirth Buttons (firesignal, activate, and screen click)
+    -- PlayerGui Rebirth Buttons
     local pGui = LocalPlayer:FindFirstChild("PlayerGui")
     if pGui then
         for _, btn in ipairs(pGui:GetDescendants()) do
@@ -325,7 +325,7 @@ end)
 -- 5. SOCCER PLAYERS & LUCKY BLOCKS ESP (WALLHACK)
 --------------------------------------------------------------------
 local ESPFolder = Instance.new("Folder")
-ESPFolder.Name = "Junejo_SoccerESP"
+ESPFolder.Name = "Junejo_SoccerESP_Folder"
 ESPFolder.Parent = UIContainer
 
 local function ClearSoccerESP()
@@ -433,16 +433,15 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 6. JUNEJO ULTRA SCRIPT HUB - MASTER UI (STRICT 5 FLAT ROWS)
+-- 6. JUNEJO ULTRA SCRIPT HUB - MASTER UI (STRICT 5 FLAT ROWS ONLY)
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "JunejoJumpToStealSoccerUI_v2"
+ScreenGui.Name = "Junejo_SoccerSteal_CleanUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999999
 ScreenGui.Parent = UIContainer
 
--- Total Height: Header 32 + Line 1 + Spacing 5 + (5 rows * 27) + Footer 36 = 209px (~210px)
 local TotalFrameHeight = 210
 
 local MainFrame = Instance.new("Frame")
@@ -618,7 +617,7 @@ local function AddToggleRow(text, configKey, callback)
 end
 
 --------------------------------------------------------------------
--- POPULATE EXACT 5 CLEAN ROWS
+-- POPULATE EXACT 5 CLEAN ROWS (NO EXTRA TEXT OR LABELS)
 --------------------------------------------------------------------
 
 -- 1. Soccer Players ESP
@@ -626,7 +625,7 @@ AddToggleRow("Soccer Players ESP", "SoccerESP", function(enabled)
     if not enabled then ClearSoccerESP() end
 end)
 
--- 2. Auto Rebirth (Clean row without any sub-label)
+-- 2. Auto Rebirth
 AddToggleRow("Auto Rebirth", "AutoRebirth")
 
 -- 3. Fly Mode
@@ -788,4 +787,4 @@ FooterSub.TextSize = 9
 FooterSub.Font = Enum.Font.GothamMedium
 FooterSub.Parent = Footer
 
-print("[JUNEJO SCRIPT HUB] Jump To Steal Soccer Players Loaded Cleanly!")
+print("[JUNEJO SCRIPT HUB] Jump To Steal Soccer Loaded Cleanly!")
