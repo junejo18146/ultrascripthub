@@ -41,13 +41,11 @@ for _, name in ipairs({"JunejoHubUI_NightsForest", "JunejoNightsInTheForestUI", 
 end
 
 --------------------------------------------------------------------
--- CONFIGURATION & STATE
+-- CONFIGURATION & STATE (5 SELECTED FEATURES)
 --------------------------------------------------------------------
 local Toggles = {
-    AutoCampfire = false,
     ChildrenESP = false,
     ItemsESP = false,
-    GodMode = false,
     Fly = false,
     InfiniteJump = false
 }
@@ -56,7 +54,7 @@ local FlySpeed = 50
 local CampfirePosition = nil
 local SavedSpawnPosition = nil
 
--- Record initial position as emergency campfire fallback
+-- Record initial spawn position as safe campfire backup
 pcall(function()
     local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
     local hrp = char:WaitForChild("HumanoidRootPart", 5)
@@ -102,11 +100,9 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 --------------------------------------------------------------------
--- 2. CAMPFIRE DETECTOR & LOCATOR HELPER
+-- 2. CAMPFIRE LOCATOR & TELEPORT ENGINE
 --------------------------------------------------------------------
 local function FindCampfire()
-    local target = nil
-    
     -- Priority 1: Check known workspace paths
     local candidates = {
         Workspace:FindFirstChild("Campground"),
@@ -149,67 +145,6 @@ local function FindCampfire()
     return nil
 end
 
---------------------------------------------------------------------
--- 3. AUTO CAMPFIRE (AUTO FUEL & FEED ENGINE)
---------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        task.wait(1.5)
-        if Toggles.AutoCampfire then
-            pcall(function()
-                local campPart = FindCampfire()
-                local campPos = campPart and campPart.Position or SavedSpawnPosition
-                
-                if campPos then
-                    CampfirePosition = campPos
-                    
-                    -- Trigger any ProximityPrompts on the Campfire itself (Add Fuel, Upgrade Fire)
-                    if campPart then
-                        for _, prompt in ipairs(campPart:GetDescendants()) do
-                            if prompt:IsA("ProximityPrompt") and prompt.Enabled then
-                                pcall(function()
-                                    fireproximityprompt(prompt, 0)
-                                end)
-                            end
-                        end
-                        if campPart.Parent then
-                            for _, prompt in ipairs(campPart.Parent:GetDescendants()) do
-                                if prompt:IsA("ProximityPrompt") and prompt.Enabled then
-                                    pcall(function()
-                                        fireproximityprompt(prompt, 0)
-                                    end)
-                                end
-                            end
-                        end
-                    end
-                    
-                    -- Search for nearby logs, wood, sticks, fuel to feed into campfire
-                    for _, item in ipairs(Workspace:GetDescendants()) do
-                        if item:IsA("BasePart") and not item.Anchored and item:IsDescendantOf(Workspace) then
-                            local itemName = string.lower(item.Name)
-                            if string.find(itemName, "log") or string.find(itemName, "wood") or string.find(itemName, "fuel") or string.find(itemName, "stick") or string.find(itemName, "coal") then
-                                -- Check if within 120 studs
-                                local dist = (item.Position - campPos).Magnitude
-                                if dist < 120 and dist > 4 then
-                                    item.CFrame = CFrame.new(campPos + Vector3.new(0, 1.5, 0))
-                                    -- Check if item has pickup prompt
-                                    local p = item:FindFirstChildWhichIsA("ProximityPrompt")
-                                    if p and p.Enabled then
-                                        pcall(function() fireproximityprompt(p, 0) end)
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
---------------------------------------------------------------------
--- 4. TELEPORT TO CAMPFIRE (EMERGENCY BASE TP)
---------------------------------------------------------------------
 local function TeleportToCampfire()
     pcall(function()
         local char = LocalPlayer.Character
@@ -228,7 +163,7 @@ local function TeleportToCampfire()
 end
 
 --------------------------------------------------------------------
--- 5. MISSING CHILDREN ESP
+-- 3. MISSING CHILDREN ESP
 --------------------------------------------------------------------
 local ChildrenESPFolder = Instance.new("Folder")
 ChildrenESPFolder.Name = "Junejo_ChildrenESP"
@@ -249,7 +184,6 @@ local function IsChildModel(model)
         return true
     end
     
-    -- Check for child NPC attributes or tags
     if model:GetAttribute("IsChild") or model:GetAttribute("MissingChild") then
         return true
     end
@@ -331,7 +265,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 6. ITEMS & CHESTS ESP
+-- 4. ITEMS & CHESTS ESP
 --------------------------------------------------------------------
 local ItemsESPFolder = Instance.new("Folder")
 ItemsESPFolder.Name = "Junejo_ItemsESP"
@@ -373,7 +307,7 @@ local function CreateItemESP(target, labelText)
     espHolder.Name = id
     espHolder.Parent = ItemsESPFolder
     
-    -- Lime/Gold Highlight
+    -- Gold Highlight
     local hl = Instance.new("Highlight")
     hl.Adornee = target
     hl.FillColor = Color3.fromRGB(255, 200, 0)
@@ -439,61 +373,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 7. GODMODE & AUTO HEAL ENGINE
---------------------------------------------------------------------
-local HealthConn = nil
-
-local function EnableGodMode(char)
-    if not char then return end
-    local hum = char:WaitForChild("Humanoid", 5)
-    if not hum then return end
-    
-    pcall(function()
-        hum.MaxHealth = math.huge
-        hum.Health = math.huge
-        hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-        hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
-        hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
-    end)
-    
-    if HealthConn then HealthConn:Disconnect() end
-    HealthConn = hum.HealthChanged:Connect(function(health)
-        if Toggles.GodMode and health < hum.MaxHealth then
-            pcall(function()
-                hum.Health = hum.MaxHealth
-            end)
-        end
-    end)
-end
-
-RunService.Heartbeat:Connect(function()
-    if Toggles.GodMode then
-        pcall(function()
-            local char = LocalPlayer.Character
-            local hum = char and char:FindFirstChildOfClass("Humanoid")
-            if hum then
-                if hum.Health < hum.MaxHealth or hum.Health < 100 then
-                    hum.MaxHealth = math.huge
-                    hum.Health = math.huge
-                end
-            end
-        end)
-    end
-end)
-
-if LocalPlayer.Character then
-    EnableGodMode(LocalPlayer.Character)
-end
-
-LocalPlayer.CharacterAdded:Connect(function(char)
-    task.wait(0.5)
-    if Toggles.GodMode then
-        EnableGodMode(char)
-    end
-end)
-
---------------------------------------------------------------------
--- 8. FLY ENGINE (SMOOTH 3D WASD & MOBILE FLIGHT)
+-- 5. FLY ENGINE (SMOOTH 3D WASD & MOBILE FLIGHT)
 --------------------------------------------------------------------
 local FlyBodyVel = nil
 local FlyBodyGyro = nil
@@ -583,7 +463,7 @@ local function StopFly()
 end
 
 --------------------------------------------------------------------
--- 9. JUNEJO ULTRA SCRIPT HUB - OFFICIAL MASTER UI
+-- 6. JUNEJO ULTRA SCRIPT HUB - OFFICIAL MASTER UI (5 ROWS COMPACT)
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoHubUI_NightsForest"
@@ -593,8 +473,8 @@ ScreenGui.DisplayOrder = 999999
 ScreenGui.Parent = UIContainer
 
 -- Total Height calculation:
--- Header (32) + Line (1) + Spacing (5) + (7 rows * 27) + Footer (36) = ~265px
-local TotalFrameHeight = 265
+-- Header (32) + Line (1) + Spacing (5) + (5 rows * 27) + Footer (36) = ~212px
+local TotalFrameHeight = 215
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
@@ -649,16 +529,14 @@ CloseBtn.MouseButton1Click:Connect(function()
     StopFly()
     ClearChildrenESP()
     ClearItemsESP()
-    Toggles.AutoCampfire = false
     Toggles.ChildrenESP = false
     Toggles.ItemsESP = false
-    Toggles.GodMode = false
     Toggles.Fly = false
     Toggles.InfiniteJump = false
     ScreenGui:Destroy()
 end)
 
--- Header Separation Line (Official Junejo Standard)
+-- Header Separation Line
 local HeaderLine = Instance.new("Frame")
 HeaderLine.Name = "HeaderLine"
 HeaderLine.Size = UDim2.new(1, -24, 0, 1)
@@ -696,10 +574,10 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Content Frame
+-- Content Frame (5 rows)
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -24, 0, 190)
+ContentFrame.Size = UDim2.new(1, -24, 0, 138)
 ContentFrame.Position = UDim2.new(0, 12, 0, 38)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
@@ -821,34 +699,24 @@ local function AddActionRow(text, btnText, callback)
 end
 
 --------------------------------------------------------------------
--- POPULATE ROWS (7 VERIFIED FEATURES)
+-- POPULATE ROWS (EXACT 5 USER REQUESTED FEATURES)
 --------------------------------------------------------------------
--- 1. Auto Campfire
-AddToggleRow("Auto Campfire", "AutoCampfire")
-
--- 2. Missing Children ESP
+-- 1. Missing Children ESP
 AddToggleRow("Missing Children ESP", "ChildrenESP", function(enabled)
     if not enabled then ClearChildrenESP() end
 end)
 
--- 3. Items & Chests ESP
+-- 2. Items & Chests ESP
 AddToggleRow("Items & Chests ESP", "ItemsESP", function(enabled)
     if not enabled then ClearItemsESP() end
 end)
 
--- 4. GodMode
-AddToggleRow("GodMode", "GodMode", function(enabled)
-    if enabled and LocalPlayer.Character then
-        EnableGodMode(LocalPlayer.Character)
-    end
-end)
-
--- 5. Teleport to Campfire
+-- 3. Campfire Teleport
 AddActionRow("Campfire Teleport", "Teleport", function()
     TeleportToCampfire()
 end)
 
--- 6. Fly Mode
+-- 4. Fly Mode
 AddToggleRow("Fly Mode", "Fly", function(enabled)
     if enabled then
         StartFly()
@@ -857,7 +725,7 @@ AddToggleRow("Fly Mode", "Fly", function(enabled)
     end
 end)
 
--- 7. Infinite Jump
+-- 5. Infinite Jump
 AddToggleRow("Infinite Jump", "InfiniteJump")
 
 --------------------------------------------------------------------
@@ -890,4 +758,4 @@ FooterSub.TextSize = 9
 FooterSub.Font = Enum.Font.GothamMedium
 FooterSub.Parent = Footer
 
-print("[JUNEJO SCRIPT HUB] 99 Nights in the Forest loaded successfully!")
+print("[JUNEJO SCRIPT HUB] 99 Nights in the Forest Loaded (5 Verified Features)!")
