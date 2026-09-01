@@ -1,13 +1,13 @@
 --[[
-    JUNEJO ULTRA SCRIPT HUB - JUMP TO STEAL SOCCER PLAYERS (V2 REVISED)
+    JUNEJO ULTRA SCRIPT HUB - JUMP TO STEAL SOCCER PLAYERS (V2 CLEAN)
     Target Game: Jump To Steal Soccer Players (Roblox)
     Author: Made by Junejo (junejo18146)
     Repository: junejo18146/ultrascripthub
     Theme: Unified Junejo Executive Dark UI (#0F0F11) - Flat & Borderless Standard
     Status: Direct Standalone Executable
-    Features (5 Total):
+    Features (5 Standard Clean Rows):
       1. Soccer Players ESP
-      2. Auto Rebirth (Multi-Engine with live screen diagnostics)
+      2. Auto Rebirth
       3. Fly Mode
       4. WalkSpeed Boost (+ / - Pill)
       5. Infinite Jump
@@ -22,7 +22,6 @@ local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
 local VirtualInputManager = nil
 pcall(function() VirtualInputManager = game:GetService("VirtualInputManager") end)
-local StarterGui = game:GetService("StarterGui")
 local CoreGui = game:GetService("CoreGui")
 
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
@@ -48,7 +47,7 @@ end
 
 local UIContainer = GetSafeUIContainer()
 
--- Cleanup ALL previous UI instances completely
+-- Cleanup ALL previous UI instances
 pcall(function()
     local names = {
         "JunejoJumpToStealSoccerUI_v2", 
@@ -66,7 +65,7 @@ pcall(function()
 end)
 
 --------------------------------------------------------------------
--- CONFIGURATION & STATE (ONLY 5 REQUESTED FEATURES)
+-- CONFIGURATION & STATE (EXACT 5 ROWS)
 --------------------------------------------------------------------
 local Toggles = {
     SoccerESP = false,
@@ -78,19 +77,6 @@ local Toggles = {
 
 local CustomSpeedValue = 50
 local FlySpeed = 50
-
---------------------------------------------------------------------
--- NOTIFICATION HELPER
---------------------------------------------------------------------
-local function Notify(title, text)
-    pcall(function()
-        StarterGui:SetCore("SendNotification", {
-            Title = title,
-            Text = text,
-            Duration = 3
-        })
-    end)
-end
 
 --------------------------------------------------------------------
 -- ANTI-AFK SYSTEM (PREVENTS 20-MINUTE IDLE DISCONNECT)
@@ -169,7 +155,7 @@ LocalPlayer.CharacterAdded:Connect(function()
 end)
 
 --------------------------------------------------------------------
--- 3. FLY MODE ENGINE (WASD & MOBILE CONTROLS)
+-- 3. FLY MODE ENGINE (WASD & MOBILE TOUCH CONTROLS)
 --------------------------------------------------------------------
 local Flying = false
 local BodyGyro, BodyVelocity
@@ -243,12 +229,10 @@ local function StopFlying()
 end
 
 --------------------------------------------------------------------
--- 4. ULTRA AUTO REBIRTH (FULL COMPREHENSIVE ENGINE + LIVE UI STATUS)
+-- 4. AUTO REBIRTH (MULTI-ENGINE BACKGROUND LOOP)
 --------------------------------------------------------------------
-local StatusLabelRef = nil
-
 local function ExecuteRebirthTriggers()
-    -- 1. Fire ALL ReplicatedStorage Remotes & Functions related to Rebirth
+    -- Method 1: Remote Events & Functions in ReplicatedStorage
     for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
         if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
             local n = string.lower(obj.Name)
@@ -270,7 +254,7 @@ local function ExecuteRebirthTriggers()
         end
     end
 
-    -- 2. Physical Rebirth Pads & Proximity Prompts in Workspace
+    -- Method 2: Physical Rebirth Pads & Proximity Prompts in Workspace
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
     for _, obj in ipairs(Workspace:GetDescendants()) do
@@ -299,7 +283,7 @@ local function ExecuteRebirthTriggers()
         end
     end
 
-    -- 3. PlayerGui Rebirth Buttons (Search all ScreenGuis)
+    -- Method 3: PlayerGui Rebirth Buttons (firesignal, activate, and screen click)
     local pGui = LocalPlayer:FindFirstChild("PlayerGui")
     if pGui then
         for _, btn in ipairs(pGui:GetDescendants()) do
@@ -326,61 +310,13 @@ local function ExecuteRebirthTriggers()
     end
 end
 
--- Rebirth Scanner & Status Updater Loop
 task.spawn(function()
-    local lastNotifyTime = 0
-
     while true do
         task.wait(1.5)
         if Toggles.AutoRebirth then
             pcall(function()
-                local requirementText = nil
-
-                -- Scan GUI for text indicating requirement / missing cash
-                local pGui = LocalPlayer:FindFirstChild("PlayerGui")
-                if pGui then
-                    for _, lbl in ipairs(pGui:GetDescendants()) do
-                        if lbl:IsA("TextLabel") and lbl.Visible then
-                            local txt = string.lower(lbl.Text)
-                            if (string.find(txt, "need") or string.find(txt, "cost") or string.find(txt, "require") or string.find(txt, "rebirth") or string.find(txt, "/")) and string.len(lbl.Text) < 55 then
-                                requirementText = lbl.Text
-                                break
-                            end
-                        end
-                    end
-                end
-
-                -- Read leaderstats
-                local leaderstats = LocalPlayer:FindFirstChild("leaderstats")
-                local cashStat = leaderstats and (leaderstats:FindFirstChild("Cash") or leaderstats:FindFirstChild("Money") or leaderstats:FindFirstChild("Coins") or leaderstats:FindFirstChild("Jumps"))
-                local currentCash = cashStat and tostring(cashStat.Value) or "Checking..."
-
-                -- Fire Rebirth
                 ExecuteRebirthTriggers()
-
-                -- Build Live Status String
-                local statusDisplay = ""
-                if requirementText then
-                    statusDisplay = requirementText
-                else
-                    statusDisplay = "Checking Rebirth... (Cash: " .. currentCash .. ")"
-                end
-
-                if StatusLabelRef then
-                    StatusLabelRef.Text = "Status: " .. statusDisplay
-                end
-
-                -- Show Notification every 6 seconds
-                local now = tick()
-                if now - lastNotifyTime >= 6 then
-                    lastNotifyTime = now
-                    Notify("Auto Rebirth", statusDisplay)
-                end
             end)
-        else
-            if StatusLabelRef then
-                StatusLabelRef.Text = "Status: Disabled"
-            end
         end
     end
 end)
@@ -497,7 +433,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 6. JUNEJO ULTRA SCRIPT HUB - MASTER UI (STRICT 5 FEATURES)
+-- 6. JUNEJO ULTRA SCRIPT HUB - MASTER UI (STRICT 5 FLAT ROWS)
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoJumpToStealSoccerUI_v2"
@@ -506,7 +442,8 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999999
 ScreenGui.Parent = UIContainer
 
-local TotalFrameHeight = 230
+-- Total Height: Header 32 + Line 1 + Spacing 5 + (5 rows * 27) + Footer 36 = 209px (~210px)
+local TotalFrameHeight = 210
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
@@ -607,10 +544,10 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Content Frame (5 Features)
+-- Content Frame (Strict 5 Rows)
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -24, 0, 150)
+ContentFrame.Size = UDim2.new(1, -24, 0, 134)
 ContentFrame.Position = UDim2.new(0, 12, 0, 38)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
@@ -681,7 +618,7 @@ local function AddToggleRow(text, configKey, callback)
 end
 
 --------------------------------------------------------------------
--- EXACT 5 ROWS (STRICT)
+-- POPULATE EXACT 5 CLEAN ROWS
 --------------------------------------------------------------------
 
 -- 1. Soccer Players ESP
@@ -689,29 +626,8 @@ AddToggleRow("Soccer Players ESP", "SoccerESP", function(enabled)
     if not enabled then ClearSoccerESP() end
 end)
 
--- 2. Auto Rebirth
-AddToggleRow("Auto Rebirth", "AutoRebirth", function(enabled)
-    if enabled then
-        Notify("Auto Rebirth", "Scanning Rebirth requirements & remotes...")
-    end
-end)
-
--- Live Status feedback row inside the GUI under Auto Rebirth
-local StatusRow = Instance.new("Frame")
-StatusRow.Name = "Status_Row"
-StatusRow.Size = UDim2.new(1, 0, 0, 16)
-StatusRow.BackgroundTransparency = 1
-StatusRow.Parent = ContentFrame
-
-StatusLabelRef = Instance.new("TextLabel")
-StatusLabelRef.Size = UDim2.new(1, 0, 1, 0)
-StatusLabelRef.BackgroundTransparency = 1
-StatusLabelRef.Text = "Status: Disabled"
-StatusLabelRef.TextColor3 = Color3.fromRGB(0, 230, 118)
-StatusLabelRef.TextSize = 10
-StatusLabelRef.Font = Enum.Font.GothamMedium
-StatusLabelRef.TextXAlignment = Enum.TextXAlignment.Left
-StatusLabelRef.Parent = StatusRow
+-- 2. Auto Rebirth (Clean row without any sub-label)
+AddToggleRow("Auto Rebirth", "AutoRebirth")
 
 -- 3. Fly Mode
 AddToggleRow("Fly Mode", "FlyMode", function(enabled)
@@ -872,4 +788,4 @@ FooterSub.TextSize = 9
 FooterSub.Font = Enum.Font.GothamMedium
 FooterSub.Parent = Footer
 
-print("[JUNEJO SCRIPT HUB] Jump To Steal Soccer Players V2 Loaded Successfully!")
+print("[JUNEJO SCRIPT HUB] Jump To Steal Soccer Players Loaded Cleanly!")
