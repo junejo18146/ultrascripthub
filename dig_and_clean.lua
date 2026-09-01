@@ -1,5 +1,5 @@
 --[[
-    JUNEJO ULTRA SCRIPT HUB - DIG & CLEAN
+    JUNEJO ULTRA SCRIPT HUB - DIG & CLEAN (REBUILT & ENHANCED ENGINE)
     Target Game: Dig & Clean (Roblox)
     Author: Made by Junejo (junejo18146)
     Repository: junejo18146/ultrascripthub
@@ -13,6 +13,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
+local VirtualInputManager = nil
+pcall(function() VirtualInputManager = game:GetService("VirtualInputManager") end)
 local CoreGui = game:GetService("CoreGui")
 
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
@@ -76,13 +78,57 @@ LocalPlayer.Idled:Connect(function()
 end)
 
 --------------------------------------------------------------------
--- RELIABLE UTILITY FUNCTIONS
+-- UNIVERSAL CLICK & INTERACTION SIMULATOR (DELTA / MOBILE / PC)
 --------------------------------------------------------------------
+local function SimulateScreenClick()
+    pcall(function()
+        local cam = Workspace.CurrentCamera
+        local center = cam and Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y / 2) or Vector2.new(200, 200)
+
+        -- 1. VirtualInputManager Click
+        if VirtualInputManager then
+            VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, true, game, 0)
+            task.wait(0.03)
+            VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, false, game, 0)
+            return
+        end
+
+        -- 2. Mouse1 Click
+        if mouse1click then
+            mouse1click()
+            return
+        end
+
+        -- 3. VirtualUser Center Click
+        VirtualUser:CaptureController()
+        VirtualUser:Button1Down(center, cam.CFrame)
+        task.wait(0.03)
+        VirtualUser:Button1Up(center, cam.CFrame)
+    end)
+end
+
+-- Universal ProximityPrompt Trigger
+local function TriggerPrompt(prompt)
+    if not prompt or not prompt.Enabled then return end
+    pcall(function()
+        if fireproximityprompt then
+            fireproximityprompt(prompt, 0)
+            fireproximityprompt(prompt)
+        end
+        if prompt.InputHoldBegin and prompt.InputHoldEnd then
+            prompt:InputHoldBegin()
+            task.wait(0.05)
+            prompt:InputHoldEnd()
+        end
+    end)
+end
+
+-- Comprehensive Tool Equipper
 local function EquipToolByKeywords(keywords)
     local char = LocalPlayer.Character
     if not char then return nil end
 
-    -- Check equipped tool
+    -- Check currently equipped tool
     local equipped = char:FindFirstChildOfClass("Tool")
     if equipped then
         local name = string.lower(equipped.Name)
@@ -114,6 +160,51 @@ local function EquipToolByKeywords(keywords)
 end
 
 --------------------------------------------------------------------
+-- CACHED NETWORK & REMOTES RESOLVER
+--------------------------------------------------------------------
+local CachedRemotes = {
+    Dig = {},
+    Clean = {},
+    Place = {},
+    Detector = {}
+}
+
+local function RefreshRemotes()
+    pcall(function()
+        CachedRemotes = { Dig = {}, Clean = {}, Place = {}, Detector = {} }
+        for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
+            if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
+                local name = string.lower(obj.Name)
+                if string.find(name, "dig") or string.find(name, "mine") or string.find(name, "shovel") then
+                    table.insert(CachedRemotes.Dig, obj)
+                end
+                if string.find(name, "clean") or string.find(name, "wash") or string.find(name, "spray") or string.find(name, "dirt") then
+                    table.insert(CachedRemotes.Clean, obj)
+                end
+                if string.find(name, "place") or string.find(name, "museum") or string.find(name, "stand") or string.find(name, "display") then
+                    table.insert(CachedRemotes.Place, obj)
+                end
+                if string.find(name, "detector") or string.find(name, "scan") or string.find(name, "search") then
+                    table.insert(CachedRemotes.Detector, obj)
+                end
+            end
+        end
+    end)
+end
+
+RefreshRemotes()
+
+local function SafeFireRemote(remote, ...)
+    pcall(function()
+        if remote:IsA("RemoteEvent") then
+            remote:FireServer(...)
+        elseif remote:IsA("RemoteFunction") then
+            remote:InvokeServer(...)
+        end
+    end)
+end
+
+--------------------------------------------------------------------
 -- 1. INFINITE JUMP ENGINE
 --------------------------------------------------------------------
 UserInputService.JumpRequest:Connect(function()
@@ -139,7 +230,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 --------------------------------------------------------------------
--- 2. BULLETPROOF WALKSPEED BOOST ENGINE (DUAL ENGINE)
+-- 2. WALKSPEED BOOST ENGINE (DUAL ENGINE)
 --------------------------------------------------------------------
 local function UpdateCharacterSpeed()
     pcall(function()
@@ -155,7 +246,6 @@ local function UpdateCharacterSpeed()
     end)
 end
 
--- RenderStepped CFrame assist for responsive speed
 RunService.RenderStepped:Connect(function(deltaTime)
     pcall(function()
         if Toggles.WalkSpeedBoost and CustomSpeedValue > 16 then
@@ -173,24 +263,31 @@ RunService.RenderStepped:Connect(function(deltaTime)
 end)
 
 --------------------------------------------------------------------
--- 3. AUTO DETECTOR ENGINE
+-- 3. AUTO DETECTOR ENGINE (MULTI-LAYERED)
 --------------------------------------------------------------------
 task.spawn(function()
     while true do
-        task.wait(0.15)
+        task.wait(0.2)
         if Toggles.AutoDetector then
             pcall(function()
-                local tool = EquipToolByKeywords({"detector", "metal", "scan", "search"})
+                local tool = EquipToolByKeywords({"detector", "metal", "scan", "finder", "sensor"})
                 if tool then
                     tool:Activate()
-                    VirtualUser:CaptureController()
-                    VirtualUser:Button1Down(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
-                    
-                    for _, item in ipairs(tool:GetDescendants()) do
-                        if item:IsA("RemoteEvent") then
-                            item:FireServer()
+                    SimulateScreenClick()
+
+                    -- Fire any remote inside the tool
+                    for _, child in ipairs(tool:GetDescendants()) do
+                        if child:IsA("RemoteEvent") then
+                            SafeFireRemote(child)
+                            SafeFireRemote(child, true)
                         end
                     end
+                end
+
+                -- Fire cached detector remotes
+                for _, remote in ipairs(CachedRemotes.Detector) do
+                    SafeFireRemote(remote)
+                    SafeFireRemote(remote, true)
                 end
             end)
         end
@@ -198,7 +295,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 4. AUTO DIG ENGINE
+-- 4. AUTO DIG ENGINE (MULTI-LAYERED)
 --------------------------------------------------------------------
 task.spawn(function()
     while true do
@@ -209,37 +306,36 @@ task.spawn(function()
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
                 if not hrp then return end
 
-                local tool = EquipToolByKeywords({"shovel", "spade", "dig", "pick"})
+                -- Equip shovel/spade
+                local tool = EquipToolByKeywords({"shovel", "spade", "dig", "trowel", "pick", "scoop"})
                 if tool then
                     tool:Activate()
                 end
 
-                VirtualUser:CaptureController()
-                VirtualUser:Button1Down(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
+                -- Click center of screen to dig
+                SimulateScreenClick()
 
-                -- Proximity Prompt Trigger
+                -- Trigger nearby digging proximity prompts
                 for _, prompt in ipairs(Workspace:GetDescendants()) do
                     if not Toggles.AutoDig then break end
                     if prompt:IsA("ProximityPrompt") and prompt.Enabled then
-                        local parent = prompt.Parent
-                        if parent and parent:IsA("BasePart") then
-                            if (parent.Position - hrp.Position).Magnitude <= prompt.MaxActivationDistance + 5 then
-                                if fireproximityprompt then
-                                    fireproximityprompt(prompt, 0)
+                        local pPart = prompt.Parent
+                        if pPart and pPart:IsA("BasePart") then
+                            local dist = (pPart.Position - hrp.Position).Magnitude
+                            if dist <= prompt.MaxActivationDistance + 8 then
+                                local act = string.lower(prompt.ActionText .. " " .. prompt.ObjectText)
+                                if string.find(act, "dig") or string.find(act, "mine") or string.find(act, "search") or string.find(act, "unearth") or act == " " or act == "" then
+                                    TriggerPrompt(prompt)
                                 end
                             end
                         end
                     end
                 end
 
-                -- RemoteEvent Fallback Trigger
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if remote:IsA("RemoteEvent") then
-                        local name = string.lower(remote.Name)
-                        if string.find(name, "dig") or string.find(name, "mine") then
-                            remote:FireServer()
-                        end
-                    end
+                -- Fire cached dig remotes
+                for _, remote in ipairs(CachedRemotes.Dig) do
+                    SafeFireRemote(remote)
+                    SafeFireRemote(remote, true)
                 end
             end)
         end
@@ -247,30 +343,48 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 5. AUTO CLEAN ENGINE
+-- 5. AUTO CLEAN ENGINE (MULTI-LAYERED)
 --------------------------------------------------------------------
 task.spawn(function()
     while true do
-        task.wait(0.15)
+        task.wait(0.2)
         if Toggles.AutoClean then
             pcall(function()
-                local tool = EquipToolByKeywords({"spray", "water", "clean", "sponge", "wash"})
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+                -- Equip cleaner/spray
+                local tool = EquipToolByKeywords({"spray", "water", "clean", "sponge", "wash", "brush", "bottle"})
                 if tool then
                     tool:Activate()
                 end
 
-                VirtualUser:CaptureController()
-                VirtualUser:Button1Down(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
+                -- Click center of screen to clean/spray
+                SimulateScreenClick()
 
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if not Toggles.AutoClean then break end
-                    if remote:IsA("RemoteEvent") then
-                        local name = string.lower(remote.Name)
-                        if string.find(name, "clean") or string.find(name, "wash") or string.find(name, "dirt") then
-                            remote:FireServer()
-                            remote:FireServer(true)
+                -- Trigger nearby cleaning prompts
+                if hrp then
+                    for _, prompt in ipairs(Workspace:GetDescendants()) do
+                        if not Toggles.AutoClean then break end
+                        if prompt:IsA("ProximityPrompt") and prompt.Enabled then
+                            local pPart = prompt.Parent
+                            if pPart and pPart:IsA("BasePart") then
+                                local dist = (pPart.Position - hrp.Position).Magnitude
+                                if dist <= prompt.MaxActivationDistance + 8 then
+                                    local act = string.lower(prompt.ActionText .. " " .. prompt.ObjectText)
+                                    if string.find(act, "clean") or string.find(act, "wash") or string.find(act, "rinse") or string.find(act, "sponge") then
+                                        TriggerPrompt(prompt)
+                                    end
+                                end
+                            end
                         end
                     end
+                end
+
+                -- Fire cached clean remotes
+                for _, remote in ipairs(CachedRemotes.Clean) do
+                    SafeFireRemote(remote)
+                    SafeFireRemote(remote, true)
                 end
             end)
         end
@@ -278,32 +392,43 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 6. AUTO PLACE ENGINE
+-- 6. AUTO PLACE ENGINE (MULTI-LAYERED)
 --------------------------------------------------------------------
 task.spawn(function()
     while true do
         task.wait(0.4)
         if Toggles.AutoPlace then
             pcall(function()
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if not Toggles.AutoPlace then break end
-                    if remote:IsA("RemoteEvent") then
-                        local name = string.lower(remote.Name)
-                        if string.find(name, "place") or string.find(name, "museum") or string.find(name, "stand") or string.find(name, "display") then
-                            remote:FireServer()
-                            remote:FireServer("All")
-                            remote:FireServer(true)
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+                -- 1. Trigger nearby museum / stand placement prompts
+                if hrp then
+                    for _, prompt in ipairs(Workspace:GetDescendants()) do
+                        if not Toggles.AutoPlace then break end
+                        if prompt:IsA("ProximityPrompt") and prompt.Enabled then
+                            local pPart = prompt.Parent
+                            if pPart and pPart:IsA("BasePart") then
+                                local dist = (pPart.Position - hrp.Position).Magnitude
+                                if dist <= prompt.MaxActivationDistance + 8 then
+                                    local act = string.lower(prompt.ActionText .. " " .. prompt.ObjectText)
+                                    if string.find(act, "place") or string.find(act, "display") or string.find(act, "stand") or string.find(act, "put") or string.find(act, "museum") then
+                                        TriggerPrompt(prompt)
+                                    end
+                                end
+                            end
                         end
                     end
                 end
 
+                -- 2. Trigger place / display UI buttons
                 local pGui = LocalPlayer:FindFirstChild("PlayerGui")
                 if pGui then
                     for _, btn in ipairs(pGui:GetDescendants()) do
                         if (btn:IsA("TextButton") or btn:IsA("ImageButton")) and btn.Visible then
                             local txt = btn:IsA("TextButton") and string.lower(btn.Text) or ""
                             local name = string.lower(btn.Name)
-                            if string.find(name, "place") or string.find(txt, "place") or string.find(name, "display") or string.find(txt, "display") then
+                            if string.find(name, "place") or string.find(txt, "place") or string.find(name, "display") or string.find(txt, "display") or string.find(txt, "deposit") then
                                 if firesignal then
                                     firesignal(btn.MouseButton1Click)
                                     firesignal(btn.Activated)
@@ -311,6 +436,13 @@ task.spawn(function()
                             end
                         end
                     end
+                end
+
+                -- 3. Fire cached place remotes
+                for _, remote in ipairs(CachedRemotes.Place) do
+                    SafeFireRemote(remote)
+                    SafeFireRemote(remote, "All")
+                    SafeFireRemote(remote, true)
                 end
             end)
         end
@@ -327,8 +459,6 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999999
 ScreenGui.Parent = UIContainer
 
--- Total Height calculation:
--- Header (32) + Line (1) + Spacing (5) + (6 rows * 27) + Footer (36) = ~236px
 local TotalFrameHeight = 240
 
 local MainFrame = Instance.new("Frame")
@@ -503,7 +633,7 @@ local function AddToggleRow(text, configKey, callback)
 end
 
 --------------------------------------------------------------------
--- POPULATE ROWS (6 VERIFIED CORE FEATURES)
+-- POPULATE ROWS (6 CORE FEATURES)
 --------------------------------------------------------------------
 -- 1. Auto Dig
 AddToggleRow("Auto Dig", "AutoDig")
