@@ -1,11 +1,19 @@
 --[[
-    JUNEJO ULTRA SCRIPT HUB - +1 SPIDER EVOLUTION
+    JUNEJO ULTRA SCRIPT HUB - +1 SPIDER EVOLUTION (REVISED)
     Target Game: +1 Spider Evolution (Roblox)
     Game URL: https://www.roblox.com/games/135830878717711/1-Spider-Evolution
     Author: Made by Junejo (junejo18146)
     Repository: junejo18146/ultrascripthub
     Theme: Unified Junejo Executive Dark UI (#0F0F11) - Flat & Borderless Standard
     Status: Direct Standalone Executable
+    Features (6 Exact Requested):
+      1. Auto Click (Web Power)
+      2. Auto Rebirth
+      3. Auto Wins (Ultra Multi-Engine)
+      4. Fly Mode
+      5. WalkSpeed Boost (+ / - Pill)
+      6. Infinite Jump
+      (+ Anti-AFK Engine)
 --]]
 
 local Players = game:GetService("Players")
@@ -54,13 +62,12 @@ pcall(function()
 end)
 
 --------------------------------------------------------------------
--- CONFIGURATION & STATE (7 REQUESTED FEATURES)
+-- CONFIGURATION & STATE (6 EXACT FEATURES)
 --------------------------------------------------------------------
 local Toggles = {
     AutoClick = false,
-    AutoEvolve = false,
-    AutoAttack = false,
     AutoRebirth = false,
+    AutoWins = false,
     FlyMode = false,
     WalkSpeedBoost = false,
     InfiniteJump = false
@@ -81,7 +88,7 @@ LocalPlayer.Idled:Connect(function()
 end)
 
 --------------------------------------------------------------------
--- 1. AUTO CLICK / WEB POWER GENERATOR (MULTI-ENGINE)
+-- 1. AUTO CLICK ENGINE (FAST WEB POWER GENERATOR)
 --------------------------------------------------------------------
 local function SimulateClick()
     pcall(function()
@@ -104,17 +111,17 @@ task.spawn(function()
         task.wait(0.05)
         if Toggles.AutoClick then
             pcall(function()
-                -- 1. Click screen
+                -- 1. Screen tap simulation
                 SimulateClick()
 
-                -- 2. Activate tool if equipped
+                -- 2. Tool activate if equipped
                 local char = LocalPlayer.Character
                 if char then
                     local tool = char:FindFirstChildOfClass("Tool")
                     if tool then tool:Activate() end
                 end
 
-                -- 3. Fire Click / Tap / Power Remotes in ReplicatedStorage
+                -- 3. Click / Tap / Power Remotes in ReplicatedStorage
                 for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
                     if not Toggles.AutoClick then break end
                     if obj:IsA("RemoteEvent") then
@@ -132,128 +139,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 2. AUTO EVOLVE (AUTO LEVEL UP SPIDER STAGES & SUITS)
---------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        task.wait(1)
-        if Toggles.AutoEvolve then
-            pcall(function()
-                -- 1. Fire Evolve Remotes in ReplicatedStorage
-                for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if not Toggles.AutoEvolve then break end
-                    if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
-                        local n = string.lower(obj.Name)
-                        if string.find(n, "evolve") or string.find(n, "evolution") or string.find(n, "stage") or string.find(n, "suit") or string.find(n, "mutate") or string.find(n, "upgrade") then
-                            if obj:IsA("RemoteEvent") then
-                                obj:FireServer()
-                                obj:FireServer(1)
-                                obj:FireServer(true)
-                            elseif obj:IsA("RemoteFunction") then
-                                obj:InvokeServer()
-                            end
-                        end
-                    end
-                end
-
-                -- 2. Step on Evolve Pads or fire ProximityPrompts in Workspace
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if not Toggles.AutoEvolve then break end
-                    local n = string.lower(obj.Name)
-                    if string.find(n, "evolve") or string.find(n, "evolution") then
-                        if obj:IsA("BasePart") and hrp and firetouchinterest then
-                            firetouchinterest(hrp, obj, 0)
-                            task.wait(0.02)
-                            firetouchinterest(hrp, obj, 1)
-                        end
-                        if obj:IsA("ProximityPrompt") and obj.Enabled then
-                            if fireproximityprompt then
-                                fireproximityprompt(obj, 0)
-                                fireproximityprompt(obj)
-                            end
-                            if obj.InputHoldBegin then
-                                obj:InputHoldBegin()
-                                task.wait(0.04)
-                                obj:InputHoldEnd()
-                            end
-                        end
-                    end
-                end
-
-                -- 3. Click Evolve UI Buttons if available
-                local pGui = LocalPlayer:FindFirstChild("PlayerGui")
-                if pGui then
-                    for _, btn in ipairs(pGui:GetDescendants()) do
-                        if (btn:IsA("TextButton") or btn:IsA("ImageButton")) and btn.Visible then
-                            local bText = btn:IsA("TextButton") and string.lower(btn.Text) or ""
-                            local bName = string.lower(btn.Name)
-                            if string.find(bName, "evolve") or string.find(bText, "evolve") or string.find(bName, "mutate") or string.find(bText, "mutate") then
-                                if firesignal then
-                                    firesignal(btn.MouseButton1Click)
-                                    firesignal(btn.Activated)
-                                end
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
---------------------------------------------------------------------
--- 3. AUTO ATTACK / BOSS AURA (AUTO DAMAGE NEARBY BOSSES & MOBS)
---------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        task.wait(0.12)
-        if Toggles.AutoAttack then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                if not hrp then return end
-
-                -- Find nearby bosses and mobs
-                for _, model in ipairs(Workspace:GetDescendants()) do
-                    if not Toggles.AutoAttack then break end
-                    if model:IsA("Model") and model ~= char and not Players:GetPlayerFromCharacter(model) then
-                        local hum = model:FindFirstChildOfClass("Humanoid")
-                        local root = model:FindFirstChild("HumanoidRootPart") or model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart")
-                        if hum and hum.Health > 0 and root then
-                            local dist = (root.Position - hrp.Position).Magnitude
-                            if dist <= 40 then
-                                -- Attack target via tool
-                                local tool = char:FindFirstChildOfClass("Tool")
-                                if tool then tool:Activate() end
-                                SimulateClick()
-
-                                -- Fire attack/damage remotes
-                                for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
-                                    if rem:IsA("RemoteEvent") then
-                                        local n = string.lower(rem.Name)
-                                        if string.find(n, "attack") or string.find(n, "damage") or string.find(n, "hit") or string.find(n, "fight") or string.find(n, "boss") then
-                                            rem:FireServer(model)
-                                            rem:FireServer(hum)
-                                            rem:FireServer(root)
-                                            rem:FireServer(1)
-                                            rem:FireServer(true)
-                                        end
-                                    end
-                                end
-                                break
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
---------------------------------------------------------------------
--- 4. AUTO REBIRTH ENGINE
+-- 2. AUTO REBIRTH ENGINE
 --------------------------------------------------------------------
 task.spawn(function()
     while true do
@@ -272,6 +158,20 @@ task.spawn(function()
                             elseif obj:IsA("RemoteFunction") then
                                 obj:InvokeServer()
                             end
+                        end
+                    end
+                end
+
+                -- Physical Rebirth Pads
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    local n = string.lower(obj.Name)
+                    if string.find(n, "rebirth") then
+                        if obj:IsA("BasePart") and hrp and firetouchinterest then
+                            firetouchinterest(hrp, obj, 0)
+                            task.wait(0.02)
+                            firetouchinterest(hrp, obj, 1)
                         end
                     end
                 end
@@ -298,7 +198,89 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 5. FLY MODE ENGINE (WASD & MOBILE CONTROLS)
+-- 3. ULTRA AUTO WINS ENGINE (REMOTES + TOUCH PADS + FINISH LINES)
+--------------------------------------------------------------------
+local function ProcessWins()
+    pcall(function()
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+        -- Method 1: ReplicatedStorage Win Remotes / Functions
+        for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
+            if not Toggles.AutoWins then break end
+            if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
+                local n = string.lower(obj.Name)
+                if string.find(n, "win") or string.find(n, "victory") or string.find(n, "finish") or string.find(n, "trophy") or string.find(n, "claimwin") or string.find(n, "addwin") or string.find(n, "givewin") then
+                    if obj:IsA("RemoteEvent") then
+                        obj:FireServer()
+                        obj:FireServer(1)
+                        obj:FireServer(true)
+                        obj:FireServer("Win")
+                    elseif obj:IsA("RemoteFunction") then
+                        obj:InvokeServer()
+                        obj:InvokeServer(1)
+                        obj:InvokeServer(true)
+                    end
+                end
+            end
+        end
+
+        -- Method 2: Physical Win Pads, Finish Lines & End Gates in Workspace
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if not Toggles.AutoWins then break end
+            local n = string.lower(obj.Name)
+            if string.find(n, "win") or string.find(n, "finish") or string.find(n, "victory") or string.find(n, "endpad") or string.find(n, "goal") or string.find(n, "trophy") then
+                if obj:IsA("BasePart") and hrp and firetouchinterest then
+                    firetouchinterest(hrp, obj, 0)
+                    task.wait(0.02)
+                    firetouchinterest(hrp, obj, 1)
+                end
+                if obj:IsA("ProximityPrompt") and obj.Enabled then
+                    if fireproximityprompt then
+                        fireproximityprompt(obj, 0)
+                        fireproximityprompt(obj)
+                    end
+                    if obj.InputHoldBegin then
+                        obj:InputHoldBegin()
+                        task.wait(0.04)
+                        obj:InputHoldEnd()
+                    end
+                end
+            end
+        end
+
+        -- Method 3: PlayerGui Win Buttons / Claim Rewards
+        local pGui = LocalPlayer:FindFirstChild("PlayerGui")
+        if pGui then
+            for _, btn in ipairs(pGui:GetDescendants()) do
+                if not Toggles.AutoWins then break end
+                if (btn:IsA("TextButton") or btn:IsA("ImageButton")) and btn.Visible then
+                    local bText = btn:IsA("TextButton") and string.lower(btn.Text) or ""
+                    local bName = string.lower(btn.Name)
+                    if string.find(bName, "win") or string.find(bText, "win") or (string.find(bName, "claim") and string.find(bText, "win")) then
+                        if firesignal then
+                            firesignal(btn.MouseButton1Click)
+                            firesignal(btn.Activated)
+                        end
+                        if btn.Activate then btn:Activate() end
+                    end
+                end
+            end
+        end
+    end)
+end
+
+task.spawn(function()
+    while true do
+        task.wait(0.4)
+        if Toggles.AutoWins then
+            ProcessWins()
+        end
+    end
+end)
+
+--------------------------------------------------------------------
+-- 4. FLY MODE ENGINE (WASD & MOBILE CONTROLS)
 --------------------------------------------------------------------
 local Flying = false
 local BodyGyro, BodyVelocity
@@ -372,7 +354,7 @@ local function StopFlying()
 end
 
 --------------------------------------------------------------------
--- 6. WALKSPEED BOOST ENGINE (DUAL ENGINE)
+-- 5. WALKSPEED BOOST ENGINE (DUAL ENGINE)
 --------------------------------------------------------------------
 local function UpdateCharacterSpeed()
     pcall(function()
@@ -412,7 +394,7 @@ LocalPlayer.CharacterAdded:Connect(function()
 end)
 
 --------------------------------------------------------------------
--- 7. INFINITE JUMP ENGINE
+-- 6. INFINITE JUMP ENGINE
 --------------------------------------------------------------------
 UserInputService.JumpRequest:Connect(function()
     if Toggles.InfiniteJump and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
@@ -437,7 +419,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 --------------------------------------------------------------------
--- JUNEJO ULTRA SCRIPT HUB - MASTER UI (7 FLAT ROWS)
+-- JUNEJO ULTRA SCRIPT HUB - MASTER UI (6 CLEAN ROWS)
 --------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoSpiderEvolutionUI"
@@ -446,7 +428,7 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999999
 ScreenGui.Parent = UIContainer
 
-local TotalFrameHeight = 265
+local TotalFrameHeight = 238
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
@@ -500,9 +482,8 @@ CloseBtn.Parent = Header
 CloseBtn.MouseButton1Click:Connect(function()
     StopFlying()
     Toggles.AutoClick = false
-    Toggles.AutoEvolve = false
-    Toggles.AutoAttack = false
     Toggles.AutoRebirth = false
+    Toggles.AutoWins = false
     Toggles.FlyMode = false
     Toggles.WalkSpeedBoost = false
     Toggles.InfiniteJump = false
@@ -548,10 +529,10 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Content Frame (7 Rows)
+-- Content Frame (6 Clean Rows)
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -24, 0, 189)
+ContentFrame.Size = UDim2.new(1, -24, 0, 162)
 ContentFrame.Position = UDim2.new(0, 12, 0, 38)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
@@ -622,23 +603,20 @@ local function AddToggleRow(text, configKey, callback)
 end
 
 --------------------------------------------------------------------
--- POPULATE EXACT 7 ROWS
+-- POPULATE EXACT 6 CLEAN ROWS
 --------------------------------------------------------------------
 
--- 1. Auto Click (Web Power)
-AddToggleRow("Auto Click (Web Power)", "AutoClick")
+-- 1. Auto Click
+AddToggleRow("Auto Click", "AutoClick")
 
--- 2. Auto Evolve
-AddToggleRow("Auto Evolve", "AutoEvolve")
-
--- 3. Auto Attack / Boss Aura
-AddToggleRow("Auto Attack / Boss Aura", "AutoAttack")
-
--- 4. Auto Rebirth
+-- 2. Auto Rebirth
 AddToggleRow("Auto Rebirth", "AutoRebirth")
 
--- 5. Fly Mode
-AddToggleRow("Fly Mode", "FlyMode", function(enabled)
+-- 3. Auto Wins (New Feature)
+AddToggleRow("Auto Wins", "AutoWins")
+
+-- 4. Fly
+AddToggleRow("Fly", "FlyMode", function(enabled)
     if enabled then
         StartFlying()
     else
@@ -646,7 +624,7 @@ AddToggleRow("Fly Mode", "FlyMode", function(enabled)
     end
 end)
 
--- 6. WalkSpeed Boost with Integrated Adjuster Pill (- / +)
+-- 5. WalkSpeed Boost with Integrated Adjuster Pill (- / +)
 local SpeedRow = Instance.new("Frame")
 SpeedRow.Name = "WalkSpeed_Row"
 SpeedRow.Size = UDim2.new(1, 0, 0, 23)
@@ -763,7 +741,7 @@ PlusBtn.MouseButton1Click:Connect(function()
     UpdateCharacterSpeed()
 end)
 
--- 7. Infinite Jump
+-- 6. Infinite Jump
 AddToggleRow("Infinite Jump", "InfiniteJump")
 
 --------------------------------------------------------------------
@@ -796,4 +774,4 @@ FooterSub.TextSize = 9
 FooterSub.Font = Enum.Font.GothamMedium
 FooterSub.Parent = Footer
 
-print("[JUNEJO SCRIPT HUB] +1 Spider Evolution Loaded Successfully!")
+print("[JUNEJO SCRIPT HUB] +1 Spider Evolution Loaded Cleanly!")
