@@ -1,326 +1,424 @@
---[[
-    JUNEJO ULTRA SCRIPT HUB - ANIME ABILITY ARENA
-    Target Game: Anime Ability Arena (Roblox)
-    Author: Made by Junejo (junejo18146)
-    Repository: junejo18146/ultrascripthub
-    Theme: Unified Junejo Executive Dark UI (#0F0F11)
-    Status: Unlocked Direct Standalone Execution
---]]
+--==============================================================--
+--  JUNEJO ULTRA SCRIPT HUB - OFFICIAL STANDALONE SCRIPT
+--  Game: Anime Ability Arena (Roblox)
+--  Version: 2.0 (Pro Combat, Auto Farm Yen, Kill Aura, Hitbox Expander, Player ESP & Safe Zone)
+--  Branding: ULTRA SCRIPT HUB | Made by Junejo (junejo18146)
+--==============================================================--
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local VirtualUser = game:GetService("VirtualUser")
-local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CoreGui = game:GetService("CoreGui")
+local StarterGui = game:GetService("StarterGui")
 
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
+local Camera = Workspace.CurrentCamera
 
--- Safe UI Parent getter (Delta, Arceus X, Fluxus, PC/Mobile compatible)
-local function GetUIContainer()
-    local success, res = pcall(function()
-        if gethui then return gethui() end
-        if syn and syn.protect_gui then return CoreGui end
-        return CoreGui
-    end)
-    if success and res then return res end
-    return LocalPlayer:WaitForChild("PlayerGui")
-end
+local VirtualUser = nil
+pcall(function() VirtualUser = game:GetService("VirtualUser") end)
 
-local UIContainer = GetUIContainer()
+local VirtualInputManager = nil
+pcall(function() VirtualInputManager = game:GetService("VirtualInputManager") end)
 
--- Cleanup previous UI instances
-for _, name in ipairs({"JunejoAnimeAbilityUI", "JunejoHubUI_AnimeAbility", "JunejoAnimeArenaMain"}) do
-    if CoreGui:FindFirstChild(name) then CoreGui[name]:Destroy() end
-    if LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild(name) then
-        LocalPlayer.PlayerGui[name]:Destroy()
-    end
-end
-
--- Feature States
+-- Feature Toggles & State
 local Toggles = {
-    Fly = false,
-    InfiniteJump = false,
-    WalkSpeedBoost = false
+    AutoFarmYen = false,
+    AutoSkills = false,
+    HitboxExpander = false,
+    PlayerESP = false,
+    AutoSafeEscape = false,
+    FlyMode = false,
+    WalkSpeedBoost = false,
+    InfiniteJump = false
 }
 
 local CustomSpeedValue = 50
+local NormalWalkSpeed = 16
 local FlySpeed = 60
+local Flying = false
+local FlyBodyGyro, FlyBodyVel
+local HitboxSize = Vector3.new(16, 16, 16)
 
---------------------------------------------------------------------
--- ANTI-AFK SYSTEM
---------------------------------------------------------------------
+-- Clean Old UI Instances
+pcall(function()
+    for _, name in ipairs({"JunejoHub_AnimeAbilityArena", "JunejoAnimeAbilityUI", "JunejoHubUI_AnimeAbility"}) do
+        if CoreGui:FindFirstChild(name) then CoreGui[name]:Destroy() end
+        local lpGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
+        if lpGui and lpGui:FindFirstChild(name) then
+            lpGui[name]:Destroy()
+        end
+    end
+end)
+
+-- Anti-AFK Engine
 LocalPlayer.Idled:Connect(function()
-    pcall(function()
-        VirtualUser:Button2Down(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
-        task.wait(1)
-        VirtualUser:Button2Up(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
-    end)
-end)
-
---------------------------------------------------------------------
--- 1. ROCK-SOLID INFINITE JUMP (PC & MOBILE COMPATIBLE)
---------------------------------------------------------------------
-UserInputService.JumpRequest:Connect(function()
-    if Toggles.InfiniteJump and LocalPlayer.Character then
+    if VirtualUser then
         pcall(function()
-            local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-            local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if hum then
-                hum:ChangeState(Enum.HumanoidStateType.Jumping)
-                if hrp then
-                    hrp.Velocity = Vector3.new(hrp.Velocity.X, math.max(hum.JumpPower > 0 and hum.JumpPower or 50, 50), hrp.Velocity.Z)
-                end
-            end
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new(0, 0))
         end)
     end
 end)
 
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not gameProcessed and Toggles.InfiniteJump and input.KeyCode == Enum.KeyCode.Space then
-        pcall(function()
-            local char = LocalPlayer.Character
-            local hum = char and char:FindFirstChildOfClass("Humanoid")
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            if hum and hrp then
-                hum:ChangeState(Enum.HumanoidStateType.Jumping)
-                hrp.Velocity = Vector3.new(hrp.Velocity.X, 50, hrp.Velocity.Z)
-            end
-        end)
-    end
-end)
+-- Character Helpers
+local function getChar()
+    return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+end
 
---------------------------------------------------------------------
--- 2. BULLETPROOF WALKSPEED BOOST ENGINE (DUAL METHOD: PROPERTY + CFRAME VECTOR ASSIST)
---------------------------------------------------------------------
-local function UpdateCharacterSpeed()
-    pcall(function()
-        local char = LocalPlayer.Character
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        if hum then
-            if Toggles.WalkSpeedBoost then
-                hum.WalkSpeed = CustomSpeedValue
-            else
-                hum.WalkSpeed = 16
+local function getRoot()
+    local char = LocalPlayer.Character
+    if not char then return nil end
+    return char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso") or char.PrimaryPart
+end
+
+local function getHum()
+    local char = LocalPlayer.Character
+    if not char then return nil end
+    return char:FindFirstChildOfClass("Humanoid")
+end
+
+-- Find Safe Zone / Spawn CFrame
+local function GetSafeZoneCFrame()
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("BasePart") then
+            local n = obj.Name:lower()
+            if n:find("safezone") or n:find("lobby") or n:find("spawn") or n:find("hub") then
+                return obj.CFrame + Vector3.new(0, 5, 0)
             end
+        end
+    end
+    local spawnLoc = Workspace:FindFirstChildOfClass("SpawnLocation")
+    if spawnLoc then
+        return spawnLoc.CFrame + Vector3.new(0, 5, 0)
+    end
+    return CFrame.new(0, 35, 0)
+end
+
+local function TeleportToSafeZone()
+    pcall(function()
+        local root = getRoot()
+        if root then
+            root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            root.CFrame = GetSafeZoneCFrame()
         end
     end)
 end
 
-local function BindHumanoidSpeedListener(char)
-    if not char then return end
-    local hum = char:WaitForChild("Humanoid", 5)
-    if hum then
-        hum:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
-            if Toggles.WalkSpeedBoost and hum.WalkSpeed ~= CustomSpeedValue then
-                hum.WalkSpeed = CustomSpeedValue
-            end
-        end)
-    end
-end
+-- Remote Finder & Dispatcher
+local function fireCombatRemotes(keywords, argsList)
+    local searchContainers = {ReplicatedStorage, Workspace}
+    local lpGui = LocalPlayer:FindFirstChild("PlayerGui")
+    if lpGui then table.insert(searchContainers, lpGui) end
+    local char = LocalPlayer.Character
+    if char then table.insert(searchContainers, char) end
 
-if LocalPlayer.Character then
-    BindHumanoidSpeedListener(LocalPlayer.Character)
-end
-LocalPlayer.CharacterAdded:Connect(function(char)
-    task.wait(0.3)
-    BindHumanoidSpeedListener(char)
-    UpdateCharacterSpeed()
-end)
-
-RunService.RenderStepped:Connect(function(dt)
-    if Toggles.WalkSpeedBoost and not Toggles.Fly then
-        pcall(function()
-            local char = LocalPlayer.Character
-            local hum = char and char:FindFirstChildOfClass("Humanoid")
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            if hum and hrp and hum.Health > 0 then
-                if hum.WalkSpeed ~= CustomSpeedValue then
-                    hum.WalkSpeed = CustomSpeedValue
-                end
-                
-                if hum.MoveDirection.Magnitude > 0.05 then
-                    local targetSpeed = tonumber(CustomSpeedValue) or 50
-                    if targetSpeed > 16 then
-                        local extraSpeed = (targetSpeed - 16)
-                        local stepMultiplier = math.clamp(dt or (1/60), 0.001, 0.05)
-                        hrp.CFrame = hrp.CFrame + (hum.MoveDirection * (extraSpeed * stepMultiplier))
+    for _, container in ipairs(searchContainers) do
+        for _, obj in ipairs(container:GetDescendants()) do
+            if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
+                local n = string.lower(obj.Name)
+                for _, kw in ipairs(keywords) do
+                    if string.find(n, kw) then
+                        for _, argSet in ipairs(argsList) do
+                            pcall(function()
+                                if obj:IsA("RemoteEvent") then
+                                    if type(argSet) == "table" then
+                                        obj:FireServer(unpack(argSet))
+                                    elseif argSet ~= nil then
+                                        obj:FireServer(argSet)
+                                    else
+                                        obj:FireServer()
+                                    end
+                                elseif obj:IsA("RemoteFunction") then
+                                    if type(argSet) == "table" then
+                                        obj:InvokeServer(unpack(argSet))
+                                    elseif argSet ~= nil then
+                                        obj:InvokeServer(argSet)
+                                    else
+                                        obj:InvokeServer()
+                                    end
+                                end
+                            end)
+                        end
+                        break
                     end
                 end
             end
-        end)
+        end
     end
-end)
-
---------------------------------------------------------------------
--- 3. BULLETPROOF 3D FLY SYSTEM (PC KEYBOARD + MOBILE TOUCH SUPPORT)
---------------------------------------------------------------------
-local flyBodyGyro, flyBodyVelocity, flyConnection
-
-local function StopFly()
-    pcall(function()
-        if flyConnection then
-            flyConnection:Disconnect()
-            flyConnection = nil
-        end
-        if flyBodyGyro then
-            flyBodyGyro:Destroy()
-            flyBodyGyro = nil
-        end
-        if flyBodyVelocity then
-            flyBodyVelocity:Destroy()
-            flyBodyVelocity = nil
-        end
-        local char = LocalPlayer.Character
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        if hum then
-            hum.PlatformStand = false
-        end
-    end)
 end
 
-local function StartFly()
-    StopFly()
-    pcall(function()
-        local char = LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        if not hrp or not hum then return end
+-- Target Finder (Closest Living Enemy)
+local function GetClosestEnemy()
+    local myRoot = getRoot()
+    if not myRoot then return nil end
 
-        hum.PlatformStand = true
+    local closestPlayer = nil
+    local shortestDist = math.huge
 
-        flyBodyGyro = Instance.new("BodyGyro")
-        flyBodyGyro.P = 9e4
-        flyBodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
-        flyBodyGyro.CFrame = hrp.CFrame
-        flyBodyGyro.Parent = hrp
-
-        flyBodyVelocity = Instance.new("BodyVelocity")
-        flyBodyVelocity.Velocity = Vector3.new(0, 0, 0)
-        flyBodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-        flyBodyVelocity.Parent = hrp
-
-        flyConnection = RunService.RenderStepped:Connect(function()
-            if not Toggles.Fly or not hrp or not hrp.Parent or not hum or not hum.Parent then
-                StopFly()
-                return
-            end
-
-            hum.PlatformStand = true
-            local camera = Workspace.CurrentCamera
-            if not camera then return end
-
-            flyBodyGyro.CFrame = camera.CFrame
-            local moveDirection = Vector3.new(0, 0, 0)
-
-            -- PC Keyboard
-            if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-                moveDirection = moveDirection + camera.CFrame.LookVector
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-                moveDirection = moveDirection - camera.CFrame.LookVector
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-                moveDirection = moveDirection - camera.CFrame.RightVector
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-                moveDirection = moveDirection + camera.CFrame.RightVector
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) or UserInputService:IsKeyDown(Enum.KeyCode.E) then
-                moveDirection = moveDirection + Vector3.new(0, 1, 0)
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.Q) then
-                moveDirection = moveDirection - Vector3.new(0, 1, 0)
-            end
-
-            -- Mobile Touch / Thumbstick
-            if hum.MoveDirection.Magnitude > 0.05 then
-                local camLook = camera.CFrame.LookVector
-                local camRight = camera.CFrame.RightVector
-                local localMove = hum.MoveDirection
-                moveDirection = moveDirection + (camLook * (-localMove.Z)) + (camRight * localMove.X)
-            end
-
-            if moveDirection.Magnitude > 0 then
-                flyBodyVelocity.Velocity = moveDirection.Unit * FlySpeed
-            else
-                flyBodyVelocity.Velocity = Vector3.new(0, 0, 0)
-            end
-        end)
-    end)
-end
-
-LocalPlayer.CharacterAdded:Connect(function()
-    task.wait(0.5)
-    if Toggles.Fly then
-        StartFly()
-    end
-end)
-
---------------------------------------------------------------------
--- 4. SAFE ZONE TELEPORT HELPER
---------------------------------------------------------------------
-local function TeleportToSafeZone()
-    pcall(function()
-        local char = LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
-
-        -- 1. Search for explicit SafeZone / Lobby parts
-        local targetCFrame = nil
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            if obj:IsA("BasePart") then
-                local n = obj.Name:lower()
-                if n:find("safezone") or n:find("lobby") or n:find("spawn") or n:find("hub") then
-                    targetCFrame = obj.CFrame + Vector3.new(0, 5, 0)
-                    break
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local enemyRoot = player.Character:FindFirstChild("HumanoidRootPart")
+            local enemyHum = player.Character:FindFirstChildOfClass("Humanoid")
+            if enemyRoot and enemyHum and enemyHum.Health > 0 then
+                local dist = (myRoot.Position - enemyRoot.Position).Magnitude
+                if dist < shortestDist then
+                    shortestDist = dist
+                    closestPlayer = player
                 end
             end
         end
+    end
+    return closestPlayer
+end
 
-        -- 2. Fallback to SpawnLocation
-        if not targetCFrame then
-            local spawnLoc = Workspace:FindFirstChildOfClass("SpawnLocation")
-            if spawnLoc then
-                targetCFrame = spawnLoc.CFrame + Vector3.new(0, 5, 0)
+-- WalkSpeed Multi-Layer Engine
+local function UpdateCharacterSpeed()
+    local hum = getHum()
+    if hum then
+        if Toggles.WalkSpeedBoost then
+            hum.WalkSpeed = CustomSpeedValue
+        else
+            hum.WalkSpeed = NormalWalkSpeed
+        end
+    end
+end
+
+RunService.RenderStepped:Connect(function()
+    if Toggles.WalkSpeedBoost and CustomSpeedValue > 16 then
+        pcall(function()
+            local hum = getHum()
+            if hum then
+                hum.WalkSpeed = CustomSpeedValue
             end
-        end
+        end)
+    end
+end)
 
-        -- 3. Fallback to highest safe ground / origin
-        if not targetCFrame then
-            targetCFrame = CFrame.new(0, 30, 0)
-        end
+RunService.Heartbeat:Connect(function()
+    if Toggles.WalkSpeedBoost and CustomSpeedValue > 16 then
+        pcall(function()
+            local hum = getHum()
+            local root = getRoot()
+            if hum and root then
+                if hum.WalkSpeed ~= CustomSpeedValue then
+                    hum.WalkSpeed = CustomSpeedValue
+                end
+                local moveDir = hum.MoveDirection
+                if moveDir.Magnitude > 0 then
+                    root.AssemblyLinearVelocity = Vector3.new(
+                        moveDir.X * CustomSpeedValue,
+                        root.AssemblyLinearVelocity.Y,
+                        moveDir.Z * CustomSpeedValue
+                    )
+                end
+            end
+        end)
+    end
+end)
 
-        -- Perform instant safe teleport
-        hrp.Velocity = Vector3.new(0, 0, 0)
-        if hrp.AssemblyLinearVelocity then
-            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+LocalPlayer.CharacterAdded:Connect(function(newChar)
+    task.wait(0.5)
+    UpdateCharacterSpeed()
+end)
+
+-- Infinite Jump Engine
+UserInputService.JumpRequest:Connect(function()
+    if Toggles.InfiniteJump then
+        pcall(function()
+            local hum = getHum()
+            local root = getRoot()
+            if hum and root then
+                hum:ChangeState(Enum.HumanoidStateType.Jumping)
+                root.AssemblyLinearVelocity = Vector3.new(
+                    root.AssemblyLinearVelocity.X,
+                    50,
+                    root.AssemblyLinearVelocity.Z
+                )
+            end
+        end)
+    end
+end)
+
+-- Smooth 3D Flight Engine
+local function startFlying()
+    local root = getRoot()
+    local hum = getHum()
+    if not root or not hum then return end
+
+    Flying = true
+    hum.PlatformStand = true
+
+    FlyBodyGyro = Instance.new("BodyGyro")
+    FlyBodyGyro.P = 9e4
+    FlyBodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+    FlyBodyGyro.CFrame = root.CFrame
+    FlyBodyGyro.Parent = root
+
+    FlyBodyVel = Instance.new("BodyVelocity")
+    FlyBodyVel.Velocity = Vector3.new(0, 0, 0)
+    FlyBodyVel.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+    FlyBodyVel.Parent = root
+
+    task.spawn(function()
+        while Flying and Toggles.FlyMode do
+            RunService.RenderStepped:Wait()
+            if not root or not FlyBodyGyro or not FlyBodyVel then break end
+            
+            FlyBodyGyro.CFrame = Camera.CFrame
+            local direction = Vector3.new()
+
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+                direction = direction + (Camera.CFrame.LookVector)
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+                direction = direction - (Camera.CFrame.LookVector)
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+                direction = direction - (Camera.CFrame.RightVector)
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+                direction = direction + (Camera.CFrame.RightVector)
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+                direction = direction + Vector3.new(0, 1, 0)
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+                direction = direction - Vector3.new(0, 1, 0)
+            end
+
+            -- Mobile Touch / Thumbstick support
+            if hum.MoveDirection.Magnitude > 0 and direction.Magnitude == 0 then
+                direction = (Camera.CFrame.LookVector * hum.MoveDirection.Z * -1) + (Camera.CFrame.RightVector * hum.MoveDirection.X)
+            end
+
+            FlyBodyVel.Velocity = direction * FlySpeed
         end
-        hrp.CFrame = targetCFrame
+        if FlyBodyGyro then FlyBodyGyro:Destroy() end
+        if FlyBodyVel then FlyBodyVel:Destroy() end
+        if hum then hum.PlatformStand = false end
+        Flying = false
     end)
 end
 
---------------------------------------------------------------------
--- 5. UNIFIED JUNEJO EXECUTIVE DARK UI (#0F0F11, 290x218px)
---------------------------------------------------------------------
+local function stopFlying()
+    Flying = false
+    if FlyBodyGyro then FlyBodyGyro:Destroy() end
+    if FlyBodyVel then FlyBodyVel:Destroy() end
+    local hum = getHum()
+    if hum then hum.PlatformStand = false end
+end
+
+--==============================================================--
+--  GUI CREATION (Official Junejo Ultra Script Hub Standard)
+--==============================================================--
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "JunejoAnimeAbilityUI"
+ScreenGui.Name = "JunejoHub_AnimeAbilityArena"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999999
 
-if syn and syn.protect_gui then
-    syn.protect_gui(ScreenGui)
-    ScreenGui.Parent = CoreGui
-else
-    ScreenGui.Parent = UIContainer
+local parentGui = nil
+if gethui then 
+    pcall(function() parentGui = gethui() end) 
+end
+if not parentGui then 
+    pcall(function() parentGui = CoreGui end) 
+end
+if not parentGui then 
+    pcall(function()
+        parentGui = LocalPlayer:FindFirstChildOfClass("PlayerGui") or LocalPlayer:WaitForChild("PlayerGui", 5)
+    end) 
 end
 
+pcall(function()
+    ScreenGui.Parent = parentGui or CoreGui
+end)
+if not ScreenGui.Parent then
+    pcall(function()
+        ScreenGui.Parent = LocalPlayer:FindFirstChildOfClass("PlayerGui")
+    end)
+end
+
+-- Floating Notification Toast
+local ToastFrame = Instance.new("Frame")
+ToastFrame.Name = "ToastFrame"
+ToastFrame.Size = UDim2.new(0, 310, 0, 42)
+ToastFrame.Position = UDim2.new(0.5, -155, 0, 18)
+ToastFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+ToastFrame.BorderSizePixel = 0
+ToastFrame.Visible = false
+ToastFrame.ZIndex = 100
+ToastFrame.Parent = ScreenGui
+
+local ToastCorner = Instance.new("UICorner")
+ToastCorner.CornerRadius = UDim.new(0, 8)
+ToastCorner.Parent = ToastFrame
+
+local ToastStroke = Instance.new("UIStroke")
+ToastStroke.Color = Color3.fromRGB(45, 45, 58)
+ToastStroke.Thickness = 1.2
+ToastStroke.Parent = ToastFrame
+
+local ToastIcon = Instance.new("TextLabel")
+ToastIcon.Size = UDim2.new(0, 26, 1, 0)
+ToastIcon.Position = UDim2.new(0, 8, 0, 0)
+ToastIcon.BackgroundTransparency = 1
+ToastIcon.Text = "ℹ️"
+ToastIcon.TextSize = 14
+ToastIcon.Font = Enum.Font.GothamBold
+ToastIcon.ZIndex = 101
+ToastIcon.Parent = ToastFrame
+
+local ToastLabel = Instance.new("TextLabel")
+ToastLabel.Size = UDim2.new(1, -42, 1, 0)
+ToastLabel.Position = UDim2.new(0, 36, 0, 0)
+ToastLabel.BackgroundTransparency = 1
+ToastLabel.Text = "Status Checking..."
+ToastLabel.TextColor3 = Color3.fromRGB(255, 200, 80)
+ToastLabel.TextSize = 11
+ToastLabel.Font = Enum.Font.GothamBold
+ToastLabel.TextWrapped = true
+ToastLabel.TextXAlignment = Enum.TextXAlignment.Left
+ToastLabel.ZIndex = 101
+ToastLabel.Parent = ToastFrame
+
+local toastDismissTask = nil
+local function ShowScreenToast(msg, isSuccess)
+    if not ScreenGui or not ScreenGui.Parent then return end
+    ToastLabel.Text = msg
+    if isSuccess then
+        ToastIcon.Text = "✅"
+        ToastLabel.TextColor3 = Color3.fromRGB(80, 255, 140)
+        ToastStroke.Color = Color3.fromRGB(40, 160, 80)
+    else
+        ToastIcon.Text = "⚠️"
+        ToastLabel.TextColor3 = Color3.fromRGB(255, 190, 70)
+        ToastStroke.Color = Color3.fromRGB(180, 120, 30)
+    end
+    ToastFrame.Visible = true
+
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "Anime Ability Arena",
+            Text = msg,
+            Duration = 3
+        })
+    end)
+
+    if toastDismissTask then task.cancel(toastDismissTask) end
+    toastDismissTask = task.delay(4, function()
+        ToastFrame.Visible = false
+    end)
+end
+
+-- Main Window Frame (280 x 320)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 290, 0, 218)
-MainFrame.Position = UDim2.new(0.5, -145, 0.5, -109)
+MainFrame.Size = UDim2.new(0, 280, 0, 320)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -160)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -345,7 +443,7 @@ Header.BackgroundTransparency = 1
 Header.Parent = MainFrame
 
 local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Size = UDim2.new(1, -36, 1, 0)
+TitleLabel.Size = UDim2.new(1, -40, 1, 0)
 TitleLabel.Position = UDim2.new(0, 12, 0, 0)
 TitleLabel.BackgroundTransparency = 1
 TitleLabel.Text = "ANIME ABILITY ARENA"
@@ -355,45 +453,43 @@ TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.Parent = Header
 
-local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 24, 0, 24)
-CloseBtn.Position = UDim2.new(1, -28, 0, 4)
-CloseBtn.BackgroundTransparency = 1
-CloseBtn.Text = "X"
-CloseBtn.TextColor3 = Color3.fromRGB(160, 160, 160)
-CloseBtn.TextSize = 13
-CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.Parent = Header
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0, 24, 0, 24)
+CloseButton.Position = UDim2.new(1, -28, 0, 4)
+CloseButton.BackgroundTransparency = 1
+CloseButton.Text = "X"
+CloseButton.TextColor3 = Color3.fromRGB(160, 160, 160)
+CloseButton.TextSize = 13
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.Parent = Header
+CloseButton.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
 
-CloseBtn.MouseButton1Click:Connect(function()
-    ScreenGui:Destroy()
-end)
-
+-- Header Separation Line
 local HeaderLine = Instance.new("Frame")
-HeaderLine.Size = UDim2.new(1, -20, 0, 1)
-HeaderLine.Position = UDim2.new(0, 10, 0, 32)
+HeaderLine.Size = UDim2.new(1, -24, 0, 1)
+HeaderLine.Position = UDim2.new(0, 12, 0, 32)
 HeaderLine.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
 HeaderLine.BorderSizePixel = 0
 HeaderLine.Parent = MainFrame
 
--- Content List
+-- Content Frame
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -20, 0, 135)
-ContentFrame.Position = UDim2.new(0, 10, 0, 38)
+ContentFrame.Size = UDim2.new(1, -24, 0, 242)
+ContentFrame.Position = UDim2.new(0, 12, 0, 38)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
 
 local UIList = Instance.new("UIListLayout")
 UIList.SortOrder = Enum.SortOrder.LayoutOrder
-UIList.Padding = UDim.new(0, 5)
+UIList.Padding = UDim.new(0, 4)
 UIList.Parent = ContentFrame
 
--- Top Primary Action Button: Safe Zone Teleport
+-- Top Primary Action: Safe Zone Teleport Button
 local SafeZoneBtn = Instance.new("TextButton")
 SafeZoneBtn.Name = "SafeZoneBtn"
-SafeZoneBtn.Size = UDim2.new(1, 0, 0, 26)
-SafeZoneBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+SafeZoneBtn.Size = UDim2.new(1, 0, 0, 24)
+SafeZoneBtn.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
 SafeZoneBtn.BorderSizePixel = 0
 SafeZoneBtn.Text = "TELEPORT SAFE ZONE"
 SafeZoneBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -402,24 +498,23 @@ SafeZoneBtn.Font = Enum.Font.GothamBold
 SafeZoneBtn.Parent = ContentFrame
 
 local SafeZoneCorner = Instance.new("UICorner")
-SafeZoneCorner.CornerRadius = UDim.new(0, 6)
+SafeZoneCorner.CornerRadius = UDim.new(0, 4)
 SafeZoneCorner.Parent = SafeZoneBtn
 
 local SafeZoneStroke = Instance.new("UIStroke")
-SafeZoneStroke.Color = Color3.fromRGB(55, 55, 65)
+SafeZoneStroke.Color = Color3.fromRGB(45, 45, 55)
 SafeZoneStroke.Thickness = 1
 SafeZoneStroke.Parent = SafeZoneBtn
 
 SafeZoneBtn.MouseButton1Click:Connect(function()
     TeleportToSafeZone()
-    SafeZoneBtn.Text = "TELEPORTED!"
-    task.wait(0.7)
-    SafeZoneBtn.Text = "TELEPORT SAFE ZONE"
+    ShowScreenToast("Teleported to Safe Zone / Spawn!", true)
 end)
 
+-- Helper function for Toggle Rows
 local function AddToggleRow(text, configKey, callback)
     local Row = Instance.new("Frame")
-    Row.Size = UDim2.new(1, 0, 0, 24)
+    Row.Size = UDim2.new(1, 0, 0, 23)
     Row.BackgroundTransparency = 1
     Row.Parent = ContentFrame
     
@@ -475,15 +570,79 @@ local function AddToggleRow(text, configKey, callback)
     end)
 end
 
--- Toggles
-AddToggleRow("Fly Mode", "Fly", function(enabled)
-    if enabled then StartFly() else StopFly() end
+-- 1. Auto Farm Yen / Kill Aura
+AddToggleRow("Auto Farm Yen (Aura)", "AutoFarmYen", function(enabled)
+    if enabled then
+        ShowScreenToast("Auto Farm Yen Activated! Locking on Enemies...", true)
+    end
 end)
-AddToggleRow("Infinite Jump", "InfiniteJump")
 
--- WalkSpeed Row with Adjuster (+ / - Controls)
+-- 2. Auto Skills (E & R Spammer)
+AddToggleRow("Auto Skills (E & R)", "AutoSkills", function(enabled)
+    if enabled then
+        ShowScreenToast("Auto Skills Activated! Spammer Running...", true)
+    end
+end)
+
+-- 3. Hitbox Expander
+AddToggleRow("Hitbox Expander", "HitboxExpander", function(enabled)
+    if enabled then
+        ShowScreenToast("Hitbox Expander Enabled (16x16 Studs)!", true)
+    else
+        pcall(function()
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer and p.Character then
+                    local root = p.Character:FindFirstChild("HumanoidRootPart")
+                    if root then
+                        root.Size = Vector3.new(2, 2, 1)
+                        root.Transparency = 1
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+-- 4. Player ESP
+AddToggleRow("Player ESP", "PlayerESP", function(enabled)
+    if enabled then
+        ShowScreenToast("Player ESP Enabled!", true)
+    else
+        pcall(function()
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p.Character then
+                    if p.Character:FindFirstChild("JunejoESP_Highlight") then
+                        p.Character.JunejoESP_Highlight:Destroy()
+                    end
+                    local head = p.Character:FindFirstChild("Head")
+                    if head and head:FindFirstChild("JunejoESP_Tag") then
+                        head.JunejoESP_Tag:Destroy()
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+-- 5. Auto Safe Escape (Low HP)
+AddToggleRow("Auto Safe Escape (Low HP)", "AutoSafeEscape", function(enabled)
+    if enabled then
+        ShowScreenToast("Auto Safe Escape Activated (Safe at < 25% HP)!", true)
+    end
+end)
+
+-- 6. Fly Mode
+AddToggleRow("Fly Mode", "FlyMode", function(enabled)
+    if enabled then
+        startFlying()
+    else
+        stopFlying()
+    end
+end)
+
+-- 7. WalkSpeed Row with Pill Adjuster
 local SpeedRow = Instance.new("Frame")
-SpeedRow.Size = UDim2.new(1, 0, 0, 24)
+SpeedRow.Size = UDim2.new(1, 0, 0, 23)
 SpeedRow.BackgroundTransparency = 1
 SpeedRow.Parent = ContentFrame
 
@@ -591,21 +750,24 @@ MinusBtn.MouseButton1Click:Connect(function()
 end)
 
 PlusBtn.MouseButton1Click:Connect(function()
-    CustomSpeedValue = math.min(300, CustomSpeedValue + 15)
+    CustomSpeedValue = math.min(250, CustomSpeedValue + 15)
     SpeedDisplay.Text = tostring(CustomSpeedValue)
     UpdateCharacterSpeed()
 end)
 
+-- 8. Infinite Jump Toggle
+AddToggleRow("Infinite Jump", "InfiniteJump")
+
 -- Footer
 local Footer = Instance.new("Frame")
 Footer.Name = "Footer"
-Footer.Size = UDim2.new(1, 0, 0, 44)
-Footer.Position = UDim2.new(0, 0, 1, -44)
+Footer.Size = UDim2.new(1, 0, 0, 36)
+Footer.Position = UDim2.new(0, 0, 1, -38)
 Footer.BackgroundTransparency = 1
 Footer.Parent = MainFrame
 
 local FooterTitle = Instance.new("TextLabel")
-FooterTitle.Size = UDim2.new(1, 0, 0, 16)
+FooterTitle.Size = UDim2.new(1, 0, 0, 14)
 FooterTitle.Position = UDim2.new(0, 0, 0, 4)
 FooterTitle.BackgroundTransparency = 1
 FooterTitle.Text = "ULTRA SCRIPT HUB"
@@ -614,12 +776,224 @@ FooterTitle.TextSize = 11
 FooterTitle.Font = Enum.Font.GothamBold
 FooterTitle.Parent = Footer
 
-local FooterSubtitle = Instance.new("TextLabel")
-FooterSubtitle.Size = UDim2.new(1, 0, 0, 14)
-FooterSubtitle.Position = UDim2.new(0, 0, 0, 20)
-FooterSubtitle.BackgroundTransparency = 1
-FooterSubtitle.Text = "Made by Junejo"
-FooterSubtitle.TextColor3 = Color3.fromRGB(136, 136, 153)
-FooterSubtitle.TextSize = 10
-FooterSubtitle.Font = Enum.Font.GothamMedium
-FooterSubtitle.Parent = Footer
+local FooterSub = Instance.new("TextLabel")
+FooterSub.Size = UDim2.new(1, 0, 0, 12)
+FooterSub.Position = UDim2.new(0, 0, 0, 18)
+FooterSub.BackgroundTransparency = 1
+FooterSub.Text = "Made by Junejo"
+FooterSub.TextColor3 = Color3.fromRGB(136, 136, 153)
+FooterSub.TextSize = 9
+FooterSub.Font = Enum.Font.GothamMedium
+FooterSub.Parent = Footer
+
+--==============================================================--
+-- 1. AUTO FARM YEN / KILL AURA (Behind-Back Target Lock)
+--==============================================================--
+task.spawn(function()
+    while true do
+        if Toggles.AutoFarmYen then
+            pcall(function()
+                local root = getRoot()
+                local char = LocalPlayer.Character
+                if root and char then
+                    local target = GetClosestEnemy()
+                    if target and target.Character then
+                        local tRoot = target.Character:FindFirstChild("HumanoidRootPart")
+                        local tHum = target.Character:FindFirstChildOfClass("Humanoid")
+                        if tRoot and tHum and tHum.Health > 0 then
+                            -- Teleport directly behind the enemy
+                            root.CFrame = tRoot.CFrame * CFrame.new(0, 0, 2.5)
+
+                            -- Auto Equip Tools
+                            local tool = char:FindFirstChildOfClass("Tool")
+                            if not tool then
+                                local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+                                if backpack then
+                                    local bTool = backpack:FindFirstChildOfClass("Tool")
+                                    if bTool then
+                                        bTool.Parent = char
+                                        tool = bTool
+                                    end
+                                end
+                            end
+                            if tool then pcall(function() tool:Activate() end) end
+
+                            -- Fire Attack Remotes
+                            fireCombatRemotes(
+                                {"attack", "m1", "punch", "slash", "hit", "damage", "combat", "strike", "swing", "combo", "lightattack"},
+                                {{}, {1}, {target.Character}, {tRoot}, {"m1"}, {true}}
+                            )
+
+                            -- Virtual Clicks
+                            if VirtualUser then
+                                pcall(function()
+                                    VirtualUser:CaptureController()
+                                    VirtualUser:ClickButton1(Vector2.new(500, 500))
+                                end)
+                            end
+                        end
+                    end
+                end
+            end)
+            task.wait(0.04)
+        else
+            task.wait(0.3)
+        end
+    end
+end)
+
+--==============================================================--
+-- 2. AUTO SKILLS SPAMMER (E & R Key Abilities)
+--==============================================================--
+task.spawn(function()
+    while true do
+        if Toggles.AutoSkills then
+            pcall(function()
+                -- Fire Ability Remotes
+                fireCombatRemotes(
+                    {"ability", "skill", "useability", "e", "r", "light", "heavy", "skill1", "skill2", "move1", "move2", "special", "ultimate"},
+                    {{}, {"E"}, {"R"}, {1}, {2}, {true}, {"Skill1"}, {"Skill2"}}
+                )
+
+                -- Virtual Keyboard E & R simulation
+                if VirtualInputManager then
+                    pcall(function()
+                        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+                        task.wait(0.02)
+                        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+                        task.wait(0.05)
+                        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.R, false, game)
+                        task.wait(0.02)
+                        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.R, false, game)
+                    end)
+                end
+            end)
+            task.wait(0.2)
+        else
+            task.wait(0.4)
+        end
+    end
+end)
+
+--==============================================================--
+-- 3. HITBOX EXPANDER (16x16 Studs)
+--==============================================================--
+task.spawn(function()
+    while true do
+        if Toggles.HitboxExpander then
+            pcall(function()
+                for _, player in ipairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer and player.Character then
+                        local enemyRoot = player.Character:FindFirstChild("HumanoidRootPart")
+                        local enemyHum = player.Character:FindFirstChildOfClass("Humanoid")
+                        if enemyRoot and enemyHum and enemyHum.Health > 0 then
+                            enemyRoot.Size = HitboxSize
+                            enemyRoot.Transparency = 0.6
+                            enemyRoot.Color = Color3.fromRGB(255, 60, 60)
+                            enemyRoot.Material = Enum.Material.Neon
+                            enemyRoot.CanCollide = false
+                        end
+                    end
+                end
+            end)
+            task.wait(0.4)
+        else
+            task.wait(1)
+        end
+    end
+end)
+
+--==============================================================--
+-- 4. PLAYER ESP ENGINE (Highlight + Info Tag)
+--==============================================================--
+task.spawn(function()
+    while true do
+        if Toggles.PlayerESP then
+            pcall(function()
+                for _, player in ipairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer and player.Character then
+                        local char = player.Character
+                        local hum = char:FindFirstChildOfClass("Humanoid")
+                        local head = char:FindFirstChild("Head")
+
+                        if hum and hum.Health > 0 and head then
+                            -- Highlight
+                            local hl = char:FindFirstChild("JunejoESP_Highlight")
+                            if not hl then
+                                hl = Instance.new("Highlight")
+                                hl.Name = "JunejoESP_Highlight"
+                                hl.FillColor = Color3.fromRGB(255, 50, 80)
+                                hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                                hl.FillTransparency = 0.5
+                                hl.OutlineTransparency = 0
+                                hl.Parent = char
+                            end
+
+                            -- Billboard Tag
+                            local bb = head:FindFirstChild("JunejoESP_Tag")
+                            if not bb then
+                                bb = Instance.new("BillboardGui")
+                                bb.Name = "JunejoESP_Tag"
+                                bb.Size = UDim2.new(0, 150, 0, 30)
+                                bb.StudsOffset = Vector3.new(0, 2.5, 0)
+                                bb.AlwaysOnTop = true
+                                bb.Parent = head
+
+                                local lbl = Instance.new("TextLabel")
+                                lbl.Name = "ESPLabel"
+                                lbl.Size = UDim2.new(1, 0, 1, 0)
+                                lbl.BackgroundTransparency = 1
+                                lbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+                                lbl.TextStrokeTransparency = 0
+                                lbl.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+                                lbl.TextSize = 11
+                                lbl.Font = Enum.Font.GothamBold
+                                lbl.Parent = bb
+                            end
+
+                            local myRoot = getRoot()
+                            local dist = myRoot and math.floor((myRoot.Position - head.Position).Magnitude) or 0
+                            local hp = math.floor((hum.Health / hum.MaxHealth) * 100)
+                            local lbl = bb:FindFirstChild("ESPLabel")
+                            if lbl then
+                                lbl.Text = string.format("%s | %d HP | %dm", player.DisplayName, hp, dist)
+                            end
+                        end
+                    end
+                end
+            end)
+            task.wait(0.2)
+        else
+            task.wait(0.5)
+        end
+    end
+end)
+
+--==============================================================--
+-- 5. AUTO SAFE ESCAPE (Low Health Protection)
+--==============================================================--
+RunService.Heartbeat:Connect(function()
+    if Toggles.AutoSafeEscape then
+        pcall(function()
+            local hum = getHum()
+            if hum and hum.Health > 0 and hum.MaxHealth > 0 then
+                local hpPercent = (hum.Health / hum.MaxHealth) * 100
+                if hpPercent <= 25 then
+                    TeleportToSafeZone()
+                    ShowScreenToast("Low HP Escape Triggered! Escaped to Safe Zone!", false)
+                    task.wait(1)
+                end
+            end
+        end)
+    end
+end)
+
+print("[ULTRA SCRIPT HUB] Anime Ability Arena v2.0 Loaded Successfully!")
+
+pcall(function()
+    StarterGui:SetCore("SendNotification", {
+        Title = "ULTRA SCRIPT HUB",
+        Text = "Anime Ability Arena Ready! Made by Junejo",
+        Duration = 5
+    })
+end)
