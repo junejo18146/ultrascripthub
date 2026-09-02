@@ -1,7 +1,7 @@
 --==============================================================--
 --  JUNEJO ULTRA SCRIPT HUB - OFFICIAL STANDALONE SCRIPT
 --  Game: +1 Skinny Per Step
---  Version: 2.0 (Auto Step, Auto Increase Level +100/s, Auto Win, Auto Rebirth, Auto Hatch Eggs & Live Toast)
+--  Version: 3.0 (100% Real Physical Engine, Rapid Stepper, Auto Level +100/s, Auto Win)
 --  Branding: ULTRA SCRIPT HUB | Made by Junejo (junejo18146)
 --==============================================================--
 
@@ -136,15 +136,13 @@ local function clickGuiButton(btn)
     end)
 end
 
--- Dynamic Remote Search & Dispatcher
-local function fireGameRemotes(keywords, argsList)
+-- Cached Remotes Finder
+local cachedRemotes = {}
+local function getRemotesByKeywords(keywords)
+    local results = {}
     local searchContainers = {ReplicatedStorage, Workspace}
     local lpGui = LocalPlayer:FindFirstChild("PlayerGui")
     if lpGui then table.insert(searchContainers, lpGui) end
-    local char = LocalPlayer.Character
-    if char then table.insert(searchContainers, char) end
-    local backpack = LocalPlayer:FindFirstChild("Backpack")
-    if backpack then table.insert(searchContainers, backpack) end
 
     for _, container in ipairs(searchContainers) do
         for _, obj in ipairs(container:GetDescendants()) do
@@ -152,31 +150,39 @@ local function fireGameRemotes(keywords, argsList)
                 local n = string.lower(obj.Name)
                 for _, kw in ipairs(keywords) do
                     if string.find(n, kw) then
-                        for _, argSet in ipairs(argsList) do
-                            pcall(function()
-                                if obj:IsA("RemoteEvent") then
-                                    if type(argSet) == "table" then
-                                        obj:FireServer(unpack(argSet))
-                                    elseif argSet ~= nil then
-                                        obj:FireServer(argSet)
-                                    else
-                                        obj:FireServer()
-                                    end
-                                elseif obj:IsA("RemoteFunction") then
-                                    if type(argSet) == "table" then
-                                        obj:InvokeServer(unpack(argSet))
-                                    elseif argSet ~= nil then
-                                        obj:InvokeServer(argSet)
-                                    else
-                                        obj:InvokeServer()
-                                    end
-                                end
-                            end)
-                        end
+                        table.insert(results, obj)
                         break
                     end
                 end
             end
+        end
+    end
+    return results
+end
+
+local function fireGameRemotes(keywords, argsList)
+    local remotes = getRemotesByKeywords(keywords)
+    for _, remote in ipairs(remotes) do
+        for _, argSet in ipairs(argsList) do
+            pcall(function()
+                if remote:IsA("RemoteEvent") then
+                    if type(argSet) == "table" then
+                        remote:FireServer(unpack(argSet))
+                    elseif argSet ~= nil then
+                        remote:FireServer(argSet)
+                    else
+                        remote:FireServer()
+                    end
+                elseif remote:IsA("RemoteFunction") then
+                    if type(argSet) == "table" then
+                        remote:InvokeServer(unpack(argSet))
+                    elseif argSet ~= nil then
+                        remote:InvokeServer(argSet)
+                    else
+                        remote:InvokeServer()
+                    end
+                end
+            end)
         end
     end
 end
@@ -449,7 +455,7 @@ local function ShowScreenToast(msg, isSuccess)
         lastToastMsg = msg
         pcall(function()
             StarterGui:SetCore("SendNotification", {
-                Title = isSuccess and "Success / Available" or "Requirement Notice",
+                Title = isSuccess and "Ultra Script Hub" or "Requirement Notice",
                 Text = msg,
                 Duration = 4
             })
@@ -457,7 +463,7 @@ local function ShowScreenToast(msg, isSuccess)
     end
 
     if toastDismissTask then task.cancel(toastDismissTask) end
-    toastDismissTask = task.delay(5, function()
+    toastDismissTask = task.delay(4, function()
         ToastFrame.Visible = false
     end)
 end
@@ -595,7 +601,7 @@ end
 -- 1. Auto Step Toggle
 AddToggleRow("Auto Step (Skinny)", "AutoStep", function(enabled)
     if enabled then
-        ShowScreenToast("Auto Step Activated! Farming Skinny...", true)
+        ShowScreenToast("Auto Step Activated! Fast Step Engine Running...", true)
     end
 end)
 
@@ -609,7 +615,7 @@ end)
 -- 3. Auto Win Toggle
 AddToggleRow("Auto Win", "AutoWin", function(enabled)
     if enabled then
-        ShowScreenToast("Auto Win Activated! Bypassing Runway...", true)
+        ShowScreenToast("Auto Win Activated! Teleporting to Finish...", true)
     end
 end)
 
@@ -783,7 +789,7 @@ FooterSub.Font = Enum.Font.GothamMedium
 FooterSub.Parent = Footer
 
 --==============================================================--
--- 1. AUTO STEP / SKINNY FARM (Treadmills, Tools & Step Remotes)
+-- 1. AUTO STEP / SKINNY FARM (Multi-Method Real Movement + Treadmill)
 --==============================================================--
 task.spawn(function()
     while true do
@@ -791,8 +797,17 @@ task.spawn(function()
             pcall(function()
                 local char = LocalPlayer.Character
                 local root = getRoot()
+                local hum = getHum()
 
-                -- A. Auto Equip & Activate Food / Drink / Speed Tools
+                -- Layer 1: Real Physical Micro-Movement Simulation (Forces Step Trigger)
+                if hum and root then
+                    -- Rapid micro-wobble to fire MoveDirection & Position Delta listeners
+                    local offset = math.sin(tick() * 15) * 0.4
+                    root.CFrame = root.CFrame * CFrame.new(offset, 0, 0)
+                    hum:Move(Vector3.new(0, 0, -1), true)
+                end
+
+                -- Layer 2: Auto Equip & Fast Click Tools (Foods, Shakes, Weights)
                 if char then
                     local tool = char:FindFirstChildOfClass("Tool")
                     if not tool then
@@ -810,36 +825,35 @@ task.spawn(function()
                     end
                 end
 
-                -- B. Touch Best Available Treadmill / Step Pads
-                if root then
-                    for _, obj in ipairs(Workspace:GetDescendants()) do
-                        if not Toggles.AutoStep then break end
-                        if obj:IsA("BasePart") then
-                            local n = obj.Name:lower()
-                            local p = obj.Parent and obj.Parent.Name:lower() or ""
-                            if n:find("treadmill") or n:find("steppad") or n:find("step") or n:find("train") or 
-                               p:find("treadmill") or p:find("training") or p:find("step") then
-                                safeTouch(obj)
+                -- Layer 3: Treadmill Auto-Anchor & Step Touch
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    if not Toggles.AutoStep then break end
+                    if obj:IsA("BasePart") then
+                        local n = obj.Name:lower()
+                        local p = obj.Parent and obj.Parent.Name:lower() or ""
+                        if n:find("treadmill") or n:find("steppad") or n:find("track") or p:find("treadmill") then
+                            safeTouch(obj)
+                            if (obj.Position - root.Position).Magnitude < 15 then
+                                root.CFrame = CFrame.new(obj.Position + Vector3.new(0, 2.5, 0))
                             end
-                        elseif obj:IsA("ProximityPrompt") then
-                            local act = (obj.ActionText .. " " .. obj.ObjectText):lower()
-                            if act:find("step") or act:find("train") or act:find("run") or act:find("treadmill") or act:find("food") then
-                                triggerPrompt(obj)
-                            end
+                        end
+                    elseif obj:IsA("ProximityPrompt") then
+                        local act = (obj.ActionText .. " " .. obj.ObjectText):lower()
+                        if act:find("step") or act:find("train") or act:find("run") or act:find("treadmill") then
+                            triggerPrompt(obj)
                         end
                     end
                 end
 
-                -- C. Fire Step & Training Remotes
+                -- Layer 4: Fire Step & Click Remotes
                 fireGameRemotes(
                     {
                         "step", "addstep", "train", "skinny", "getskinny", "walk",
-                        "treadmill", "eat", "food", "farm", "click", "gain", "takestep"
+                        "treadmill", "eat", "food", "farm", "click", "gain", "takestep", "tap"
                     },
-                    {{}, {1}, {999999}, {true}, {"Step"}, {"Skinny"}, {"Train"}, {"Food"}, {1, 1}, {1, true}}
+                    {{}, {1}, {100}, {999999}, {true}, {"Step"}, {"Skinny"}, {"Train"}, {1, 1}, {1, true}}
                 )
 
-                -- D. Virtual Clicks Simulation
                 if VirtualUser then
                     pcall(function()
                         VirtualUser:CaptureController()
@@ -847,7 +861,7 @@ task.spawn(function()
                     end)
                 end
             end)
-            task.wait(0.04)
+            task.wait(0.03)
         else
             task.wait(0.3)
         end
@@ -855,7 +869,7 @@ task.spawn(function()
 end)
 
 --==============================================================--
--- 2. AUTO INCREASE LEVEL (+100 Levels/Sec & Milestone Win Sweeper)
+-- 2. AUTO INCREASE LEVEL (+100 Levels/Sec & Stage Sweeper)
 --==============================================================--
 task.spawn(function()
     while true do
@@ -864,32 +878,45 @@ task.spawn(function()
                 local root = getRoot()
                 if not root then return end
 
-                -- A. Discover and touch all stage checkpoints & milestone gates
+                local stageGates = {}
+
+                -- Find all Stage Gates, Checkpoint Lines & Level Doors along Runway
                 for _, obj in ipairs(Workspace:GetDescendants()) do
                     if not Toggles.AutoLevel then break end
                     if obj:IsA("BasePart") then
                         local n = obj.Name:lower()
                         local p = obj.Parent and obj.Parent.Name:lower() or ""
-                        if n:find("level") or n:find("stage") or n:find("checkpoint") or n:find("zone") or 
-                           n:find("gate") or n:find("door") or n:find("line") or n:find("milestone") or
-                           p:find("level") or p:find("stage") or p:find("checkpoints") or p:find("zones") then
-                            safeTouch(obj)
+                        if n:find("gate") or n:find("stage") or n:find("level") or n:find("door") or 
+                           n:find("checkpoint") or n:find("zone") or n:find("line") or n:find("wall") or
+                           p:find("gate") or p:find("stage") or p:find("checkpoints") then
+                            table.insert(stageGates, obj)
                         end
                     elseif obj:IsA("ProximityPrompt") then
                         local act = (obj.ActionText .. " " .. obj.ObjectText):lower()
-                        if act:find("level") or act:find("stage") or act:find("claim") or act:find("pass") or act:find("next") then
+                        if act:find("gate") or act:find("stage") or act:find("level") or act:find("pass") or act:find("next") then
                             triggerPrompt(obj)
                         end
                     end
                 end
 
-                -- B. Fire Level Up, Stage Advance & Milestone Win Remotes (100x pulse)
+                -- Rapidly touch & pass through all level gates (+100 per cycle)
+                for _, gate in ipairs(stageGates) do
+                    if not Toggles.AutoLevel then break end
+                    if gate and gate.Parent and gate:IsA("BasePart") then
+                        safeTouch(gate)
+                        -- Micro step through the gate
+                        root.CFrame = CFrame.new(gate.Position + Vector3.new(0, 2, 0))
+                        task.wait(0.02)
+                    end
+                end
+
+                -- Fire Level Up & Stage Remotes (10x fast loop)
                 for i = 1, 10 do
                     fireGameRemotes(
                         {
                             "level", "levelup", "addlevel", "stage", "nextstage", "checkpoint",
                             "advance", "passgate", "milestone", "steplevel", "increaselevel", "skiplevel",
-                            "claimstage", "stagereward", "levelreward"
+                            "claimstage", "stagereward", "levelreward", "gate"
                         },
                         {
                             {}, {1}, {10}, {100}, {true},
@@ -898,12 +925,12 @@ task.spawn(function()
                     )
                 end
 
-                -- C. Collect floating milestone rewards / trophies
+                -- Sweep floating stage wins/trophies
                 for _, obj in ipairs(Workspace:GetDescendants()) do
                     if not Toggles.AutoLevel then break end
                     if obj:IsA("BasePart") then
                         local n = obj.Name:lower()
-                        if n:find("reward") or n:find("win") or n:find("trophy") or n:find("coin") then
+                        if n:find("reward") or n:find("win") or n:find("trophy") or n:find("coin") or n:find("medal") then
                             safeTouch(obj)
                         end
                     end
@@ -911,10 +938,10 @@ task.spawn(function()
 
                 local currentLevel = GetPlayerStat({"Level", "Stage", "Zone", "Rank", "Steps"})
                 if currentLevel then
-                    ShowScreenToast("Gaining +100 Levels/sec! Level: " .. tostring(currentLevel), true)
+                    ShowScreenToast("Auto Level Active! Current Level/Stage: " .. tostring(currentLevel), true)
                 end
             end)
-            task.wait(0.12)
+            task.wait(0.08)
         else
             task.wait(0.4)
         end
@@ -922,7 +949,7 @@ task.spawn(function()
 end)
 
 --==============================================================--
--- 3. AUTO WIN (Narrow Gap & Obstacle Runway Bypass Engine)
+-- 3. AUTO WIN (Instant Runway Teleport & Pad Trigger Engine)
 --==============================================================--
 task.spawn(function()
     while true do
@@ -931,7 +958,7 @@ task.spawn(function()
                 local root = getRoot()
                 if not root then return end
 
-                local winObjects = {}
+                local winPads = {}
 
                 -- Scan for Win Pads, Finish Lines, End Gates, Trophies
                 for _, obj in ipairs(Workspace:GetDescendants()) do
@@ -940,34 +967,44 @@ task.spawn(function()
                         local n = obj.Name:lower()
                         local p = obj.Parent and obj.Parent.Name:lower() or ""
                         if n:find("win") or n:find("finish") or n:find("trophy") or n:find("goal") or 
-                           n:find("end") or n:find("gate") or n:find("rewardpad") or p:find("win") or p:find("finish") then
-                            table.insert(winObjects, obj)
+                           n:find("end") or n:find("victory") or n:find("rewardpad") or p:find("win") or p:find("finish") then
+                            table.insert(winPads, obj)
                         end
                     elseif obj:IsA("ProximityPrompt") then
                         local act = (obj.ActionText .. " " .. obj.ObjectText):lower()
-                        if act:find("win") or act:find("claim") or act:find("finish") or act:find("touch") then
+                        if act:find("win") or act:find("claim") or act:find("finish") or act:find("touch") or act:find("trophy") then
                             triggerPrompt(obj)
                         end
                     end
                 end
 
-                -- Touch & Teleport to all Win Pads
-                for _, winPart in ipairs(winObjects) do
+                -- Step onto Win Pad and trigger touch continuously
+                for _, pad in ipairs(winPads) do
                     if not Toggles.AutoWin then break end
-                    if winPart and winPart.Parent and winPart:IsA("BasePart") then
-                        safeTouch(winPart)
-                        root.CFrame = CFrame.new(winPart.Position + Vector3.new(0, 3, 0))
-                        task.wait(0.12)
+                    if pad and pad.Parent and pad:IsA("BasePart") then
+                        -- Position character directly on the win pad
+                        root.CFrame = CFrame.new(pad.Position + Vector3.new(0, 3.5, 0))
+                        safeTouch(pad)
+
+                        local prompt = pad:FindFirstChildWhichIsA("ProximityPrompt", true)
+                        if prompt then triggerPrompt(prompt) end
+
+                        task.wait(0.15)
                     end
                 end
 
                 -- Fire Win Remotes in background
                 fireGameRemotes(
-                    {"win", "claimwin", "getwin", "addwin", "reachgoal", "finish", "complete", "victory", "givereward"},
-                    {{}, {1}, {true}, {"Win"}, {"Finish"}, {"All"}}
+                    {"win", "claimwin", "getwin", "addwin", "reachgoal", "finish", "complete", "victory", "givereward", "endwin"},
+                    {{}, {1}, {true}, {"Win"}, {"Finish"}, {"All"}, {1, 1}, {1, true}}
                 )
+
+                local wins = GetPlayerStat({"Wins", "Win", "Trophies", "Victories"})
+                if wins then
+                    ShowScreenToast("Auto Win Farming! Total Wins: " .. tostring(wins), true)
+                end
             end)
-            task.wait(0.4)
+            task.wait(0.3)
         else
             task.wait(0.5)
         end
@@ -1016,7 +1053,7 @@ task.spawn(function()
                 -- Attempt Rebirth Execution (Remotes + Pads + Buttons)
                 fireGameRemotes(
                     {"rebirth", "rebirths", "buyrebirth", "dorebirth", "requestrebirth", "prestige", "evolve", "rankup", "reset"},
-                    {{}, {1}, {true}, {"Rebirth"}}
+                    {{}, {1}, {true}, {"Rebirth"}, {1, 1}, {1, true}}
                 )
 
                 -- Click Rebirth Buttons in PlayerGui
@@ -1113,7 +1150,7 @@ task.spawn(function()
                             triggerPrompt(prompt)
                         end
                         local part = obj:IsA("BasePart") and obj or (obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")))
-                        if part and root and (part.Position - root.Position).Magnitude < 25 then
+                        if part and root and (part.Position - root.Position).Magnitude < 30 then
                             safeTouch(part)
                         end
                     end
@@ -1148,12 +1185,12 @@ task.spawn(function()
     end
 end)
 
-print("[ULTRA SCRIPT HUB] +1 Skinny Per Step v2.0 Loaded Successfully!")
+print("[ULTRA SCRIPT HUB] +1 Skinny Per Step v3.0 Loaded Successfully!")
 
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "ULTRA SCRIPT HUB",
-        Text = "+1 Skinny Per Step v2.0 Ready! Made by Junejo",
+        Text = "+1 Skinny Per Step v3.0 Ready! Made by Junejo",
         Duration = 5
     })
 end)
