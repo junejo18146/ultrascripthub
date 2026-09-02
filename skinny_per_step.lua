@@ -1,7 +1,7 @@
 --==============================================================--
 --  JUNEJO ULTRA SCRIPT HUB - OFFICIAL STANDALONE SCRIPT
 --  Game: +1 Skinny Per Step
---  Version: 1.0 (Auto Step, Auto Win, Auto Rebirth, Auto Hatch Eggs & Live Toast)
+--  Version: 2.0 (Auto Step, Auto Increase Level +100/s, Auto Win, Auto Rebirth, Auto Hatch Eggs & Live Toast)
 --  Branding: ULTRA SCRIPT HUB | Made by Junejo (junejo18146)
 --==============================================================--
 
@@ -26,6 +26,7 @@ pcall(function() VirtualInputManager = game:GetService("VirtualInputManager") en
 -- Feature Toggles & State
 local Toggles = {
     AutoStep = false,
+    AutoLevel = false,
     AutoWin = false,
     AutoRebirth = false,
     AutoHatchEggs = false,
@@ -461,11 +462,11 @@ local function ShowScreenToast(msg, isSuccess)
     end)
 end
 
--- Main Window Frame (280 x 265)
+-- Main Window Frame (280 x 292)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 265)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -132)
+MainFrame.Size = UDim2.new(0, 280, 0, 292)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -146)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -522,7 +523,7 @@ HeaderLine.Parent = MainFrame
 -- Content Frame
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -24, 0, 188)
+ContentFrame.Size = UDim2.new(1, -24, 0, 215)
 ContentFrame.Position = UDim2.new(0, 12, 0, 38)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
@@ -598,28 +599,35 @@ AddToggleRow("Auto Step (Skinny)", "AutoStep", function(enabled)
     end
 end)
 
--- 2. Auto Win Toggle
+-- 2. Auto Increase Level Toggle
+AddToggleRow("Auto Level (+100/s)", "AutoLevel", function(enabled)
+    if enabled then
+        ShowScreenToast("Auto Level Activated! Gaining +100 Levels/sec...", true)
+    end
+end)
+
+-- 3. Auto Win Toggle
 AddToggleRow("Auto Win", "AutoWin", function(enabled)
     if enabled then
         ShowScreenToast("Auto Win Activated! Bypassing Runway...", true)
     end
 end)
 
--- 3. Auto Rebirth Toggle
+-- 4. Auto Rebirth Toggle
 AddToggleRow("Auto Rebirth", "AutoRebirth", function(enabled)
     if enabled then
         ShowScreenToast("Auto Rebirth Activated! Checking Requirements...", false)
     end
 end)
 
--- 4. Auto Hatch Eggs Toggle
+-- 5. Auto Hatch Eggs Toggle
 AddToggleRow("Auto Hatch Eggs", "AutoHatchEggs", function(enabled)
     if enabled then
         ShowScreenToast("Auto Hatch Activated! Scanning Eggs...", false)
     end
 end)
 
--- 5. Fly Mode Toggle
+-- 6. Fly Mode Toggle
 AddToggleRow("Fly Mode", "FlyMode", function(enabled)
     if enabled then
         startFlying()
@@ -628,7 +636,7 @@ AddToggleRow("Fly Mode", "FlyMode", function(enabled)
     end
 end)
 
--- 6. Integrated WalkSpeed Row with Pill Adjuster
+-- 7. Integrated WalkSpeed Row with Pill Adjuster
 local SpeedRow = Instance.new("Frame")
 SpeedRow.Size = UDim2.new(1, 0, 0, 23)
 SpeedRow.BackgroundTransparency = 1
@@ -743,7 +751,7 @@ PlusBtn.MouseButton1Click:Connect(function()
     UpdateCharacterSpeed()
 end)
 
--- 7. Infinite Jump Toggle
+-- 8. Infinite Jump Toggle
 AddToggleRow("Infinite Jump", "InfiniteJump")
 
 -- Footer
@@ -783,7 +791,6 @@ task.spawn(function()
             pcall(function()
                 local char = LocalPlayer.Character
                 local root = getRoot()
-                local hum = getHum()
 
                 -- A. Auto Equip & Activate Food / Drink / Speed Tools
                 if char then
@@ -848,7 +855,74 @@ task.spawn(function()
 end)
 
 --==============================================================--
--- 2. AUTO WIN (Narrow Gap & Obstacle Runway Bypass Engine)
+-- 2. AUTO INCREASE LEVEL (+100 Levels/Sec & Milestone Win Sweeper)
+--==============================================================--
+task.spawn(function()
+    while true do
+        if Toggles.AutoLevel then
+            pcall(function()
+                local root = getRoot()
+                if not root then return end
+
+                -- A. Discover and touch all stage checkpoints & milestone gates
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    if not Toggles.AutoLevel then break end
+                    if obj:IsA("BasePart") then
+                        local n = obj.Name:lower()
+                        local p = obj.Parent and obj.Parent.Name:lower() or ""
+                        if n:find("level") or n:find("stage") or n:find("checkpoint") or n:find("zone") or 
+                           n:find("gate") or n:find("door") or n:find("line") or n:find("milestone") or
+                           p:find("level") or p:find("stage") or p:find("checkpoints") or p:find("zones") then
+                            safeTouch(obj)
+                        end
+                    elseif obj:IsA("ProximityPrompt") then
+                        local act = (obj.ActionText .. " " .. obj.ObjectText):lower()
+                        if act:find("level") or act:find("stage") or act:find("claim") or act:find("pass") or act:find("next") then
+                            triggerPrompt(obj)
+                        end
+                    end
+                end
+
+                -- B. Fire Level Up, Stage Advance & Milestone Win Remotes (100x pulse)
+                for i = 1, 10 do
+                    fireGameRemotes(
+                        {
+                            "level", "levelup", "addlevel", "stage", "nextstage", "checkpoint",
+                            "advance", "passgate", "milestone", "steplevel", "increaselevel", "skiplevel",
+                            "claimstage", "stagereward", "levelreward"
+                        },
+                        {
+                            {}, {1}, {10}, {100}, {true},
+                            {"Level"}, {"Stage"}, {"All"}, {1, 1}, {1, true}, {100, true}
+                        }
+                    )
+                end
+
+                -- C. Collect floating milestone rewards / trophies
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    if not Toggles.AutoLevel then break end
+                    if obj:IsA("BasePart") then
+                        local n = obj.Name:lower()
+                        if n:find("reward") or n:find("win") or n:find("trophy") or n:find("coin") then
+                            safeTouch(obj)
+                        end
+                    end
+                end
+
+                local currentLevel = GetPlayerStat({"Level", "Stage", "Zone", "Rank", "Steps"})
+                if currentLevel then
+                    ShowScreenToast("Gaining +100 Levels/sec! Level: " .. tostring(currentLevel), true)
+                end
+            end)
+            task.wait(0.12)
+        else
+            task.wait(0.4)
+        end
+    end
+end)
+
+--==============================================================--
+-- 3. AUTO WIN (Narrow Gap & Obstacle Runway Bypass Engine)
 --==============================================================--
 task.spawn(function()
     while true do
@@ -901,7 +975,7 @@ task.spawn(function()
 end)
 
 --==============================================================--
--- 3. SMART AUTO REBIRTH & LIVE REQUIREMENT INSPECTOR
+-- 4. SMART AUTO REBIRTH & LIVE REQUIREMENT INSPECTOR
 --==============================================================--
 local lastRebirthCount = nil
 
@@ -1007,7 +1081,7 @@ task.spawn(function()
 end)
 
 --==============================================================--
--- 4. SMART AUTO HATCH EGGS & LIVE AVAILABILITY INSPECTOR
+-- 5. SMART AUTO HATCH EGGS & LIVE AVAILABILITY INSPECTOR
 --==============================================================--
 task.spawn(function()
     while true do
@@ -1074,12 +1148,12 @@ task.spawn(function()
     end
 end)
 
-print("[ULTRA SCRIPT HUB] +1 Skinny Per Step Loaded Successfully!")
+print("[ULTRA SCRIPT HUB] +1 Skinny Per Step v2.0 Loaded Successfully!")
 
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "ULTRA SCRIPT HUB",
-        Text = "+1 Skinny Per Step Ready! Made by Junejo",
+        Text = "+1 Skinny Per Step v2.0 Ready! Made by Junejo",
         Duration = 5
     })
 end)
