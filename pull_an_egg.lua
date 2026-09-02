@@ -5,7 +5,7 @@
     Author: Made by Junejo (junejo18146)
     Repository: junejo18146/ultrascripthub
     Theme: Unified Junejo Executive Dark UI (#0F0F11) - Flat & Borderless Standard
-    Status: Standalone Executable
+    Status: Standalone Executable (Enhanced Multi-Engine Rebirth & Optimized Features)
 --]]
 
 local Players = game:GetService("Players")
@@ -34,7 +34,7 @@ end
 
 local UIContainer = GetUIContainer()
 
--- Cleanup previous UI instances
+-- Cleanup previous UI instances of this game
 pcall(function()
     for _, name in ipairs({"JunejoHubUI_PullAnEgg", "JunejoPullAnEggUI"}) do
         if CoreGui and CoreGui:FindFirstChild(name) then CoreGui[name]:Destroy() end
@@ -49,27 +49,16 @@ end)
 -- CONFIGURATION & STATE
 --------------------------------------------------------------------
 local Toggles = {
-    AutoLift = false,
-    AutoPullEggs = false,
-    AutoHatch = false,
-    AutoCollectCash = false,
-    AutoUpgradeDumbbells = false,
-    AutoRebirth = false,
-    AvoidAnimals = false,
-    WalkSpeedBoost = false,
-    Fly = false,
     RareEggESP = false,
-    NoClip = false
+    AutoPullEggs = false,
+    AutoRebirth = false,
+    CollectCash = false,
+    NoClip = false,
+    WalkSpeedBoost = false,
+    Fly = false
 }
 
 local CustomSpeedValue = 50
-local SavedFarmCFrame = nil
-
-pcall(function()
-    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    local hrp = char:WaitForChild("HumanoidRootPart", 5)
-    if hrp then SavedFarmCFrame = hrp.CFrame end
-end)
 
 --------------------------------------------------------------------
 -- ANTI-AFK SYSTEM
@@ -119,13 +108,9 @@ RunService.Stepped:Connect(function()
     end
 end)
 
-LocalPlayer.CharacterAdded:Connect(function(char)
+LocalPlayer.CharacterAdded:Connect(function()
     task.wait(0.3)
     UpdateCharacterSpeed()
-    local hrp = char:WaitForChild("HumanoidRootPart", 5)
-    if hrp and not SavedFarmCFrame then
-        SavedFarmCFrame = hrp.CFrame
-    end
 end)
 
 --------------------------------------------------------------------
@@ -190,65 +175,36 @@ end
 -- AUTOMATION ENGINES
 --------------------------------------------------------------------
 
--- 1. Auto Lift (Train Strength)
+-- 1. Auto Pull Eggs
 task.spawn(function()
     while true do
-        task.wait(0.15)
-        if Toggles.AutoLift then
-            pcall(function()
-                local char = LocalPlayer.Character
-                if char then
-                    local tool = char:FindFirstChildOfClass("Tool")
-                    if not tool and LocalPlayer:FindFirstChild("Backpack") then
-                        for _, item in ipairs(LocalPlayer.Backpack:GetChildren()) do
-                            if item:IsA("Tool") then
-                                item.Parent = char
-                                tool = item
-                                break
-                            end
-                        end
-                    end
-                    if tool then
-                        tool:Activate()
-                        for _, r in ipairs(tool:GetDescendants()) do
-                            if r:IsA("RemoteEvent") then r:FireServer() end
-                        end
-                    end
-                    for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                        if remote:IsA("RemoteEvent") then
-                            local rName = remote.Name:lower()
-                            if rName:find("lift") or rName:find("train") or rName:find("strength") or rName:find("click") or rName:find("muscle") then
-                                remote:FireServer()
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- 2. Auto Pull Eggs (Interacts with nearest eggs)
-task.spawn(function()
-    while true do
-        task.wait(0.25)
+        task.wait(0.2)
         if Toggles.AutoPullEggs then
             pcall(function()
                 local char = LocalPlayer.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
                 if hrp then
+                    -- 1. Proximity Prompts
                     for _, obj in ipairs(Workspace:GetDescendants()) do
                         if not Toggles.AutoPullEggs then break end
                         if obj:IsA("ProximityPrompt") then
                             local pName = obj.Parent and obj.Parent.Name:lower() or ""
-                            if pName:find("egg") or pName:find("pull") or pName:find("grab") or pName:find("steal") then
-                                if fireproximityprompt then fireproximityprompt(obj) end
+                            if pName:find("egg") or pName:find("pull") or pName:find("grab") or pName:find("steal") or pName:find("take") then
+                                if fireproximityprompt then
+                                    fireproximityprompt(obj, 0)
+                                    fireproximityprompt(obj)
+                                end
                             end
-                        elseif obj:IsA("TouchTransmitter") then
+                        end
+                    end
+                    -- 2. Touch Interest / Touch Pads
+                    for _, obj in ipairs(Workspace:GetDescendants()) do
+                        if not Toggles.AutoPullEggs then break end
+                        if obj:IsA("TouchTransmitter") then
                             local parent = obj.Parent
                             if parent and parent:IsA("BasePart") then
                                 local pName = parent.Name:lower()
-                                if pName:find("egg") or pName:find("nest") then
+                                if pName:find("egg") or pName:find("nest") or pName:find("pull") then
                                     if firetouchinterest then
                                         firetouchinterest(hrp, parent, 0)
                                         task.wait()
@@ -264,18 +220,86 @@ task.spawn(function()
     end
 end)
 
--- 3. Auto Hatch
+-- 2. ROBUST MULTI-ENGINE AUTO REBIRTH (FIXED & FULLY OPTIMIZED)
 task.spawn(function()
     while true do
-        task.wait(0.5)
-        if Toggles.AutoHatch then
+        task.wait(1.0)
+        if Toggles.AutoRebirth then
             pcall(function()
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if remote:IsA("RemoteEvent") then
-                        local rName = remote.Name:lower()
-                        if rName:find("hatch") or rName:find("openegg") or rName:find("eggopen") then
-                            remote:FireServer()
-                            remote:FireServer(1)
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+                -- Method A: Scan ReplicatedStorage for ALL Rebirth Remotes (Events & Functions)
+                for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
+                    if not Toggles.AutoRebirth then break end
+                    if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") or obj:IsA("BindableEvent") or obj:IsA("BindableFunction") then
+                        local n = string.lower(obj.Name)
+                        if n:find("rebirth") or n:find("prestige") or n:find("ascend") or n:find("resetstats") or n:find("multiplierrestyle") then
+                            if obj:IsA("RemoteEvent") then
+                                obj:FireServer()
+                                obj:FireServer(1)
+                                obj:FireServer(true)
+                                obj:FireServer("Rebirth")
+                                obj:FireServer({})
+                            elseif obj:IsA("RemoteFunction") then
+                                task.spawn(function()
+                                    pcall(function() obj:InvokeServer() end)
+                                    pcall(function() obj:InvokeServer(1) end)
+                                    pcall(function() obj:InvokeServer(true) end)
+                                end)
+                            end
+                        end
+                    end
+                end
+
+                -- Method B: Scan Workspace for Rebirth ProximityPrompts
+                for _, prompt in ipairs(Workspace:GetDescendants()) do
+                    if not Toggles.AutoRebirth then break end
+                    if prompt:IsA("ProximityPrompt") then
+                        local pName = (prompt.Name .. " " .. (prompt.Parent and prompt.Parent.Name or "")):lower()
+                        if pName:find("rebirth") or pName:find("ascend") or pName:find("prestige") then
+                            if fireproximityprompt then
+                                fireproximityprompt(prompt, 0)
+                                fireproximityprompt(prompt)
+                            end
+                        end
+                    end
+                end
+
+                -- Method C: Scan Workspace for Rebirth Touch Pads
+                if hrp then
+                    for _, obj in ipairs(Workspace:GetDescendants()) do
+                        if not Toggles.AutoRebirth then break end
+                        if obj:IsA("TouchTransmitter") then
+                            local parent = obj.Parent
+                            if parent and parent:IsA("BasePart") then
+                                local pName = parent.Name:lower()
+                                if pName:find("rebirth") or pName:find("ascend") or pName:find("prestige") then
+                                    if firetouchinterest then
+                                        firetouchinterest(hrp, parent, 0)
+                                        task.wait()
+                                        firetouchinterest(hrp, parent, 1)
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+
+                -- Method D: Scan PlayerGui for Rebirth Buttons & Trigger Click Signals
+                if LocalPlayer:FindFirstChild("PlayerGui") then
+                    for _, gui in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
+                        if gui:IsA("TextButton") or gui:IsA("ImageButton") then
+                            local gName = (gui.Name .. " " .. (gui:IsA("TextButton") and gui.Text or "")):lower()
+                            if gName:find("rebirth") or gName:find("ascend") or gName:find("prestige") or gName:find("confirm rebirth") then
+                                pcall(function()
+                                    if firesignal then
+                                        firesignal(gui.MouseButton1Click)
+                                        firesignal(gui.Activated)
+                                        firesignal(gui.MouseButton1Down)
+                                    end
+                                end)
+                            end
                         end
                     end
                 end
@@ -284,27 +308,32 @@ task.spawn(function()
     end
 end)
 
--- 4. Auto Collect Cash
+-- 3. Collect Cash (Passive & Drops)
 task.spawn(function()
     while true do
         task.wait(0.5)
-        if Toggles.AutoCollectCash then
+        if Toggles.CollectCash then
             pcall(function()
                 local char = LocalPlayer.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+                -- Remotes
                 for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
                     if remote:IsA("RemoteEvent") then
                         local rName = remote.Name:lower()
-                        if rName:find("cash") or rName:find("collect") or rName:find("claim") or rName:find("income") or rName:find("money") then
+                        if rName:find("cash") or rName:find("collect") or rName:find("claim") or rName:find("income") or rName:find("money") or rName:find("coin") then
                             remote:FireServer()
+                            remote:FireServer(1)
                         end
                     end
                 end
+
+                -- Proximity Prompts
                 if hrp then
                     for _, obj in ipairs(Workspace:GetDescendants()) do
                         if obj:IsA("ProximityPrompt") then
                             local pName = obj.Parent and obj.Parent.Name:lower() or ""
-                            if pName:find("cash") or pName:find("money") or pName:find("claim") or pName:find("collect") then
+                            if pName:find("cash") or pName:find("money") or pName:find("claim") or pName:find("collect") or pName:find("coin") then
                                 if fireproximityprompt then fireproximityprompt(obj) end
                             end
                         end
@@ -315,66 +344,7 @@ task.spawn(function()
     end
 end)
 
--- 5. Auto Upgrade Dumbbells
-task.spawn(function()
-    while true do
-        task.wait(1.0)
-        if Toggles.AutoUpgradeDumbbells then
-            pcall(function()
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
-                        local rName = remote.Name:lower()
-                        if rName:find("upgradedumbbell") or rName:find("buydumbbell") or rName:find("weightupgrade") or rName:find("upgrade") then
-                            if remote:IsA("RemoteEvent") then remote:FireServer() end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- 6. Auto Rebirth
-task.spawn(function()
-    while true do
-        task.wait(1.5)
-        if Toggles.AutoRebirth then
-            pcall(function()
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if remote:IsA("RemoteEvent") then
-                        local rName = remote.Name:lower()
-                        if rName:find("rebirth") or rName:find("ascend") then
-                            remote:FireServer()
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- 7. Avoid Animals (Godmode / Safe Anti-Touch)
-RunService.Heartbeat:Connect(function()
-    if Toggles.AvoidAnimals and LocalPlayer.Character then
-        pcall(function()
-            for _, obj in ipairs(Workspace:GetChildren()) do
-                if obj:IsA("Model") and obj ~= LocalPlayer.Character and obj:FindFirstChildOfClass("Humanoid") then
-                    local name = obj.Name:lower()
-                    if name:find("animal") or name:find("guard") or name:find("cop") or name:find("npc") or name:find("enemy") then
-                        for _, p in ipairs(obj:GetDescendants()) do
-                            if p:IsA("BasePart") then
-                                p.CanTouch = false
-                                p.CanCollide = false
-                            end
-                        end
-                    end
-                end
-            end
-        end)
-    end
-end)
-
--- 8. Rare Egg ESP & TP (Glow & Instant Stand next to Rare Eggs)
+-- 4. Rare Egg ESP & Instant Teleport
 local rareHighlights = {}
 task.spawn(function()
     while true do
@@ -389,7 +359,7 @@ task.spawn(function()
                 for _, obj in ipairs(Workspace:GetDescendants()) do
                     if obj:IsA("Model") or obj:IsA("BasePart") then
                         local name = obj.Name:lower()
-                        if (name:find("rare") or name:find("legend") or name:find("mythic") or name:find("gold") or name:find("huge") or name:find("secret")) and name:find("egg") then
+                        if (name:find("rare") or name:find("legend") or name:find("mythic") or name:find("gold") or name:find("huge") or name:find("secret") or name:find("epic")) and name:find("egg") then
                             if not obj:FindFirstChild("JunejoRareESP") then
                                 local hl = Instance.new("Highlight")
                                 hl.Name = "JunejoRareESP"
@@ -445,11 +415,11 @@ else
     ScreenGui.Parent = UIContainer
 end
 
--- Main Frame (280px Width, 310px Height)
+-- Main Frame (280px Width, 275px Height for 7 Rows)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 310)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -155)
+MainFrame.Size = UDim2.new(0, 280, 0, 275)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -137)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -498,7 +468,7 @@ CloseButton.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
 
--- Draggable Functionality
+-- Draggable Functionality (Mouse & Touch)
 local dragging, dragInput, dragStart, startPos
 Header.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -533,30 +503,26 @@ HeaderLine.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
 HeaderLine.BorderSizePixel = 0
 HeaderLine.Parent = MainFrame
 
--- Scrolling Content Frame
-local ScrollFrame = Instance.new("ScrollingFrame")
-ScrollFrame.Name = "ContentFrame"
-ScrollFrame.Size = UDim2.new(1, -20, 0, 230)
-ScrollFrame.Position = UDim2.new(0, 12, 0, 38)
-ScrollFrame.BackgroundTransparency = 1
-ScrollFrame.BorderSizePixel = 0
-ScrollFrame.ScrollBarThickness = 3
-ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(45, 45, 55)
-ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 305)
-ScrollFrame.Parent = MainFrame
+-- Content Frame
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Name = "ContentFrame"
+ContentFrame.Size = UDim2.new(1, -24, 0, 195)
+ContentFrame.Position = UDim2.new(0, 12, 0, 38)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.Parent = MainFrame
 
 local UIList = Instance.new("UIListLayout")
 UIList.SortOrder = Enum.SortOrder.LayoutOrder
 UIList.Padding = UDim.new(0, 4)
-UIList.Parent = ScrollFrame
+UIList.Parent = ContentFrame
 
 -- Helper Function for Standard Flat Toggle Rows
 local function AddToggleRow(text, configKey, callback)
     local Row = Instance.new("Frame")
     Row.Name = text:gsub("%s+", "") .. "Row"
-    Row.Size = UDim2.new(1, -6, 0, 23)
+    Row.Size = UDim2.new(1, 0, 0, 23)
     Row.BackgroundTransparency = 1
-    Row.Parent = ScrollFrame
+    Row.Parent = ContentFrame
     
     local RowBtn = Instance.new("TextButton")
     RowBtn.Size = UDim2.new(1, 0, 1, 0)
@@ -610,33 +576,27 @@ local function AddToggleRow(text, configKey, callback)
     end)
 end
 
--- 1. Auto Lift
-AddToggleRow("Auto Lift", "AutoLift")
+-- 1. Rare Egg ESP / TP
+AddToggleRow("Rare Egg ESP", "RareEggESP")
 
 -- 2. Auto Pull Eggs
 AddToggleRow("Auto Pull Eggs", "AutoPullEggs")
 
--- 3. Auto Hatch
-AddToggleRow("Auto Hatch", "AutoHatch")
-
--- 4. Auto Collect Cash
-AddToggleRow("Auto Collect Cash", "AutoCollectCash")
-
--- 5. Auto Upgrade Dumbbells
-AddToggleRow("Auto Upgrade Dumbbells", "AutoUpgradeDumbbells")
-
--- 6. Auto Rebirth
+-- 3. Auto Rebirth (Multi-Engine Fixed)
 AddToggleRow("Auto Rebirth", "AutoRebirth")
 
--- 7. Avoid Animals
-AddToggleRow("Avoid Animals", "AvoidAnimals")
+-- 4. Collect Cash
+AddToggleRow("Collect Cash", "CollectCash")
 
--- 8. WalkSpeed Row with Integrated Pill Controller (- / +)
+-- 5. NoClip
+AddToggleRow("NoClip", "NoClip")
+
+-- 6. WalkSpeed Row with Integrated Pill Controller (- / +)
 local SpeedRow = Instance.new("Frame")
 SpeedRow.Name = "WalkSpeedRow"
-SpeedRow.Size = UDim2.new(1, -6, 0, 23)
+SpeedRow.Size = UDim2.new(1, 0, 0, 23)
 SpeedRow.BackgroundTransparency = 1
-SpeedRow.Parent = ScrollFrame
+SpeedRow.Parent = ContentFrame
 
 local SpeedToggleBtn = Instance.new("TextButton")
 SpeedToggleBtn.Size = UDim2.new(0.55, 0, 1, 0)
@@ -748,16 +708,10 @@ PlusBtn.MouseButton1Click:Connect(function()
     UpdateCharacterSpeed()
 end)
 
--- 9. Fly
+-- 7. Fly
 AddToggleRow("Fly", "Fly", function(enabled)
     if enabled then StartFly() else StopFly() end
 end)
-
--- 10. Rare Egg ESP & TP
-AddToggleRow("Rare Egg ESP / TP", "RareEggESP")
-
--- 11. NoClip
-AddToggleRow("NoClip", "NoClip")
 
 -- Footer (Pinned at Bottom)
 local Footer = Instance.new("Frame")
