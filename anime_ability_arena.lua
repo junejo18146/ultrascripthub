@@ -1,7 +1,7 @@
 --==============================================================--
 --  JUNEJO ULTRA SCRIPT HUB - OFFICIAL STANDALONE SCRIPT
 --  Game: Anime Ability Arena (Roblox)
---  Version: 2.0 (Pro Combat, Auto Farm Yen, Kill Aura, Hitbox Expander, Player ESP & Safe Zone)
+--  Version: 2.1 (Player ESP, Hitbox Expander, Safe Zone Teleport, Fly & Speed)
 --  Branding: ULTRA SCRIPT HUB | Made by Junejo (junejo18146)
 --==============================================================--
 
@@ -20,16 +20,10 @@ local Camera = Workspace.CurrentCamera
 local VirtualUser = nil
 pcall(function() VirtualUser = game:GetService("VirtualUser") end)
 
-local VirtualInputManager = nil
-pcall(function() VirtualInputManager = game:GetService("VirtualInputManager") end)
-
 -- Feature Toggles & State
 local Toggles = {
-    AutoFarmYen = false,
-    AutoSkills = false,
-    HitboxExpander = false,
     PlayerESP = false,
-    AutoSafeEscape = false,
+    HitboxExpander = false,
     FlyMode = false,
     WalkSpeedBoost = false,
     InfiniteJump = false
@@ -40,7 +34,7 @@ local NormalWalkSpeed = 16
 local FlySpeed = 60
 local Flying = false
 local FlyBodyGyro, FlyBodyVel
-local HitboxSize = Vector3.new(16, 16, 16)
+local HitboxSize = Vector3.new(18, 18, 18)
 
 -- Clean Old UI Instances
 pcall(function()
@@ -105,73 +99,6 @@ local function TeleportToSafeZone()
             root.CFrame = GetSafeZoneCFrame()
         end
     end)
-end
-
--- Remote Finder & Dispatcher
-local function fireCombatRemotes(keywords, argsList)
-    local searchContainers = {ReplicatedStorage, Workspace}
-    local lpGui = LocalPlayer:FindFirstChild("PlayerGui")
-    if lpGui then table.insert(searchContainers, lpGui) end
-    local char = LocalPlayer.Character
-    if char then table.insert(searchContainers, char) end
-
-    for _, container in ipairs(searchContainers) do
-        for _, obj in ipairs(container:GetDescendants()) do
-            if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
-                local n = string.lower(obj.Name)
-                for _, kw in ipairs(keywords) do
-                    if string.find(n, kw) then
-                        for _, argSet in ipairs(argsList) do
-                            pcall(function()
-                                if obj:IsA("RemoteEvent") then
-                                    if type(argSet) == "table" then
-                                        obj:FireServer(unpack(argSet))
-                                    elseif argSet ~= nil then
-                                        obj:FireServer(argSet)
-                                    else
-                                        obj:FireServer()
-                                    end
-                                elseif obj:IsA("RemoteFunction") then
-                                    if type(argSet) == "table" then
-                                        obj:InvokeServer(unpack(argSet))
-                                    elseif argSet ~= nil then
-                                        obj:InvokeServer(argSet)
-                                    else
-                                        obj:InvokeServer()
-                                    end
-                                end
-                            end)
-                        end
-                        break
-                    end
-                end
-            end
-        end
-    end
-end
-
--- Target Finder (Closest Living Enemy)
-local function GetClosestEnemy()
-    local myRoot = getRoot()
-    if not myRoot then return nil end
-
-    local closestPlayer = nil
-    local shortestDist = math.huge
-
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character then
-            local enemyRoot = player.Character:FindFirstChild("HumanoidRootPart")
-            local enemyHum = player.Character:FindFirstChildOfClass("Humanoid")
-            if enemyRoot and enemyHum and enemyHum.Health > 0 then
-                local dist = (myRoot.Position - enemyRoot.Position).Magnitude
-                if dist < shortestDist then
-                    shortestDist = dist
-                    closestPlayer = player
-                end
-            end
-        end
-    end
-    return closestPlayer
 end
 
 -- WalkSpeed Multi-Layer Engine
@@ -345,8 +272,8 @@ end
 -- Floating Notification Toast
 local ToastFrame = Instance.new("Frame")
 ToastFrame.Name = "ToastFrame"
-ToastFrame.Size = UDim2.new(0, 310, 0, 42)
-ToastFrame.Position = UDim2.new(0.5, -155, 0, 18)
+ToastFrame.Size = UDim2.new(0, 300, 0, 40)
+ToastFrame.Position = UDim2.new(0.5, -150, 0, 18)
 ToastFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
 ToastFrame.BorderSizePixel = 0
 ToastFrame.Visible = false
@@ -414,11 +341,11 @@ local function ShowScreenToast(msg, isSuccess)
     end)
 end
 
--- Main Window Frame (280 x 320)
+-- Main Window Frame (280 x 245)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 320)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -160)
+MainFrame.Size = UDim2.new(0, 280, 0, 245)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -122)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -475,7 +402,7 @@ HeaderLine.Parent = MainFrame
 -- Content Frame
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -24, 0, 242)
+ContentFrame.Size = UDim2.new(1, -24, 0, 168)
 ContentFrame.Position = UDim2.new(0, 12, 0, 38)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
@@ -485,13 +412,13 @@ UIList.SortOrder = Enum.SortOrder.LayoutOrder
 UIList.Padding = UDim.new(0, 4)
 UIList.Parent = ContentFrame
 
--- Top Primary Action: Safe Zone Teleport Button
+-- 1. Top Action: Teleport to Safe Zone Button
 local SafeZoneBtn = Instance.new("TextButton")
 SafeZoneBtn.Name = "SafeZoneBtn"
 SafeZoneBtn.Size = UDim2.new(1, 0, 0, 24)
 SafeZoneBtn.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
 SafeZoneBtn.BorderSizePixel = 0
-SafeZoneBtn.Text = "TELEPORT SAFE ZONE"
+SafeZoneBtn.Text = "TELEPORT TO SAFE ZONE"
 SafeZoneBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 SafeZoneBtn.TextSize = 11
 SafeZoneBtn.Font = Enum.Font.GothamBold
@@ -508,7 +435,11 @@ SafeZoneStroke.Parent = SafeZoneBtn
 
 SafeZoneBtn.MouseButton1Click:Connect(function()
     TeleportToSafeZone()
+    SafeZoneBtn.Text = "TELEPORTED!"
     ShowScreenToast("Teleported to Safe Zone / Spawn!", true)
+    task.delay(0.8, function()
+        SafeZoneBtn.Text = "TELEPORT TO SAFE ZONE"
+    end)
 end)
 
 -- Helper function for Toggle Rows
@@ -570,40 +501,7 @@ local function AddToggleRow(text, configKey, callback)
     end)
 end
 
--- 1. Auto Farm Yen / Kill Aura
-AddToggleRow("Auto Farm Yen (Aura)", "AutoFarmYen", function(enabled)
-    if enabled then
-        ShowScreenToast("Auto Farm Yen Activated! Locking on Enemies...", true)
-    end
-end)
-
--- 2. Auto Skills (E & R Spammer)
-AddToggleRow("Auto Skills (E & R)", "AutoSkills", function(enabled)
-    if enabled then
-        ShowScreenToast("Auto Skills Activated! Spammer Running...", true)
-    end
-end)
-
--- 3. Hitbox Expander
-AddToggleRow("Hitbox Expander", "HitboxExpander", function(enabled)
-    if enabled then
-        ShowScreenToast("Hitbox Expander Enabled (16x16 Studs)!", true)
-    else
-        pcall(function()
-            for _, p in ipairs(Players:GetPlayers()) do
-                if p ~= LocalPlayer and p.Character then
-                    local root = p.Character:FindFirstChild("HumanoidRootPart")
-                    if root then
-                        root.Size = Vector3.new(2, 2, 1)
-                        root.Transparency = 1
-                    end
-                end
-            end
-        end)
-    end
-end)
-
--- 4. Player ESP
+-- 2. Player ESP Toggle
 AddToggleRow("Player ESP", "PlayerESP", function(enabled)
     if enabled then
         ShowScreenToast("Player ESP Enabled!", true)
@@ -624,14 +522,26 @@ AddToggleRow("Player ESP", "PlayerESP", function(enabled)
     end
 end)
 
--- 5. Auto Safe Escape (Low HP)
-AddToggleRow("Auto Safe Escape (Low HP)", "AutoSafeEscape", function(enabled)
+-- 3. Hitbox Expander Toggle
+AddToggleRow("Hitbox Expander", "HitboxExpander", function(enabled)
     if enabled then
-        ShowScreenToast("Auto Safe Escape Activated (Safe at < 25% HP)!", true)
+        ShowScreenToast("Hitbox Expander Enabled (18x18 Studs)!", true)
+    else
+        pcall(function()
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer and p.Character then
+                    local root = p.Character:FindFirstChild("HumanoidRootPart")
+                    if root then
+                        root.Size = Vector3.new(2, 2, 1)
+                        root.Transparency = 1
+                    end
+                end
+            end
+        end)
     end
 end)
 
--- 6. Fly Mode
+-- 4. Fly Mode Toggle
 AddToggleRow("Fly Mode", "FlyMode", function(enabled)
     if enabled then
         startFlying()
@@ -640,7 +550,7 @@ AddToggleRow("Fly Mode", "FlyMode", function(enabled)
     end
 end)
 
--- 7. WalkSpeed Row with Pill Adjuster
+-- 5. WalkSpeed Row with Pill Adjuster
 local SpeedRow = Instance.new("Frame")
 SpeedRow.Size = UDim2.new(1, 0, 0, 23)
 SpeedRow.BackgroundTransparency = 1
@@ -755,7 +665,7 @@ PlusBtn.MouseButton1Click:Connect(function()
     UpdateCharacterSpeed()
 end)
 
--- 8. Infinite Jump Toggle
+-- 6. Infinite Jump Toggle
 AddToggleRow("Infinite Jump", "InfiniteJump")
 
 -- Footer
@@ -787,96 +697,7 @@ FooterSub.Font = Enum.Font.GothamMedium
 FooterSub.Parent = Footer
 
 --==============================================================--
--- 1. AUTO FARM YEN / KILL AURA (Behind-Back Target Lock)
---==============================================================--
-task.spawn(function()
-    while true do
-        if Toggles.AutoFarmYen then
-            pcall(function()
-                local root = getRoot()
-                local char = LocalPlayer.Character
-                if root and char then
-                    local target = GetClosestEnemy()
-                    if target and target.Character then
-                        local tRoot = target.Character:FindFirstChild("HumanoidRootPart")
-                        local tHum = target.Character:FindFirstChildOfClass("Humanoid")
-                        if tRoot and tHum and tHum.Health > 0 then
-                            -- Teleport directly behind the enemy
-                            root.CFrame = tRoot.CFrame * CFrame.new(0, 0, 2.5)
-
-                            -- Auto Equip Tools
-                            local tool = char:FindFirstChildOfClass("Tool")
-                            if not tool then
-                                local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
-                                if backpack then
-                                    local bTool = backpack:FindFirstChildOfClass("Tool")
-                                    if bTool then
-                                        bTool.Parent = char
-                                        tool = bTool
-                                    end
-                                end
-                            end
-                            if tool then pcall(function() tool:Activate() end) end
-
-                            -- Fire Attack Remotes
-                            fireCombatRemotes(
-                                {"attack", "m1", "punch", "slash", "hit", "damage", "combat", "strike", "swing", "combo", "lightattack"},
-                                {{}, {1}, {target.Character}, {tRoot}, {"m1"}, {true}}
-                            )
-
-                            -- Virtual Clicks
-                            if VirtualUser then
-                                pcall(function()
-                                    VirtualUser:CaptureController()
-                                    VirtualUser:ClickButton1(Vector2.new(500, 500))
-                                end)
-                            end
-                        end
-                    end
-                end
-            end)
-            task.wait(0.04)
-        else
-            task.wait(0.3)
-        end
-    end
-end)
-
---==============================================================--
--- 2. AUTO SKILLS SPAMMER (E & R Key Abilities)
---==============================================================--
-task.spawn(function()
-    while true do
-        if Toggles.AutoSkills then
-            pcall(function()
-                -- Fire Ability Remotes
-                fireCombatRemotes(
-                    {"ability", "skill", "useability", "e", "r", "light", "heavy", "skill1", "skill2", "move1", "move2", "special", "ultimate"},
-                    {{}, {"E"}, {"R"}, {1}, {2}, {true}, {"Skill1"}, {"Skill2"}}
-                )
-
-                -- Virtual Keyboard E & R simulation
-                if VirtualInputManager then
-                    pcall(function()
-                        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
-                        task.wait(0.02)
-                        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
-                        task.wait(0.05)
-                        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.R, false, game)
-                        task.wait(0.02)
-                        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.R, false, game)
-                    end)
-                end
-            end)
-            task.wait(0.2)
-        else
-            task.wait(0.4)
-        end
-    end
-end)
-
---==============================================================--
--- 3. HITBOX EXPANDER (16x16 Studs)
+-- 1. HITBOX EXPANDER (18x18 Studs Neon Red)
 --==============================================================--
 task.spawn(function()
     while true do
@@ -888,7 +709,7 @@ task.spawn(function()
                         local enemyHum = player.Character:FindFirstChildOfClass("Humanoid")
                         if enemyRoot and enemyHum and enemyHum.Health > 0 then
                             enemyRoot.Size = HitboxSize
-                            enemyRoot.Transparency = 0.6
+                            enemyRoot.Transparency = 0.65
                             enemyRoot.Color = Color3.fromRGB(255, 60, 60)
                             enemyRoot.Material = Enum.Material.Neon
                             enemyRoot.CanCollide = false
@@ -904,7 +725,7 @@ task.spawn(function()
 end)
 
 --==============================================================--
--- 4. PLAYER ESP ENGINE (Highlight + Info Tag)
+-- 2. PLAYER ESP ENGINE (Highlight + Info Tag)
 --==============================================================--
 task.spawn(function()
     while true do
@@ -969,26 +790,7 @@ task.spawn(function()
     end
 end)
 
---==============================================================--
--- 5. AUTO SAFE ESCAPE (Low Health Protection)
---==============================================================--
-RunService.Heartbeat:Connect(function()
-    if Toggles.AutoSafeEscape then
-        pcall(function()
-            local hum = getHum()
-            if hum and hum.Health > 0 and hum.MaxHealth > 0 then
-                local hpPercent = (hum.Health / hum.MaxHealth) * 100
-                if hpPercent <= 25 then
-                    TeleportToSafeZone()
-                    ShowScreenToast("Low HP Escape Triggered! Escaped to Safe Zone!", false)
-                    task.wait(1)
-                end
-            end
-        end)
-    end
-end)
-
-print("[ULTRA SCRIPT HUB] Anime Ability Arena v2.0 Loaded Successfully!")
+print("[ULTRA SCRIPT HUB] Anime Ability Arena Loaded Successfully!")
 
 pcall(function()
     StarterGui:SetCore("SendNotification", {
