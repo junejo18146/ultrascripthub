@@ -1,7 +1,7 @@
 --==============================================================--
 --  JUNEJO ULTRA SCRIPT HUB - OFFICIAL STANDALONE SCRIPT
 --  Game: Melt The Ice
---  Version: 1.0 (Auto Fuel, Auto Upgrade, Auto Collect & Mobile Fly)
+--  Version: 2.0 (Auto Melt Ice, Auto Fuel, Auto Upgrade, Auto Collect & Mobile Fly)
 --  Branding: ULTRA SCRIPT HUB | Made by Junejo (junejo18146)
 --==============================================================--
 
@@ -20,8 +20,12 @@ local Camera = Workspace.CurrentCamera
 local VirtualUser = nil
 pcall(function() VirtualUser = game:GetService("VirtualUser") end)
 
+local VirtualInputManager = nil
+pcall(function() VirtualInputManager = game:GetService("VirtualInputManager") end)
+
 -- Feature Toggles & States
 local Toggles = {
+    AutoMeltIce = false,
     AutoFuel = false,
     AutoUpgrade = false,
     AutoCollect = false,
@@ -295,11 +299,11 @@ if not ScreenGui.Parent then
     end)
 end
 
--- Main Frame
+-- Main Frame (280 x 265)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 238)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -119)
+MainFrame.Size = UDim2.new(0, 280, 0, 265)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -132)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -356,7 +360,7 @@ HeaderLine.Parent = MainFrame
 -- Content Frame
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -24, 0, 160)
+ContentFrame.Size = UDim2.new(1, -24, 0, 188)
 ContentFrame.Position = UDim2.new(0, 12, 0, 38)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
@@ -425,16 +429,19 @@ local function AddToggleRow(text, configKey, callback)
     end)
 end
 
--- 1. Auto Fuel Toggle
+-- 1. Auto Melt Ice Toggle
+AddToggleRow("Auto Melt Ice", "AutoMeltIce")
+
+-- 2. Auto Fuel Toggle
 AddToggleRow("Auto Fuel", "AutoFuel")
 
--- 2. Auto Upgrade Toggle
+-- 3. Auto Upgrade Toggle
 AddToggleRow("Auto Upgrade", "AutoUpgrade")
 
--- 3. Auto Collect Toggle
+-- 4. Auto Collect Toggle
 AddToggleRow("Auto Collect", "AutoCollect")
 
--- 4. Fly Mode Toggle
+-- 5. Fly Mode Toggle
 AddToggleRow("Fly Mode", "FlyMode", function(enabled)
     if enabled then
         startFlying()
@@ -443,7 +450,7 @@ AddToggleRow("Fly Mode", "FlyMode", function(enabled)
     end
 end)
 
--- 5. Integrated WalkSpeed Row with Pill Adjuster
+-- 6. Integrated WalkSpeed Row with Pill Adjuster
 local SpeedRow = Instance.new("Frame")
 SpeedRow.Size = UDim2.new(1, 0, 0, 23)
 SpeedRow.BackgroundTransparency = 1
@@ -558,7 +565,7 @@ PlusBtn.MouseButton1Click:Connect(function()
     UpdateCharacterSpeed()
 end)
 
--- 6. Infinite Jump Toggle
+-- 7. Infinite Jump Toggle
 AddToggleRow("Infinite Jump", "InfiniteJump")
 
 -- Footer
@@ -590,7 +597,99 @@ FooterSub.Font = Enum.Font.GothamMedium
 FooterSub.Parent = Footer
 
 --==============================================================--
--- 1. AUTO FUEL LOOP (Background Value Lock + Remotes)
+-- 1. AUTO MELT ICE (Hyper Weapon Fire + Target Scanner + Remotes)
+--==============================================================--
+task.spawn(function()
+    while true do
+        if Toggles.AutoMeltIce then
+            pcall(function()
+                local char = LocalPlayer.Character
+                if not char then return end
+                local root = getRoot()
+
+                -- Auto Equip & Activate Weapon / Tool
+                local tool = char:FindFirstChildOfClass("Tool")
+                if not tool then
+                    local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+                    if backpack then
+                        local bTool = backpack:FindFirstChildOfClass("Tool")
+                        if bTool then
+                            bTool.Parent = char
+                            tool = bTool
+                        end
+                    end
+                end
+
+                if tool then
+                    pcall(function() tool:Activate() end)
+                end
+
+                -- Virtual Click Simulation
+                if VirtualUser then
+                    pcall(function()
+                        VirtualUser:CaptureController()
+                        VirtualUser:ClickButton1(Vector2.new(500, 500))
+                    end)
+                end
+                if VirtualInputManager then
+                    pcall(function()
+                        VirtualInputManager:SendMouseButtonEvent(500, 500, 0, true, game, 0)
+                        task.wait(0.01)
+                        VirtualInputManager:SendMouseButtonEvent(500, 500, 0, false, game, 0)
+                    end)
+                end
+
+                -- Target & Touch Nearest Ice Blocks / Melting Targets
+                if root then
+                    for _, obj in ipairs(Workspace:GetDescendants()) do
+                        if not Toggles.AutoMeltIce then break end
+                        if obj:IsA("BasePart") then
+                            local n = obj.Name:lower()
+                            local p = obj.Parent and obj.Parent.Name:lower() or ""
+                            if n:find("ice") or n:find("melt") or n:find("glacier") or n:find("block") or n:find("frost") or
+                               p:find("ice") or p:find("melt") or p:find("glacier") or p:find("frozen") then
+                                if (obj.Position - root.Position).Magnitude < 45 then
+                                    if firetouchinterest then
+                                        firetouchinterest(obj, root, 0)
+                                        task.wait()
+                                        firetouchinterest(obj, root, 1)
+                                    end
+                                end
+                            end
+                        elseif obj:IsA("ProximityPrompt") then
+                            local act = (obj.ActionText .. " " .. obj.ObjectText):lower()
+                            if act:find("melt") or act:find("burn") or act:find("heat") or act:find("hit") or act:find("ice") then
+                                pcall(function()
+                                    obj.HoldDuration = 0
+                                    if fireproximityprompt then fireproximityprompt(obj, 0) else obj:InputHoldBegin() task.wait(0.01) obj:InputHoldEnd() end
+                                end)
+                            end
+                        elseif obj:IsA("ClickDetector") then
+                            if fireclickdetector then
+                                fireclickdetector(obj)
+                            end
+                        end
+                    end
+                end
+
+                -- Fire All Melting & Attack Remotes
+                fireGameRemotes(
+                    {
+                        "melt", "meltice", "hitice", "damageice", "burn", "heat", "damage",
+                        "click", "mine", "attack", "melter", "meltblock", "hit", "flame", "laser", "fire"
+                    },
+                    {{}, {1}, {999999}, {true}, {"Ice"}, {"Melt"}, {"All"}, {1, 1}, {1, true}}
+                )
+            end)
+            task.wait(0.04)
+        else
+            task.wait(0.3)
+        end
+    end
+end)
+
+--==============================================================--
+-- 2. AUTO FUEL LOOP (Background Value Lock + Remotes)
 --==============================================================--
 task.spawn(function()
     while true do
@@ -644,7 +743,7 @@ task.spawn(function()
 end)
 
 --==============================================================--
--- 2. AUTO UPGRADE LOOP (Background Remote Dispatcher)
+-- 3. AUTO UPGRADE LOOP (Background Remote Dispatcher)
 --==============================================================--
 task.spawn(function()
     while true do
@@ -677,7 +776,7 @@ task.spawn(function()
 end)
 
 --==============================================================--
--- 3. AUTO COLLECT LOOP (Medals, Coins, Shards, Gold Bars)
+-- 4. AUTO COLLECT LOOP (Medals, Coins, Shards, Gold Bars)
 --==============================================================--
 task.spawn(function()
     while true do
@@ -740,12 +839,12 @@ task.spawn(function()
     end
 end)
 
-print("[ULTRA SCRIPT HUB] Melt The Ice Loaded Successfully!")
+print("[ULTRA SCRIPT HUB] Melt The Ice v2.0 Loaded Successfully!")
 
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "ULTRA SCRIPT HUB",
-        Text = "Melt The Ice Ready! Made by Junejo",
+        Text = "Melt The Ice v2.0 Ready! Made by Junejo",
         Duration = 5
     })
 end)
