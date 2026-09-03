@@ -653,6 +653,27 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   - Visuals ESP (Egg ESP & Player ESP)
   - Instant Proximity Prompt & Anti-AFK Engine
 
+---
+
+## 38. Steal A Brainrot Egg
+- **Game Name**: Steal A Brainrot Egg
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/steal_a_brainrot_egg.lua"))()
+  ```
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included**:
+  - Auto Steal & Hatch Loop (Auto 0s grab + instant teleport to base & deposit)
+  - Set Current Base Position (1-Click base location recorder)
+  - Teleport to Base (1-Click instant base recall)
+  - Best Egg ESP (Bright gold highlights on all map eggs)
+  - Noclip Mode (Phase through walls, locked base doors & lasers)
+  - Infinite Jump (Continuous multi-jump bypass)
+  - WalkSpeed Boost (+ / - Pill Controller from 16 to 300 speed)
+  - Instant Proximity Prompts (0s hold across whole game)
+  - Anti-AFK Engine (Auto 20-minute idle disconnect protection)
+  - Official Classic Junejo Dark UI (Flat Borderless Rows Standard, 280x280px)
+
 ====================================================
 Updated: September 3, 2026
 ====================================================
