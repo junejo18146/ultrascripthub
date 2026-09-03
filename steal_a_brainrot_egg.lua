@@ -1,5 +1,5 @@
 -- ====================================================
--- JUNEJO ULTRA SCRIPT HUB - STEAL A BRAINROT EGG (V3 MASTER REWRITE)
+-- JUNEJO ULTRA SCRIPT HUB - STEAL A BRAINROT EGG (V4 CONTINUOUS CYCLE FIX)
 -- Author: Made by Junejo (junejo18146)
 -- GitHub: https://github.com/junejo18146/ultrascripthub
 -- ====================================================
@@ -36,6 +36,7 @@ local Toggles = {
 local CustomSpeedValue = 100
 local SavedBaseCFrame = nil
 local CurrentEggESPInstances = {}
+local CooldownEggs = {} -- Prevents targeting empty/cooling down egg spawns
 
 -- Safe Alive Check
 local function isAlive()
@@ -480,19 +481,26 @@ FooterSub.Font = Enum.Font.GothamMedium
 FooterSub.Parent = Footer
 
 -- ====================================================
--- ULTRA NEAREST EGG STEAL & BASE RETURN ENGINE
+-- CONTINUOUS MULTI-EGG STEAL & BASE RETURN ENGINE
 -- ====================================================
 
--- Function: Find the Absolute Closest Egg to Player
-local function FindNearestEgg(hrpPosition)
+-- Generate a unique spatial key for each egg spawn location
+local function GetLocationKey(pos)
+    return math.floor(pos.X / 4) .. "_" .. math.floor(pos.Y / 4) .. "_" .. math.floor(pos.Z / 4)
+end
+
+-- Function: Find the Nearest AVAILABLE Egg (cycles across all eggs without getting stuck on empty respawning ones)
+local function FindNearestAvailableEgg(hrpPosition)
     local bestTargetCFrame = nil
     local bestPrompt = nil
     local bestPart = nil
+    local bestLocKey = nil
     local shortestDist = math.huge
+    local now = os.clock()
 
     -- 1. Scan ProximityPrompts for Steal / Egg prompts
     for _, prompt in ipairs(Workspace:GetDescendants()) do
-        if prompt:IsA("ProximityPrompt") and prompt.Enabled then
+        if prompt:IsA("ProximityPrompt") then
             local pPart = prompt.Parent
             local targetPos = nil
 
@@ -505,21 +513,26 @@ local function FindNearestEgg(hrpPosition)
             end
 
             if targetPos then
-                -- Exclude our base if base is saved (don't target base prompts as eggs to steal)
-                local distFromBase = SavedBaseCFrame and (targetPos.Position - SavedBaseCFrame.Position).Magnitude or 100
-                if distFromBase > 14 then
-                    local act = (prompt.ActionText .. " " .. prompt.ObjectText):lower()
-                    local pName = pPart.Name:lower()
-                    
-                    local isEggOrSteal = act:find("steal") or act:find("take") or act:find("grab") or act:find("egg") or act:find("brainrot") or act:find("pick") or act:find("collect") or pName:find("egg") or pName:find("brainrot") or act == "" or act == " "
-                    
-                    if isEggOrSteal then
-                        local dist = (targetPos.Position - hrpPosition).Magnitude
-                        if dist < shortestDist then
-                            shortestDist = dist
-                            bestTargetCFrame = targetPos
-                            bestPrompt = prompt
-                            bestPart = pPart:IsA("BasePart") and pPart or nil
+                local locKey = GetLocationKey(targetPos.Position)
+                local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
+
+                if not isCoolingDown then
+                    local distFromBase = SavedBaseCFrame and (targetPos.Position - SavedBaseCFrame.Position).Magnitude or 100
+                    if distFromBase > 14 then
+                        local act = (prompt.ActionText .. " " .. prompt.ObjectText):lower()
+                        local pName = pPart.Name:lower()
+                        
+                        local isEggOrSteal = act:find("steal") or act:find("take") or act:find("grab") or act:find("egg") or act:find("brainrot") or act:find("pick") or act:find("collect") or pName:find("egg") or pName:find("brainrot") or act == "" or act == " "
+                        
+                        if isEggOrSteal then
+                            local dist = (targetPos.Position - hrpPosition).Magnitude
+                            if dist < shortestDist then
+                                shortestDist = dist
+                                bestTargetCFrame = targetPos
+                                bestPrompt = prompt
+                                bestPart = pPart:IsA("BasePart") and pPart or nil
+                                bestLocKey = locKey
+                            end
                         end
                     end
                 end
@@ -550,15 +563,21 @@ local function FindNearestEgg(hrpPosition)
                 end
 
                 if tCFrame then
-                    local distFromBase = SavedBaseCFrame and (tCFrame.Position - SavedBaseCFrame.Position).Magnitude or 100
-                    if distFromBase > 16 then
-                        local dist = (tCFrame.Position - hrpPosition).Magnitude
-                        if dist < shortestDist then
-                            shortestDist = dist
-                            bestTargetCFrame = tCFrame
-                            bestPart = targetPart
-                            local p = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
-                            if p then bestPrompt = p end
+                    local locKey = GetLocationKey(tCFrame.Position)
+                    local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
+
+                    if not isCoolingDown then
+                        local distFromBase = SavedBaseCFrame and (tCFrame.Position - SavedBaseCFrame.Position).Magnitude or 100
+                        if distFromBase > 16 then
+                            local dist = (tCFrame.Position - hrpPosition).Magnitude
+                            if dist < shortestDist then
+                                shortestDist = dist
+                                bestTargetCFrame = tCFrame
+                                bestPart = targetPart
+                                bestLocKey = locKey
+                                local p = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
+                                if p then bestPrompt = p end
+                            end
                         end
                     end
                 end
@@ -566,7 +585,7 @@ local function FindNearestEgg(hrpPosition)
         end
     end
 
-    return bestTargetCFrame, bestPrompt, bestPart
+    return bestTargetCFrame, bestPrompt, bestPart, bestLocKey
 end
 
 -- Teleport and Deposit at Base Helper
@@ -578,11 +597,11 @@ local function ReturnToBaseAndDeposit(hrp)
         hrp.CFrame = SavedBaseCFrame * CFrame.new(0, 1.5, 0)
         task.wait(0.2)
 
-        -- Deposit / Hatch trigger at Base (scans all prompts & touchpads within 30 studs of Base)
+        -- Deposit / Hatch trigger at Base (scans all prompts within 35 studs of Base)
         for _, prompt in ipairs(Workspace:GetDescendants()) do
             if prompt:IsA("ProximityPrompt") and prompt.Parent then
                 local pos = prompt.Parent:IsA("BasePart") and prompt.Parent.Position or (prompt.Parent:IsA("Attachment") and prompt.Parent.WorldPosition or nil)
-                if pos and (pos - hrp.Position).Magnitude < 30 then
+                if pos and (pos - hrp.Position).Magnitude < 35 then
                     InstantTriggerPrompt(prompt)
                 end
             end
@@ -590,9 +609,9 @@ local function ReturnToBaseAndDeposit(hrp)
 
         -- Base Touchpads trigger
         for _, part in ipairs(Workspace:GetDescendants()) do
-            if part:IsA("BasePart") and (part - hrp.Position).Magnitude < 25 then
+            if part:IsA("BasePart") and (part.Position - hrp.Position).Magnitude < 30 then
                 local n = part.Name:lower()
-                if n:find("deposit") or n:find("hatch") or n:find("nest") or n:find("slot") or n:find("place") or n:find("base") then
+                if n:find("deposit") or n:find("hatch") or n:find("nest") or n:find("slot") or n:find("place") or n:find("base") or n:find("incub") then
                     if firetouchinterest then
                         firetouchinterest(hrp, part, 0)
                         task.wait()
@@ -604,7 +623,7 @@ local function ReturnToBaseAndDeposit(hrp)
     end
 end
 
--- Master Auto Steal Loop (Finds Nearest Egg -> Teleports -> Steals -> Returns to Base)
+-- Master Auto Steal Loop (Continuous Cycling Across Map)
 task.spawn(function()
     while true do
         task.wait(0.2)
@@ -618,15 +637,20 @@ task.spawn(function()
                     SavedBaseCFrame = hrp.CFrame
                 end
 
-                -- Step 1: Find the nearest egg in the map
-                local targetCFrame, prompt, eggPart = FindNearestEgg(hrp.Position)
+                -- Step 1: Find the nearest AVAILABLE egg in the map
+                local targetCFrame, prompt, eggPart, locKey = FindNearestAvailableEgg(hrp.Position)
 
                 if targetCFrame then
+                    -- Mark this egg location on cooldown (6 seconds) so it cycles to other eggs while this one respawns
+                    if locKey then
+                        CooldownEggs[locKey] = os.clock() + 6
+                    end
+
                     -- Step 2: Instant Teleport to the Nearest Egg
                     hrp.AssemblyLinearVelocity = Vector3.zero
                     hrp.AssemblyAngularVelocity = Vector3.zero
                     hrp.CFrame = targetCFrame * CFrame.new(0, 2, 0)
-                    task.wait(0.18)
+                    task.wait(0.15)
 
                     -- Step 3: Trigger Steal
                     if prompt then
@@ -640,7 +664,7 @@ task.spawn(function()
                         firetouchinterest(hrp, eggPart, 1)
                     end
 
-                    -- Also scan any prompt within 15 studs of current teleport spot
+                    -- Also scan any prompt within 16 studs of current teleport spot
                     for _, p in ipairs(Workspace:GetDescendants()) do
                         if p:IsA("ProximityPrompt") and p.Parent then
                             local pPos = p.Parent:IsA("BasePart") and p.Parent.Position or nil
@@ -650,12 +674,15 @@ task.spawn(function()
                         end
                     end
 
-                    -- Small wait for server steal grab
-                    task.wait(0.2)
+                    -- Small delay for server sync
+                    task.wait(0.18)
 
                     -- Step 4: Instantly Return to Base with the Stolen Egg!
                     ReturnToBaseAndDeposit(hrp)
-                    task.wait(0.35)
+                    task.wait(0.3)
+                else
+                    -- If all nearby eggs were recently stolen and are on cooldown, clear expired ones and brief wait
+                    task.wait(0.4)
                 end
             end
         end
