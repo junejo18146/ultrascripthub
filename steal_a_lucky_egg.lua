@@ -178,71 +178,9 @@ local function UpdateCharacterSpeed()
 end
 
 -- ====================================================
--- ADVANCED RARITY EVALUATION & INTELLIGENT SCANNER
+-- RAREST EGG SCANNER & DISTANCE ENGINE
+-- (RULE: RAREST EGG = MAXIMUM DISTANCE FROM BASE/SPAWN)
 -- ====================================================
-local RarityWeights = {
-    -- Ultra Tiers
-    ["secret"] = 1000000,
-    ["godly"] = 800000,
-    ["celestial"] = 700000,
-    ["cosmic"] = 600000,
-    ["divine"] = 500000,
-    ["infinity"] = 450000,
-    ["omega"] = 400000,
-    ["galactic"] = 350000,
-    ["void"] = 300000,
-    ["ancient"] = 250000,
-    ["abyssal"] = 220000,
-    ["titan"] = 200000,
-    ["solar"] = 180000,
-    ["demon"] = 170000,
-    ["angelic"] = 160000,
-
-    -- High Tiers
-    ["mythic"] = 150000,
-    ["mythical"] = 150000,
-    ["legendary"] = 100000,
-    ["diamond"] = 80000,
-    ["emerald"] = 70000,
-    ["ruby"] = 60000,
-    ["sapphire"] = 50000,
-    ["rainbow"] = 45000,
-    ["plasma"] = 40000,
-    ["radioactive"] = 38000,
-    ["neon"] = 35000,
-    ["magma"] = 32000,
-    ["volcanic"] = 30000,
-    ["volcano"] = 30000,
-
-    -- Mid-High Tiers
-    ["epic"] = 25000,
-    ["golden"] = 20000,
-    ["gold"] = 18000,
-    ["crystal"] = 15000,
-    ["frost"] = 14000,
-    ["ice"] = 12000,
-    ["shadow"] = 10000,
-    ["darkness"] = 10000,
-    ["dark"] = 8000,
-    ["rare"] = 5000,
-    ["uncommon"] = 500,
-    ["common"] = 100,
-
-    -- Famous High Tier Characters
-    ["skibidi titan"] = 900000,
-    ["gigachad"] = 750000,
-    ["mewing"] = 650000,
-    ["sigma"] = 600000,
-    ["kai cenat"] = 400000,
-    ["baby gronk"] = 350000,
-    ["grimace"] = 300000,
-    ["caseoh"] = 250000,
-    ["tungsten"] = 200000,
-    ["fanum"] = 150000,
-    ["rizz"] = 100000,
-    ["skibidi"] = 80000,
-}
-
 local function GetLocationKey(pos)
     return math.floor(pos.X / 4) .. "_" .. math.floor(pos.Y / 4) .. "_" .. math.floor(pos.Z / 4)
 end
@@ -267,136 +205,39 @@ local function IsBaseOrPlotItem(obj)
     return false
 end
 
-local function GetEggRarityScore(obj, prompt, distFromBase)
-    local score = 100
+local function GetEggDisplayName(obj, prompt, distFromBase)
     local detectedName = "Lucky Egg"
-    local combinedText = ""
 
-    -- 1. Scan Object Name
-    if obj then
-        detectedName = obj.Name
-        combinedText = combinedText .. " " .. obj.Name:lower()
-    end
-
-    -- 2. Scan Proximity Prompt Texts
     if prompt then
-        if prompt.ObjectText and prompt.ObjectText ~= "" then
+        if prompt.ObjectText and prompt.ObjectText ~= "" and #prompt.ObjectText > 1 then
             detectedName = prompt.ObjectText
-            combinedText = combinedText .. " " .. prompt.ObjectText:lower()
-        end
-        if prompt.ActionText and prompt.ActionText ~= "" then
-            combinedText = combinedText .. " " .. prompt.ActionText:lower()
+        elseif prompt.ActionText and prompt.ActionText ~= "" and #prompt.ActionText > 2 and not prompt.ActionText:lower():find("hold") and not prompt.ActionText:lower():find("e to") then
+            detectedName = prompt.ActionText
         end
     end
 
-    -- 3. Scan Ancestor Names (Parents up to 5 levels for Zone, Biome, Area names)
-    if obj and obj:IsA("Instance") then
-        local currentParent = obj.Parent
-        local depth = 0
-        while currentParent and depth < 5 do
-            if currentParent == Workspace or currentParent == game then break end
-            combinedText = combinedText .. " " .. currentParent.Name:lower()
-            currentParent = currentParent.Parent
-            depth = depth + 1
+    if detectedName == "Lucky Egg" and obj then
+        if obj.Name and obj.Name ~= "" and obj.Name ~= "Part" and obj.Name ~= "MeshPart" and obj.Name ~= "Model" and obj.Name ~= "ProximityPrompt" and obj.Name ~= "Attachment" then
+            detectedName = obj.Name
+        elseif obj.Parent and obj.Parent ~= Workspace and obj.Parent.Name ~= "Map" and obj.Parent.Name ~= "Models" then
+            detectedName = obj.Parent.Name
         end
     end
 
-    -- 4. Scan Attributes & Value Objects
-    if obj and obj:IsA("Instance") then
-        pcall(function()
-            for attrName, attrVal in pairs(obj:GetAttributes()) do
-                combinedText = combinedText .. " " .. tostring(attrName):lower() .. " " .. tostring(attrVal):lower()
-                if type(attrVal) == "number" then
-                    local an = attrName:lower()
-                    if an:find("rarity") or an:find("tier") or an:find("luck") or an:find("multiplier") or an:find("price") or an:find("cost") or an:find("value") or an:find("level") then
-                        score = math.max(score, attrVal * 100)
-                    end
-                end
-            end
-            if obj.Parent then
-                for attrName, attrVal in pairs(obj.Parent:GetAttributes()) do
-                    combinedText = combinedText .. " " .. tostring(attrName):lower() .. " " .. tostring(attrVal):lower()
-                    if type(attrVal) == "number" then
-                        local an = attrName:lower()
-                        if an:find("rarity") or an:find("tier") or an:find("luck") or an:find("multiplier") then
-                            score = math.max(score, attrVal * 100)
-                        end
-                    end
-                end
-            end
-        end)
-
-        pcall(function()
-            for _, valObj in ipairs(obj:GetDescendants()) do
-                if valObj:IsA("ValueBase") then
-                    combinedText = combinedText .. " " .. valObj.Name:lower() .. " " .. tostring(valObj.Value):lower()
-                    if valObj:IsA("NumberValue") or valObj:IsA("IntValue") then
-                        score = math.max(score, valObj.Value * 10)
-                    end
-                elseif valObj:IsA("TextLabel") or valObj:IsA("TextBox") then
-                    combinedText = combinedText .. " " .. valObj.Text:lower()
-                    if valObj.Text and valObj.Text ~= "" and #valObj.Text > 2 and not valObj.Text:lower():find("e to") and not valObj.Text:lower():find("hold") then
-                        detectedName = valObj.Text
-                    end
-                end
-            end
-        end)
-    end
-
-    -- 5. Match High Tier Keywords
-    for keyword, weight in pairs(RarityWeights) do
-        if combinedText:find(keyword) then
-            if weight > score then
-                score = weight
-            end
-        end
-    end
-
-    -- 6. Match Multipliers, Tiers, Zones, Biomes, Numbers
-    local tierNum = combinedText:match("tier%s*(%d+)") or combinedText:match("tier%-(%d+)") or combinedText:match("t(%d+)")
-    if tierNum then
-        score = score + (tonumber(tierNum) * 30000)
-    end
-
-    local zoneNum = combinedText:match("zone%s*(%d+)") or combinedText:match("biome%s*(%d+)") or combinedText:match("area%s*(%d+)") or combinedText:match("island%s*(%d+)")
-    if zoneNum then
-        score = score + (tonumber(zoneNum) * 25000)
-    end
-
-    local multNum = combinedText:match("(%d+)%s*x") or combinedText:match("x%s*(%d+)")
-    if multNum then
-        score = score + (tonumber(multNum) * 1000)
-    end
-
-    local kNum = combinedText:match("(%d+)%s*k")
-    if kNum then
-        score = score + (tonumber(kNum) * 500)
-    end
-
-    local mNum = combinedText:match("(%d+)%s*m")
-    if mNum then
-        score = score + (tonumber(mNum) * 50000)
-    end
-
-    local bNum = combinedText:match("(%d+)%s*b")
-    if bNum then
-        score = score + (tonumber(bNum) * 500000)
-    end
-
-    -- 7. Biome Depth Distance Weighting (Higher zone eggs are placed further away)
-    if distFromBase and distFromBase > 0 then
-        score = score + math.floor(distFromBase / 4)
-    end
-
-    return score, detectedName
+    return detectedName
 end
 
+-- RAREST EGG FUNCTION: Evaluates ALL eggs and selects the one with the MAXIMUM distance from Base
 local function FindRarestEgg(hrpPosition)
     local candidates = {}
     local now = os.clock()
+
+    if not SavedBaseCFrame and isAlive() then
+        SavedBaseCFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
+    end
     local basePos = SavedBaseCFrame and SavedBaseCFrame.Position or hrpPosition
 
-    -- 1. Gather all candidates from ProximityPrompts (outside Base / Plots)
+    -- 1. Gather all candidates from ProximityPrompts across Workspace (outside Base / Plots)
     for _, prompt in ipairs(Workspace:GetDescendants()) do
         if prompt:IsA("ProximityPrompt") then
             local pPart = prompt.Parent
@@ -408,6 +249,9 @@ local function FindRarestEgg(hrpPosition)
                 targetPos = pPart.WorldCFrame
             elseif pPart:IsA("Model") and pPart.PrimaryPart then
                 targetPos = pPart.PrimaryPart.CFrame
+            elseif pPart:IsA("Model") then
+                local bp = pPart:FindFirstChildWhichIsA("BasePart")
+                if bp then targetPos = bp.CFrame end
             end
 
             if targetPos then
@@ -417,20 +261,18 @@ local function FindRarestEgg(hrpPosition)
 
                 if not isCoolingDown and not inBaseOrPlot then
                     local distFromBase = (targetPos.Position - basePos).Magnitude
-                    if distFromBase > 18 then
-                        local act = (prompt.ActionText .. " " .. prompt.ObjectText):lower()
-                        local pName = pPart.Name:lower()
-                        local isEgg = act:find("steal") or act:find("take") or act:find("grab") or act:find("egg") or act:find("lucky") or act:find("brainrot") or act:find("pick") or act:find("collect") or pName:find("egg") or pName:find("lucky") or pName:find("brainrot") or act == "" or act == " "
+                    if distFromBase > 20 then
+                        local act = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. pPart.Name):lower()
+                        local isEgg = act:find("steal") or act:find("take") or act:find("grab") or act:find("egg") or act:find("lucky") or act:find("brainrot") or act:find("pick") or act:find("collect") or act:find("claim") or act == "" or act == " "
 
                         if isEgg then
-                            local score, eggName = GetEggRarityScore(pPart, prompt, distFromBase)
+                            local eggName = GetEggDisplayName(pPart, prompt, distFromBase)
                             table.insert(candidates, {
                                 targetCFrame = targetPos,
                                 prompt = prompt,
-                                part = pPart:IsA("BasePart") and pPart or nil,
+                                part = pPart:IsA("BasePart") and pPart or pPart:FindFirstChildWhichIsA("BasePart"),
                                 locKey = locKey,
                                 eggName = eggName,
-                                score = score,
                                 distFromBase = distFromBase
                             })
                         end
@@ -440,48 +282,45 @@ local function FindRarestEgg(hrpPosition)
         end
     end
 
-    -- 2. Gather candidates from Workspace models/parts as fallback
-    if #candidates == 0 then
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            local name = obj.Name:lower()
-            if (name:find("egg") or name:find("lucky") or name:find("brainrot")) and not name:find("gui") and not name:find("ui") then
-                local tCFrame = nil
-                local targetPart = nil
+    -- 2. Gather candidates from Workspace models/parts as fallback (outside Base / Plots)
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        local name = obj.Name:lower()
+        if (name:find("egg") or name:find("lucky") or name:find("brainrot")) and not name:find("gui") and not name:find("ui") then
+            local tCFrame = nil
+            local targetPart = nil
 
-                if obj:IsA("BasePart") then
-                    tCFrame = obj.CFrame
-                    targetPart = obj
-                elseif obj:IsA("Model") and obj.PrimaryPart then
-                    tCFrame = obj.PrimaryPart.CFrame
-                    targetPart = obj.PrimaryPart
-                elseif obj:IsA("Model") then
-                    local p = obj:FindFirstChildWhichIsA("BasePart")
-                    if p then
-                        tCFrame = p.CFrame
-                        targetPart = p
-                    end
+            if obj:IsA("BasePart") then
+                tCFrame = obj.CFrame
+                targetPart = obj
+            elseif obj:IsA("Model") and obj.PrimaryPart then
+                tCFrame = obj.PrimaryPart.CFrame
+                targetPart = obj.PrimaryPart
+            elseif obj:IsA("Model") then
+                local p = obj:FindFirstChildWhichIsA("BasePart")
+                if p then
+                    tCFrame = p.CFrame
+                    targetPart = p
                 end
+            end
 
-                if tCFrame then
-                    local locKey = GetLocationKey(tCFrame.Position)
-                    local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
-                    local inBaseOrPlot = IsBaseOrPlotItem(obj)
+            if tCFrame then
+                local locKey = GetLocationKey(tCFrame.Position)
+                local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
+                local inBaseOrPlot = IsBaseOrPlotItem(obj)
 
-                    if not isCoolingDown and not inBaseOrPlot then
-                        local distFromBase = (tCFrame.Position - basePos).Magnitude
-                        if distFromBase > 18 then
-                            local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
-                            local score, eggName = GetEggRarityScore(obj, prompt, distFromBase)
-                            table.insert(candidates, {
-                                targetCFrame = tCFrame,
-                                prompt = prompt,
-                                part = targetPart,
-                                locKey = locKey,
-                                eggName = eggName,
-                                score = score,
-                                distFromBase = distFromBase
-                            })
-                        end
+                if not isCoolingDown and not inBaseOrPlot then
+                    local distFromBase = (tCFrame.Position - basePos).Magnitude
+                    if distFromBase > 20 then
+                        local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
+                        local eggName = GetEggDisplayName(obj, prompt, distFromBase)
+                        table.insert(candidates, {
+                            targetCFrame = tCFrame,
+                            prompt = prompt,
+                            part = targetPart,
+                            locKey = locKey,
+                            eggName = eggName,
+                            distFromBase = distFromBase
+                        })
                     end
                 end
             end
@@ -492,13 +331,13 @@ local function FindRarestEgg(hrpPosition)
         return nil, nil, nil, nil, "No Rare Egg Found", 0
     end
 
-    -- 3. Sort candidates in descending order by score
+    -- 3. STRICTLY SORT CANDIDATES BY MAXIMUM DISTANCE FROM BASE (FARTHEST EGG FIRST = RAREST EGG)
     table.sort(candidates, function(a, b)
-        return a.score > b.score
+        return a.distFromBase > b.distFromBase
     end)
 
     local best = candidates[1]
-    return best.targetCFrame, best.prompt, best.part, best.locKey, best.eggName, best.score
+    return best.targetCFrame, best.prompt, best.part, best.locKey, best.eggName, math.floor(best.distFromBase)
 end
 
 local function FindNearestAvailableEgg(hrpPosition)
@@ -643,7 +482,7 @@ local function TeleportToRareEggAction()
     Toggles.AutoSteal = false
     Toggles.AutoStealRare = false
 
-    local targetCFrame, prompt, eggPart, _, eggName, rarity = FindRarestEgg(hrp.Position)
+    local targetCFrame, prompt, eggPart, _, eggName, distFromBase = FindRarestEgg(hrp.Position)
     if targetCFrame then
         hrp.AssemblyLinearVelocity = Vector3.zero
         hrp.AssemblyAngularVelocity = Vector3.zero
@@ -651,9 +490,9 @@ local function TeleportToRareEggAction()
         task.wait(0.15)
         if prompt then InstantTriggerPrompt(prompt) end
         if eggPart then InstantTouch(hrp, eggPart) end
-        ShowNotification("⚡ Teleported to Rarest Egg", "👑 " .. eggName .. " (Score: " .. rarity .. ")")
+        ShowNotification("⚡ Teleported to Rarest Egg", "👑 " .. eggName .. " (Furthest: " .. tostring(distFromBase) .. " studs)")
     else
-        ShowNotification("No Rare Egg Found", "Scanning biomes... No active rare eggs found.")
+        ShowNotification("No Rare Egg Found", "Scanning map... No active eggs found outside base.")
     end
 end
 
@@ -667,14 +506,14 @@ local function StealRareEggAction()
     Toggles.AutoTreadmill = false
     Toggles.AutoSteal = false
 
-    local targetCFrame, prompt, eggPart, locKey, eggName, rarity = FindRarestEgg(hrp.Position)
+    local targetCFrame, prompt, eggPart, locKey, eggName, distFromBase = FindRarestEgg(hrp.Position)
 
     if targetCFrame then
         if locKey then
             CooldownEggs[locKey] = os.clock() + 4
         end
 
-        ShowNotification("💎 Stealing Rarest Egg", "👑 " .. eggName .. " (Score: " .. rarity .. ")")
+        ShowNotification("💎 Stealing Furthest Rare Egg", "👑 " .. eggName .. " (" .. tostring(distFromBase) .. " studs away)")
 
         hrp.AssemblyLinearVelocity = Vector3.zero
         hrp.AssemblyAngularVelocity = Vector3.zero
@@ -698,9 +537,9 @@ local function StealRareEggAction()
             end
         end
 
-        ShowNotification("✓ Rarest Egg Claimed!", "👑 Secured " .. eggName .. " at spawn location!")
+        ShowNotification("✓ Rarest Egg Claimed!", "👑 Secured " .. eggName .. " (" .. tostring(distFromBase) .. " studs from base)!")
     else
-        ShowNotification("No Rare Egg Found", "Scanning biomes... No active rare eggs found.")
+        ShowNotification("No Rare Egg Found", "Scanning map... No active eggs found outside base.")
     end
 end
 
@@ -1223,7 +1062,7 @@ task.spawn(function()
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
 
             if hrp then
-                local targetCFrame, prompt, eggPart, locKey, eggName, rarity = FindRarestEgg(hrp.Position)
+                local targetCFrame, prompt, eggPart, locKey, eggName, distFromBase = FindRarestEgg(hrp.Position)
 
                 if targetCFrame then
                     if locKey then
@@ -1684,7 +1523,7 @@ end)
 RunService.RenderStepped:Connect(function()
     if Toggles.RareEggESP then
         local myPos = isAlive() and LocalPlayer.Character.HumanoidRootPart.Position or Vector3.zero
-        local targetCFrame, prompt, eggPart, _, eggName, rarity = FindRarestEgg(myPos)
+        local targetCFrame, prompt, eggPart, _, eggName, distFromBase = FindRarestEgg(myPos)
 
         if eggPart or (targetCFrame and targetCFrame.Position) then
             local hostObj = eggPart or (prompt and prompt.Parent)
@@ -1738,8 +1577,8 @@ RunService.RenderStepped:Connect(function()
 
                 local bb = hostObj:FindFirstChild("JunejoRareEggBillboard")
                 if bb and bb:FindFirstChild("DistLabel") and isAlive() then
-                    local dist = math.floor((hostObj:GetPivot().Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude)
-                    bb.DistLabel.Text = "Distance: " .. dist .. "s | Tier Score: " .. rarity
+                    local myDist = math.floor((hostObj:GetPivot().Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude)
+                    bb.DistLabel.Text = "Base: " .. tostring(distFromBase) .. "s | Me: " .. myDist .. "s"
                 end
             end
         end
