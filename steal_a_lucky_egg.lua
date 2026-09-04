@@ -31,6 +31,8 @@ local Toggles = {
     AutoStealRare = false,
     AutoSteal = false,
     AutoRebirth = false,
+    AutoTreadmill = false,
+    AutoUpgradeBrainrot = false,
     AutoSell = false,
     AutoHatch = false,
     AutoUpgradeBase = false,
@@ -660,7 +662,7 @@ ContentFrame.BackgroundTransparency = 1
 ContentFrame.BorderSizePixel = 0
 ContentFrame.ScrollBarThickness = 3
 ContentFrame.ScrollBarImageColor3 = Color3.fromRGB(65, 65, 80)
-ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 480)
+ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 540)
 ContentFrame.Parent = MainFrame
 
 local UIList = Instance.new("UIListLayout")
@@ -848,20 +850,34 @@ AddToggleRow("Auto Rebirth", "AutoRebirth", function(state)
     end
 end)
 
--- 8. Auto Sell (Pets / Unwanted Eggs / Items)
+-- 8. Auto Treadmill (Train Speed on Treadmill)
+AddToggleRow("Auto Treadmill", "AutoTreadmill", function(state)
+    if state then
+        ShowNotification("Auto Treadmill", "Active: Automatically training speed on Base Treadmill!")
+    end
+end)
+
+-- 9. Auto Upgrade Brainrot (Upgrade/Evolve Pets & Brainrots)
+AddToggleRow("Auto Upgrade Brainrot", "AutoUpgradeBrainrot", function(state)
+    if state then
+        ShowNotification("Auto Upgrade Brainrot", "Active: Automatically upgrading Brainrots & Pets stats!")
+    end
+end)
+
+-- 10. Auto Sell (Pets / Unwanted Eggs / Items)
 AddToggleRow("Auto Sell", "AutoSell", function(state) end)
 
--- 9. Auto Hatch Eggs (Hatch incubated eggs placed in Base)
+-- 11. Auto Hatch Eggs (Hatch incubated eggs placed in Base)
 AddToggleRow("Auto Hatch Eggs", "AutoHatch", function(state) end)
 
--- 10. Auto Upgrade Base & Treadmills
+-- 12. Auto Upgrade Base & Treadmills
 AddToggleRow("Auto Upgrade Base", "AutoUpgradeBase", function(state)
     if state then
         ShowNotification("Auto Upgrade Base", "Active: Auto-buying Treadmills & Base Upgrades!")
     end
 end)
 
--- 11. Rare Lucky Egg ESP (Neon Magenta Glowing Highlight + Billboard)
+-- 13. Rare Lucky Egg ESP (Neon Magenta Glowing Highlight + Billboard)
 AddToggleRow("Rare Egg ESP", "RareEggESP", function(state)
     if not state then
         for _, inst in pairs(CurrentRareEggESPInstances) do
@@ -871,7 +887,7 @@ AddToggleRow("Rare Egg ESP", "RareEggESP", function(state)
     end
 end)
 
--- 12. Lucky Egg ESP (Gold Highlight on All Eggs)
+-- 14. Lucky Egg ESP (Gold Highlight on All Eggs)
 AddToggleRow("Lucky Egg ESP", "EggESP", function(state)
     if not state then
         for _, highlight in pairs(CurrentEggESPInstances) do
@@ -883,7 +899,7 @@ AddToggleRow("Lucky Egg ESP", "EggESP", function(state)
     end
 end)
 
--- 13. Player ESP & Base Defense Radar
+-- 15. Player ESP & Base Defense Radar
 AddToggleRow("Player ESP & Radar", "PlayerESP", function(state)
     if not state then
         for _, inst in pairs(CurrentPlayerESPInstances) do
@@ -893,16 +909,16 @@ AddToggleRow("Player ESP & Radar", "PlayerESP", function(state)
     end
 end)
 
--- 14. Fly Mode (Smooth 3D Flight)
+-- 16. Fly Mode (Smooth 3D Flight)
 AddToggleRow("Fly Mode (3D Flight)", "FlyMode", function(state) end)
 
--- 15. Noclip Mode
+-- 17. Noclip Mode
 AddToggleRow("Noclip (Phase Walls)", "Noclip", function(state) end)
 
--- 16. Infinite Jump
+-- 18. Infinite Jump
 AddToggleRow("Infinite Jump", "InfiniteJump", function(state) end)
 
--- 17. Integrated WalkSpeed Row with - / + Pill Adjuster
+-- 19. Integrated WalkSpeed Row with - / + Pill Adjuster
 local SpeedRow = Instance.new("Frame")
 SpeedRow.Size = UDim2.new(1, -6, 0, 24)
 SpeedRow.BackgroundTransparency = 1
@@ -1185,7 +1201,149 @@ task.spawn(function()
 end)
 
 -- ====================================================
--- 3. AUTO SELL ENGINE (SELLS PETS / UNWANTED EGGS)
+-- 3. AUTO TREADMILL ENGINE (SPEED TRAINER)
+-- ====================================================
+task.spawn(function()
+    while true do
+        task.wait(0.15)
+        if Toggles.AutoTreadmill and isAlive() then
+            local char = LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+            if hrp then
+                local bestTreadmillPart = nil
+                local shortestTreadmillDist = math.huge
+                local basePos = SavedBaseCFrame and SavedBaseCFrame.Position or hrp.Position
+
+                for _, part in ipairs(Workspace:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        local n = part.Name:lower()
+                        if n:find("treadmill") or n:find("speedpad") or n:find("track") or n:find("runpad") or n:find("train") then
+                            local dist = (part.Position - basePos).Magnitude
+                            if dist < shortestTreadmillDist then
+                                shortestTreadmillDist = dist
+                                bestTreadmillPart = part
+                            end
+                        end
+                    end
+                end
+
+                if bestTreadmillPart then
+                    InstantTouch(hrp, bestTreadmillPart)
+                    if not (Toggles.AutoSteal or Toggles.AutoStealRare) then
+                        if (hrp.Position - bestTreadmillPart.Position).Magnitude > 6 then
+                            hrp.CFrame = bestTreadmillPart.CFrame * CFrame.new(0, 3, 0)
+                        end
+                    end
+                end
+
+                pcall(function()
+                    for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
+                        local n = rem.Name:lower()
+                        if n:find("treadmill") or n:find("speed") or n:find("train") or n:find("step") or n:find("addspeed") or n:find("gainspeed") then
+                            if rem:IsA("RemoteEvent") then
+                                rem:FireServer()
+                                rem:FireServer(1)
+                                rem:FireServer(true)
+                            elseif rem:IsA("RemoteFunction") then
+                                rem:InvokeServer()
+                                rem:InvokeServer(1)
+                            end
+                        end
+                    end
+                end)
+
+                pcall(function()
+                    for _, prompt in ipairs(Workspace:GetDescendants()) do
+                        if prompt:IsA("ProximityPrompt") and prompt.Parent then
+                            local act = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Parent.Name):lower()
+                            if act:find("treadmill") or act:find("train") or act:find("speed") or act:find("run") then
+                                local pPos = prompt.Parent:IsA("BasePart") and prompt.Parent.Position or nil
+                                if pPos and (pPos - hrp.Position).Magnitude < 100 then
+                                    InstantTriggerPrompt(prompt)
+                                end
+                            end
+                        end
+                    end
+                end)
+            end
+        end
+    end
+end)
+
+-- ====================================================
+-- 4. AUTO UPGRADE BRAINROT ENGINE
+-- ====================================================
+task.spawn(function()
+    while true do
+        task.wait(0.6)
+        if Toggles.AutoUpgradeBrainrot and isAlive() then
+            local hrp = LocalPlayer.Character.HumanoidRootPart
+
+            pcall(function()
+                for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
+                    local n = rem.Name:lower()
+                    if n:find("upgradebrainrot") or n:find("upgradepet") or n:find("evolve") or n:find("levelup") or n:find("boostpet") or n:find("upgradepets") or n:find("mutate") then
+                        if rem:IsA("RemoteEvent") then
+                            rem:FireServer()
+                            rem:FireServer("All")
+                            rem:FireServer(1)
+                            rem:FireServer(true)
+                        elseif rem:IsA("RemoteFunction") then
+                            rem:InvokeServer()
+                            rem:InvokeServer("All")
+                        end
+                    end
+                end
+            end)
+
+            pcall(function()
+                for _, prompt in ipairs(Workspace:GetDescendants()) do
+                    if prompt:IsA("ProximityPrompt") and prompt.Parent then
+                        local act = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Parent.Name):lower()
+                        if (act:find("upgrade") or act:find("evolve") or act:find("level") or act:find("mutate") or act:find("boost")) and (act:find("brainrot") or act:find("pet") or act:find("lucky") or act:find("slot") or act:find("stand")) then
+                            local pPos = prompt.Parent:IsA("BasePart") and prompt.Parent.Position or nil
+                            if pPos and (pPos - hrp.Position).Magnitude < 150 then
+                                InstantTriggerPrompt(prompt)
+                            end
+                        end
+                    end
+                end
+            end)
+
+            pcall(function()
+                for _, part in ipairs(Workspace:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        local n = part.Name:lower()
+                        if (n:find("upgradepet") or n:find("upgradebrainrot") or n:find("evolvepad") or n:find("petpad")) and (part.Position - hrp.Position).Magnitude < 100 then
+                            InstantTouch(hrp, part)
+                        end
+                    end
+                end
+            end)
+
+            pcall(function()
+                local pgui = LocalPlayer:FindFirstChild("PlayerGui")
+                if pgui then
+                    for _, btn in ipairs(pgui:GetDescendants()) do
+                        if btn:IsA("TextButton") or btn:IsA("ImageButton") then
+                            local txt = (btn.Name .. " " .. (btn:IsA("TextButton") and btn.Text or "")):lower()
+                            if (txt:find("upgrade brainrot") or txt:find("upgrade pet") or txt:find("upgrade all") or txt:find("evolve all") or txt:find("level up")) and not txt:find("robux") and not txt:find("pass") then
+                                if getconnections then
+                                    for _, conn in ipairs(getconnections(btn.MouseButton1Click)) do conn:Fire() end
+                                    for _, conn in ipairs(getconnections(btn.Activated)) do conn:Fire() end
+                                end
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- ====================================================
+-- 5. AUTO SELL ENGINE (SELLS PETS / UNWANTED EGGS)
 -- ====================================================
 task.spawn(function()
     while true do
@@ -1238,7 +1396,7 @@ task.spawn(function()
 end)
 
 -- ====================================================
--- 4. AUTO HATCH EGGS (HATCHES EGGS IN BASE SLOTS/NESTS)
+-- 6. AUTO HATCH EGGS (HATCHES EGGS IN BASE SLOTS/NESTS)
 -- ====================================================
 task.spawn(function()
     while true do
@@ -1297,7 +1455,7 @@ task.spawn(function()
 end)
 
 -- ====================================================
--- 5. AUTO UPGRADE BASE & TREADMILLS ENGINE
+-- 7. AUTO UPGRADE BASE & TREADMILLS ENGINE
 -- ====================================================
 task.spawn(function()
     while true do
@@ -1347,7 +1505,7 @@ task.spawn(function()
 end)
 
 -- ====================================================
--- 6. RARE LUCKY EGG ESP ENGINE (MAGENTA NEON HIGHLIGHT & LIVE TAG)
+-- 8. RARE LUCKY EGG ESP ENGINE (MAGENTA NEON HIGHLIGHT & LIVE TAG)
 -- ====================================================
 RunService.RenderStepped:Connect(function()
     if Toggles.RareEggESP then
@@ -1415,7 +1573,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- ====================================================
--- 7. LUCKY EGG ESP ENGINE (GOLD HIGHLIGHT)
+-- 9. LUCKY EGG ESP ENGINE (GOLD HIGHLIGHT)
 -- ====================================================
 RunService.RenderStepped:Connect(function()
     if Toggles.EggESP then
@@ -1438,7 +1596,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- ====================================================
--- 8. PLAYER ESP & BASE DEFENSE RADAR
+-- 10. PLAYER ESP & BASE DEFENSE RADAR
 -- ====================================================
 RunService.RenderStepped:Connect(function()
     if Toggles.PlayerESP and isAlive() then
@@ -1497,7 +1655,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- ====================================================
--- 9. FLY MODE (UNIVERSAL MOBILE & PC FLIGHT)
+-- 11. FLY MODE (UNIVERSAL MOBILE & PC FLIGHT)
 -- ====================================================
 local FlyBodyVelocity = nil
 local FlyBodyGyro = nil
@@ -1564,7 +1722,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- ====================================================
--- 10. NOCLIP ENGINE & SPEED KEEPER
+-- 12. NOCLIP ENGINE & SPEED KEEPER
 -- ====================================================
 RunService.Stepped:Connect(function()
     if isAlive() then
@@ -1583,7 +1741,7 @@ RunService.Stepped:Connect(function()
 end)
 
 -- ====================================================
--- 11. INFINITE JUMP (MOBILE & PC UNIVERSAL)
+-- 13. INFINITE JUMP (MOBILE & PC UNIVERSAL)
 -- ====================================================
 UIS.JumpRequest:Connect(function()
     if Toggles.InfiniteJump and isAlive() then
@@ -1608,7 +1766,7 @@ LocalPlayer.CharacterAdded:Connect(function()
 end)
 
 -- ====================================================
--- 12. ANTI-AFK ENGINE
+-- 14. ANTI-AFK ENGINE
 -- ====================================================
 LocalPlayer.Idled:Connect(function()
     if Toggles.AntiAFK then
