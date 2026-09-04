@@ -1,8 +1,8 @@
 -- ====================================================
--- JUNEJO ULTRA SCRIPT HUB - STEAL A BRAINROT EGG (100% WORKING UNIVERSAL EDITION)
+-- JUNEJO ULTRA SCRIPT HUB - STEAL A BRAINROT EGG (CLICKABLE & AUTO SELL V6)
 -- Author: Made by Junejo (junejo18146)
 -- GitHub: https://github.com/junejo18146/ultrascripthub
--- Mobile (Delta/Codex/Fluxus) & PC Universal Compatible
+-- 100% Guaranteed Clickable UI (Mobile Delta/Codex + PC)
 -- ====================================================
 
 local CoreGui = game:GetService("CoreGui")
@@ -27,6 +27,7 @@ end
 -- Global Configuration & State
 local Toggles = {
     AutoSteal = false,
+    AutoSell = false,
     AutoHatch = false,
     AutoCollectDrops = false,
     AutoUpgradeBase = false,
@@ -56,7 +57,7 @@ local function isAlive()
     return hum and hum.Health > 0 and hrp ~= nil
 end
 
--- Universal Instant ProximityPrompt Trigger (Works on all executors)
+-- Universal Instant ProximityPrompt Trigger
 local function InstantTriggerPrompt(prompt)
     if not prompt or not prompt:IsA("ProximityPrompt") then return end
     pcall(function()
@@ -106,7 +107,7 @@ local function UpdateCharacterSpeed()
 end
 
 -- ====================================================
--- UI GENERATION (JUNEJO EXECUTIVE MATTE BLACK STANDARD)
+-- UI GENERATION (100% DIRECT CLICKABLE JUNEJO STANDARD)
 -- ====================================================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoHubUI_StealBrainrotEgg"
@@ -119,11 +120,11 @@ ScreenGui.Parent = guiParent
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 285, 0, 335)
-MainFrame.Position = UDim2.new(0.5, -142, 0.5, -167)
+MainFrame.Size = UDim2.new(0, 285, 0, 345)
+MainFrame.Position = UDim2.new(0.5, -142, 0.5, -172)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
+MainFrame.Active = false
 MainFrame.ClipsDescendants = true
 MainFrame.Parent = ScreenGui
 
@@ -136,14 +137,22 @@ MainStroke.Color = Color3.fromRGB(35, 35, 42)
 MainStroke.Thickness = 1
 MainStroke.Parent = MainFrame
 
--- Dragging Engine (PC & Mobile Universal Support)
-local function enableDrag(frame)
+-- Header Frame (Draggable only from Header)
+local Header = Instance.new("Frame")
+Header.Name = "Header"
+Header.Size = UDim2.new(1, 0, 0, 32)
+Header.BackgroundTransparency = 1
+Header.Active = true
+Header.Parent = MainFrame
+
+-- Smooth Dragging restricted to Header
+local function enableHeaderDrag(dragHandle, targetFrame)
     local dragging, dragInput, dragStart, startPos
-    frame.InputBegan:Connect(function(input)
+    dragHandle.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             dragStart = input.Position
-            startPos = frame.Position
+            startPos = targetFrame.Position
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     dragging = false
@@ -151,7 +160,7 @@ local function enableDrag(frame)
             end)
         end
     end)
-    frame.InputChanged:Connect(function(input)
+    dragHandle.InputChanged:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
             dragInput = input
         end
@@ -159,18 +168,11 @@ local function enableDrag(frame)
     UIS.InputChanged:Connect(function(input)
         if input == dragInput and dragging then
             local delta = input.Position - dragStart
-            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            targetFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
         end
     end)
 end
-enableDrag(MainFrame)
-
--- Header Frame
-local Header = Instance.new("Frame")
-Header.Name = "Header"
-Header.Size = UDim2.new(1, 0, 0, 32)
-Header.BackgroundTransparency = 1
-Header.Parent = MainFrame
+enableHeaderDrag(Header, MainFrame)
 
 local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(1, -40, 1, 0)
@@ -181,6 +183,7 @@ TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleLabel.TextSize = 12
 TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Active = false
 TitleLabel.Parent = Header
 
 local CloseButton = Instance.new("TextButton")
@@ -191,6 +194,8 @@ CloseButton.Text = "X"
 CloseButton.TextColor3 = Color3.fromRGB(160, 160, 160)
 CloseButton.TextSize = 13
 CloseButton.Font = Enum.Font.GothamBold
+CloseButton.Active = true
+CloseButton.ZIndex = 10
 CloseButton.Parent = Header
 
 local function closeUI() ScreenGui:Destroy() end
@@ -207,13 +212,15 @@ HeaderLine.Parent = MainFrame
 
 -- Scrollable Content Frame
 local ContentFrame = Instance.new("ScrollingFrame")
-ContentFrame.Size = UDim2.new(1, -16, 0, 257)
+ContentFrame.Name = "ContentFrame"
+ContentFrame.Size = UDim2.new(1, -16, 0, 265)
 ContentFrame.Position = UDim2.new(0, 10, 0, 38)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.BorderSizePixel = 0
 ContentFrame.ScrollBarThickness = 3
 ContentFrame.ScrollBarImageColor3 = Color3.fromRGB(65, 65, 80)
-ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 390)
+ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 430)
+ContentFrame.Active = false
 ContentFrame.Parent = MainFrame
 
 local UIList = Instance.new("UIListLayout")
@@ -221,36 +228,39 @@ UIList.SortOrder = Enum.SortOrder.LayoutOrder
 UIList.Padding = UDim.new(0, 4)
 UIList.Parent = ContentFrame
 
--- Helper Function: Add Toggle Row (Mobile + PC Universal Bind)
+-- Helper Function: Add Toggle Row (Direct Full-Width Button without blocking layers)
 local function AddToggleRow(text, configKey, callback)
-    local Row = Instance.new("Frame")
-    Row.Size = UDim2.new(1, -6, 0, 23)
-    Row.BackgroundTransparency = 1
-    Row.Parent = ContentFrame
-    
     local RowBtn = Instance.new("TextButton")
-    RowBtn.Size = UDim2.new(1, 0, 1, 0)
+    RowBtn.Name = "Row_" .. configKey
+    RowBtn.Size = UDim2.new(1, -6, 0, 24)
     RowBtn.BackgroundTransparency = 1
+    RowBtn.AutoButtonColor = false
     RowBtn.Text = ""
+    RowBtn.Active = true
     RowBtn.ZIndex = 5
-    RowBtn.Parent = Row
+    RowBtn.Parent = ContentFrame
     
     local Label = Instance.new("TextLabel")
     Label.Size = UDim2.new(1, -28, 1, 0)
+    Label.Position = UDim2.new(0, 4, 0, 0)
     Label.BackgroundTransparency = 1
     Label.Text = text
     Label.TextColor3 = Color3.fromRGB(240, 240, 240)
     Label.TextSize = 12
     Label.Font = Enum.Font.GothamBold
     Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.Parent = Row
+    Label.Active = false
+    Label.ZIndex = 6
+    Label.Parent = RowBtn
     
     local CheckBox = Instance.new("Frame")
     CheckBox.Size = UDim2.new(0, 18, 0, 18)
-    CheckBox.Position = UDim2.new(1, -18, 0.5, -9)
+    CheckBox.Position = UDim2.new(1, -22, 0.5, -9)
     CheckBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
     CheckBox.BorderSizePixel = 0
-    CheckBox.Parent = Row
+    CheckBox.Active = false
+    CheckBox.ZIndex = 6
+    CheckBox.Parent = RowBtn
     
     local CheckCorner = Instance.new("UICorner")
     CheckCorner.CornerRadius = UDim.new(0, 4)
@@ -267,6 +277,8 @@ local function AddToggleRow(text, configKey, callback)
     CheckMark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     CheckMark.BackgroundTransparency = Toggles[configKey] and 0 or 1
     CheckMark.BorderSizePixel = 0
+    CheckMark.Active = false
+    CheckMark.ZIndex = 7
     CheckMark.Parent = CheckBox
     
     local MarkCorner = Instance.new("UICorner")
@@ -283,22 +295,20 @@ local function AddToggleRow(text, configKey, callback)
     RowBtn.Activated:Connect(onToggle)
 end
 
--- Helper Function: Add Action Button Row (Mobile + PC Universal Bind)
+-- Helper Function: Add Action Button Row
 local function AddActionButton(text, callback)
-    local Row = Instance.new("Frame")
-    Row.Size = UDim2.new(1, -6, 0, 23)
-    Row.BackgroundTransparency = 1
-    Row.Parent = ContentFrame
-    
     local Btn = Instance.new("TextButton")
-    Btn.Size = UDim2.new(1, 0, 1, 0)
+    Btn.Size = UDim2.new(1, -6, 0, 24)
     Btn.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
     Btn.BorderSizePixel = 0
     Btn.Text = text
     Btn.TextColor3 = Color3.fromRGB(240, 240, 240)
     Btn.Font = Enum.Font.GothamBold
     Btn.TextSize = 11
-    Btn.Parent = Row
+    Btn.Active = true
+    Btn.ZIndex = 5
+    Btn.AutoButtonColor = true
+    Btn.Parent = ContentFrame
     
     local BtnCorner = Instance.new("UICorner")
     BtnCorner.CornerRadius = UDim.new(0, 4)
@@ -321,7 +331,7 @@ end
 -- TOGGLE & ACTION BUTTON REGISTRATION
 -- ====================================================
 
--- 1. Auto Steal Nearest Egg & Return to Base
+-- 1. Auto Steal Nearest Egg
 AddToggleRow("Auto Steal Nearest Egg", "AutoSteal", function(state)
     if state and isAlive() then
         if not SavedBaseCFrame then
@@ -360,22 +370,25 @@ AddActionButton("⚡ Teleport to Base", function(btn)
     end
 end)
 
--- 4. Auto Hatch & Incubate
+-- 4. Auto Sell Brainrots [NEW REQUESTED FEATURE]
+AddToggleRow("Auto Sell Brainrots", "AutoSell", function(state) end)
+
+-- 5. Auto Hatch & Incubate
 AddToggleRow("Auto Hatch & Incubate", "AutoHatch", function(state) end)
 
--- 5. Auto Collect Drops & Cash (Magnet)
+-- 6. Auto Collect Drops & Base Cash (Magnet)
 AddToggleRow("Auto Collect Drops / Cash", "AutoCollectDrops", function(state) end)
 
--- 6. Auto Upgrade Base & Speed
+-- 7. Auto Upgrade Base & Speed
 AddToggleRow("Auto Upgrade Base / Speed", "AutoUpgradeBase", function(state) end)
 
--- 7. Auto Rebirth Engine
+-- 8. Auto Rebirth Engine
 AddToggleRow("Auto Rebirth", "AutoRebirth", function(state) end)
 
--- 8. Godmode & Anti-Stun / Laser Immunity
+-- 9. Godmode & Anti-Stun / Laser Immunity
 AddToggleRow("Godmode & Anti-Stun", "Godmode", function(state) end)
 
--- 9. Player ESP & Base Radar
+-- 10. Player ESP & Base Defense Radar
 AddToggleRow("Player ESP & Radar", "PlayerESP", function(state)
     if not state then
         for _, inst in pairs(CurrentPlayerESPInstances) do
@@ -385,10 +398,10 @@ AddToggleRow("Player ESP & Radar", "PlayerESP", function(state)
     end
 end)
 
--- 10. Fly Mode (Smooth 3D Flight)
+-- 11. Fly Mode (Smooth 3D Flight)
 AddToggleRow("Fly Mode (3D Flight)", "FlyMode", function(state) end)
 
--- 11. Best Egg ESP
+-- 12. Best Egg ESP
 AddToggleRow("Best Egg ESP", "EggESP", function(state)
     if not state then
         for _, highlight in pairs(CurrentEggESPInstances) do
@@ -400,15 +413,15 @@ AddToggleRow("Best Egg ESP", "EggESP", function(state)
     end
 end)
 
--- 12. Noclip Mode
+-- 13. Noclip Mode
 AddToggleRow("Noclip (Phase Walls)", "Noclip", function(state) end)
 
--- 13. Infinite Jump
+-- 14. Infinite Jump
 AddToggleRow("Infinite Jump", "InfiniteJump", function(state) end)
 
--- 14. Integrated WalkSpeed Row with - / + Pill Adjuster
+-- 15. Integrated WalkSpeed Row with - / + Pill Adjuster
 local SpeedRow = Instance.new("Frame")
-SpeedRow.Size = UDim2.new(1, -6, 0, 23)
+SpeedRow.Size = UDim2.new(1, -6, 0, 24)
 SpeedRow.BackgroundTransparency = 1
 SpeedRow.Parent = ContentFrame
 
@@ -416,17 +429,21 @@ local SpeedToggleBtn = Instance.new("TextButton")
 SpeedToggleBtn.Size = UDim2.new(0.55, 0, 1, 0)
 SpeedToggleBtn.BackgroundTransparency = 1
 SpeedToggleBtn.Text = ""
+SpeedToggleBtn.Active = true
 SpeedToggleBtn.ZIndex = 5
 SpeedToggleBtn.Parent = SpeedRow
 
 local SpeedLabel = Instance.new("TextLabel")
 SpeedLabel.Size = UDim2.new(1, -26, 1, 0)
+SpeedLabel.Position = UDim2.new(0, 4, 0, 0)
 SpeedLabel.BackgroundTransparency = 1
 SpeedLabel.Text = "WalkSpeed"
 SpeedLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
 SpeedLabel.TextSize = 12
 SpeedLabel.Font = Enum.Font.GothamBold
 SpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
+SpeedLabel.Active = false
+SpeedLabel.ZIndex = 6
 SpeedLabel.Parent = SpeedToggleBtn
 
 local SpeedCheckBox = Instance.new("Frame")
@@ -434,6 +451,8 @@ SpeedCheckBox.Size = UDim2.new(0, 18, 0, 18)
 SpeedCheckBox.Position = UDim2.new(1, -18, 0.5, -9)
 SpeedCheckBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
 SpeedCheckBox.BorderSizePixel = 0
+SpeedCheckBox.Active = false
+SpeedCheckBox.ZIndex = 6
 SpeedCheckBox.Parent = SpeedToggleBtn
 
 local SpeedCheckCorner = Instance.new("UICorner")
@@ -451,6 +470,8 @@ SpeedCheckMark.Position = UDim2.new(0.5, -5, 0.5, -5)
 SpeedCheckMark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 SpeedCheckMark.BackgroundTransparency = Toggles.WalkSpeedBoost and 0 or 1
 SpeedCheckMark.BorderSizePixel = 0
+SpeedCheckMark.Active = false
+SpeedCheckMark.ZIndex = 7
 SpeedCheckMark.Parent = SpeedCheckBox
 
 local SpeedMarkCorner = Instance.new("UICorner")
@@ -470,6 +491,7 @@ SpeedControlFrame.Size = UDim2.new(0.42, 0, 1, 0)
 SpeedControlFrame.Position = UDim2.new(0.58, 0, 0, 0)
 SpeedControlFrame.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
 SpeedControlFrame.BorderSizePixel = 0
+SpeedControlFrame.ZIndex = 5
 SpeedControlFrame.Parent = SpeedRow
 
 local CtrlCorner = Instance.new("UICorner")
@@ -489,6 +511,8 @@ MinusBtn.Text = "-"
 MinusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
 MinusBtn.TextSize = 14
 MinusBtn.Font = Enum.Font.GothamBold
+MinusBtn.Active = true
+MinusBtn.ZIndex = 10
 MinusBtn.Parent = SpeedControlFrame
 
 local SpeedDisplay = Instance.new("TextLabel")
@@ -499,6 +523,8 @@ SpeedDisplay.Text = tostring(CustomSpeedValue)
 SpeedDisplay.TextColor3 = Color3.fromRGB(255, 255, 255)
 SpeedDisplay.TextSize = 11
 SpeedDisplay.Font = Enum.Font.GothamBold
+SpeedDisplay.Active = false
+SpeedDisplay.ZIndex = 6
 SpeedDisplay.Parent = SpeedControlFrame
 
 local PlusBtn = Instance.new("TextButton")
@@ -509,6 +535,8 @@ PlusBtn.Text = "+"
 PlusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
 PlusBtn.TextSize = 14
 PlusBtn.Font = Enum.Font.GothamBold
+PlusBtn.Active = true
+PlusBtn.ZIndex = 10
 PlusBtn.Parent = SpeedControlFrame
 
 local function onMinus()
@@ -527,7 +555,7 @@ end
 PlusBtn.MouseButton1Click:Connect(onPlus)
 PlusBtn.Activated:Connect(onPlus)
 
--- Footer (Junejo Brand Standards)
+-- Footer Frame
 local Footer = Instance.new("Frame")
 Footer.Size = UDim2.new(1, 0, 0, 36)
 Footer.Position = UDim2.new(0, 0, 1, -38)
@@ -742,7 +770,81 @@ task.spawn(function()
 end)
 
 -- ====================================================
--- 2. UNIVERSAL AUTO HATCH & INCUBATE ENGINE
+-- 2. AUTO SELL BRAINROTS ENGINE (MULTI-LAYER FAST SELLER)
+-- ====================================================
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        if Toggles.AutoSell and isAlive() then
+            local hrp = LocalPlayer.Character.HumanoidRootPart
+
+            -- A. Fire Sell Remotes in ReplicatedStorage
+            pcall(function()
+                for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
+                    local n = rem.Name:lower()
+                    if n:find("sell") or n:find("sellall") or n:find("sellbrainrot") or n:find("sellegg") or n:find("cashout") or n:find("exchange") then
+                        if rem:IsA("RemoteEvent") then
+                            rem:FireServer()
+                            rem:FireServer("All")
+                            rem:FireServer(true)
+                        elseif rem:IsA("RemoteFunction") then
+                            rem:InvokeServer()
+                            rem:InvokeServer("All")
+                        end
+                    end
+                end
+            end)
+
+            -- B. Trigger Sell ProximityPrompts across base & map
+            pcall(function()
+                for _, prompt in ipairs(Workspace:GetDescendants()) do
+                    if prompt:IsA("ProximityPrompt") and prompt.Parent then
+                        local act = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Parent.Name):lower()
+                        if act:find("sell") or act:find("cash in") or act:find("exchange") or act:find("trade in") or act:find("deposit cash") then
+                            local pPos = prompt.Parent:IsA("BasePart") and prompt.Parent.Position or nil
+                            if pPos and (pPos - hrp.Position).Magnitude < 180 then
+                                InstantTriggerPrompt(prompt)
+                            end
+                        end
+                    end
+                end
+            end)
+
+            -- C. Touch Sell Pads / Merchant / Sell Zones
+            pcall(function()
+                for _, part in ipairs(Workspace:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        local n = part.Name:lower()
+                        if (n:find("sell") or n:find("sellpad") or n:find("sellzone") or n:find("dropzone") or n:find("merchant") or n:find("cashin")) and (part.Position - hrp.Position).Magnitude < 120 then
+                            InstantTouch(hrp, part)
+                        end
+                    end
+                end
+            end)
+
+            -- D. Trigger Sell GUI Buttons in PlayerGui
+            pcall(function()
+                local pgui = LocalPlayer:FindFirstChild("PlayerGui")
+                if pgui then
+                    for _, btn in ipairs(pgui:GetDescendants()) do
+                        if btn:IsA("TextButton") or btn:IsA("ImageButton") then
+                            local txt = (btn.Name .. " " .. (btn:IsA("TextButton") and btn.Text or "")):lower()
+                            if (txt:find("sell all") or txt:find("sell") or txt:find("cash out")) and not txt:find("robux") and not txt:find("pass") then
+                                if getconnections then
+                                    for _, conn in ipairs(getconnections(btn.MouseButton1Click)) do conn:Fire() end
+                                    for _, conn in ipairs(getconnections(btn.Activated)) do conn:Fire() end
+                                end
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- ====================================================
+-- 3. UNIVERSAL AUTO HATCH & INCUBATE ENGINE
 -- ====================================================
 task.spawn(function()
     while true do
@@ -823,7 +925,7 @@ task.spawn(function()
 end)
 
 -- ====================================================
--- 3. UNIVERSAL AUTO COLLECT DROPS & BASE CASH (MAGNET)
+-- 4. UNIVERSAL AUTO COLLECT DROPS & BASE CASH (MAGNET)
 -- ====================================================
 task.spawn(function()
     while true do
@@ -831,7 +933,7 @@ task.spawn(function()
         if Toggles.AutoCollectDrops and isAlive() then
             local hrp = LocalPlayer.Character.HumanoidRootPart
 
-            -- A. Collect All Map Drops (Coins, Gems, Drops, Cash, Stars, Candies)
+            -- A. Collect All Map Drops
             pcall(function()
                 for _, obj in ipairs(Workspace:GetDescendants()) do
                     local n = obj.Name:lower()
@@ -883,7 +985,7 @@ task.spawn(function()
 end)
 
 -- ====================================================
--- 4. AUTO UPGRADE BASE, TREADMILL & STATS ENGINE
+-- 5. AUTO UPGRADE BASE, TREADMILL & STATS ENGINE
 -- ====================================================
 task.spawn(function()
     while true do
@@ -936,7 +1038,7 @@ task.spawn(function()
 end)
 
 -- ====================================================
--- 5. AUTO REBIRTH ENGINE
+-- 6. AUTO REBIRTH ENGINE
 -- ====================================================
 task.spawn(function()
     while true do
@@ -986,9 +1088,8 @@ task.spawn(function()
 end)
 
 -- ====================================================
--- 6. BULLETPROOF GODMODE & ANTI-STUN / LASER IMMUNITY
+-- 7. BULLETPROOF GODMODE & ANTI-STUN / LASER IMMUNITY
 -- ====================================================
--- A. Deactivate all Kill Parts & Lasers locally
 task.spawn(function()
     while true do
         task.wait(0.4)
@@ -1011,7 +1112,6 @@ task.spawn(function()
     end
 end)
 
--- B. Anti-Stun, Anti-Ragdoll, Anti-Freeze, Anti-Void Loop
 RunService.Stepped:Connect(function()
     if Toggles.Godmode and isAlive() then
         local char = LocalPlayer.Character
@@ -1039,7 +1139,6 @@ RunService.Stepped:Connect(function()
             end
         end
 
-        -- Delete any Ragdoll / Stun joints attached to Character
         for _, desc in ipairs(char:GetDescendants()) do
             if desc:IsA("BallSocketConstraint") or desc:IsA("HingeConstraint") or desc:IsA("NoCollisionConstraint") then
                 if desc.Name:lower():find("ragdoll") or desc.Name:lower():find("stun") or desc.Name:lower():find("joint") then
@@ -1053,7 +1152,6 @@ RunService.Stepped:Connect(function()
             end
         end
 
-        -- Anti-Void Fall Rescue
         if hrp then
             if hrp.Position.Y < -30 or hrp.AssemblyLinearVelocity.Y < -85 then
                 hrp.AssemblyLinearVelocity = Vector3.zero
@@ -1069,7 +1167,7 @@ RunService.Stepped:Connect(function()
 end)
 
 -- ====================================================
--- 7. PLAYER ESP & BASE DEFENSE RADAR
+-- 8. PLAYER ESP & BASE DEFENSE RADAR
 -- ====================================================
 RunService.RenderStepped:Connect(function()
     if Toggles.PlayerESP and isAlive() then
@@ -1130,7 +1228,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- ====================================================
--- 8. FLY MODE (UNIVERSAL MOBILE & PC FLIGHT)
+-- 9. FLY MODE (UNIVERSAL MOBILE & PC FLIGHT)
 -- ====================================================
 local FlyBodyVelocity = nil
 local FlyBodyGyro = nil
@@ -1175,7 +1273,7 @@ RunService.RenderStepped:Connect(function()
         if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
         if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir = moveDir - Vector3.new(0, 1, 0) end
         
-        -- Mobile Touch Thumbstick direction support
+        -- Mobile Touch Thumbstick support
         if hum and hum.MoveDirection.Magnitude > 0 and moveDir.Magnitude == 0 then
             moveDir = (cam.CFrame.LookVector * hum.MoveDirection.Z * -1) + (cam.CFrame.RightVector * hum.MoveDirection.X)
             if hum.Jump then
@@ -1199,7 +1297,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- ====================================================
--- 9. BEST EGG ESP ENGINE
+-- 10. BEST EGG ESP ENGINE
 -- ====================================================
 RunService.RenderStepped:Connect(function()
     if Toggles.EggESP then
@@ -1222,7 +1320,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- ====================================================
--- 10. NOCLIP ENGINE & SPEED KEEPER
+-- 11. NOCLIP ENGINE & SPEED KEEPER
 -- ====================================================
 RunService.Stepped:Connect(function()
     if isAlive() then
@@ -1241,7 +1339,7 @@ RunService.Stepped:Connect(function()
 end)
 
 -- ====================================================
--- 11. INFINITE JUMP (MOBILE & PC UNIVERSAL)
+-- 12. INFINITE JUMP (MOBILE & PC UNIVERSAL)
 -- ====================================================
 UIS.JumpRequest:Connect(function()
     if Toggles.InfiniteJump and isAlive() then
@@ -1266,7 +1364,7 @@ LocalPlayer.CharacterAdded:Connect(function()
 end)
 
 -- ====================================================
--- 12. ANTI-AFK ENGINE
+-- 13. ANTI-AFK ENGINE
 -- ====================================================
 LocalPlayer.Idled:Connect(function()
     if Toggles.AntiAFK then
