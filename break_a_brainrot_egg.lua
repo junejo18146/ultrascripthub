@@ -55,8 +55,12 @@ local function isAlive()
     return hum and hum.Health > 0 and hrp ~= nil
 end
 
--- Screen Notification Helper
+-- Screen Notification Helper with Anti-Spam Debounce
+local LastToastTime = 0
 local function ShowNotification(title, message)
+    local now = os.clock()
+    if now - LastToastTime < 2.0 then return end
+    LastToastTime = now
     pcall(function()
         local sg = CoreGui:FindFirstChild("JunejoHubUI_BreakBrainrotEgg") or (LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild("JunejoHubUI_BreakBrainrotEgg"))
         if not sg then return end
@@ -66,25 +70,25 @@ local function ShowNotification(title, message)
 
         local Toast = Instance.new("Frame")
         Toast.Name = "JunejoToast"
-        Toast.Size = UDim2.new(0, 260, 0, 42)
-        Toast.Position = UDim2.new(0.5, -130, 0.12, 0)
+        Toast.Size = UDim2.new(0, 240, 0, 36)
+        Toast.Position = UDim2.new(0.5, -120, 0.08, 0)
         Toast.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
         Toast.BorderSizePixel = 0
         Toast.ZIndex = 999
         Toast.Parent = sg
 
         local ToastCorner = Instance.new("UICorner")
-        ToastCorner.CornerRadius = UDim.new(0, 8)
+        ToastCorner.CornerRadius = UDim.new(0, 6)
         ToastCorner.Parent = Toast
 
         local ToastStroke = Instance.new("UIStroke")
         ToastStroke.Color = Color3.fromRGB(60, 60, 80)
-        ToastStroke.Thickness = 1.2
+        ToastStroke.Thickness = 1
         ToastStroke.Parent = Toast
 
         local TitleLbl = Instance.new("TextLabel")
-        TitleLbl.Size = UDim2.new(1, -12, 0, 16)
-        TitleLbl.Position = UDim2.new(0, 8, 0, 4)
+        TitleLbl.Size = UDim2.new(1, -12, 0, 15)
+        TitleLbl.Position = UDim2.new(0, 8, 0, 3)
         TitleLbl.BackgroundTransparency = 1
         TitleLbl.Text = title
         TitleLbl.TextColor3 = Color3.fromRGB(255, 215, 0)
@@ -95,8 +99,8 @@ local function ShowNotification(title, message)
         TitleLbl.Parent = Toast
 
         local MsgLbl = Instance.new("TextLabel")
-        MsgLbl.Size = UDim2.new(1, -12, 0, 16)
-        MsgLbl.Position = UDim2.new(0, 8, 0, 20)
+        MsgLbl.Size = UDim2.new(1, -12, 0, 14)
+        MsgLbl.Position = UDim2.new(0, 8, 0, 18)
         MsgLbl.BackgroundTransparency = 1
         MsgLbl.Text = message
         MsgLbl.TextColor3 = Color3.fromRGB(230, 230, 240)
@@ -106,14 +110,14 @@ local function ShowNotification(title, message)
         MsgLbl.ZIndex = 1000
         MsgLbl.Parent = Toast
 
-        task.delay(3.5, function()
+        task.delay(1.6, function()
             if Toast and Toast.Parent then
-                local tween = TweenService:Create(Toast, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1})
+                local tween = TweenService:Create(Toast, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1})
                 tween:Play()
                 TitleLbl.TextTransparency = 1
                 MsgLbl.TextTransparency = 1
                 ToastStroke.Transparency = 1
-                task.wait(0.35)
+                task.wait(0.22)
                 if Toast then Toast:Destroy() end
             end
         end)
@@ -201,7 +205,7 @@ local function UpdateCharacterSpeed()
 end
 
 -- ====================================================
--- CUSTOM CASH / INFINITE CASH ENGINE (7-VECTOR REAL CASH GENERATOR)
+-- CUSTOM CASH / INFINITE CASH ENGINE (REAL SERVER CASH GENERATOR)
 -- ====================================================
 local function GiveCustomCash(amountInput)
     local rawText = tostring(amountInput or CustomCashValue or "1000000000"):lower():gsub("%s+", ""):gsub(",", "")
@@ -228,7 +232,7 @@ local function GiveCustomCash(amountInput)
     CustomCashValue = tostring(numAmount)
     EquipBestTool()
 
-    -- VECTOR 1: Rapid Egg Strike & Break Packets (Generates Real Gameplay Cash & Brainrots)
+    -- 1. Rapid Egg Strike & Break Packets (Generates Real In-Game Cash & Brainrots)
     pcall(function()
         if isAlive() then
             local char = LocalPlayer.Character
@@ -246,9 +250,9 @@ local function GiveCustomCash(amountInput)
                         InstantTriggerPrompt(obj)
                         hitCount = hitCount + 1
                     end
-                elseif obj:IsA("BasePart") then
+                elseif obj:IsA("BasePart") and hrp then
                     local n = obj.Name:lower()
-                    if (n:find("egg") or n:find("brainrot") or n:find("drop") or n:find("coin") or n:find("cash")) and hrp then
+                    if (n:find("egg") or n:find("brainrot") or n:find("drop") or n:find("coin") or n:find("cash")) then
                         InstantTouch(hrp, obj)
                     end
                 end
@@ -257,7 +261,7 @@ local function GiveCustomCash(amountInput)
         end
     end)
 
-    -- VECTOR 2: Direct Server Remotes Fire (All Cash, Money, Reward, Sell & Deposit Remotes)
+    -- 2. Direct Server Remotes Fire (All Cash, Money, Reward, Sell & Deposit Remotes)
     pcall(function()
         for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
             local n = rem.Name:lower()
@@ -287,7 +291,7 @@ local function GiveCustomCash(amountInput)
         end
     end)
 
-    -- VECTOR 3: Auto Claim All Free Playtime Gifts & Daily Rewards (1 to 24)
+    -- 3. Auto Claim Free Playtime Gifts & Daily Rewards (1 to 15)
     pcall(function()
         for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
             local n = rem.Name:lower()
@@ -307,7 +311,7 @@ local function GiveCustomCash(amountInput)
         end
     end)
 
-    -- VECTOR 4: Auto Redeem Active Promo Codes (Instant Cash Grants)
+    -- 4. Auto Redeem Active Promo Codes
     pcall(function()
         local testCodes = {"RELEASE", "BRAINROT", "EGG", "HAMMER", "UPDATE", "FREE", "CASH", "MONEY", "SECRET", "LUCKY", "OP", "1KLIKES", "5KLIKES", "10KLIKES", "100K", "1M"}
         for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
@@ -327,7 +331,7 @@ local function GiveCustomCash(amountInput)
         end
     end)
 
-    -- VECTOR 5: Trigger Workspace Cash & Deposit Prompts & Pads
+    -- 5. Trigger Workspace Cash & Deposit Prompts & Sell Pads
     pcall(function()
         if isAlive() then
             local hrp = LocalPlayer.Character.HumanoidRootPart
@@ -342,8 +346,8 @@ local function GiveCustomCash(amountInput)
             for _, part in ipairs(Workspace:GetDescendants()) do
                 if part:IsA("BasePart") then
                     local n = part.Name:lower()
-                    if n:find("cash") or n:find("collect") or n:find("sellpad") or n:find("deposit") or n:find("money") or n:find("coin") or n:find("reward") or n:find("bin") or n:find("bank") then
-                        if (part.Position - hrp.Position).Magnitude < 140 then
+                    if n:find("cash") or n:find("collect") or n:find("sellpad") or n:find("deposit") or n:find("money") or n:find("coin") or n:find("reward") or n:find("bin") or n:find("bank") or n:find("sell") then
+                        if (part.Position - hrp.Position).Magnitude < 160 then
                             InstantTouch(hrp, part)
                         end
                     end
@@ -352,7 +356,7 @@ local function GiveCustomCash(amountInput)
         end
     end)
 
-    -- VECTOR 6: Local Leaderstats & Data Value Sync
+    -- 6. Local Leaderstats & Data Value Sync
     pcall(function()
         local leaderstats = LocalPlayer:FindFirstChild("leaderstats")
         if leaderstats then
@@ -383,8 +387,6 @@ local function GiveCustomCash(amountInput)
             end
         end
     end)
-
-    ShowNotification("💰 Infinite Cash Triggered!", "✓ Injected: " .. tostring(numAmount) .. " Cash + Multi-Rewards")
 end
 
 -- ====================================================
@@ -616,22 +618,26 @@ local function PerformEggBreakAttack(targetCFrame, prompt, eggPart)
     EquipBestTool()
     local char = LocalPlayer.Character
     if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
     local tool = char:FindFirstChildOfClass("Tool")
-    if tool then
-        tool:Activate()
-        if tool:FindFirstChild("Handle") and eggPart then
-            InstantTouch(tool.Handle, eggPart)
+    
+    for _ = 1, 4 do
+        if tool then
+            tool:Activate()
+            if tool:FindFirstChild("Handle") and eggPart then
+                InstantTouch(tool.Handle, eggPart)
+            end
         end
-    end
 
-    VirtualUser:CaptureController()
-    VirtualUser:ClickButton1(Vector2.new(500, 500))
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton1(Vector2.new(500, 500))
 
-    if prompt then
-        InstantTriggerPrompt(prompt)
-    end
-    if eggPart and char:FindFirstChild("HumanoidRootPart") then
-        InstantTouch(char.HumanoidRootPart, eggPart)
+        if prompt then
+            InstantTriggerPrompt(prompt)
+        end
+        if eggPart and hrp then
+            InstantTouch(hrp, eggPart)
+        end
     end
 
     pcall(function()
@@ -640,9 +646,12 @@ local function PerformEggBreakAttack(targetCFrame, prompt, eggPart)
             if n:find("hit") or n:find("damage") or n:find("break") or n:find("attack") or n:find("smash") or n:find("click") or n:find("mine") then
                 if rem:IsA("RemoteEvent") then
                     if eggPart then rem:FireServer(eggPart) end
+                    rem:FireServer(1)
+                    rem:FireServer(true)
                     rem:FireServer()
                 elseif rem:IsA("RemoteFunction") then
                     if eggPart then rem:InvokeServer(eggPart) end
+                    rem:InvokeServer()
                 end
             end
         end
@@ -1003,11 +1012,7 @@ AddActionButton("⚡ Teleport to Unlocked Rare Egg", function(btn)
 end)
 
 -- 3. Auto Break Unlocked Rare Egg (Continuous Loop)
-AddToggleRow("Auto Break Unlocked Rare Egg", "AutoBreakRare", function(state)
-    if state and isAlive() then
-        ShowNotification("Auto Break Unlocked Rare Egg", "Active: Seeking & breaking furthest unlocked eggs across zones!")
-    end
-end)
+AddToggleRow("Auto Break Unlocked Rare Egg", "AutoBreakRare", function(state) end)
 
 -- 4. Unlocked Rare Egg ESP (Neon Magenta Glowing Highlight + Distance Billboard)
 AddToggleRow("Unlocked Rare Egg ESP", "RareEggESP", function(state)
@@ -1034,25 +1039,13 @@ AddActionButton("💰 Max Cash (+999 Billion)", function(btn)
 end)
 
 -- 7. Infinite Cash: Auto Infinite Cash Loop Toggle
-AddToggleRow("Auto Infinite Cash (Loop)", "AutoInfiniteCash", function(state)
-    if state then
-        ShowNotification("Auto Infinite Cash", "Active: Continuously injecting cash into balance!")
-    end
-end)
+AddToggleRow("Auto Infinite Cash (Loop)", "AutoInfiniteCash", function(state) end)
 
 -- 8. Auto Buy Best Hammer & Upgrades
-AddToggleRow("Auto Buy Best Hammer", "AutoBuyHammer", function(state)
-    if state then
-        ShowNotification("Auto Buy Best Hammer", "Active: Purchasing best hammers & tool upgrades from shop!")
-    end
-end)
+AddToggleRow("Auto Buy Best Hammer", "AutoBuyHammer", function(state) end)
 
--- 8. Auto Rebirth (Automatic Prestige Engine)
-AddToggleRow("Auto Rebirth", "AutoRebirth", function(state)
-    if state then
-        ShowNotification("Auto Rebirth", "Active: Automatically rebirthing for Cash & Power multiplier!")
-    end
-end)
+-- 9. Auto Rebirth (Automatic Prestige Engine)
+AddToggleRow("Auto Rebirth", "AutoRebirth", function(state) end)
 
 -- 9. Action Button: Set Current Base Position
 AddActionButton("📍 Set Current Base Position", function(btn)
