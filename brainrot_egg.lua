@@ -127,17 +127,17 @@ local function InstantTriggerPrompt(prompt)
     if not prompt or not prompt:IsA("ProximityPrompt") then return end
     pcall(function()
         prompt.HoldDuration = 0
-        prompt.MaxActivationDistance = 150
+        prompt.MaxActivationDistance = math.huge
         prompt.RequiresLineOfSight = false
         prompt.Enabled = true
 
         if fireproximityprompt then
             fireproximityprompt(prompt, 0)
+            fireproximityprompt(prompt, 1)
             fireproximityprompt(prompt)
         end
         if prompt.InputHoldBegin and prompt.InputHoldEnd then
             prompt:InputHoldBegin()
-            task.wait(0.01)
             prompt:InputHoldEnd()
         end
     end)
@@ -149,8 +149,9 @@ local function InstantTouch(part, targetPart)
     pcall(function()
         if firetouchinterest then
             firetouchinterest(part, targetPart, 0)
-            task.wait()
             firetouchinterest(part, targetPart, 1)
+            firetouchinterest(targetPart, part, 0)
+            firetouchinterest(targetPart, part, 1)
         end
     end)
 end
@@ -944,32 +945,38 @@ task.spawn(function()
         task.wait(0.2)
         if Toggles.AutoCollectDrops and isAlive() then
             local hrp = LocalPlayer.Character.HumanoidRootPart
+            local basePos = SavedBaseCFrame and SavedBaseCFrame.Position or hrp.Position
 
+            -- Vector 1: Base Cash Collector, ATMs, Vaults & Storage ProximityPrompts
             pcall(function()
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    local n = obj.Name:lower()
-                    local isDrop = n:find("coin") or n:find("gem") or n:find("drop") or n:find("token") or n:find("cash") or n:find("star") or n:find("candy") or n:find("pickup") or n:find("reward") or n:find("money") or n:find("dollar") or n:find("bill")
-                    if isDrop and not n:find("gui") and not n:find("ui") then
-                        if obj:IsA("BasePart") and (obj.Position - hrp.Position).Magnitude < 350 then
-                            InstantTouch(hrp, obj)
-                        elseif obj:IsA("Model") and obj.PrimaryPart and (obj.PrimaryPart.Position - hrp.Position).Magnitude < 350 then
-                            InstantTouch(hrp, obj.PrimaryPart)
-                        elseif obj:IsA("ProximityPrompt") and obj.Parent then
-                            local pPos = obj.Parent:IsA("BasePart") and obj.Parent.Position or nil
-                            if pPos and (pPos - hrp.Position).Magnitude < 250 then
-                                InstantTriggerPrompt(obj)
+                for _, prompt in ipairs(Workspace:GetDescendants()) do
+                    if prompt:IsA("ProximityPrompt") and prompt.Parent then
+                        local pPos = prompt.Parent:IsA("BasePart") and prompt.Parent.Position or (prompt.Parent:IsA("Attachment") and prompt.Parent.WorldPosition or nil)
+                        if pPos then
+                            local act = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Parent.Name):lower()
+                            local isCollectPrompt = act:find("collect") or act:find("claim") or act:find("cash") or act:find("coin") or act:find("money") or act:find("income") or act:find("withdraw") or act:find("harvest") or act:find("gather") or act:find("drop") or act:find("reward") or act:find("atm") or act:find("bank") or act:find("generator")
+                            if isCollectPrompt then
+                                local distToMe = (pPos - hrp.Position).Magnitude
+                                local distToBase = (pPos - basePos).Magnitude
+                                if distToMe < 350 or distToBase < 120 then
+                                    InstantTriggerPrompt(prompt)
+                                end
                             end
                         end
                     end
                 end
             end)
 
+            -- Vector 2: Base Cash Collector Touchpads, ATMs & Money Vaults
             pcall(function()
                 for _, part in ipairs(Workspace:GetDescendants()) do
                     if part:IsA("BasePart") then
                         local n = part.Name:lower()
-                        if n:find("collector") or n:find("atm") or n:find("bank") or n:find("cashpad") or n:find("money") or n:find("income") or n:find("withdraw") then
-                            if (part.Position - hrp.Position).Magnitude < 120 then
+                        local isCollectorPart = n:find("collector") or n:find("atm") or n:find("bank") or n:find("cashpad") or n:find("moneypad") or n:find("income") or n:find("withdraw") or n:find("vault") or n:find("deposit") or n:find("cashstand") or n:find("coinstand")
+                        if isCollectorPart then
+                            local distToMe = (part.Position - hrp.Position).Magnitude
+                            local distToBase = (part.Position - basePos).Magnitude
+                            if distToMe < 300 or distToBase < 100 then
                                 InstantTouch(hrp, part)
                             end
                         end
@@ -977,14 +984,70 @@ task.spawn(function()
                 end
             end)
 
+            -- Vector 3: Map Currency Drops Magnet (Pulls unanchored coins/cash to player & touches anchored drops)
+            pcall(function()
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    local n = obj.Name:lower()
+                    local isDrop = n:find("coin") or n:find("gem") or n:find("drop") or n:find("token") or n:find("cash") or n:find("star") or n:find("candy") or n:find("pickup") or n:find("reward") or n:find("money") or n:find("dollar") or n:find("bill") or n:find("currency") or n:find("debris")
+                    if isDrop and not n:find("gui") and not n:find("ui") then
+                        if obj:IsA("BasePart") then
+                            local dist = (obj.Position - hrp.Position).Magnitude
+                            if dist < 450 then
+                                if not obj.Anchored and obj.CanTouch then
+                                    obj.CFrame = hrp.CFrame
+                                    obj.AssemblyLinearVelocity = Vector3.zero
+                                end
+                                InstantTouch(hrp, obj)
+                            end
+                        elseif obj:IsA("Model") and obj.PrimaryPart then
+                            local dist = (obj.PrimaryPart.Position - hrp.Position).Magnitude
+                            if dist < 450 then
+                                if not obj.PrimaryPart.Anchored and obj.PrimaryPart.CanTouch then
+                                    obj.PrimaryPart.CFrame = hrp.CFrame
+                                    obj.PrimaryPart.AssemblyLinearVelocity = Vector3.zero
+                                end
+                                InstantTouch(hrp, obj.PrimaryPart)
+                            end
+                        end
+                    end
+                end
+            end)
+
+            -- Vector 4: ReplicatedStorage Remotes & Network Events Sweep
             pcall(function()
                 for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
                     local n = rem.Name:lower()
-                    if n:find("collect") or n:find("pickup") or n:find("claimcash") or n:find("claimincome") or n:find("withdraw") or n:find("claimdrop") then
+                    local isCollectRem = n:find("collect") or n:find("pickup") or n:find("claimcash") or n:find("claimincome") or n:find("withdraw") or n:find("claimdrop") or n:find("collectdrop") or n:find("getcash") or n:find("collectmoney") or n:find("harvest")
+                    if isCollectRem then
                         if rem:IsA("RemoteEvent") then
                             rem:FireServer()
+                            rem:FireServer("Cash")
+                            rem:FireServer("All")
+                            rem:FireServer(LocalPlayer)
+                            rem:FireServer(true)
+                            rem:FireServer(1)
                         elseif rem:IsA("RemoteFunction") then
                             rem:InvokeServer()
+                            rem:InvokeServer("Cash")
+                            rem:InvokeServer("All")
+                        end
+                    end
+                end
+            end)
+
+            -- Vector 5: PlayerGui Auto Claim Buttons
+            pcall(function()
+                local pgui = LocalPlayer:FindFirstChild("PlayerGui")
+                if pgui then
+                    for _, btn in ipairs(pgui:GetDescendants()) do
+                        if btn:IsA("TextButton") or btn:IsA("ImageButton") then
+                            local txt = (btn.Name .. " " .. (btn:IsA("TextButton") and btn.Text or "")):lower()
+                            if (txt:find("collect") or txt:find("claim") or txt:find("harvest")) and not txt:find("robux") and not txt:find("pass") and not txt:find("shop") and not txt:find("buy") then
+                                if getconnections then
+                                    for _, conn in ipairs(getconnections(btn.MouseButton1Click)) do conn:Fire() end
+                                    for _, conn in ipairs(getconnections(btn.Activated)) do conn:Fire() end
+                                end
+                            end
                         end
                     end
                 end
@@ -1049,19 +1112,43 @@ end)
 -- ====================================================
 -- 6. BULLETPROOF GODMODE (DAMAGE & LASER IMMUNITY)
 -- ====================================================
--- Neutralize Kill Parts & Lasers
+
+-- Network Metatable Hook: Block incoming/outgoing damage & ragdoll remotes
+pcall(function()
+    local rawmeta = getrawmetatable and getrawmetatable(game)
+    if rawmeta and setreadonly then
+        local oldNamecall = rawmeta.__namecall
+        setreadonly(rawmeta, false)
+        rawmeta.__namecall = newcclosure(function(self, ...)
+            local method = getnamecallmethod and getnamecallmethod()
+            if Toggles.Godmode and (method == "FireServer" or method == "InvokeServer") then
+                local name = tostring(self):lower()
+                if name:find("damage") or name:find("hurt") or name:find("kill") or name:find("hit") or name:find("die") or name:find("ragdoll") or name:find("stun") or name:find("trap") or name:find("laser") or name:find("falldamage") then
+                    return nil
+                end
+            end
+            return oldNamecall(self, ...)
+        end)
+        setreadonly(rawmeta, true)
+    end
+end)
+
+-- Neutralize Kill Parts, Lasers, Traps & Hazard Hitboxes
 task.spawn(function()
     while true do
-        task.wait(0.3)
+        task.wait(0.25)
         if Toggles.Godmode then
             pcall(function()
                 for _, part in ipairs(Workspace:GetDescendants()) do
                     if part:IsA("BasePart") then
                         local n = part.Name:lower()
-                        local isKillOrTrap = n:find("kill") or n:find("laser") or n:find("trap") or n:find("death") or n:find("lava") or n:find("spike") or n:find("damage") or n:find("hazard")
+                        local isKillOrTrap = n:find("kill") or n:find("laser") or n:find("trap") or n:find("death") or n:find("lava") or n:find("spike") or n:find("damage") or n:find("hazard") or n:find("acid") or n:find("saw") or n:find("blade") or n:find("hurt") or n:find("sensor")
                         if isKillOrTrap then
                             part.CanTouch = false
                             part.CanCollide = false
+                            part.CanQuery = false
+                            part.Size = Vector3.new(0.001, 0.001, 0.001)
+                            part.Transparency = 1
                             local tt = part:FindFirstChildWhichIsA("TouchTransmitter")
                             if tt then tt:Destroy() end
                         end
@@ -1072,14 +1159,23 @@ task.spawn(function()
     end
 end)
 
--- Anti-Damage & State Preservation
+-- Anti-Damage, ForceField & Humanoid State Anchor
 RunService.Stepped:Connect(function()
     if Toggles.Godmode and isAlive() then
         local char = LocalPlayer.Character
         local hum = char:FindFirstChildOfClass("Humanoid")
         local hrp = char:FindFirstChild("HumanoidRootPart")
 
+        -- ForceField Protection
+        if char and not char:FindFirstChildOfClass("ForceField") then
+            local ff = Instance.new("ForceField")
+            ff.Visible = false
+            ff.Parent = char
+        end
+
         if hum then
+            hum.BreakJointsOnDeath = false
+            hum.RequiresNeck = false
             hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
             hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
             hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
@@ -1092,20 +1188,20 @@ RunService.Stepped:Connect(function()
             if hum.Sit then hum.Sit = false end
 
             local currentState = hum:GetState()
-            if currentState == Enum.HumanoidStateType.Ragdoll or currentState == Enum.HumanoidStateType.FallingDown or currentState == Enum.HumanoidStateType.PlatformStanding then
+            if currentState == Enum.HumanoidStateType.Ragdoll or currentState == Enum.HumanoidStateType.FallingDown or currentState == Enum.HumanoidStateType.PlatformStanding or currentState == Enum.HumanoidStateType.Dead then
                 hum:ChangeState(Enum.HumanoidStateType.Running)
             end
         end
 
         -- Anti-Void Fall Rescue
         if hrp then
-            if hrp.Position.Y < -30 or hrp.AssemblyLinearVelocity.Y < -85 then
+            if hrp.Position.Y < -20 or hrp.AssemblyLinearVelocity.Y < -75 then
                 hrp.AssemblyLinearVelocity = Vector3.zero
                 hrp.AssemblyAngularVelocity = Vector3.zero
                 if SavedBaseCFrame then
-                    hrp.CFrame = SavedBaseCFrame * CFrame.new(0, 2, 0)
+                    hrp.CFrame = SavedBaseCFrame * CFrame.new(0, 3, 0)
                 else
-                    hrp.CFrame = CFrame.new(hrp.Position.X, 15, hrp.Position.Z)
+                    hrp.CFrame = CFrame.new(hrp.Position.X, 18, hrp.Position.Z)
                 end
             end
         end
