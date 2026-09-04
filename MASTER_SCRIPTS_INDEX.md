@@ -702,6 +702,8 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   - 1-Click Set Base Position (Saves player's exact base coordinates safely)
   - 1-Click Instant Teleport to Base (Failsafe return with 0 velocity)
   - Auto Rebirth (Automatic Multi-layer Prestige & Rebirth Engine for Cash & Luck Multipliers)
+  - Auto Treadmill (Automatic Speed Trainer on Base Treadmills, Tracks & Remotes)
+  - Auto Upgrade Brainrot (Automatic Pet/Brainrot Stat Multiplier & Evolve Upgrader)
   - Auto Sell (Auto sells extra pets/items from base & deposits cash directly to player)
   - Auto Hatch Eggs (Auto hatches lucky eggs stored in Base slots and nests)
   - Auto Upgrade Base & Treadmills (Auto buys base capacity, speed treadmills & upgrades with live notification)
@@ -718,5 +720,6 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
 ====================================================
 Updated: September 4, 2026
 ====================================================
+
 
 
