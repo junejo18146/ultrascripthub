@@ -1,5 +1,5 @@
 -- ====================================================
--- JUNEJO ULTRA SCRIPT HUB - STEAL A BRAINROT EGG (V9 REFINED EDITION)
+-- JUNEJO ULTRA SCRIPT HUB - STEAL A BRAINROT EGG (V10 ULTIMATE RARE EDITION)
 -- Author: Made by Junejo (junejo18146)
 -- GitHub: https://github.com/junejo18146/ultrascripthub
 -- Mobile (Delta/Codex/Fluxus) & PC Universal Compatible
@@ -28,11 +28,13 @@ end
 -- Global Configuration & State
 local Toggles = {
     AutoSteal = false,
+    AutoStealRare = false,
     AutoSell = false,
     AutoHatch = false,
     AutoUpgradeBase = false,
     PlayerESP = false,
     FlyMode = false,
+    RareEggESP = false,
     EggESP = false,
     Noclip = false,
     InfiniteJump = false,
@@ -43,6 +45,7 @@ local Toggles = {
 local CustomSpeedValue = 100
 local SavedBaseCFrame = nil
 local CurrentEggESPInstances = {}
+local CurrentRareEggESPInstances = {}
 local CurrentPlayerESPInstances = {}
 local CooldownEggs = {}
 
@@ -171,7 +174,385 @@ local function UpdateCharacterSpeed()
 end
 
 -- ====================================================
--- OFFICIAL JUNEJO COMPACT SCROLLING UI (280x275px)
+-- RARITY EVALUATION & INTELLIGENT SCANNER
+-- ====================================================
+local RarityWeights = {
+    -- High Tier Keywords
+    ["secret"] = 10000,
+    ["godly"] = 9000,
+    ["celestial"] = 8000,
+    ["cosmic"] = 7500,
+    ["divine"] = 7000,
+    ["omega"] = 6500,
+    ["galactic"] = 6000,
+    ["void"] = 5500,
+    ["ancient"] = 5000,
+    ["titan"] = 4500,
+    ["mythic"] = 4000,
+    ["legendary"] = 3000,
+    ["diamond"] = 2500,
+    ["epic"] = 2000,
+    ["golden"] = 1500,
+    ["gold"] = 1400,
+    ["rare"] = 1000,
+    ["uncommon"] = 500,
+    ["common"] = 100,
+
+    -- Specific Brainrot Highest Tiers
+    ["skibidi titan"] = 9500,
+    ["gigachad"] = 8500,
+    ["mewing"] = 8000,
+    ["sigma"] = 7500,
+    ["skibidi"] = 6000,
+    ["kai cenat"] = 5500,
+    ["baby gronk"] = 5000,
+    ["grimace"] = 4500,
+    ["fanum"] = 4000,
+    ["rizz"] = 3500,
+    ["tungsten"] = 3000,
+    ["caseoh"] = 2500,
+}
+
+local function GetLocationKey(pos)
+    return math.floor(pos.X / 4) .. "_" .. math.floor(pos.Y / 4) .. "_" .. math.floor(pos.Z / 4)
+end
+
+local function GetEggRarityScore(obj, prompt)
+    local score = 100
+    local detectedName = obj and obj.Name or "Unknown Egg"
+    local combinedText = (obj and obj.Name or ""):lower()
+
+    if prompt then
+        combinedText = combinedText .. " " .. (prompt.ObjectText .. " " .. prompt.ActionText):lower()
+    end
+
+    if obj and obj:IsA("Instance") then
+        pcall(function()
+            for attrName, attrVal in pairs(obj:GetAttributes()) do
+                combinedText = combinedText .. " " .. tostring(attrName):lower() .. " " .. tostring(attrVal):lower()
+                if type(attrVal) == "number" and (attrName:lower():find("price") or attrName:lower():find("value") or attrName:lower():find("tier") or attrName:lower():find("rarity") or attrName:lower():find("level")) then
+                    score = math.max(score, attrVal)
+                end
+            end
+        end)
+
+        pcall(function()
+            for _, lbl in ipairs(obj:GetDescendants()) do
+                if lbl:IsA("TextLabel") or lbl:IsA("TextBox") then
+                    combinedText = combinedText .. " " .. lbl.Text:lower()
+                end
+            end
+        end)
+    end
+
+    for keyword, weight in pairs(RarityWeights) do
+        if combinedText:find(keyword) then
+            if weight > score then
+                score = weight
+            end
+        end
+    end
+
+    local tierNum = combinedText:match("tier%s*(%d+)") or combinedText:match("tier%-(%d+)")
+    if tierNum then
+        score = score + (tonumber(tierNum) * 500)
+    end
+
+    return score, detectedName
+end
+
+local function FindRarestEgg(hrpPosition)
+    local bestTargetCFrame = nil
+    local bestPrompt = nil
+    local bestPart = nil
+    local bestLocKey = nil
+    local bestEggName = "Rare Egg"
+    local highestRarity = -1
+    local now = os.clock()
+
+    for _, prompt in ipairs(Workspace:GetDescendants()) do
+        if prompt:IsA("ProximityPrompt") then
+            local pPart = prompt.Parent
+            local targetPos = nil
+
+            if pPart:IsA("BasePart") then
+                targetPos = pPart.CFrame
+            elseif pPart:IsA("Attachment") then
+                targetPos = pPart.WorldCFrame
+            elseif pPart:IsA("Model") and pPart.PrimaryPart then
+                targetPos = pPart.PrimaryPart.CFrame
+            end
+
+            if targetPos then
+                local locKey = GetLocationKey(targetPos.Position)
+                local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
+
+                if not isCoolingDown then
+                    local distFromBase = SavedBaseCFrame and (targetPos.Position - SavedBaseCFrame.Position).Magnitude or 100
+                    if distFromBase > 14 then
+                        local act = (prompt.ActionText .. " " .. prompt.ObjectText):lower()
+                        local pName = pPart.Name:lower()
+                        local isEgg = act:find("steal") or act:find("take") or act:find("grab") or act:find("egg") or act:find("brainrot") or act:find("pick") or act:find("collect") or pName:find("egg") or pName:find("brainrot") or act == "" or act == " "
+
+                        if isEgg then
+                            local score, eggName = GetEggRarityScore(pPart, prompt)
+                            if score > highestRarity then
+                                highestRarity = score
+                                bestTargetCFrame = targetPos
+                                bestPrompt = prompt
+                                bestPart = pPart:IsA("BasePart") and pPart or nil
+                                bestLocKey = locKey
+                                bestEggName = eggName
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    if not bestTargetCFrame or highestRarity <= 100 then
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            local name = obj.Name:lower()
+            if (name:find("egg") or name:find("brainrot")) and not name:find("gui") and not name:find("ui") then
+                local tCFrame = nil
+                local targetPart = nil
+
+                if obj:IsA("BasePart") then
+                    tCFrame = obj.CFrame
+                    targetPart = obj
+                elseif obj:IsA("Model") and obj.PrimaryPart then
+                    tCFrame = obj.PrimaryPart.CFrame
+                    targetPart = obj.PrimaryPart
+                elseif obj:IsA("Model") then
+                    local p = obj:FindFirstChildWhichIsA("BasePart")
+                    if p then
+                        tCFrame = p.CFrame
+                        targetPart = p
+                    end
+                end
+
+                if tCFrame then
+                    local locKey = GetLocationKey(tCFrame.Position)
+                    local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
+
+                    if not isCoolingDown then
+                        local distFromBase = SavedBaseCFrame and (tCFrame.Position - SavedBaseCFrame.Position).Magnitude or 100
+                        if distFromBase > 14 then
+                            local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
+                            local score, eggName = GetEggRarityScore(obj, prompt)
+                            if score > highestRarity then
+                                highestRarity = score
+                                bestTargetCFrame = tCFrame
+                                bestPart = targetPart
+                                bestLocKey = locKey
+                                bestEggName = eggName
+                                bestPrompt = prompt
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return bestTargetCFrame, bestPrompt, bestPart, bestLocKey, bestEggName, highestRarity
+end
+
+local function FindNearestAvailableEgg(hrpPosition)
+    local bestTargetCFrame = nil
+    local bestPrompt = nil
+    local bestPart = nil
+    local bestLocKey = nil
+    local shortestDist = math.huge
+    local now = os.clock()
+
+    for _, prompt in ipairs(Workspace:GetDescendants()) do
+        if prompt:IsA("ProximityPrompt") then
+            local pPart = prompt.Parent
+            local targetPos = nil
+
+            if pPart:IsA("BasePart") then
+                targetPos = pPart.CFrame
+            elseif pPart:IsA("Attachment") then
+                targetPos = pPart.WorldCFrame
+            elseif pPart:IsA("Model") and pPart.PrimaryPart then
+                targetPos = pPart.PrimaryPart.CFrame
+            end
+
+            if targetPos then
+                local locKey = GetLocationKey(targetPos.Position)
+                local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
+
+                if not isCoolingDown then
+                    local distFromBase = SavedBaseCFrame and (targetPos.Position - SavedBaseCFrame.Position).Magnitude or 100
+                    if distFromBase > 12 then
+                        local act = (prompt.ActionText .. " " .. prompt.ObjectText):lower()
+                        local pName = pPart.Name:lower()
+                        
+                        local isEggOrSteal = act:find("steal") or act:find("take") or act:find("grab") or act:find("egg") or act:find("brainrot") or act:find("pick") or act:find("collect") or pName:find("egg") or pName:find("brainrot") or act == "" or act == " "
+                        
+                        if isEggOrSteal then
+                            local dist = (targetPos.Position - hrpPosition).Magnitude
+                            if dist < shortestDist then
+                                shortestDist = dist
+                                bestTargetCFrame = targetPos
+                                bestPrompt = prompt
+                                bestPart = pPart:IsA("BasePart") and pPart or nil
+                                bestLocKey = locKey
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    if not bestTargetCFrame then
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            local name = obj.Name:lower()
+            if (name:find("egg") or name:find("brainrot")) and not name:find("gui") and not name:find("ui") then
+                local tCFrame = nil
+                local targetPart = nil
+                
+                if obj:IsA("BasePart") then
+                    tCFrame = obj.CFrame
+                    targetPart = obj
+                elseif obj:IsA("Model") and obj.PrimaryPart then
+                    tCFrame = obj.PrimaryPart.CFrame
+                    targetPart = obj.PrimaryPart
+                elseif obj:IsA("Model") then
+                    local p = obj:FindFirstChildWhichIsA("BasePart")
+                    if p then
+                        tCFrame = p.CFrame
+                        targetPart = p
+                    end
+                end
+
+                if tCFrame then
+                    local locKey = GetLocationKey(tCFrame.Position)
+                    local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
+
+                    if not isCoolingDown then
+                        local distFromBase = SavedBaseCFrame and (tCFrame.Position - SavedBaseCFrame.Position).Magnitude or 100
+                        if distFromBase > 14 then
+                            local dist = (tCFrame.Position - hrpPosition).Magnitude
+                            if dist < shortestDist then
+                                shortestDist = dist
+                                bestTargetCFrame = tCFrame
+                                bestPart = targetPart
+                                bestLocKey = locKey
+                                local p = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
+                                if p then bestPrompt = p end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return bestTargetCFrame, bestPrompt, bestPart, bestLocKey
+end
+
+local function ReturnToBaseAndDeposit(hrp)
+    if SavedBaseCFrame and isAlive() then
+        hrp.AssemblyLinearVelocity = Vector3.zero
+        hrp.AssemblyAngularVelocity = Vector3.zero
+        hrp.CFrame = SavedBaseCFrame * CFrame.new(0, 2, 0)
+        task.wait(0.18)
+
+        for _, prompt in ipairs(Workspace:GetDescendants()) do
+            if prompt:IsA("ProximityPrompt") and prompt.Parent then
+                local pos = prompt.Parent:IsA("BasePart") and prompt.Parent.Position or (prompt.Parent:IsA("Attachment") and prompt.Parent.WorldPosition or nil)
+                if pos and (pos - hrp.Position).Magnitude < 50 then
+                    InstantTriggerPrompt(prompt)
+                end
+            end
+        end
+
+        for _, part in ipairs(Workspace:GetDescendants()) do
+            if part:IsA("BasePart") and (part.Position - hrp.Position).Magnitude < 45 then
+                local n = part.Name:lower()
+                if n:find("deposit") or n:find("hatch") or n:find("nest") or n:find("slot") or n:find("place") or n:find("base") or n:find("incub") then
+                    InstantTouch(hrp, part)
+                end
+            end
+        end
+    end
+end
+
+-- Steal Rare Egg Action Pipeline
+local function StealRareEggAction()
+    if not isAlive() then return end
+    local char = LocalPlayer.Character
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    if not SavedBaseCFrame then
+        SavedBaseCFrame = hrp.CFrame
+    end
+
+    local targetCFrame, prompt, eggPart, locKey, eggName, rarity = FindRarestEgg(hrp.Position)
+
+    if targetCFrame then
+        if locKey then
+            CooldownEggs[locKey] = os.clock() + 5
+        end
+
+        ShowNotification("💎 Stealing Rare Egg", "Target: " .. eggName .. " (Tier: " .. rarity .. ")")
+
+        hrp.AssemblyLinearVelocity = Vector3.zero
+        hrp.AssemblyAngularVelocity = Vector3.zero
+        hrp.CFrame = targetCFrame * CFrame.new(0, 1.8, 0)
+        task.wait(0.12)
+
+        if prompt then
+            InstantTriggerPrompt(prompt)
+        end
+
+        if eggPart then
+            InstantTouch(hrp, eggPart)
+        end
+
+        for _, p in ipairs(Workspace:GetDescendants()) do
+            if p:IsA("ProximityPrompt") and p.Parent then
+                local pPos = p.Parent:IsA("BasePart") and p.Parent.Position or nil
+                if pPos and (pPos - hrp.Position).Magnitude < 20 then
+                    InstantTriggerPrompt(p)
+                end
+            end
+        end
+
+        task.wait(0.15)
+        ReturnToBaseAndDeposit(hrp)
+        task.wait(0.15)
+        ShowNotification("✓ Rare Egg Secured!", "Deposited " .. eggName .. " safely at Base!")
+    else
+        ShowNotification("No Rare Egg Found", "No rare eggs currently available on map.")
+    end
+end
+
+-- Teleport to Rare Egg Action
+local function TeleportToRareEggAction()
+    if not isAlive() then return end
+    local char = LocalPlayer.Character
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    local targetCFrame, _, _, _, eggName, rarity = FindRarestEgg(hrp.Position)
+    if targetCFrame then
+        hrp.AssemblyLinearVelocity = Vector3.zero
+        hrp.AssemblyAngularVelocity = Vector3.zero
+        hrp.CFrame = targetCFrame * CFrame.new(0, 2.5, 0)
+        ShowNotification("⚡ Teleported to Rare Egg", "Arrived at: " .. eggName .. " (Score: " .. rarity .. ")")
+    else
+        ShowNotification("No Rare Egg Found", "No rare eggs currently available on map.")
+    end
+end
+
+-- ====================================================
+-- OFFICIAL JUNEJO COMPACT SCROLLING UI (280x285px)
 -- ====================================================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoHubUI_StealBrainrotEgg"
@@ -184,8 +565,8 @@ ScreenGui.Parent = guiParent
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 275)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -137)
+MainFrame.Size = UDim2.new(0, 280, 0, 285)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -142)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -269,13 +650,13 @@ HeaderLine.Parent = MainFrame
 -- Scrollable Content Frame
 local ContentFrame = Instance.new("ScrollingFrame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -16, 0, 195)
+ContentFrame.Size = UDim2.new(1, -16, 0, 205)
 ContentFrame.Position = UDim2.new(0, 10, 0, 38)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.BorderSizePixel = 0
 ContentFrame.ScrollBarThickness = 3
 ContentFrame.ScrollBarImageColor3 = Color3.fromRGB(65, 65, 80)
-ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 340)
+ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 440)
 ContentFrame.Parent = MainFrame
 
 local UIList = Instance.new("UIListLayout")
@@ -385,7 +766,39 @@ end
 -- REGISTER ALL REQUESTED TOGGLES & ACTIONS
 -- ====================================================
 
--- 1. Auto Steal Nearest Egg
+-- 1. Steal Rare Egg (1-Click Instant Action)
+AddActionButton("💎 Steal Rare Egg (1-Click)", function(btn)
+    btn.Text = "⏳ Stealing Rare Egg..."
+    btn.TextColor3 = Color3.fromRGB(255, 215, 0)
+    StealRareEggAction()
+    task.delay(1.5, function()
+        btn.Text = "💎 Steal Rare Egg (1-Click)"
+        btn.TextColor3 = Color3.fromRGB(240, 240, 240)
+    end)
+end)
+
+-- 2. Teleport to Rare Egg (1-Click Instant Action)
+AddActionButton("⚡ Teleport to Rare Egg", function(btn)
+    btn.Text = "⏳ Teleporting..."
+    btn.TextColor3 = Color3.fromRGB(220, 50, 255)
+    TeleportToRareEggAction()
+    task.delay(1.5, function()
+        btn.Text = "⚡ Teleport to Rare Egg"
+        btn.TextColor3 = Color3.fromRGB(240, 240, 240)
+    end)
+end)
+
+-- 3. Auto Steal Rare Egg (Continuous Loop)
+AddToggleRow("Auto Steal Rare Egg", "AutoStealRare", function(state)
+    if state and isAlive() then
+        if not SavedBaseCFrame then
+            SavedBaseCFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
+        end
+        ShowNotification("Auto Steal Rare Egg", "Active: Continuously seeking and depositing rarest eggs!")
+    end
+end)
+
+-- 4. Auto Steal Nearest Egg (Continuous Loop)
 AddToggleRow("Auto Steal Nearest Egg", "AutoSteal", function(state)
     if state and isAlive() then
         if not SavedBaseCFrame then
@@ -394,7 +807,7 @@ AddToggleRow("Auto Steal Nearest Egg", "AutoSteal", function(state)
     end
 end)
 
--- 2. Action Button: Set Current Base Position
+-- 5. Action Button: Set Current Base Position
 AddActionButton("📍 Set Current Base Position", function(btn)
     if isAlive() then
         SavedBaseCFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
@@ -407,7 +820,7 @@ AddActionButton("📍 Set Current Base Position", function(btn)
     end
 end)
 
--- 3. Action Button: Teleport to Base
+-- 6. Action Button: Teleport to Base
 AddActionButton("⚡ Teleport to Base", function(btn)
     if isAlive() then
         if not SavedBaseCFrame then
@@ -424,33 +837,30 @@ AddActionButton("⚡ Teleport to Base", function(btn)
     end
 end)
 
--- 4. Auto Sell Brainrots
+-- 7. Auto Sell Brainrots
 AddToggleRow("Auto Sell Brainrots", "AutoSell", function(state) end)
 
--- 5. Auto Hatch Eggs (Hatch eggs placed in Base)
+-- 8. Auto Hatch Eggs (Hatch eggs placed in Base)
 AddToggleRow("Auto Hatch Eggs", "AutoHatch", function(state) end)
 
--- 6. Auto Upgrade Base (Auto-buys base upgrades, treadmill speed & slots when cash is available)
+-- 9. Auto Upgrade Base
 AddToggleRow("Auto Upgrade Base", "AutoUpgradeBase", function(state)
     if state then
         ShowNotification("Auto Upgrade Base", "Active: Auto-buying Base Upgrades when Cash is available!")
     end
 end)
 
--- 7. Player ESP & Base Defense Radar
-AddToggleRow("Player ESP & Radar", "PlayerESP", function(state)
+-- 10. Rare Egg ESP (Neon Magenta Glowing Highlight + Billboard)
+AddToggleRow("Rare Egg ESP", "RareEggESP", function(state)
     if not state then
-        for _, inst in pairs(CurrentPlayerESPInstances) do
+        for _, inst in pairs(CurrentRareEggESPInstances) do
             pcall(function() inst:Destroy() end)
         end
-        CurrentPlayerESPInstances = {}
+        CurrentRareEggESPInstances = {}
     end
 end)
 
--- 8. Fly Mode (Smooth 3D Flight)
-AddToggleRow("Fly Mode (3D Flight)", "FlyMode", function(state) end)
-
--- 9. Best Egg ESP
+-- 11. Best Egg ESP (Gold Highlight on All Eggs)
 AddToggleRow("Best Egg ESP", "EggESP", function(state)
     if not state then
         for _, highlight in pairs(CurrentEggESPInstances) do
@@ -462,13 +872,26 @@ AddToggleRow("Best Egg ESP", "EggESP", function(state)
     end
 end)
 
--- 10. Noclip Mode
+-- 12. Player ESP & Base Defense Radar
+AddToggleRow("Player ESP & Radar", "PlayerESP", function(state)
+    if not state then
+        for _, inst in pairs(CurrentPlayerESPInstances) do
+            pcall(function() inst:Destroy() end)
+        end
+        CurrentPlayerESPInstances = {}
+    end
+end)
+
+-- 13. Fly Mode (Smooth 3D Flight)
+AddToggleRow("Fly Mode (3D Flight)", "FlyMode", function(state) end)
+
+-- 14. Noclip Mode
 AddToggleRow("Noclip (Phase Walls)", "Noclip", function(state) end)
 
--- 11. Infinite Jump
+-- 15. Infinite Jump
 AddToggleRow("Infinite Jump", "InfiniteJump", function(state) end)
 
--- 12. Integrated WalkSpeed Row with - / + Pill Adjuster
+-- 16. Integrated WalkSpeed Row with - / + Pill Adjuster
 local SpeedRow = Instance.new("Frame")
 SpeedRow.Size = UDim2.new(1, -6, 0, 24)
 SpeedRow.BackgroundTransparency = 1
@@ -615,140 +1038,14 @@ FooterSub.Font = Enum.Font.GothamMedium
 FooterSub.Parent = Footer
 
 -- ====================================================
--- 1. CONTINUOUS MULTI-EGG AUTO STEAL & DEPOSIT ENGINE
+-- 1. CONTINUOUS AUTO STEAL ENGINES
 -- ====================================================
-local function GetLocationKey(pos)
-    return math.floor(pos.X / 4) .. "_" .. math.floor(pos.Y / 4) .. "_" .. math.floor(pos.Z / 4)
-end
 
-local function FindNearestAvailableEgg(hrpPosition)
-    local bestTargetCFrame = nil
-    local bestPrompt = nil
-    local bestPart = nil
-    local bestLocKey = nil
-    local shortestDist = math.huge
-    local now = os.clock()
-
-    for _, prompt in ipairs(Workspace:GetDescendants()) do
-        if prompt:IsA("ProximityPrompt") then
-            local pPart = prompt.Parent
-            local targetPos = nil
-
-            if pPart:IsA("BasePart") then
-                targetPos = pPart.CFrame
-            elseif pPart:IsA("Attachment") then
-                targetPos = pPart.WorldCFrame
-            elseif pPart:IsA("Model") and pPart.PrimaryPart then
-                targetPos = pPart.PrimaryPart.CFrame
-            end
-
-            if targetPos then
-                local locKey = GetLocationKey(targetPos.Position)
-                local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
-
-                if not isCoolingDown then
-                    local distFromBase = SavedBaseCFrame and (targetPos.Position - SavedBaseCFrame.Position).Magnitude or 100
-                    if distFromBase > 12 then
-                        local act = (prompt.ActionText .. " " .. prompt.ObjectText):lower()
-                        local pName = pPart.Name:lower()
-                        
-                        local isEggOrSteal = act:find("steal") or act:find("take") or act:find("grab") or act:find("egg") or act:find("brainrot") or act:find("pick") or act:find("collect") or pName:find("egg") or pName:find("brainrot") or act == "" or act == " "
-                        
-                        if isEggOrSteal then
-                            local dist = (targetPos.Position - hrpPosition).Magnitude
-                            if dist < shortestDist then
-                                shortestDist = dist
-                                bestTargetCFrame = targetPos
-                                bestPrompt = prompt
-                                bestPart = pPart:IsA("BasePart") and pPart or nil
-                                bestLocKey = locKey
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-
-    if not bestTargetCFrame then
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            local name = obj.Name:lower()
-            if (name:find("egg") or name:find("brainrot")) and not name:find("gui") and not name:find("ui") then
-                local tCFrame = nil
-                local targetPart = nil
-                
-                if obj:IsA("BasePart") then
-                    tCFrame = obj.CFrame
-                    targetPart = obj
-                elseif obj:IsA("Model") and obj.PrimaryPart then
-                    tCFrame = obj.PrimaryPart.CFrame
-                    targetPart = obj.PrimaryPart
-                elseif obj:IsA("Model") then
-                    local p = obj:FindFirstChildWhichIsA("BasePart")
-                    if p then
-                        tCFrame = p.CFrame
-                        targetPart = p
-                    end
-                end
-
-                if tCFrame then
-                    local locKey = GetLocationKey(tCFrame.Position)
-                    local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
-
-                    if not isCoolingDown then
-                        local distFromBase = SavedBaseCFrame and (tCFrame.Position - SavedBaseCFrame.Position).Magnitude or 100
-                        if distFromBase > 14 then
-                            local dist = (tCFrame.Position - hrpPosition).Magnitude
-                            if dist < shortestDist then
-                                shortestDist = dist
-                                bestTargetCFrame = tCFrame
-                                bestPart = targetPart
-                                bestLocKey = locKey
-                                local p = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
-                                if p then bestPrompt = p end
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-
-    return bestTargetCFrame, bestPrompt, bestPart, bestLocKey
-end
-
-local function ReturnToBaseAndDeposit(hrp)
-    if SavedBaseCFrame and isAlive() then
-        hrp.AssemblyLinearVelocity = Vector3.zero
-        hrp.AssemblyAngularVelocity = Vector3.zero
-        hrp.CFrame = SavedBaseCFrame * CFrame.new(0, 2, 0)
-        task.wait(0.18)
-
-        for _, prompt in ipairs(Workspace:GetDescendants()) do
-            if prompt:IsA("ProximityPrompt") and prompt.Parent then
-                local pos = prompt.Parent:IsA("BasePart") and prompt.Parent.Position or (prompt.Parent:IsA("Attachment") and prompt.Parent.WorldPosition or nil)
-                if pos and (pos - hrp.Position).Magnitude < 50 then
-                    InstantTriggerPrompt(prompt)
-                end
-            end
-        end
-
-        for _, part in ipairs(Workspace:GetDescendants()) do
-            if part:IsA("BasePart") and (part.Position - hrp.Position).Magnitude < 45 then
-                local n = part.Name:lower()
-                if n:find("deposit") or n:find("hatch") or n:find("nest") or n:find("slot") or n:find("place") or n:find("base") or n:find("incub") then
-                    InstantTouch(hrp, part)
-                end
-            end
-        end
-    end
-end
-
--- Master Auto Steal Loop
+-- Master Auto Steal Loop (Nearest & Rare)
 task.spawn(function()
     while true do
         task.wait(0.15)
-        if Toggles.AutoSteal and isAlive() then
+        if (Toggles.AutoSteal or Toggles.AutoStealRare) and isAlive() then
             local char = LocalPlayer.Character
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
 
@@ -757,7 +1054,12 @@ task.spawn(function()
                     SavedBaseCFrame = hrp.CFrame
                 end
 
-                local targetCFrame, prompt, eggPart, locKey = FindNearestAvailableEgg(hrp.Position)
+                local targetCFrame, prompt, eggPart, locKey, eggName, rarity
+                if Toggles.AutoStealRare then
+                    targetCFrame, prompt, eggPart, locKey, eggName, rarity = FindRarestEgg(hrp.Position)
+                else
+                    targetCFrame, prompt, eggPart, locKey = FindNearestAvailableEgg(hrp.Position)
+                end
 
                 if targetCFrame then
                     if locKey then
@@ -877,7 +1179,6 @@ task.spawn(function()
             local hrp = LocalPlayer.Character.HumanoidRootPart
             local basePos = SavedBaseCFrame and SavedBaseCFrame.Position or hrp.Position
 
-            -- Trigger all Egg Slot / Incubator / Hatch prompts at Base
             pcall(function()
                 for _, prompt in ipairs(Workspace:GetDescendants()) do
                     if prompt:IsA("ProximityPrompt") and prompt.Parent then
@@ -896,7 +1197,6 @@ task.spawn(function()
                 end
             end)
 
-            -- Touch all Base Hatch / Nest / Slot parts
             pcall(function()
                 for _, part in ipairs(Workspace:GetDescendants()) do
                     if part:IsA("BasePart") then
@@ -910,7 +1210,6 @@ task.spawn(function()
                 end
             end)
 
-            -- Fire Hatch remotes in ReplicatedStorage
             pcall(function()
                 for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
                     local n = rem.Name:lower()
@@ -938,7 +1237,6 @@ task.spawn(function()
         if Toggles.AutoUpgradeBase and isAlive() then
             local hrp = LocalPlayer.Character.HumanoidRootPart
 
-            -- Trigger Upgrade ProximityPrompts at Base
             pcall(function()
                 for _, prompt in ipairs(Workspace:GetDescendants()) do
                     if prompt:IsA("ProximityPrompt") and prompt.Parent then
@@ -953,7 +1251,6 @@ task.spawn(function()
                 end
             end)
 
-            -- Touch Upgrade Pads
             pcall(function()
                 for _, part in ipairs(Workspace:GetDescendants()) do
                     if part:IsA("BasePart") then
@@ -965,7 +1262,6 @@ task.spawn(function()
                 end
             end)
 
-            -- Fire Upgrade Remotes in ReplicatedStorage
             pcall(function()
                 for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
                     local n = rem.Name:lower()
@@ -983,7 +1279,98 @@ task.spawn(function()
 end)
 
 -- ====================================================
--- 5. PLAYER ESP & BASE DEFENSE RADAR
+-- 5. RARE EGG ESP ENGINE (MAGENTA NEON HIGHLIGHT & LIVE TAG)
+-- ====================================================
+RunService.RenderStepped:Connect(function()
+    if Toggles.RareEggESP then
+        local myPos = isAlive() and LocalPlayer.Character.HumanoidRootPart.Position or Vector3.zero
+        local targetCFrame, prompt, eggPart, _, eggName, rarity = FindRarestEgg(myPos)
+
+        if eggPart or (targetCFrame and targetCFrame.Position) then
+            local hostObj = eggPart or (prompt and prompt.Parent)
+            if hostObj and (hostObj:IsA("BasePart") or hostObj:IsA("Model")) then
+                if not hostObj:FindFirstChild("JunejoRareEggHighlight") then
+                    local hl = Instance.new("Highlight")
+                    hl.Name = "JunejoRareEggHighlight"
+                    hl.FillColor = Color3.fromRGB(220, 30, 255)
+                    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                    hl.FillTransparency = 0.2
+                    hl.OutlineTransparency = 0
+                    hl.Parent = hostObj
+                    table.insert(CurrentRareEggESPInstances, hl)
+                end
+
+                if not hostObj:FindFirstChild("JunejoRareEggBillboard") then
+                    local bb = Instance.new("BillboardGui")
+                    bb.Name = "JunejoRareEggBillboard"
+                    bb.Size = UDim2.new(0, 220, 0, 42)
+                    bb.StudsOffset = Vector3.new(0, 3.5, 0)
+                    bb.AlwaysOnTop = true
+                    bb.Adornee = hostObj:IsA("BasePart") and hostObj or hostObj:FindFirstChildWhichIsA("BasePart")
+                    bb.Parent = hostObj
+
+                    local tagLabel = Instance.new("TextLabel")
+                    tagLabel.Name = "TagLabel"
+                    tagLabel.Size = UDim2.new(1, 0, 0.5, 0)
+                    tagLabel.Position = UDim2.new(0, 0, 0, 0)
+                    tagLabel.BackgroundTransparency = 1
+                    tagLabel.Text = "👑 RAREST: " .. eggName
+                    tagLabel.TextColor3 = Color3.fromRGB(255, 60, 255)
+                    tagLabel.TextStrokeTransparency = 0
+                    tagLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+                    tagLabel.TextSize = 11
+                    tagLabel.Font = Enum.Font.GothamBold
+                    tagLabel.Parent = bb
+
+                    local distLabel = Instance.new("TextLabel")
+                    distLabel.Name = "DistLabel"
+                    distLabel.Size = UDim2.new(1, 0, 0.5, 0)
+                    distLabel.Position = UDim2.new(0, 0, 0.5, 0)
+                    distLabel.BackgroundTransparency = 1
+                    distLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+                    distLabel.TextStrokeTransparency = 0
+                    distLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+                    distLabel.TextSize = 10
+                    distLabel.Font = Enum.Font.GothamMedium
+                    distLabel.Parent = bb
+                    table.insert(CurrentRareEggESPInstances, bb)
+                end
+
+                local bb = hostObj:FindFirstChild("JunejoRareEggBillboard")
+                if bb and bb:FindFirstChild("DistLabel") and isAlive() then
+                    local dist = math.floor((hostObj:GetPivot().Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude)
+                    bb.DistLabel.Text = "Distance: " .. dist .. "s | Tier Score: " .. rarity
+                end
+            end
+        end
+    end
+end)
+
+-- ====================================================
+-- 6. BEST EGG ESP ENGINE (GOLD HIGHLIGHT)
+-- ====================================================
+RunService.RenderStepped:Connect(function()
+    if Toggles.EggESP then
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            local name = obj.Name:lower()
+            if (obj:IsA("Model") or obj:IsA("BasePart")) and (name:find("egg") or name:find("brainrot")) and not name:find("gui") then
+                if not obj:FindFirstChild("JunejoEggESP") then
+                    local highlight = Instance.new("Highlight")
+                    highlight.Name = "JunejoEggESP"
+                    highlight.FillColor = Color3.fromRGB(255, 215, 0)
+                    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                    highlight.FillTransparency = 0.25
+                    highlight.OutlineTransparency = 0
+                    highlight.Parent = obj
+                    table.insert(CurrentEggESPInstances, highlight)
+                end
+            end
+        end
+    end
+end)
+
+-- ====================================================
+-- 7. PLAYER ESP & BASE DEFENSE RADAR
 -- ====================================================
 RunService.RenderStepped:Connect(function()
     if Toggles.PlayerESP and isAlive() then
@@ -1042,7 +1429,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- ====================================================
--- 6. FLY MODE (UNIVERSAL MOBILE & PC FLIGHT)
+-- 8. FLY MODE (UNIVERSAL MOBILE & PC FLIGHT)
 -- ====================================================
 local FlyBodyVelocity = nil
 local FlyBodyGyro = nil
@@ -1109,34 +1496,11 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- ====================================================
--- 7. BEST EGG ESP ENGINE
--- ====================================================
-RunService.RenderStepped:Connect(function()
-    if Toggles.EggESP then
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            local name = obj.Name:lower()
-            if (obj:IsA("Model") or obj:IsA("BasePart")) and (name:find("egg") or name:find("brainrot")) and not name:find("gui") then
-                if not obj:FindFirstChild("JunejoEggESP") then
-                    local highlight = Instance.new("Highlight")
-                    highlight.Name = "JunejoEggESP"
-                    highlight.FillColor = Color3.fromRGB(255, 215, 0)
-                    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-                    highlight.FillTransparency = 0.25
-                    highlight.OutlineTransparency = 0
-                    highlight.Parent = obj
-                    table.insert(CurrentEggESPInstances, highlight)
-                end
-            end
-        end
-    end
-end)
-
--- ====================================================
--- 8. NOCLIP ENGINE & SPEED KEEPER
+-- 9. NOCLIP ENGINE & SPEED KEEPER
 -- ====================================================
 RunService.Stepped:Connect(function()
     if isAlive() then
-        if Toggles.Noclip or Toggles.AutoSteal then
+        if Toggles.Noclip or Toggles.AutoSteal or Toggles.AutoStealRare then
             for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
                 if part:IsA("BasePart") then
                     part.CanCollide = false
@@ -1151,7 +1515,7 @@ RunService.Stepped:Connect(function()
 end)
 
 -- ====================================================
--- 9. INFINITE JUMP (MOBILE & PC UNIVERSAL)
+-- 10. INFINITE JUMP (MOBILE & PC UNIVERSAL)
 -- ====================================================
 UIS.JumpRequest:Connect(function()
     if Toggles.InfiniteJump and isAlive() then
@@ -1176,7 +1540,7 @@ LocalPlayer.CharacterAdded:Connect(function()
 end)
 
 -- ====================================================
--- 10. ANTI-AFK ENGINE
+-- 11. ANTI-AFK ENGINE
 -- ====================================================
 LocalPlayer.Idled:Connect(function()
     if Toggles.AntiAFK then
