@@ -30,9 +30,7 @@ local Toggles = {
     AutoSteal = false,
     AutoSell = false,
     AutoHatch = false,
-    AutoCollectDrops = false,
     AutoUpgradeBase = false,
-    Godmode = false,
     PlayerESP = false,
     FlyMode = false,
     EggESP = false,
@@ -277,7 +275,7 @@ ContentFrame.BackgroundTransparency = 1
 ContentFrame.BorderSizePixel = 0
 ContentFrame.ScrollBarThickness = 3
 ContentFrame.ScrollBarImageColor3 = Color3.fromRGB(65, 65, 80)
-ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 395)
+ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 340)
 ContentFrame.Parent = MainFrame
 
 local UIList = Instance.new("UIListLayout")
@@ -432,20 +430,14 @@ AddToggleRow("Auto Sell Brainrots", "AutoSell", function(state) end)
 -- 5. Auto Hatch Eggs (Hatch eggs placed in Base)
 AddToggleRow("Auto Hatch Eggs", "AutoHatch", function(state) end)
 
--- 6. Auto Collect Drops / Cash (Magnet)
-AddToggleRow("Auto Collect Drops / Cash", "AutoCollectDrops", function(state) end)
-
--- 7. Auto Upgrade Base (Auto-buys base upgrades, treadmill speed & slots when cash is available)
+-- 6. Auto Upgrade Base (Auto-buys base upgrades, treadmill speed & slots when cash is available)
 AddToggleRow("Auto Upgrade Base", "AutoUpgradeBase", function(state)
     if state then
         ShowNotification("Auto Upgrade Base", "Active: Auto-buying Base Upgrades when Cash is available!")
     end
 end)
 
--- 8. Godmode (Bulletproof Damage & Laser Immunity)
-AddToggleRow("Godmode", "Godmode", function(state) end)
-
--- 9. Player ESP & Base Defense Radar
+-- 7. Player ESP & Base Defense Radar
 AddToggleRow("Player ESP & Radar", "PlayerESP", function(state)
     if not state then
         for _, inst in pairs(CurrentPlayerESPInstances) do
@@ -455,10 +447,10 @@ AddToggleRow("Player ESP & Radar", "PlayerESP", function(state)
     end
 end)
 
--- 10. Fly Mode (Smooth 3D Flight)
+-- 8. Fly Mode (Smooth 3D Flight)
 AddToggleRow("Fly Mode (3D Flight)", "FlyMode", function(state) end)
 
--- 11. Best Egg ESP
+-- 9. Best Egg ESP
 AddToggleRow("Best Egg ESP", "EggESP", function(state)
     if not state then
         for _, highlight in pairs(CurrentEggESPInstances) do
@@ -470,13 +462,13 @@ AddToggleRow("Best Egg ESP", "EggESP", function(state)
     end
 end)
 
--- 12. Noclip Mode
+-- 10. Noclip Mode
 AddToggleRow("Noclip (Phase Walls)", "Noclip", function(state) end)
 
--- 13. Infinite Jump
+-- 11. Infinite Jump
 AddToggleRow("Infinite Jump", "InfiniteJump", function(state) end)
 
--- 14. Integrated WalkSpeed Row with - / + Pill Adjuster
+-- 12. Integrated WalkSpeed Row with - / + Pill Adjuster
 local SpeedRow = Instance.new("Frame")
 SpeedRow.Size = UDim2.new(1, -6, 0, 24)
 SpeedRow.BackgroundTransparency = 1
@@ -938,126 +930,7 @@ task.spawn(function()
 end)
 
 -- ====================================================
--- 4. UNIVERSAL AUTO COLLECT DROPS & BASE CASH (MAGNET)
--- ====================================================
-task.spawn(function()
-    while true do
-        task.wait(0.2)
-        if Toggles.AutoCollectDrops and isAlive() then
-            local hrp = LocalPlayer.Character.HumanoidRootPart
-            local basePos = SavedBaseCFrame and SavedBaseCFrame.Position or hrp.Position
-
-            -- Vector 1: Base Cash Collector, ATMs, Vaults & Storage ProximityPrompts
-            pcall(function()
-                for _, prompt in ipairs(Workspace:GetDescendants()) do
-                    if prompt:IsA("ProximityPrompt") and prompt.Parent then
-                        local pPos = prompt.Parent:IsA("BasePart") and prompt.Parent.Position or (prompt.Parent:IsA("Attachment") and prompt.Parent.WorldPosition or nil)
-                        if pPos then
-                            local act = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Parent.Name):lower()
-                            local isCollectPrompt = act:find("collect") or act:find("claim") or act:find("cash") or act:find("coin") or act:find("money") or act:find("income") or act:find("withdraw") or act:find("harvest") or act:find("gather") or act:find("drop") or act:find("reward") or act:find("atm") or act:find("bank") or act:find("generator")
-                            if isCollectPrompt then
-                                local distToMe = (pPos - hrp.Position).Magnitude
-                                local distToBase = (pPos - basePos).Magnitude
-                                if distToMe < 350 or distToBase < 120 then
-                                    InstantTriggerPrompt(prompt)
-                                end
-                            end
-                        end
-                    end
-                end
-            end)
-
-            -- Vector 2: Base Cash Collector Touchpads, ATMs & Money Vaults
-            pcall(function()
-                for _, part in ipairs(Workspace:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        local n = part.Name:lower()
-                        local isCollectorPart = n:find("collector") or n:find("atm") or n:find("bank") or n:find("cashpad") or n:find("moneypad") or n:find("income") or n:find("withdraw") or n:find("vault") or n:find("deposit") or n:find("cashstand") or n:find("coinstand")
-                        if isCollectorPart then
-                            local distToMe = (part.Position - hrp.Position).Magnitude
-                            local distToBase = (part.Position - basePos).Magnitude
-                            if distToMe < 300 or distToBase < 100 then
-                                InstantTouch(hrp, part)
-                            end
-                        end
-                    end
-                end
-            end)
-
-            -- Vector 3: Map Currency Drops Magnet (Pulls unanchored coins/cash to player & touches anchored drops)
-            pcall(function()
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    local n = obj.Name:lower()
-                    local isDrop = n:find("coin") or n:find("gem") or n:find("drop") or n:find("token") or n:find("cash") or n:find("star") or n:find("candy") or n:find("pickup") or n:find("reward") or n:find("money") or n:find("dollar") or n:find("bill") or n:find("currency") or n:find("debris")
-                    if isDrop and not n:find("gui") and not n:find("ui") then
-                        if obj:IsA("BasePart") then
-                            local dist = (obj.Position - hrp.Position).Magnitude
-                            if dist < 450 then
-                                if not obj.Anchored and obj.CanTouch then
-                                    obj.CFrame = hrp.CFrame
-                                    obj.AssemblyLinearVelocity = Vector3.zero
-                                end
-                                InstantTouch(hrp, obj)
-                            end
-                        elseif obj:IsA("Model") and obj.PrimaryPart then
-                            local dist = (obj.PrimaryPart.Position - hrp.Position).Magnitude
-                            if dist < 450 then
-                                if not obj.PrimaryPart.Anchored and obj.PrimaryPart.CanTouch then
-                                    obj.PrimaryPart.CFrame = hrp.CFrame
-                                    obj.PrimaryPart.AssemblyLinearVelocity = Vector3.zero
-                                end
-                                InstantTouch(hrp, obj.PrimaryPart)
-                            end
-                        end
-                    end
-                end
-            end)
-
-            -- Vector 4: ReplicatedStorage Remotes & Network Events Sweep
-            pcall(function()
-                for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
-                    local n = rem.Name:lower()
-                    local isCollectRem = n:find("collect") or n:find("pickup") or n:find("claimcash") or n:find("claimincome") or n:find("withdraw") or n:find("claimdrop") or n:find("collectdrop") or n:find("getcash") or n:find("collectmoney") or n:find("harvest")
-                    if isCollectRem then
-                        if rem:IsA("RemoteEvent") then
-                            rem:FireServer()
-                            rem:FireServer("Cash")
-                            rem:FireServer("All")
-                            rem:FireServer(LocalPlayer)
-                            rem:FireServer(true)
-                            rem:FireServer(1)
-                        elseif rem:IsA("RemoteFunction") then
-                            rem:InvokeServer()
-                            rem:InvokeServer("Cash")
-                            rem:InvokeServer("All")
-                        end
-                    end
-                end
-            end)
-
-            -- Vector 5: PlayerGui Auto Claim Buttons
-            pcall(function()
-                local pgui = LocalPlayer:FindFirstChild("PlayerGui")
-                if pgui then
-                    for _, btn in ipairs(pgui:GetDescendants()) do
-                        if btn:IsA("TextButton") or btn:IsA("ImageButton") then
-                            local txt = (btn.Name .. " " .. (btn:IsA("TextButton") and btn.Text or "")):lower()
-                            if (txt:find("collect") or txt:find("claim") or txt:find("harvest")) and not txt:find("robux") and not txt:find("pass") and not txt:find("shop") and not txt:find("buy") then
-                                if getconnections then
-                                    for _, conn in ipairs(getconnections(btn.MouseButton1Click)) do conn:Fire() end
-                                    for _, conn in ipairs(getconnections(btn.Activated)) do conn:Fire() end
-                                end
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- ====================================================
--- 5. AUTO UPGRADE BASE ENGINE (MULTI-LAYER UPGRADER)
+-- 4. AUTO UPGRADE BASE ENGINE (MULTI-LAYER UPGRADER)
 -- ====================================================
 task.spawn(function()
     while true do
@@ -1110,106 +983,7 @@ task.spawn(function()
 end)
 
 -- ====================================================
--- 6. BULLETPROOF GODMODE (DAMAGE & LASER IMMUNITY)
--- ====================================================
-
--- Network Metatable Hook: Block incoming/outgoing damage & ragdoll remotes
-pcall(function()
-    local rawmeta = getrawmetatable and getrawmetatable(game)
-    if rawmeta and setreadonly then
-        local oldNamecall = rawmeta.__namecall
-        setreadonly(rawmeta, false)
-        rawmeta.__namecall = newcclosure(function(self, ...)
-            local method = getnamecallmethod and getnamecallmethod()
-            if Toggles.Godmode and (method == "FireServer" or method == "InvokeServer") then
-                local name = tostring(self):lower()
-                if name:find("damage") or name:find("hurt") or name:find("kill") or name:find("hit") or name:find("die") or name:find("ragdoll") or name:find("stun") or name:find("trap") or name:find("laser") or name:find("falldamage") then
-                    return nil
-                end
-            end
-            return oldNamecall(self, ...)
-        end)
-        setreadonly(rawmeta, true)
-    end
-end)
-
--- Neutralize Kill Parts, Lasers, Traps & Hazard Hitboxes
-task.spawn(function()
-    while true do
-        task.wait(0.25)
-        if Toggles.Godmode then
-            pcall(function()
-                for _, part in ipairs(Workspace:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        local n = part.Name:lower()
-                        local isKillOrTrap = n:find("kill") or n:find("laser") or n:find("trap") or n:find("death") or n:find("lava") or n:find("spike") or n:find("damage") or n:find("hazard") or n:find("acid") or n:find("saw") or n:find("blade") or n:find("hurt") or n:find("sensor")
-                        if isKillOrTrap then
-                            part.CanTouch = false
-                            part.CanCollide = false
-                            part.CanQuery = false
-                            part.Size = Vector3.new(0.001, 0.001, 0.001)
-                            part.Transparency = 1
-                            local tt = part:FindFirstChildWhichIsA("TouchTransmitter")
-                            if tt then tt:Destroy() end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- Anti-Damage, ForceField & Humanoid State Anchor
-RunService.Stepped:Connect(function()
-    if Toggles.Godmode and isAlive() then
-        local char = LocalPlayer.Character
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-
-        -- ForceField Protection
-        if char and not char:FindFirstChildOfClass("ForceField") then
-            local ff = Instance.new("ForceField")
-            ff.Visible = false
-            ff.Parent = char
-        end
-
-        if hum then
-            hum.BreakJointsOnDeath = false
-            hum.RequiresNeck = false
-            hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-            hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
-            hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
-            hum:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding, false)
-            
-            if hum.Health < hum.MaxHealth and hum.Health > 0 then
-                hum.Health = hum.MaxHealth
-            end
-            if hum.PlatformStand then hum.PlatformStand = false end
-            if hum.Sit then hum.Sit = false end
-
-            local currentState = hum:GetState()
-            if currentState == Enum.HumanoidStateType.Ragdoll or currentState == Enum.HumanoidStateType.FallingDown or currentState == Enum.HumanoidStateType.PlatformStanding or currentState == Enum.HumanoidStateType.Dead then
-                hum:ChangeState(Enum.HumanoidStateType.Running)
-            end
-        end
-
-        -- Anti-Void Fall Rescue
-        if hrp then
-            if hrp.Position.Y < -20 or hrp.AssemblyLinearVelocity.Y < -75 then
-                hrp.AssemblyLinearVelocity = Vector3.zero
-                hrp.AssemblyAngularVelocity = Vector3.zero
-                if SavedBaseCFrame then
-                    hrp.CFrame = SavedBaseCFrame * CFrame.new(0, 3, 0)
-                else
-                    hrp.CFrame = CFrame.new(hrp.Position.X, 18, hrp.Position.Z)
-                end
-            end
-        end
-    end
-end)
-
--- ====================================================
--- 7. PLAYER ESP & BASE DEFENSE RADAR
+-- 5. PLAYER ESP & BASE DEFENSE RADAR
 -- ====================================================
 RunService.RenderStepped:Connect(function()
     if Toggles.PlayerESP and isAlive() then
@@ -1268,7 +1042,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- ====================================================
--- 8. FLY MODE (UNIVERSAL MOBILE & PC FLIGHT)
+-- 6. FLY MODE (UNIVERSAL MOBILE & PC FLIGHT)
 -- ====================================================
 local FlyBodyVelocity = nil
 local FlyBodyGyro = nil
@@ -1335,7 +1109,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- ====================================================
--- 9. BEST EGG ESP ENGINE
+-- 7. BEST EGG ESP ENGINE
 -- ====================================================
 RunService.RenderStepped:Connect(function()
     if Toggles.EggESP then
@@ -1358,7 +1132,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- ====================================================
--- 10. NOCLIP ENGINE & SPEED KEEPER
+-- 8. NOCLIP ENGINE & SPEED KEEPER
 -- ====================================================
 RunService.Stepped:Connect(function()
     if isAlive() then
@@ -1377,7 +1151,7 @@ RunService.Stepped:Connect(function()
 end)
 
 -- ====================================================
--- 11. INFINITE JUMP (MOBILE & PC UNIVERSAL)
+-- 9. INFINITE JUMP (MOBILE & PC UNIVERSAL)
 -- ====================================================
 UIS.JumpRequest:Connect(function()
     if Toggles.InfiniteJump and isAlive() then
@@ -1402,7 +1176,7 @@ LocalPlayer.CharacterAdded:Connect(function()
 end)
 
 -- ====================================================
--- 12. ANTI-AFK ENGINE
+-- 10. ANTI-AFK ENGINE
 -- ====================================================
 LocalPlayer.Idled:Connect(function()
     if Toggles.AntiAFK then
