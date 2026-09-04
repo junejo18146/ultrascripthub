@@ -178,79 +178,152 @@ local function UpdateCharacterSpeed()
 end
 
 -- ====================================================
--- RARITY EVALUATION & INTELLIGENT SCANNER
+-- ADVANCED RARITY EVALUATION & INTELLIGENT SCANNER
 -- ====================================================
 local RarityWeights = {
-    -- High Tier Keywords
-    ["secret"] = 10000,
-    ["godly"] = 9000,
-    ["celestial"] = 8000,
-    ["cosmic"] = 7500,
-    ["divine"] = 7000,
-    ["omega"] = 6500,
-    ["galactic"] = 6000,
-    ["void"] = 5500,
-    ["ancient"] = 5000,
-    ["rainbow"] = 4800,
-    ["titan"] = 4500,
-    ["mythic"] = 4000,
-    ["legendary"] = 3000,
-    ["diamond"] = 2500,
-    ["epic"] = 2000,
-    ["golden"] = 1500,
-    ["gold"] = 1400,
-    ["rare"] = 1000,
-    ["lucky"] = 800,
+    -- Ultra Tiers
+    ["secret"] = 1000000,
+    ["godly"] = 800000,
+    ["celestial"] = 700000,
+    ["cosmic"] = 600000,
+    ["divine"] = 500000,
+    ["infinity"] = 450000,
+    ["omega"] = 400000,
+    ["galactic"] = 350000,
+    ["void"] = 300000,
+    ["ancient"] = 250000,
+    ["abyssal"] = 220000,
+    ["titan"] = 200000,
+    ["solar"] = 180000,
+    ["demon"] = 170000,
+    ["angelic"] = 160000,
+
+    -- High Tiers
+    ["mythic"] = 150000,
+    ["mythical"] = 150000,
+    ["legendary"] = 100000,
+    ["diamond"] = 80000,
+    ["emerald"] = 70000,
+    ["ruby"] = 60000,
+    ["sapphire"] = 50000,
+    ["rainbow"] = 45000,
+    ["plasma"] = 40000,
+    ["radioactive"] = 38000,
+    ["neon"] = 35000,
+    ["magma"] = 32000,
+    ["volcanic"] = 30000,
+    ["volcano"] = 30000,
+
+    -- Mid-High Tiers
+    ["epic"] = 25000,
+    ["golden"] = 20000,
+    ["gold"] = 18000,
+    ["crystal"] = 15000,
+    ["frost"] = 14000,
+    ["ice"] = 12000,
+    ["shadow"] = 10000,
+    ["darkness"] = 10000,
+    ["dark"] = 8000,
+    ["rare"] = 5000,
     ["uncommon"] = 500,
     ["common"] = 100,
 
-    -- Specific Brainrot & Lucky Characters / Tiers
-    ["skibidi titan"] = 9500,
-    ["gigachad"] = 8500,
-    ["mewing"] = 8000,
-    ["sigma"] = 7500,
-    ["skibidi"] = 6000,
-    ["kai cenat"] = 5500,
-    ["baby gronk"] = 5000,
-    ["grimace"] = 4500,
-    ["fanum"] = 4000,
-    ["rizz"] = 3500,
-    ["tungsten"] = 3000,
-    ["caseoh"] = 2500,
+    -- Famous High Tier Characters
+    ["skibidi titan"] = 900000,
+    ["gigachad"] = 750000,
+    ["mewing"] = 650000,
+    ["sigma"] = 600000,
+    ["kai cenat"] = 400000,
+    ["baby gronk"] = 350000,
+    ["grimace"] = 300000,
+    ["caseoh"] = 250000,
+    ["tungsten"] = 200000,
+    ["fanum"] = 150000,
+    ["rizz"] = 100000,
+    ["skibidi"] = 80000,
 }
 
 local function GetLocationKey(pos)
     return math.floor(pos.X / 4) .. "_" .. math.floor(pos.Y / 4) .. "_" .. math.floor(pos.Z / 4)
 end
 
-local function GetEggRarityScore(obj, prompt)
+local function GetEggRarityScore(obj, prompt, distFromBase)
     local score = 100
-    local detectedName = obj and obj.Name or "Lucky Egg"
-    local combinedText = (obj and obj.Name or ""):lower()
+    local detectedName = "Lucky Egg"
+    local combinedText = ""
 
-    if prompt then
-        combinedText = combinedText .. " " .. (prompt.ObjectText .. " " .. prompt.ActionText):lower()
+    -- 1. Scan Object Name
+    if obj then
+        detectedName = obj.Name
+        combinedText = combinedText .. " " .. obj.Name:lower()
     end
 
+    -- 2. Scan Proximity Prompt Texts
+    if prompt then
+        if prompt.ObjectText and prompt.ObjectText ~= "" then
+            detectedName = prompt.ObjectText
+            combinedText = combinedText .. " " .. prompt.ObjectText:lower()
+        end
+        if prompt.ActionText and prompt.ActionText ~= "" then
+            combinedText = combinedText .. " " .. prompt.ActionText:lower()
+        end
+    end
+
+    -- 3. Scan Ancestor Names (Parents up to 5 levels for Zone, Biome, Area names)
+    if obj and obj:IsA("Instance") then
+        local currentParent = obj.Parent
+        local depth = 0
+        while currentParent and depth < 5 do
+            if currentParent == Workspace or currentParent == game then break end
+            combinedText = combinedText .. " " .. currentParent.Name:lower()
+            currentParent = currentParent.Parent
+            depth = depth + 1
+        end
+    end
+
+    -- 4. Scan Attributes & Value Objects
     if obj and obj:IsA("Instance") then
         pcall(function()
             for attrName, attrVal in pairs(obj:GetAttributes()) do
                 combinedText = combinedText .. " " .. tostring(attrName):lower() .. " " .. tostring(attrVal):lower()
-                if type(attrVal) == "number" and (attrName:lower():find("price") or attrName:lower():find("value") or attrName:lower():find("tier") or attrName:lower():find("rarity") or attrName:lower():find("level") or attrName:lower():find("luck")) then
-                    score = math.max(score, attrVal)
+                if type(attrVal) == "number" then
+                    local an = attrName:lower()
+                    if an:find("rarity") or an:find("tier") or an:find("luck") or an:find("multiplier") or an:find("price") or an:find("cost") or an:find("value") or an:find("level") then
+                        score = math.max(score, attrVal * 100)
+                    end
+                end
+            end
+            if obj.Parent then
+                for attrName, attrVal in pairs(obj.Parent:GetAttributes()) do
+                    combinedText = combinedText .. " " .. tostring(attrName):lower() .. " " .. tostring(attrVal):lower()
+                    if type(attrVal) == "number" then
+                        local an = attrName:lower()
+                        if an:find("rarity") or an:find("tier") or an:find("luck") or an:find("multiplier") then
+                            score = math.max(score, attrVal * 100)
+                        end
+                    end
                 end
             end
         end)
 
         pcall(function()
-            for _, lbl in ipairs(obj:GetDescendants()) do
-                if lbl:IsA("TextLabel") or lbl:IsA("TextBox") then
-                    combinedText = combinedText .. " " .. lbl.Text:lower()
+            for _, valObj in ipairs(obj:GetDescendants()) do
+                if valObj:IsA("ValueBase") then
+                    combinedText = combinedText .. " " .. valObj.Name:lower() .. " " .. tostring(valObj.Value):lower()
+                    if valObj:IsA("NumberValue") or valObj:IsA("IntValue") then
+                        score = math.max(score, valObj.Value * 10)
+                    end
+                elseif valObj:IsA("TextLabel") or valObj:IsA("TextBox") then
+                    combinedText = combinedText .. " " .. valObj.Text:lower()
+                    if valObj.Text and valObj.Text ~= "" and #valObj.Text > 2 and not valObj.Text:lower():find("e to") and not valObj.Text:lower():find("hold") then
+                        detectedName = valObj.Text
+                    end
                 end
             end
         end)
     end
 
+    -- 5. Match High Tier Keywords
     for keyword, weight in pairs(RarityWeights) do
         if combinedText:find(keyword) then
             if weight > score then
@@ -259,22 +332,157 @@ local function GetEggRarityScore(obj, prompt)
         end
     end
 
-    local tierNum = combinedText:match("tier%s*(%d+)") or combinedText:match("tier%-(%d+)")
+    -- 6. Match Multipliers, Tiers, Zones, Biomes, Numbers
+    local tierNum = combinedText:match("tier%s*(%d+)") or combinedText:match("tier%-(%d+)") or combinedText:match("t(%d+)")
     if tierNum then
-        score = score + (tonumber(tierNum) * 500)
+        score = score + (tonumber(tierNum) * 30000)
+    end
+
+    local zoneNum = combinedText:match("zone%s*(%d+)") or combinedText:match("biome%s*(%d+)") or combinedText:match("area%s*(%d+)") or combinedText:match("island%s*(%d+)")
+    if zoneNum then
+        score = score + (tonumber(zoneNum) * 25000)
+    end
+
+    local multNum = combinedText:match("(%d+)%s*x") or combinedText:match("x%s*(%d+)")
+    if multNum then
+        score = score + (tonumber(multNum) * 1000)
+    end
+
+    local kNum = combinedText:match("(%d+)%s*k")
+    if kNum then
+        score = score + (tonumber(kNum) * 500)
+    end
+
+    local mNum = combinedText:match("(%d+)%s*m")
+    if mNum then
+        score = score + (tonumber(mNum) * 50000)
+    end
+
+    local bNum = combinedText:match("(%d+)%s*b")
+    if bNum then
+        score = score + (tonumber(bNum) * 500000)
+    end
+
+    -- 7. Biome Depth Distance Weighting (Higher zone eggs are placed further away)
+    if distFromBase and distFromBase > 0 then
+        score = score + math.floor(distFromBase / 4)
     end
 
     return score, detectedName
 end
 
 local function FindRarestEgg(hrpPosition)
-    local bestTargetCFrame = nil
-    local bestPrompt = nil
-    local bestPart = nil
-    local bestLocKey = nil
-    local bestEggName = "Rare Lucky Egg"
-    local highestRarity = -1
+    local candidates = {}
     local now = os.clock()
+    local basePos = SavedBaseCFrame and SavedBaseCFrame.Position or hrpPosition
+
+    -- 1. Gather all candidates from ProximityPrompts
+    for _, prompt in ipairs(Workspace:GetDescendants()) do
+        if prompt:IsA("ProximityPrompt") then
+            local pPart = prompt.Parent
+            local targetPos = nil
+
+            if pPart:IsA("BasePart") then
+                targetPos = pPart.CFrame
+            elseif pPart:IsA("Attachment") then
+                targetPos = pPart.WorldCFrame
+            elseif pPart:IsA("Model") and pPart.PrimaryPart then
+                targetPos = pPart.PrimaryPart.CFrame
+            end
+
+            if targetPos then
+                local locKey = GetLocationKey(targetPos.Position)
+                local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
+
+                if not isCoolingDown then
+                    local distFromBase = (targetPos.Position - basePos).Magnitude
+                    if distFromBase > 16 then
+                        local act = (prompt.ActionText .. " " .. prompt.ObjectText):lower()
+                        local pName = pPart.Name:lower()
+                        local isEgg = act:find("steal") or act:find("take") or act:find("grab") or act:find("egg") or act:find("lucky") or act:find("brainrot") or act:find("pick") or act:find("collect") or pName:find("egg") or pName:find("lucky") or pName:find("brainrot") or act == "" or act == " "
+
+                        if isEgg then
+                            local score, eggName = GetEggRarityScore(pPart, prompt, distFromBase)
+                            table.insert(candidates, {
+                                targetCFrame = targetPos,
+                                prompt = prompt,
+                                part = pPart:IsA("BasePart") and pPart or nil,
+                                locKey = locKey,
+                                eggName = eggName,
+                                score = score,
+                                distFromBase = distFromBase
+                            })
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    -- 2. Gather candidates from Workspace models/parts as fallback
+    if #candidates == 0 then
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            local name = obj.Name:lower()
+            if (name:find("egg") or name:find("lucky") or name:find("brainrot")) and not name:find("gui") and not name:find("ui") then
+                local tCFrame = nil
+                local targetPart = nil
+
+                if obj:IsA("BasePart") then
+                    tCFrame = obj.CFrame
+                    targetPart = obj
+                elseif obj:IsA("Model") and obj.PrimaryPart then
+                    tCFrame = obj.PrimaryPart.CFrame
+                    targetPart = obj.PrimaryPart
+                elseif obj:IsA("Model") then
+                    local p = obj:FindFirstChildWhichIsA("BasePart")
+                    if p then
+                        tCFrame = p.CFrame
+                        targetPart = p
+                    end
+                end
+
+                if tCFrame then
+                    local locKey = GetLocationKey(tCFrame.Position)
+                    local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
+
+                    if not isCoolingDown then
+                        local distFromBase = (tCFrame.Position - basePos).Magnitude
+                        if distFromBase > 16 then
+                            local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
+                            local score, eggName = GetEggRarityScore(obj, prompt, distFromBase)
+                            table.insert(candidates, {
+                                targetCFrame = tCFrame,
+                                prompt = prompt,
+                                part = targetPart,
+                                locKey = locKey,
+                                eggName = eggName,
+                                score = score,
+                                distFromBase = distFromBase
+                            })
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    if #candidates == 0 then
+        return nil, nil, nil, nil, "No Egg Found", 0
+    end
+
+    -- 3. Sort candidates in descending order by score
+    table.sort(candidates, function(a, b)
+        return a.score > b.score
+    end)
+
+    local best = candidates[1]
+    return best.targetCFrame, best.prompt, best.part, best.locKey, best.eggName, best.score
+end
+
+local function FindNearestAvailableEgg(hrpPosition)
+    local candidates = {}
+    local now = os.clock()
+    local basePos = SavedBaseCFrame and SavedBaseCFrame.Position or hrpPosition
 
     for _, prompt in ipairs(Workspace:GetDescendants()) do
         if prompt:IsA("ProximityPrompt") then
@@ -294,119 +502,21 @@ local function FindRarestEgg(hrpPosition)
                 local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
 
                 if not isCoolingDown then
-                    local distFromBase = SavedBaseCFrame and (targetPos.Position - SavedBaseCFrame.Position).Magnitude or 100
+                    local distFromBase = (targetPos.Position - basePos).Magnitude
                     if distFromBase > 14 then
                         local act = (prompt.ActionText .. " " .. prompt.ObjectText):lower()
                         local pName = pPart.Name:lower()
                         local isEgg = act:find("steal") or act:find("take") or act:find("grab") or act:find("egg") or act:find("lucky") or act:find("brainrot") or act:find("pick") or act:find("collect") or pName:find("egg") or pName:find("lucky") or pName:find("brainrot") or act == "" or act == " "
 
                         if isEgg then
-                            local score, eggName = GetEggRarityScore(pPart, prompt)
-                            if score > highestRarity then
-                                highestRarity = score
-                                bestTargetCFrame = targetPos
-                                bestPrompt = prompt
-                                bestPart = pPart:IsA("BasePart") and pPart or nil
-                                bestLocKey = locKey
-                                bestEggName = eggName
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-
-    if not bestTargetCFrame or highestRarity <= 100 then
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            local name = obj.Name:lower()
-            if (name:find("egg") or name:find("lucky") or name:find("brainrot")) and not name:find("gui") and not name:find("ui") then
-                local tCFrame = nil
-                local targetPart = nil
-
-                if obj:IsA("BasePart") then
-                    tCFrame = obj.CFrame
-                    targetPart = obj
-                elseif obj:IsA("Model") and obj.PrimaryPart then
-                    tCFrame = obj.PrimaryPart.CFrame
-                    targetPart = obj.PrimaryPart
-                elseif obj:IsA("Model") then
-                    local p = obj:FindFirstChildWhichIsA("BasePart")
-                    if p then
-                        tCFrame = p.CFrame
-                        targetPart = p
-                    end
-                end
-
-                if tCFrame then
-                    local locKey = GetLocationKey(tCFrame.Position)
-                    local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
-
-                    if not isCoolingDown then
-                        local distFromBase = SavedBaseCFrame and (tCFrame.Position - SavedBaseCFrame.Position).Magnitude or 100
-                        if distFromBase > 14 then
-                            local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
-                            local score, eggName = GetEggRarityScore(obj, prompt)
-                            if score > highestRarity then
-                                highestRarity = score
-                                bestTargetCFrame = tCFrame
-                                bestPart = targetPart
-                                bestLocKey = locKey
-                                bestEggName = eggName
-                                bestPrompt = prompt
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-
-    return bestTargetCFrame, bestPrompt, bestPart, bestLocKey, bestEggName, highestRarity
-end
-
-local function FindNearestAvailableEgg(hrpPosition)
-    local bestTargetCFrame = nil
-    local bestPrompt = nil
-    local bestPart = nil
-    local bestLocKey = nil
-    local shortestDist = math.huge
-    local now = os.clock()
-
-    for _, prompt in ipairs(Workspace:GetDescendants()) do
-        if prompt:IsA("ProximityPrompt") then
-            local pPart = prompt.Parent
-            local targetPos = nil
-
-            if pPart:IsA("BasePart") then
-                targetPos = pPart.CFrame
-            elseif pPart:IsA("Attachment") then
-                targetPos = pPart.WorldCFrame
-            elseif pPart:IsA("Model") and pPart.PrimaryPart then
-                targetPos = pPart.PrimaryPart.CFrame
-            end
-
-            if targetPos then
-                local locKey = GetLocationKey(targetPos.Position)
-                local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
-
-                if not isCoolingDown then
-                    local distFromBase = SavedBaseCFrame and (targetPos.Position - SavedBaseCFrame.Position).Magnitude or 100
-                    if distFromBase > 12 then
-                        local act = (prompt.ActionText .. " " .. prompt.ObjectText):lower()
-                        local pName = pPart.Name:lower()
-                        
-                        local isEggOrSteal = act:find("steal") or act:find("take") or act:find("grab") or act:find("egg") or act:find("lucky") or act:find("brainrot") or act:find("pick") or act:find("collect") or pName:find("egg") or pName:find("lucky") or pName:find("brainrot") or act == "" or act == " "
-                        
-                        if isEggOrSteal then
                             local dist = (targetPos.Position - hrpPosition).Magnitude
-                            if dist < shortestDist then
-                                shortestDist = dist
-                                bestTargetCFrame = targetPos
-                                bestPrompt = prompt
-                                bestPart = pPart:IsA("BasePart") and pPart or nil
-                                bestLocKey = locKey
-                            end
+                            table.insert(candidates, {
+                                targetCFrame = targetPos,
+                                prompt = prompt,
+                                part = pPart:IsA("BasePart") and pPart or nil,
+                                locKey = locKey,
+                                dist = dist
+                            })
                         end
                     end
                 end
@@ -414,13 +524,13 @@ local function FindNearestAvailableEgg(hrpPosition)
         end
     end
 
-    if not bestTargetCFrame then
+    if #candidates == 0 then
         for _, obj in ipairs(Workspace:GetDescendants()) do
             local name = obj.Name:lower()
             if (name:find("egg") or name:find("lucky") or name:find("brainrot")) and not name:find("gui") and not name:find("ui") then
                 local tCFrame = nil
                 local targetPart = nil
-                
+
                 if obj:IsA("BasePart") then
                     tCFrame = obj.CFrame
                     targetPart = obj
@@ -440,17 +550,17 @@ local function FindNearestAvailableEgg(hrpPosition)
                     local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
 
                     if not isCoolingDown then
-                        local distFromBase = SavedBaseCFrame and (tCFrame.Position - SavedBaseCFrame.Position).Magnitude or 100
+                        local distFromBase = (tCFrame.Position - basePos).Magnitude
                         if distFromBase > 14 then
                             local dist = (tCFrame.Position - hrpPosition).Magnitude
-                            if dist < shortestDist then
-                                shortestDist = dist
-                                bestTargetCFrame = tCFrame
-                                bestPart = targetPart
-                                bestLocKey = locKey
-                                local p = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
-                                if p then bestPrompt = p end
-                            end
+                            local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
+                            table.insert(candidates, {
+                                targetCFrame = tCFrame,
+                                prompt = prompt,
+                                part = targetPart,
+                                locKey = locKey,
+                                dist = dist
+                            })
                         end
                     end
                 end
@@ -458,7 +568,16 @@ local function FindNearestAvailableEgg(hrpPosition)
         end
     end
 
-    return bestTargetCFrame, bestPrompt, bestPart, bestLocKey
+    if #candidates == 0 then
+        return nil, nil, nil, nil
+    end
+
+    table.sort(candidates, function(a, b)
+        return a.dist < b.dist
+    end)
+
+    local best = candidates[1]
+    return best.targetCFrame, best.prompt, best.part, best.locKey
 end
 
 local function ReturnToBaseAndDeposit(hrp)
@@ -506,7 +625,7 @@ local function StealRareEggAction()
             CooldownEggs[locKey] = os.clock() + 5
         end
 
-        ShowNotification("💎 Stealing Rare Egg", "Target: " .. eggName .. " (Tier: " .. rarity .. ")")
+        ShowNotification("💎 Stealing Rarest Egg", "👑 " .. eggName .. " (Score: " .. rarity .. ")")
 
         hrp.AssemblyLinearVelocity = Vector3.zero
         hrp.AssemblyAngularVelocity = Vector3.zero
@@ -533,7 +652,7 @@ local function StealRareEggAction()
         task.wait(0.15)
         ReturnToBaseAndDeposit(hrp)
         task.wait(0.15)
-        ShowNotification("✓ Rare Egg Secured!", "Deposited " .. eggName .. " safely at Base!")
+        ShowNotification("✓ Rarest Egg Secured!", "Deposited " .. eggName .. " safely at Base!")
     else
         ShowNotification("No Rare Egg Found", "No rare eggs currently available on map.")
     end
@@ -551,7 +670,7 @@ local function TeleportToRareEggAction()
         hrp.AssemblyLinearVelocity = Vector3.zero
         hrp.AssemblyAngularVelocity = Vector3.zero
         hrp.CFrame = targetCFrame * CFrame.new(0, 2.5, 0)
-        ShowNotification("⚡ Teleported to Rare Egg", "Arrived at: " .. eggName .. " (Score: " .. rarity .. ")")
+        ShowNotification("⚡ Teleported to Rarest Egg", "👑 " .. eggName .. " (Score: " .. rarity .. ")")
     else
         ShowNotification("No Rare Egg Found", "No rare eggs currently available on map.")
     end
