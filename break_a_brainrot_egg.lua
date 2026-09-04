@@ -30,6 +30,7 @@ end
 local Toggles = {
     AutoBreakRare = false,
     RareEggESP = false,
+    AutoInfiniteCash = false,
     AutoBuyHammer = false,
     AutoRebirth = false,
     FlyMode = false,
@@ -39,6 +40,7 @@ local Toggles = {
     AntiAFK = true
 }
 
+local CustomCashValue = "1000000000"
 local CustomSpeedValue = 100
 local SavedBaseCFrame = nil
 local CurrentRareEggESPInstances = {}
@@ -202,11 +204,14 @@ end
 -- CUSTOM CASH / INFINITE CASH ENGINE
 -- ====================================================
 local function GiveCustomCash(amountInput)
-    local rawText = tostring(amountInput or "1000000000"):lower():gsub("%s+", ""):gsub(",", "")
+    local rawText = tostring(amountInput or CustomCashValue or "1000000000"):lower():gsub("%s+", ""):gsub(",", "")
     local numAmount = 1000000000
 
     if rawText:find("inf") or rawText:find("max") then
         numAmount = 999999999999
+    elseif rawText:find("t") then
+        local n = tonumber(rawText:gsub("t", ""))
+        numAmount = (n or 1) * 1000000000000
     elseif rawText:find("b") then
         local n = tonumber(rawText:gsub("b", ""))
         numAmount = (n or 1) * 1000000000
@@ -220,20 +225,31 @@ local function GiveCustomCash(amountInput)
         numAmount = tonumber(rawText) or 1000000000
     end
 
+    CustomCashValue = tostring(numAmount)
+
     -- 1. Server Remotes Injection (ReplicatedStorage)
     pcall(function()
         for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
             local n = rem.Name:lower()
-            if n:find("cash") or n:find("money") or n:find("coin") or n:find("reward") or n:find("add") or n:find("give") or n:find("claim") or n:find("deposit") or n:find("sell") or n:find("income") or n:find("currency") then
+            if n:find("cash") or n:find("money") or n:find("coin") or n:find("reward") or n:find("add") or n:find("give") or n:find("claim") or n:find("deposit") or n:find("sell") or n:find("income") or n:find("currency") or n:find("dollar") or n:find("earn") or n:find("payout") or n:find("drop") then
                 if rem:IsA("RemoteEvent") then
                     rem:FireServer(numAmount)
                     rem:FireServer("Cash", numAmount)
                     rem:FireServer("Money", numAmount)
+                    rem:FireServer("Coins", numAmount)
                     rem:FireServer(tostring(numAmount))
                     rem:FireServer(1, numAmount)
+                    rem:FireServer(true, numAmount)
+                    rem:FireServer("Reward", numAmount)
+                    rem:FireServer("Claim", numAmount)
+                    rem:FireServer("SellAll", numAmount)
+                    rem:FireServer("AddCash", numAmount)
                 elseif rem:IsA("RemoteFunction") then
                     rem:InvokeServer(numAmount)
                     rem:InvokeServer("Cash", numAmount)
+                    rem:InvokeServer("Money", numAmount)
+                    rem:InvokeServer("Coins", numAmount)
+                    rem:InvokeServer("Reward", numAmount)
                 end
             end
         end
@@ -246,7 +262,7 @@ local function GiveCustomCash(amountInput)
             for _, prompt in ipairs(Workspace:GetDescendants()) do
                 if prompt:IsA("ProximityPrompt") and prompt.Parent then
                     local act = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Parent.Name):lower()
-                    if act:find("cash") or act:find("money") or act:find("sell") or act:find("claim") or act:find("deposit") or act:find("collect") then
+                    if act:find("cash") or act:find("money") or act:find("sell") or act:find("claim") or act:find("deposit") or act:find("collect") or act:find("coin") or act:find("reward") then
                         InstantTriggerPrompt(prompt)
                     end
                 end
@@ -254,7 +270,7 @@ local function GiveCustomCash(amountInput)
             for _, part in ipairs(Workspace:GetDescendants()) do
                 if part:IsA("BasePart") then
                     local n = part.Name:lower()
-                    if n:find("cash") or n:find("collect") or n:find("sellpad") or n:find("deposit") or n:find("money") then
+                    if n:find("cash") or n:find("collect") or n:find("sellpad") or n:find("deposit") or n:find("money") or n:find("coin") or n:find("reward") then
                         if (part.Position - hrp.Position).Magnitude < 100 then
                             InstantTouch(hrp, part)
                         end
@@ -270,7 +286,7 @@ local function GiveCustomCash(amountInput)
         if leaderstats then
             for _, val in ipairs(leaderstats:GetChildren()) do
                 local n = val.Name:lower()
-                if n:find("cash") or n:find("money") or n:find("coin") or n:find("currency") or n:find("dollar") then
+                if n:find("cash") or n:find("money") or n:find("coin") or n:find("currency") or n:find("dollar") or n:find("point") or n:find("score") then
                     if val:IsA("NumberValue") or val:IsA("IntValue") then
                         val.Value = numAmount
                     elseif val:IsA("StringValue") then
@@ -279,13 +295,17 @@ local function GiveCustomCash(amountInput)
                 end
             end
         end
-        local dataFolder = LocalPlayer:FindFirstChild("Data") or LocalPlayer:FindFirstChild("PlayerData")
-        if dataFolder then
-            for _, val in ipairs(dataFolder:GetChildren()) do
-                local n = val.Name:lower()
-                if n:find("cash") or n:find("money") or n:find("coin") then
-                    if val:IsA("NumberValue") or val:IsA("IntValue") then
-                        val.Value = numAmount
+        local dataFolders = {LocalPlayer:FindFirstChild("Data"), LocalPlayer:FindFirstChild("PlayerData"), LocalPlayer:FindFirstChild("Stats"), LocalPlayer:FindFirstChild("Values")}
+        for _, dataFolder in ipairs(dataFolders) do
+            if dataFolder then
+                for _, val in ipairs(dataFolder:GetChildren()) do
+                    local n = val.Name:lower()
+                    if n:find("cash") or n:find("money") or n:find("coin") or n:find("currency") then
+                        if val:IsA("NumberValue") or val:IsA("IntValue") then
+                            val.Value = numAmount
+                        elseif val:IsA("StringValue") then
+                            val.Value = tostring(numAmount)
+                        end
                     end
                 end
             end
@@ -709,9 +729,11 @@ ContentFrame.Size = UDim2.new(1, -16, 0, 205)
 ContentFrame.Position = UDim2.new(0, 10, 0, 38)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.BorderSizePixel = 0
-ContentFrame.ScrollBarThickness = 3
+ContentFrame.ScrollBarThickness = 4
 ContentFrame.ScrollBarImageColor3 = Color3.fromRGB(65, 65, 80)
-ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 390)
+ContentFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ContentFrame.ScrollingDirection = Enum.ScrollingDirection.Y
 ContentFrame.Parent = MainFrame
 
 local UIList = Instance.new("UIListLayout")
@@ -939,7 +961,14 @@ AddActionButton("💰 Max Cash (+999 Billion)", function(btn)
     end)
 end)
 
--- 7. Auto Buy Best Hammer & Upgrades
+-- 7. Infinite Cash: Auto Infinite Cash Loop Toggle
+AddToggleRow("Auto Infinite Cash (Loop)", "AutoInfiniteCash", function(state)
+    if state then
+        ShowNotification("Auto Infinite Cash", "Active: Continuously injecting cash into balance!")
+    end
+end)
+
+-- 8. Auto Buy Best Hammer & Upgrades
 AddToggleRow("Auto Buy Best Hammer", "AutoBuyHammer", function(state)
     if state then
         ShowNotification("Auto Buy Best Hammer", "Active: Purchasing best hammers & tool upgrades from shop!")
@@ -1179,7 +1208,19 @@ task.spawn(function()
 end)
 
 -- ====================================================
--- 2. COMPREHENSIVE AUTO BUY BEST HAMMER ENGINE
+-- 2. AUTO INFINITE CASH ENGINE (CONTINUOUS REFILL)
+-- ====================================================
+task.spawn(function()
+    while true do
+        task.wait(0.6)
+        if Toggles.AutoInfiniteCash and isAlive() then
+            GiveCustomCash(CustomCashValue or "1000000000")
+        end
+    end
+end)
+
+-- ====================================================
+-- 3. COMPREHENSIVE AUTO BUY BEST HAMMER ENGINE
 -- ====================================================
 task.spawn(function()
     while true do
