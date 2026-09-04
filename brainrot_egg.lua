@@ -1,8 +1,8 @@
 -- ====================================================
--- JUNEJO ULTRA SCRIPT HUB - STEAL A BRAINROT EGG (OFFICIAL COMPACT V8)
+-- JUNEJO ULTRA SCRIPT HUB - STEAL A BRAINROT EGG (V9 REFINED EDITION)
 -- Author: Made by Junejo (junejo18146)
 -- GitHub: https://github.com/junejo18146/ultrascripthub
--- Compact Standard Scrolling UI with Debounced Click Engine
+-- Mobile (Delta/Codex/Fluxus) & PC Universal Compatible
 -- ====================================================
 
 local CoreGui = game:GetService("CoreGui")
@@ -12,6 +12,7 @@ local UIS = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
 -- Clean all previous UI instances safely
@@ -31,7 +32,6 @@ local Toggles = {
     AutoHatch = false,
     AutoCollectDrops = false,
     AutoUpgradeBase = false,
-    AutoRebirth = false,
     Godmode = false,
     PlayerESP = false,
     FlyMode = false,
@@ -55,6 +55,71 @@ local function isAlive()
     local hum = char:FindFirstChildOfClass("Humanoid")
     local hrp = char:FindFirstChild("HumanoidRootPart")
     return hum and hum.Health > 0 and hrp ~= nil
+end
+
+-- Screen Notification Helper
+local function ShowNotification(title, message)
+    pcall(function()
+        local sg = CoreGui:FindFirstChild("JunejoHubUI_StealBrainrotEgg") or LocalPlayer:FindFirstChild("PlayerGui"):FindFirstChild("JunejoHubUI_StealBrainrotEgg")
+        if not sg then return end
+
+        local oldNotify = sg:FindFirstChild("JunejoToast")
+        if oldNotify then oldNotify:Destroy() end
+
+        local Toast = Instance.new("Frame")
+        Toast.Name = "JunejoToast"
+        Toast.Size = UDim2.new(0, 260, 0, 42)
+        Toast.Position = UDim2.new(0.5, -130, 0.12, 0)
+        Toast.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+        Toast.BorderSizePixel = 0
+        Toast.ZIndex = 999
+        Toast.Parent = sg
+
+        local ToastCorner = Instance.new("UICorner")
+        ToastCorner.CornerRadius = UDim.new(0, 8)
+        ToastCorner.Parent = Toast
+
+        local ToastStroke = Instance.new("UIStroke")
+        ToastStroke.Color = Color3.fromRGB(60, 60, 80)
+        ToastStroke.Thickness = 1.2
+        ToastStroke.Parent = Toast
+
+        local TitleLbl = Instance.new("TextLabel")
+        TitleLbl.Size = UDim2.new(1, -12, 0, 16)
+        TitleLbl.Position = UDim2.new(0, 8, 0, 4)
+        TitleLbl.BackgroundTransparency = 1
+        TitleLbl.Text = title
+        TitleLbl.TextColor3 = Color3.fromRGB(255, 215, 0)
+        TitleLbl.TextSize = 11
+        TitleLbl.Font = Enum.Font.GothamBold
+        TitleLbl.TextXAlignment = Enum.TextXAlignment.Left
+        TitleLbl.ZIndex = 1000
+        TitleLbl.Parent = Toast
+
+        local MsgLbl = Instance.new("TextLabel")
+        MsgLbl.Size = UDim2.new(1, -12, 0, 16)
+        MsgLbl.Position = UDim2.new(0, 8, 0, 20)
+        MsgLbl.BackgroundTransparency = 1
+        MsgLbl.Text = message
+        MsgLbl.TextColor3 = Color3.fromRGB(230, 230, 240)
+        MsgLbl.TextSize = 10
+        MsgLbl.Font = Enum.Font.GothamMedium
+        MsgLbl.TextXAlignment = Enum.TextXAlignment.Left
+        MsgLbl.ZIndex = 1000
+        MsgLbl.Parent = Toast
+
+        task.delay(3.5, function()
+            if Toast and Toast.Parent then
+                local tween = TweenService:Create(Toast, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1})
+                tween:Play()
+                TitleLbl.TextTransparency = 1
+                MsgLbl.TextTransparency = 1
+                ToastStroke.Transparency = 1
+                task.wait(0.35)
+                if Toast then Toast:Destroy() end
+            end
+        end)
+    end)
 end
 
 -- Universal Instant ProximityPrompt Trigger
@@ -202,7 +267,7 @@ HeaderLine.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
 HeaderLine.BorderSizePixel = 0
 HeaderLine.Parent = MainFrame
 
--- Scrollable Content Frame (Smooth Scrollbar Line)
+-- Scrollable Content Frame
 local ContentFrame = Instance.new("ScrollingFrame")
 ContentFrame.Name = "ContentFrame"
 ContentFrame.Size = UDim2.new(1, -16, 0, 195)
@@ -211,7 +276,7 @@ ContentFrame.BackgroundTransparency = 1
 ContentFrame.BorderSizePixel = 0
 ContentFrame.ScrollBarThickness = 3
 ContentFrame.ScrollBarImageColor3 = Color3.fromRGB(65, 65, 80)
-ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 420)
+ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 395)
 ContentFrame.Parent = MainFrame
 
 local UIList = Instance.new("UIListLayout")
@@ -318,7 +383,7 @@ local function AddActionButton(text, callback)
 end
 
 -- ====================================================
--- REGISTER ALL TOGGLES & ACTIONS
+-- REGISTER ALL REQUESTED TOGGLES & ACTIONS
 -- ====================================================
 
 -- 1. Auto Steal Nearest Egg
@@ -363,22 +428,23 @@ end)
 -- 4. Auto Sell Brainrots
 AddToggleRow("Auto Sell Brainrots", "AutoSell", function(state) end)
 
--- 5. Auto Hatch & Incubate
-AddToggleRow("Auto Hatch & Incubate", "AutoHatch", function(state) end)
+-- 5. Auto Hatch Eggs (Hatch eggs placed in Base)
+AddToggleRow("Auto Hatch Eggs", "AutoHatch", function(state) end)
 
--- 6. Auto Collect Drops & Base Cash (Magnet)
+-- 6. Auto Collect Drops / Cash (Magnet)
 AddToggleRow("Auto Collect Drops / Cash", "AutoCollectDrops", function(state) end)
 
--- 7. Auto Upgrade Base & Speed
-AddToggleRow("Auto Upgrade Base / Speed", "AutoUpgradeBase", function(state) end)
+-- 7. Auto Upgrade Base (Auto-buys base upgrades, treadmill speed & slots when cash is available)
+AddToggleRow("Auto Upgrade Base", "AutoUpgradeBase", function(state)
+    if state then
+        ShowNotification("Auto Upgrade Base", "Active: Auto-buying Base Upgrades when Cash is available!")
+    end
+end)
 
--- 8. Auto Rebirth Engine
-AddToggleRow("Auto Rebirth", "AutoRebirth", function(state) end)
+-- 8. Godmode (Bulletproof Damage & Laser Immunity)
+AddToggleRow("Godmode", "Godmode", function(state) end)
 
--- 9. Godmode & Anti-Stun / Laser Immunity
-AddToggleRow("Godmode & Anti-Stun", "Godmode", function(state) end)
-
--- 10. Player ESP & Base Defense Radar
+-- 9. Player ESP & Base Defense Radar
 AddToggleRow("Player ESP & Radar", "PlayerESP", function(state)
     if not state then
         for _, inst in pairs(CurrentPlayerESPInstances) do
@@ -388,10 +454,10 @@ AddToggleRow("Player ESP & Radar", "PlayerESP", function(state)
     end
 end)
 
--- 11. Fly Mode (Smooth 3D Flight)
+-- 10. Fly Mode (Smooth 3D Flight)
 AddToggleRow("Fly Mode (3D Flight)", "FlyMode", function(state) end)
 
--- 12. Best Egg ESP
+-- 11. Best Egg ESP
 AddToggleRow("Best Egg ESP", "EggESP", function(state)
     if not state then
         for _, highlight in pairs(CurrentEggESPInstances) do
@@ -403,13 +469,13 @@ AddToggleRow("Best Egg ESP", "EggESP", function(state)
     end
 end)
 
--- 13. Noclip Mode
+-- 12. Noclip Mode
 AddToggleRow("Noclip (Phase Walls)", "Noclip", function(state) end)
 
--- 14. Infinite Jump
+-- 13. Infinite Jump
 AddToggleRow("Infinite Jump", "InfiniteJump", function(state) end)
 
--- 15. Integrated WalkSpeed Row with - / + Pill Adjuster
+-- 14. Integrated WalkSpeed Row with - / + Pill Adjuster
 local SpeedRow = Instance.new("Frame")
 SpeedRow.Size = UDim2.new(1, -6, 0, 24)
 SpeedRow.BackgroundTransparency = 1
@@ -809,7 +875,7 @@ task.spawn(function()
 end)
 
 -- ====================================================
--- 3. UNIVERSAL AUTO HATCH & INCUBATE ENGINE
+-- 3. AUTO HATCH EGGS (HATCHES EGGS IN BASE SLOTS/NESTS)
 -- ====================================================
 task.spawn(function()
     while true do
@@ -818,16 +884,17 @@ task.spawn(function()
             local hrp = LocalPlayer.Character.HumanoidRootPart
             local basePos = SavedBaseCFrame and SavedBaseCFrame.Position or hrp.Position
 
+            -- Trigger all Egg Slot / Incubator / Hatch prompts at Base
             pcall(function()
                 for _, prompt in ipairs(Workspace:GetDescendants()) do
                     if prompt:IsA("ProximityPrompt") and prompt.Parent then
                         local pPos = prompt.Parent:IsA("BasePart") and prompt.Parent.Position or (prompt.Parent:IsA("Attachment") and prompt.Parent.WorldPosition or nil)
                         if pPos then
-                            local distToMe = (pPos - hrp.Position).Magnitude
                             local distToBase = (pPos - basePos).Magnitude
-                            if distToMe < 150 or distToBase < 90 then
+                            local distToMe = (pPos - hrp.Position).Magnitude
+                            if distToBase < 90 or distToMe < 120 then
                                 local act = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Parent.Name):lower()
-                                if act:find("hatch") or act:find("open") or act:find("incub") or act:find("craft") or act:find("place") or act:find("deposit") or act:find("egg") or act:find("trait") or act:find("claim") or act:find("slot") then
+                                if act:find("hatch") or act:find("open") or act:find("egg") or act:find("claim") or act:find("slot") or act:find("nest") or act:find("incub") then
                                     InstantTriggerPrompt(prompt)
                                 end
                             end
@@ -836,11 +903,12 @@ task.spawn(function()
                 end
             end)
 
+            -- Touch all Base Hatch / Nest / Slot parts
             pcall(function()
                 for _, part in ipairs(Workspace:GetDescendants()) do
                     if part:IsA("BasePart") then
                         local n = part.Name:lower()
-                        if n:find("incub") or n:find("hatch") or n:find("nest") or n:find("slot") or n:find("eggstand") then
+                        if n:find("hatch") or n:find("nest") or n:find("slot") or n:find("eggstand") or n:find("incub") then
                             if (part.Position - hrp.Position).Magnitude < 100 then
                                 InstantTouch(hrp, part)
                             end
@@ -849,15 +917,15 @@ task.spawn(function()
                 end
             end)
 
+            -- Fire Hatch remotes in ReplicatedStorage
             pcall(function()
                 for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
                     local n = rem.Name:lower()
-                    if n:find("hatch") or n:find("openegg") or n:find("buyegg") or n:find("incub") or n:find("placeegg") or n:find("claimpet") or n:find("claimbrainrot") or n:find("traithatch") then
+                    if n:find("hatch") or n:find("openegg") or n:find("buyegg") or n:find("claimpet") or n:find("claimbrainrot") then
                         if rem:IsA("RemoteEvent") then
                             rem:FireServer()
                             rem:FireServer(1)
                             rem:FireServer("Egg")
-                            rem:FireServer("Basic")
                         elseif rem:IsA("RemoteFunction") then
                             rem:InvokeServer()
                         end
@@ -926,7 +994,7 @@ task.spawn(function()
 end)
 
 -- ====================================================
--- 5. AUTO UPGRADE BASE, TREADMILL & STATS ENGINE
+-- 5. AUTO UPGRADE BASE ENGINE (MULTI-LAYER UPGRADER)
 -- ====================================================
 task.spawn(function()
     while true do
@@ -934,11 +1002,12 @@ task.spawn(function()
         if Toggles.AutoUpgradeBase and isAlive() then
             local hrp = LocalPlayer.Character.HumanoidRootPart
 
+            -- Trigger Upgrade ProximityPrompts at Base
             pcall(function()
                 for _, prompt in ipairs(Workspace:GetDescendants()) do
                     if prompt:IsA("ProximityPrompt") and prompt.Parent then
                         local act = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Parent.Name):lower()
-                        if act:find("upgrade") or act:find("buy") or act:find("speed") or act:find("treadmill") or act:find("slot") or act:find("capacity") or act:find("base") then
+                        if act:find("upgrade") or act:find("buy") or act:find("capacity") or act:find("base") or act:find("slot") or act:find("speed") or act:find("treadmill") then
                             local pPos = prompt.Parent:IsA("BasePart") and prompt.Parent.Position or nil
                             if pPos and (pPos - hrp.Position).Magnitude < 150 then
                                 InstantTriggerPrompt(prompt)
@@ -948,21 +1017,23 @@ task.spawn(function()
                 end
             end)
 
+            -- Touch Upgrade Pads
             pcall(function()
                 for _, part in ipairs(Workspace:GetDescendants()) do
                     if part:IsA("BasePart") then
                         local n = part.Name:lower()
-                        if (n:find("treadmill") or n:find("upgrade") or n:find("buyslot") or n:find("speedpad")) and (part.Position - hrp.Position).Magnitude < 100 then
+                        if (n:find("upgrade") or n:find("buyslot") or n:find("treadmill") or n:find("speedpad")) and (part.Position - hrp.Position).Magnitude < 100 then
                             InstantTouch(hrp, part)
                         end
                     end
                 end
             end)
 
+            -- Fire Upgrade Remotes in ReplicatedStorage
             pcall(function()
                 for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
                     local n = rem.Name:lower()
-                    if n:find("upgrade") or n:find("buyspeed") or n:find("buyslot") or n:find("treadmill") or n:find("upgradebase") or n:find("upgradetreadmill") then
+                    if n:find("upgrade") or n:find("buyspeed") or n:find("buyslot") or n:find("treadmill") or n:find("upgradebase") then
                         if rem:IsA("RemoteEvent") then
                             rem:FireServer()
                         elseif rem:IsA("RemoteFunction") then
@@ -976,61 +1047,12 @@ task.spawn(function()
 end)
 
 -- ====================================================
--- 6. AUTO REBIRTH ENGINE
+-- 6. BULLETPROOF GODMODE (DAMAGE & LASER IMMUNITY)
 -- ====================================================
+-- Neutralize Kill Parts & Lasers
 task.spawn(function()
     while true do
-        task.wait(1.2)
-        if Toggles.AutoRebirth and isAlive() then
-            pcall(function()
-                for _, desc in ipairs(ReplicatedStorage:GetDescendants()) do
-                    local n = desc.Name:lower()
-                    if n:find("rebirth") or n:find("prestige") or n:find("ascend") then
-                        if desc:IsA("RemoteEvent") then
-                            desc:FireServer()
-                        elseif desc:IsA("RemoteFunction") then
-                            desc:InvokeServer()
-                        end
-                    end
-                end
-            end)
-            pcall(function()
-                local pgui = LocalPlayer:FindFirstChild("PlayerGui")
-                if pgui then
-                    for _, btn in ipairs(pgui:GetDescendants()) do
-                        if btn:IsA("TextButton") or btn:IsA("ImageButton") then
-                            local txt = (btn.Name .. " " .. (btn:IsA("TextButton") and btn.Text or "")):lower()
-                            if txt:find("rebirth") or txt:find("prestige") then
-                                if getconnections then
-                                    for _, conn in ipairs(getconnections(btn.MouseButton1Click)) do conn:Fire() end
-                                    for _, conn in ipairs(getconnections(btn.Activated)) do conn:Fire() end
-                                end
-                            end
-                        end
-                    end
-                end
-            end)
-            pcall(function()
-                local hrp = LocalPlayer.Character.HumanoidRootPart
-                for _, part in ipairs(Workspace:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        local n = part.Name:lower()
-                        if (n:find("rebirth") or n:find("prestige")) and (part.Position - hrp.Position).Magnitude < 50 then
-                            InstantTouch(hrp, part)
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- ====================================================
--- 7. BULLETPROOF GODMODE & ANTI-STUN / LASER IMMUNITY
--- ====================================================
-task.spawn(function()
-    while true do
-        task.wait(0.4)
+        task.wait(0.3)
         if Toggles.Godmode then
             pcall(function()
                 for _, part in ipairs(Workspace:GetDescendants()) do
@@ -1050,6 +1072,7 @@ task.spawn(function()
     end
 end)
 
+-- Anti-Damage & State Preservation
 RunService.Stepped:Connect(function()
     if Toggles.Godmode and isAlive() then
         local char = LocalPlayer.Character
@@ -1057,39 +1080,24 @@ RunService.Stepped:Connect(function()
         local hrp = char:FindFirstChild("HumanoidRootPart")
 
         if hum then
+            hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
             hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
             hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
             hum:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding, false)
             
+            if hum.Health < hum.MaxHealth and hum.Health > 0 then
+                hum.Health = hum.MaxHealth
+            end
             if hum.PlatformStand then hum.PlatformStand = false end
             if hum.Sit then hum.Sit = false end
-            
+
             local currentState = hum:GetState()
             if currentState == Enum.HumanoidStateType.Ragdoll or currentState == Enum.HumanoidStateType.FallingDown or currentState == Enum.HumanoidStateType.PlatformStanding then
                 hum:ChangeState(Enum.HumanoidStateType.Running)
             end
-
-            if hum.WalkSpeed < 16 and not Toggles.WalkSpeedBoost then
-                hum.WalkSpeed = 16
-            end
-            if hum.JumpPower == 0 then
-                hum.JumpPower = 50
-            end
         end
 
-        for _, desc in ipairs(char:GetDescendants()) do
-            if desc:IsA("BallSocketConstraint") or desc:IsA("HingeConstraint") or desc:IsA("NoCollisionConstraint") then
-                if desc.Name:lower():find("ragdoll") or desc.Name:lower():find("stun") or desc.Name:lower():find("joint") then
-                    pcall(function() desc:Destroy() end)
-                end
-            elseif desc:IsA("ValueBase") then
-                local vn = desc.Name:lower()
-                if vn:find("ragdoll") or vn:find("stun") or vn:find("knock") or vn:find("frozen") then
-                    pcall(function() desc:Destroy() end)
-                end
-            end
-        end
-
+        -- Anti-Void Fall Rescue
         if hrp then
             if hrp.Position.Y < -30 or hrp.AssemblyLinearVelocity.Y < -85 then
                 hrp.AssemblyLinearVelocity = Vector3.zero
@@ -1105,7 +1113,7 @@ RunService.Stepped:Connect(function()
 end)
 
 -- ====================================================
--- 8. PLAYER ESP & BASE DEFENSE RADAR
+-- 7. PLAYER ESP & BASE DEFENSE RADAR
 -- ====================================================
 RunService.RenderStepped:Connect(function()
     if Toggles.PlayerESP and isAlive() then
@@ -1164,7 +1172,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- ====================================================
--- 9. FLY MODE (UNIVERSAL MOBILE & PC FLIGHT)
+-- 8. FLY MODE (UNIVERSAL MOBILE & PC FLIGHT)
 -- ====================================================
 local FlyBodyVelocity = nil
 local FlyBodyGyro = nil
@@ -1231,7 +1239,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- ====================================================
--- 10. BEST EGG ESP ENGINE
+-- 9. BEST EGG ESP ENGINE
 -- ====================================================
 RunService.RenderStepped:Connect(function()
     if Toggles.EggESP then
@@ -1254,7 +1262,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- ====================================================
--- 11. NOCLIP ENGINE & SPEED KEEPER
+-- 10. NOCLIP ENGINE & SPEED KEEPER
 -- ====================================================
 RunService.Stepped:Connect(function()
     if isAlive() then
@@ -1273,7 +1281,7 @@ RunService.Stepped:Connect(function()
 end)
 
 -- ====================================================
--- 12. INFINITE JUMP (MOBILE & PC UNIVERSAL)
+-- 11. INFINITE JUMP (MOBILE & PC UNIVERSAL)
 -- ====================================================
 UIS.JumpRequest:Connect(function()
     if Toggles.InfiniteJump and isAlive() then
@@ -1298,7 +1306,7 @@ LocalPlayer.CharacterAdded:Connect(function()
 end)
 
 -- ====================================================
--- 13. ANTI-AFK ENGINE
+-- 12. ANTI-AFK ENGINE
 -- ====================================================
 LocalPlayer.Idled:Connect(function()
     if Toggles.AntiAFK then
