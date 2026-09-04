@@ -247,6 +247,26 @@ local function GetLocationKey(pos)
     return math.floor(pos.X / 4) .. "_" .. math.floor(pos.Y / 4) .. "_" .. math.floor(pos.Z / 4)
 end
 
+local function IsBaseOrPlotItem(obj)
+    if not obj then return false end
+    local charModel = obj:FindFirstAncestorOfClass("Model")
+    if charModel and Players:GetPlayerFromCharacter(charModel) then
+        return true
+    end
+    local current = obj
+    local depth = 0
+    while current and depth < 7 do
+        if current == Workspace or current == game then break end
+        local n = current.Name:lower()
+        if n:find("plot") or n:find("base") or n:find("incubator") or n:find("hatchery") or n:find("tycoon") or n:find("house") or n:find("myslot") or n:find("mybase") or n:find("deposit") or n:find("treadmill") or n:find("stand") then
+            return true
+        end
+        current = current.Parent
+        depth = depth + 1
+    end
+    return false
+end
+
 local function GetEggRarityScore(obj, prompt, distFromBase)
     local score = 100
     local detectedName = "Lucky Egg"
@@ -376,7 +396,7 @@ local function FindRarestEgg(hrpPosition)
     local now = os.clock()
     local basePos = SavedBaseCFrame and SavedBaseCFrame.Position or hrpPosition
 
-    -- 1. Gather all candidates from ProximityPrompts
+    -- 1. Gather all candidates from ProximityPrompts (outside Base / Plots)
     for _, prompt in ipairs(Workspace:GetDescendants()) do
         if prompt:IsA("ProximityPrompt") then
             local pPart = prompt.Parent
@@ -393,10 +413,11 @@ local function FindRarestEgg(hrpPosition)
             if targetPos then
                 local locKey = GetLocationKey(targetPos.Position)
                 local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
+                local inBaseOrPlot = IsBaseOrPlotItem(pPart)
 
-                if not isCoolingDown then
+                if not isCoolingDown and not inBaseOrPlot then
                     local distFromBase = (targetPos.Position - basePos).Magnitude
-                    if distFromBase > 16 then
+                    if distFromBase > 18 then
                         local act = (prompt.ActionText .. " " .. prompt.ObjectText):lower()
                         local pName = pPart.Name:lower()
                         local isEgg = act:find("steal") or act:find("take") or act:find("grab") or act:find("egg") or act:find("lucky") or act:find("brainrot") or act:find("pick") or act:find("collect") or pName:find("egg") or pName:find("lucky") or pName:find("brainrot") or act == "" or act == " "
@@ -444,10 +465,11 @@ local function FindRarestEgg(hrpPosition)
                 if tCFrame then
                     local locKey = GetLocationKey(tCFrame.Position)
                     local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
+                    local inBaseOrPlot = IsBaseOrPlotItem(obj)
 
-                    if not isCoolingDown then
+                    if not isCoolingDown and not inBaseOrPlot then
                         local distFromBase = (tCFrame.Position - basePos).Magnitude
-                        if distFromBase > 16 then
+                        if distFromBase > 18 then
                             local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
                             local score, eggName = GetEggRarityScore(obj, prompt, distFromBase)
                             table.insert(candidates, {
@@ -467,7 +489,7 @@ local function FindRarestEgg(hrpPosition)
     end
 
     if #candidates == 0 then
-        return nil, nil, nil, nil, "No Egg Found", 0
+        return nil, nil, nil, nil, "No Rare Egg Found", 0
     end
 
     -- 3. Sort candidates in descending order by score
@@ -500,10 +522,11 @@ local function FindNearestAvailableEgg(hrpPosition)
             if targetPos then
                 local locKey = GetLocationKey(targetPos.Position)
                 local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
+                local inBaseOrPlot = IsBaseOrPlotItem(pPart)
 
-                if not isCoolingDown then
+                if not isCoolingDown and not inBaseOrPlot then
                     local distFromBase = (targetPos.Position - basePos).Magnitude
-                    if distFromBase > 14 then
+                    if distFromBase > 16 then
                         local act = (prompt.ActionText .. " " .. prompt.ObjectText):lower()
                         local pName = pPart.Name:lower()
                         local isEgg = act:find("steal") or act:find("take") or act:find("grab") or act:find("egg") or act:find("lucky") or act:find("brainrot") or act:find("pick") or act:find("collect") or pName:find("egg") or pName:find("lucky") or pName:find("brainrot") or act == "" or act == " "
@@ -548,10 +571,11 @@ local function FindNearestAvailableEgg(hrpPosition)
                 if tCFrame then
                     local locKey = GetLocationKey(tCFrame.Position)
                     local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
+                    local inBaseOrPlot = IsBaseOrPlotItem(obj)
 
-                    if not isCoolingDown then
+                    if not isCoolingDown and not inBaseOrPlot then
                         local distFromBase = (tCFrame.Position - basePos).Magnitude
-                        if distFromBase > 14 then
+                        if distFromBase > 16 then
                             local dist = (tCFrame.Position - hrpPosition).Magnitude
                             local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
                             table.insert(candidates, {
@@ -607,30 +631,55 @@ local function ReturnToBaseAndDeposit(hrp)
     end
 end
 
--- Steal Rare Lucky Egg Action Pipeline
+-- Teleport to Rare Lucky Egg Action (TELEPORTS AND STAYS AT RARE EGG)
+local function TeleportToRareEggAction()
+    if not isAlive() then return end
+    local char = LocalPlayer.Character
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    -- Disable any auto loops that pull player away
+    Toggles.AutoTreadmill = false
+    Toggles.AutoSteal = false
+    Toggles.AutoStealRare = false
+
+    local targetCFrame, prompt, eggPart, _, eggName, rarity = FindRarestEgg(hrp.Position)
+    if targetCFrame then
+        hrp.AssemblyLinearVelocity = Vector3.zero
+        hrp.AssemblyAngularVelocity = Vector3.zero
+        hrp.CFrame = targetCFrame * CFrame.new(0, 3.2, 0)
+        task.wait(0.15)
+        if prompt then InstantTriggerPrompt(prompt) end
+        if eggPart then InstantTouch(hrp, eggPart) end
+        ShowNotification("⚡ Teleported to Rarest Egg", "👑 " .. eggName .. " (Score: " .. rarity .. ")")
+    else
+        ShowNotification("No Rare Egg Found", "Scanning biomes... No active rare eggs found.")
+    end
+end
+
+-- Steal Rare Lucky Egg Action Pipeline (TELEPORTS AND CLAIMS RARE EGG ON THE SPOT)
 local function StealRareEggAction()
     if not isAlive() then return end
     local char = LocalPlayer.Character
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
 
-    if not SavedBaseCFrame then
-        SavedBaseCFrame = hrp.CFrame
-    end
+    Toggles.AutoTreadmill = false
+    Toggles.AutoSteal = false
 
     local targetCFrame, prompt, eggPart, locKey, eggName, rarity = FindRarestEgg(hrp.Position)
 
     if targetCFrame then
         if locKey then
-            CooldownEggs[locKey] = os.clock() + 5
+            CooldownEggs[locKey] = os.clock() + 4
         end
 
         ShowNotification("💎 Stealing Rarest Egg", "👑 " .. eggName .. " (Score: " .. rarity .. ")")
 
         hrp.AssemblyLinearVelocity = Vector3.zero
         hrp.AssemblyAngularVelocity = Vector3.zero
-        hrp.CFrame = targetCFrame * CFrame.new(0, 1.8, 0)
-        task.wait(0.12)
+        hrp.CFrame = targetCFrame * CFrame.new(0, 2.5, 0)
+        task.wait(0.15)
 
         if prompt then
             InstantTriggerPrompt(prompt)
@@ -643,36 +692,15 @@ local function StealRareEggAction()
         for _, p in ipairs(Workspace:GetDescendants()) do
             if p:IsA("ProximityPrompt") and p.Parent then
                 local pPos = p.Parent:IsA("BasePart") and p.Parent.Position or nil
-                if pPos and (pPos - hrp.Position).Magnitude < 20 then
+                if pPos and (pPos - hrp.Position).Magnitude < 30 then
                     InstantTriggerPrompt(p)
                 end
             end
         end
 
-        task.wait(0.15)
-        ReturnToBaseAndDeposit(hrp)
-        task.wait(0.15)
-        ShowNotification("✓ Rarest Egg Secured!", "Deposited " .. eggName .. " safely at Base!")
+        ShowNotification("✓ Rarest Egg Claimed!", "👑 Secured " .. eggName .. " at spawn location!")
     else
-        ShowNotification("No Rare Egg Found", "No rare eggs currently available on map.")
-    end
-end
-
--- Teleport to Rare Lucky Egg Action
-local function TeleportToRareEggAction()
-    if not isAlive() then return end
-    local char = LocalPlayer.Character
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-
-    local targetCFrame, _, _, _, eggName, rarity = FindRarestEgg(hrp.Position)
-    if targetCFrame then
-        hrp.AssemblyLinearVelocity = Vector3.zero
-        hrp.AssemblyAngularVelocity = Vector3.zero
-        hrp.CFrame = targetCFrame * CFrame.new(0, 2.5, 0)
-        ShowNotification("⚡ Teleported to Rarest Egg", "👑 " .. eggName .. " (Score: " .. rarity .. ")")
-    else
-        ShowNotification("No Rare Egg Found", "No rare eggs currently available on map.")
+        ShowNotification("No Rare Egg Found", "Scanning biomes... No active rare eggs found.")
     end
 end
 
@@ -916,10 +944,9 @@ end)
 -- 3. Auto Steal Rare Egg (Continuous Loop)
 AddToggleRow("Auto Steal Rare Egg", "AutoStealRare", function(state)
     if state and isAlive() then
-        if not SavedBaseCFrame then
-            SavedBaseCFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
-        end
-        ShowNotification("Auto Steal Rare Egg", "Active: Seeking and securing rarest lucky eggs!")
+        Toggles.AutoTreadmill = false
+        Toggles.AutoSteal = false
+        ShowNotification("Auto Steal Rare Egg", "Active: Seeking and securing rarest lucky eggs at spawn zones!")
     end
 end)
 
@@ -972,7 +999,7 @@ end)
 -- 8. Auto Treadmill (Train Speed on Treadmill)
 AddToggleRow("Auto Treadmill", "AutoTreadmill", function(state)
     if state then
-        ShowNotification("Auto Treadmill", "Active: Automatically training speed on Base Treadmill!")
+        ShowNotification("Auto Treadmill", "Active: Training on Base Treadmill when at Base!")
     end
 end)
 
@@ -1187,35 +1214,26 @@ FooterSub.Parent = Footer
 -- 1. CONTINUOUS AUTO STEAL ENGINES
 -- ====================================================
 
--- Master Auto Steal Loop (Nearest & Rare)
+-- Master Auto Steal Rare Egg Engine (TELEPORTS & STAYS AT RARE EGGS, NEVER RETURNS TO BASE)
 task.spawn(function()
     while true do
-        task.wait(0.15)
-        if (Toggles.AutoSteal or Toggles.AutoStealRare) and isAlive() then
+        task.wait(0.3)
+        if Toggles.AutoStealRare and isAlive() then
             local char = LocalPlayer.Character
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
 
             if hrp then
-                if not SavedBaseCFrame then
-                    SavedBaseCFrame = hrp.CFrame
-                end
-
-                local targetCFrame, prompt, eggPart, locKey, eggName, rarity
-                if Toggles.AutoStealRare then
-                    targetCFrame, prompt, eggPart, locKey, eggName, rarity = FindRarestEgg(hrp.Position)
-                else
-                    targetCFrame, prompt, eggPart, locKey = FindNearestAvailableEgg(hrp.Position)
-                end
+                local targetCFrame, prompt, eggPart, locKey, eggName, rarity = FindRarestEgg(hrp.Position)
 
                 if targetCFrame then
                     if locKey then
-                        CooldownEggs[locKey] = os.clock() + 5
+                        CooldownEggs[locKey] = os.clock() + 3
                     end
 
                     hrp.AssemblyLinearVelocity = Vector3.zero
                     hrp.AssemblyAngularVelocity = Vector3.zero
-                    hrp.CFrame = targetCFrame * CFrame.new(0, 1.8, 0)
-                    task.wait(0.12)
+                    hrp.CFrame = targetCFrame * CFrame.new(0, 2.2, 0)
+                    task.wait(0.15)
 
                     if prompt then
                         InstantTriggerPrompt(prompt)
@@ -1228,17 +1246,68 @@ task.spawn(function()
                     for _, p in ipairs(Workspace:GetDescendants()) do
                         if p:IsA("ProximityPrompt") and p.Parent then
                             local pPos = p.Parent:IsA("BasePart") and p.Parent.Position or nil
-                            if pPos and (pPos - hrp.Position).Magnitude < 18 then
+                            if pPos and (pPos - hrp.Position).Magnitude < 30 then
+                                InstantTriggerPrompt(p)
+                            end
+                        end
+                    end
+                    -- STAYS AT RARE EGG LOCATION - NEVER RETURNS TO BASE!
+                    task.wait(0.3)
+                else
+                    task.wait(0.5)
+                end
+            end
+        end
+    end
+end)
+
+-- Master Auto Steal Nearest Egg Engine (Cycles between nearest eggs and Base)
+task.spawn(function()
+    while true do
+        task.wait(0.25)
+        if Toggles.AutoSteal and not Toggles.AutoStealRare and isAlive() then
+            local char = LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+            if hrp then
+                if not SavedBaseCFrame then
+                    SavedBaseCFrame = hrp.CFrame
+                end
+
+                local targetCFrame, prompt, eggPart, locKey = FindNearestAvailableEgg(hrp.Position)
+
+                if targetCFrame then
+                    if locKey then
+                        CooldownEggs[locKey] = os.clock() + 4
+                    end
+
+                    hrp.AssemblyLinearVelocity = Vector3.zero
+                    hrp.AssemblyAngularVelocity = Vector3.zero
+                    hrp.CFrame = targetCFrame * CFrame.new(0, 2.2, 0)
+                    task.wait(0.25)
+
+                    if prompt then
+                        InstantTriggerPrompt(prompt)
+                    end
+
+                    if eggPart then
+                        InstantTouch(hrp, eggPart)
+                    end
+
+                    for _, p in ipairs(Workspace:GetDescendants()) do
+                        if p:IsA("ProximityPrompt") and p.Parent then
+                            local pPos = p.Parent:IsA("BasePart") and p.Parent.Position or nil
+                            if pPos and (pPos - hrp.Position).Magnitude < 22 then
                                 InstantTriggerPrompt(p)
                             end
                         end
                     end
 
-                    task.wait(0.15)
+                    task.wait(0.5)
                     ReturnToBaseAndDeposit(hrp)
-                    task.wait(0.25)
+                    task.wait(0.3)
                 else
-                    task.wait(0.35)
+                    task.wait(0.5)
                 end
             end
         end
@@ -1320,39 +1389,39 @@ task.spawn(function()
 end)
 
 -- ====================================================
--- 3. AUTO TREADMILL ENGINE (SPEED TRAINER)
+-- 3. AUTO TREADMILL ENGINE (SAFE BASE SPEED TRAINER)
 -- ====================================================
 task.spawn(function()
     while true do
-        task.wait(0.15)
+        task.wait(0.3)
         if Toggles.AutoTreadmill and isAlive() then
             local char = LocalPlayer.Character
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
 
             if hrp then
-                local bestTreadmillPart = nil
-                local shortestTreadmillDist = math.huge
                 local basePos = SavedBaseCFrame and SavedBaseCFrame.Position or hrp.Position
+                local distFromBase = (hrp.Position - basePos).Magnitude
 
-                for _, part in ipairs(Workspace:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        local n = part.Name:lower()
-                        if n:find("treadmill") or n:find("speedpad") or n:find("track") or n:find("runpad") or n:find("train") then
-                            local dist = (part.Position - basePos).Magnitude
-                            if dist < shortestTreadmillDist then
-                                shortestTreadmillDist = dist
-                                bestTreadmillPart = part
+                -- Only train on treadmill when player is AT BASE (never pull away from distant zones)
+                if distFromBase < 40 and not (Toggles.AutoSteal or Toggles.AutoStealRare) then
+                    local bestTreadmillPart = nil
+                    local shortestTreadmillDist = math.huge
+
+                    for _, part in ipairs(Workspace:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            local n = part.Name:lower()
+                            if n:find("treadmill") or n:find("speedpad") or n:find("track") or n:find("runpad") or n:find("train") then
+                                local dist = (part.Position - basePos).Magnitude
+                                if dist < shortestTreadmillDist then
+                                    shortestTreadmillDist = dist
+                                    bestTreadmillPart = part
+                                end
                             end
                         end
                     end
-                end
 
-                if bestTreadmillPart then
-                    InstantTouch(hrp, bestTreadmillPart)
-                    if not (Toggles.AutoSteal or Toggles.AutoStealRare) then
-                        if (hrp.Position - bestTreadmillPart.Position).Magnitude > 6 then
-                            hrp.CFrame = bestTreadmillPart.CFrame * CFrame.new(0, 3, 0)
-                        end
+                    if bestTreadmillPart then
+                        InstantTouch(hrp, bestTreadmillPart)
                     end
                 end
 
@@ -1367,20 +1436,6 @@ task.spawn(function()
                             elseif rem:IsA("RemoteFunction") then
                                 rem:InvokeServer()
                                 rem:InvokeServer(1)
-                            end
-                        end
-                    end
-                end)
-
-                pcall(function()
-                    for _, prompt in ipairs(Workspace:GetDescendants()) do
-                        if prompt:IsA("ProximityPrompt") and prompt.Parent then
-                            local act = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Parent.Name):lower()
-                            if act:find("treadmill") or act:find("train") or act:find("speed") or act:find("run") then
-                                local pPos = prompt.Parent:IsA("BasePart") and prompt.Parent.Position or nil
-                                if pPos and (pPos - hrp.Position).Magnitude < 100 then
-                                    InstantTriggerPrompt(prompt)
-                                end
                             end
                         end
                     end
