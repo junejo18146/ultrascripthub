@@ -683,7 +683,40 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   - Anti-AFK Engine (Auto 20-minute idle disconnect protection)
   - Official Classic Junejo Dark UI (Compact 280x285px Scrolling Standard)
 
+---
+
+## 39. Steal A Lucky Egg
+- **Game Name**: Steal A Lucky Egg
+- **Target URL**: https://www.roblox.com/games/123698673940079/Steal-A-Lucky-Egg
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/steal_a_lucky_egg.lua"))()
+  ```
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included**:
+  - 💎 Steal Rare Egg (1-Click Action: Scans map for rarest lucky egg, teleports to it, grabs with 0s prompt & returns to Base instantly)
+  - ⚡ Teleport to Rare Egg (1-Click Action: Instant direct teleport to the highest-tier/rarest lucky egg on map)
+  - 👑 Rare Egg ESP (Neon Magenta Glowing Highlight + Live Rarity Score, Egg Name & Distance Billboard Tag)
+  - Auto Steal Rare Egg (Continuous automated pipeline seeking & depositing rarest lucky eggs)
+  - Auto Steal Nearest Egg (Auto 0s grab + instant teleport to base & deposit)
+  - 1-Click Set Base Position (Saves player's exact base coordinates safely)
+  - 1-Click Instant Teleport to Base (Failsafe return with 0 velocity)
+  - Auto Rebirth (Automatic Multi-layer Prestige & Rebirth Engine for Cash & Luck Multipliers)
+  - Auto Sell (Auto sells extra pets/items from base & deposits cash directly to player)
+  - Auto Hatch Eggs (Auto hatches lucky eggs stored in Base slots and nests)
+  - Auto Upgrade Base & Treadmills (Auto buys base capacity, speed treadmills & upgrades with live notification)
+  - Lucky Egg ESP (Bright Gold Visual Highlight on all Lucky Eggs across the map)
+  - Player ESP & Base Defense Radar (Neon Red Player Highlight + Live Distance to Me & Base Indicator)
+  - Fly Mode (Smooth 3D WASD & Mobile Touch Flight Engine)
+  - Noclip Mode (Phase through walls, locked base doors & lasers)
+  - Infinite Jump (Continuous multi-jump bypass)
+  - WalkSpeed Boost (+ / - Pill Controller from 16 to 300 speed)
+  - Instant Proximity Prompts (0s hold across whole game)
+  - Anti-AFK Engine (Auto 20-minute idle disconnect protection)
+  - Official Classic Junejo Dark UI (Compact 280x285px Scrolling Standard)
+
 ====================================================
 Updated: September 4, 2026
 ====================================================
+
 
