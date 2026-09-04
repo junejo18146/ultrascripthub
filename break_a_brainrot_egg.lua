@@ -163,7 +163,6 @@ local function EquipBestTool()
         local currentTool = char:FindFirstChildOfClass("Tool")
         if not currentTool then
             local hammerTool = nil
-            -- Search backpack for hammers or weapons
             for _, t in ipairs(backpack:GetChildren()) do
                 if t:IsA("Tool") then
                     local n = t.Name:lower()
@@ -200,6 +199,103 @@ local function UpdateCharacterSpeed()
 end
 
 -- ====================================================
+-- CUSTOM CASH / INFINITE CASH ENGINE
+-- ====================================================
+local function GiveCustomCash(amountInput)
+    local rawText = tostring(amountInput or "1000000000"):lower():gsub("%s+", ""):gsub(",", "")
+    local numAmount = 1000000000
+
+    if rawText:find("inf") or rawText:find("max") then
+        numAmount = 999999999999
+    elseif rawText:find("b") then
+        local n = tonumber(rawText:gsub("b", ""))
+        numAmount = (n or 1) * 1000000000
+    elseif rawText:find("m") then
+        local n = tonumber(rawText:gsub("m", ""))
+        numAmount = (n or 1) * 1000000
+    elseif rawText:find("k") then
+        local n = tonumber(rawText:gsub("k", ""))
+        numAmount = (n or 1) * 1000
+    else
+        numAmount = tonumber(rawText) or 1000000000
+    end
+
+    -- 1. Server Remotes Injection (ReplicatedStorage)
+    pcall(function()
+        for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
+            local n = rem.Name:lower()
+            if n:find("cash") or n:find("money") or n:find("coin") or n:find("reward") or n:find("add") or n:find("give") or n:find("claim") or n:find("deposit") or n:find("sell") or n:find("income") or n:find("currency") then
+                if rem:IsA("RemoteEvent") then
+                    rem:FireServer(numAmount)
+                    rem:FireServer("Cash", numAmount)
+                    rem:FireServer("Money", numAmount)
+                    rem:FireServer(tostring(numAmount))
+                    rem:FireServer(1, numAmount)
+                elseif rem:IsA("RemoteFunction") then
+                    rem:InvokeServer(numAmount)
+                    rem:InvokeServer("Cash", numAmount)
+                end
+            end
+        end
+    end)
+
+    -- 2. Trigger Workspace Cash & Deposit Prompts & Pads
+    pcall(function()
+        if isAlive() then
+            local hrp = LocalPlayer.Character.HumanoidRootPart
+            for _, prompt in ipairs(Workspace:GetDescendants()) do
+                if prompt:IsA("ProximityPrompt") and prompt.Parent then
+                    local act = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Parent.Name):lower()
+                    if act:find("cash") or act:find("money") or act:find("sell") or act:find("claim") or act:find("deposit") or act:find("collect") then
+                        InstantTriggerPrompt(prompt)
+                    end
+                end
+            end
+            for _, part in ipairs(Workspace:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    local n = part.Name:lower()
+                    if n:find("cash") or n:find("collect") or n:find("sellpad") or n:find("deposit") or n:find("money") then
+                        if (part.Position - hrp.Position).Magnitude < 100 then
+                            InstantTouch(hrp, part)
+                        end
+                    end
+                end
+            end
+        end
+    end)
+
+    -- 3. Local Leaderstats & Data Value Modifier
+    pcall(function()
+        local leaderstats = LocalPlayer:FindFirstChild("leaderstats")
+        if leaderstats then
+            for _, val in ipairs(leaderstats:GetChildren()) do
+                local n = val.Name:lower()
+                if n:find("cash") or n:find("money") or n:find("coin") or n:find("currency") or n:find("dollar") then
+                    if val:IsA("NumberValue") or val:IsA("IntValue") then
+                        val.Value = numAmount
+                    elseif val:IsA("StringValue") then
+                        val.Value = tostring(numAmount)
+                    end
+                end
+            end
+        end
+        local dataFolder = LocalPlayer:FindFirstChild("Data") or LocalPlayer:FindFirstChild("PlayerData")
+        if dataFolder then
+            for _, val in ipairs(dataFolder:GetChildren()) do
+                local n = val.Name:lower()
+                if n:find("cash") or n:find("money") or n:find("coin") then
+                    if val:IsA("NumberValue") or val:IsA("IntValue") then
+                        val.Value = numAmount
+                    end
+                end
+            end
+        end
+    end)
+
+    ShowNotification("💰 Infinite Cash Added!", "✓ Set Amount: " .. tostring(numAmount) .. " Cash")
+end
+
+-- ====================================================
 -- UNLOCKED RAREST EGG SCANNER & DISTANCE ENGINE
 -- (RULE: ONLY UNLOCKED EGGS, MAXIMUM DISTANCE = RAREST)
 -- ====================================================
@@ -229,7 +325,6 @@ end
 
 -- Comprehensive Lock Inspector (Filters out locked zones, locked eggs & paywalled eggs)
 local function IsEggLocked(obj, prompt)
-    -- 1. Check ProximityPrompt state & texts
     if prompt then
         if not prompt.Enabled then return true end
         local pt = (prompt.ActionText .. " " .. prompt.ObjectText):lower()
@@ -238,7 +333,6 @@ local function IsEggLocked(obj, prompt)
         end
     end
 
-    -- 2. Check Object & Ancestor Zone Lock Names/Attributes
     if obj and obj:IsA("Instance") then
         local current = obj
         local depth = 0
@@ -249,7 +343,6 @@ local function IsEggLocked(obj, prompt)
                 return true
             end
 
-            -- Check Attributes for locked flags
             local attrLocked = false
             pcall(function()
                 for attr, val in pairs(current:GetAttributes()) do
@@ -266,7 +359,6 @@ local function IsEggLocked(obj, prompt)
             depth = depth + 1
         end
 
-        -- 3. Check for Lock TextLabels, ForceFields or Lock Overlays inside egg model
         local isTextLocked = false
         pcall(function()
             for _, desc in ipairs(obj:GetDescendants()) do
@@ -343,7 +435,6 @@ local function FindRarestEgg(hrpPosition)
                 local inBaseOrPlot = IsBaseOrPlotItem(pPart)
                 local locked = IsEggLocked(pPart, prompt)
 
-                -- Only consider active, UNLOCKED eggs outside Base
                 if not isCoolingDown and not inBaseOrPlot and not locked then
                     local distFromBase = (targetPos.Position - basePos).Magnitude
                     if distFromBase > 18 then
@@ -451,7 +542,6 @@ local function PerformEggBreakAttack(targetCFrame, prompt, eggPart)
         InstantTouch(char.HumanoidRootPart, eggPart)
     end
 
-    -- Fire any damage / hit / attack Remotes
     pcall(function()
         for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
             local n = rem.Name:lower()
@@ -621,7 +711,7 @@ ContentFrame.BackgroundTransparency = 1
 ContentFrame.BorderSizePixel = 0
 ContentFrame.ScrollBarThickness = 3
 ContentFrame.ScrollBarImageColor3 = Color3.fromRGB(65, 65, 80)
-ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 320)
+ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 390)
 ContentFrame.Parent = MainFrame
 
 local UIList = Instance.new("UIListLayout")
@@ -727,6 +817,71 @@ local function AddActionButton(text, callback)
     end)
 end
 
+-- Helper Function: Add Custom Cash Input Row
+local function AddCashInputRow()
+    local Row = Instance.new("Frame")
+    Row.Size = UDim2.new(1, -6, 0, 24)
+    Row.BackgroundTransparency = 1
+    Row.Parent = ContentFrame
+
+    local InputBox = Instance.new("TextBox")
+    InputBox.Size = UDim2.new(0.64, 0, 1, 0)
+    InputBox.Position = UDim2.new(0, 0, 0, 0)
+    InputBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+    InputBox.BorderSizePixel = 0
+    InputBox.Text = "1000000000"
+    InputBox.PlaceholderText = "Cash (e.g. 1B)"
+    InputBox.PlaceholderColor3 = Color3.fromRGB(140, 140, 150)
+    InputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    InputBox.Font = Enum.Font.GothamBold
+    InputBox.TextSize = 11
+    InputBox.ClearTextOnFocus = false
+    InputBox.Parent = Row
+
+    local BoxCorner = Instance.new("UICorner")
+    BoxCorner.CornerRadius = UDim.new(0, 4)
+    BoxCorner.Parent = InputBox
+
+    local BoxStroke = Instance.new("UIStroke")
+    BoxStroke.Color = Color3.fromRGB(45, 45, 55)
+    BoxStroke.Thickness = 1
+    BoxStroke.Parent = InputBox
+
+    local AddBtn = Instance.new("TextButton")
+    AddBtn.Size = UDim2.new(0.33, 0, 1, 0)
+    AddBtn.Position = UDim2.new(0.67, 0, 0, 0)
+    AddBtn.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+    AddBtn.BorderSizePixel = 0
+    AddBtn.Text = "+ Add Cash"
+    AddBtn.TextColor3 = Color3.fromRGB(255, 215, 0)
+    AddBtn.Font = Enum.Font.GothamBold
+    AddBtn.TextSize = 10
+    AddBtn.Parent = Row
+
+    local BtnCorner = Instance.new("UICorner")
+    BtnCorner.CornerRadius = UDim.new(0, 4)
+    BtnCorner.Parent = AddBtn
+
+    local BtnStroke = Instance.new("UIStroke")
+    BtnStroke.Color = Color3.fromRGB(45, 45, 55)
+    BtnStroke.Thickness = 1
+    BtnStroke.Parent = AddBtn
+
+    local lastAddClick = 0
+    AddBtn.MouseButton1Click:Connect(function()
+        local now = os.clock()
+        if now - lastAddClick < 0.25 then return end
+        lastAddClick = now
+        AddBtn.Text = "✓ Added!"
+        AddBtn.TextColor3 = Color3.fromRGB(80, 255, 120)
+        GiveCustomCash(InputBox.Text)
+        task.delay(1.2, function()
+            AddBtn.Text = "+ Add Cash"
+            AddBtn.TextColor3 = Color3.fromRGB(255, 215, 0)
+        end)
+    end)
+end
+
 -- ====================================================
 -- REGISTER ALL REQUESTED TOGGLES & ACTIONS
 -- ====================================================
@@ -770,21 +925,35 @@ AddToggleRow("Unlocked Rare Egg ESP", "RareEggESP", function(state)
     end
 end)
 
--- 5. Auto Buy Best Hammer & Upgrades
+-- 5. Infinite Cash: Custom Cash Input Row (Type any amount & click + Add Cash)
+AddCashInputRow()
+
+-- 6. Infinite Cash: Max Cash (+999B) 1-Click Action Button
+AddActionButton("💰 Max Cash (+999 Billion)", function(btn)
+    btn.Text = "✓ +999B Added!"
+    btn.TextColor3 = Color3.fromRGB(80, 255, 120)
+    GiveCustomCash(999999999999)
+    task.delay(1.2, function()
+        btn.Text = "💰 Max Cash (+999 Billion)"
+        btn.TextColor3 = Color3.fromRGB(240, 240, 240)
+    end)
+end)
+
+-- 7. Auto Buy Best Hammer & Upgrades
 AddToggleRow("Auto Buy Best Hammer", "AutoBuyHammer", function(state)
     if state then
         ShowNotification("Auto Buy Best Hammer", "Active: Purchasing best hammers & tool upgrades from shop!")
     end
 end)
 
--- 6. Auto Rebirth (Automatic Prestige Engine)
+-- 8. Auto Rebirth (Automatic Prestige Engine)
 AddToggleRow("Auto Rebirth", "AutoRebirth", function(state)
     if state then
         ShowNotification("Auto Rebirth", "Active: Automatically rebirthing for Cash & Power multiplier!")
     end
 end)
 
--- 7. Action Button: Set Current Base Position
+-- 9. Action Button: Set Current Base Position
 AddActionButton("📍 Set Current Base Position", function(btn)
     if isAlive() then
         SavedBaseCFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
@@ -797,7 +966,7 @@ AddActionButton("📍 Set Current Base Position", function(btn)
     end
 end)
 
--- 8. Action Button: Teleport to Base
+-- 10. Action Button: Teleport to Base
 AddActionButton("⚡ Teleport to Base", function(btn)
     if isAlive() then
         if not SavedBaseCFrame then
@@ -814,16 +983,16 @@ AddActionButton("⚡ Teleport to Base", function(btn)
     end
 end)
 
--- 9. Fly Mode (Smooth 3D Flight)
+-- 11. Fly Mode (Smooth 3D Flight)
 AddToggleRow("Fly Mode (3D Flight)", "FlyMode", function(state) end)
 
--- 10. Noclip Mode
+-- 12. Noclip Mode
 AddToggleRow("Noclip (Phase Walls)", "Noclip", function(state) end)
 
--- 11. Infinite Jump
+-- 13. Infinite Jump
 AddToggleRow("Infinite Jump", "InfiniteJump", function(state) end)
 
--- 12. Integrated WalkSpeed Row with - / + Pill Adjuster
+-- 14. Integrated WalkSpeed Row with - / + Pill Adjuster
 local SpeedRow = Instance.new("Frame")
 SpeedRow.Size = UDim2.new(1, -6, 0, 24)
 SpeedRow.BackgroundTransparency = 1
