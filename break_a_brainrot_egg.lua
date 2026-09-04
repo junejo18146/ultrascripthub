@@ -152,7 +152,7 @@ local function InstantTouch(part, targetPart)
     end)
 end
 
--- Tool Auto-Equip Helper (Equips Hammer / Damage Weapon)
+-- Tool Auto-Equip Helper (Equips Highest Tier Hammer / Damage Weapon)
 local function EquipBestTool()
     pcall(function()
         if not isAlive() then return end
@@ -163,12 +163,12 @@ local function EquipBestTool()
         local currentTool = char:FindFirstChildOfClass("Tool")
         if not currentTool then
             local hammerTool = nil
+            -- Search backpack for hammers or weapons
             for _, t in ipairs(backpack:GetChildren()) do
                 if t:IsA("Tool") then
                     local n = t.Name:lower()
-                    if n:find("hammer") or n:find("axe") or n:find("mallet") or n:find("weapon") or n:find("pick") then
+                    if n:find("hammer") or n:find("axe") or n:find("mallet") or n:find("weapon") or n:find("pick") or n:find("sword") then
                         hammerTool = t
-                        break
                     end
                 end
             end
@@ -200,8 +200,8 @@ local function UpdateCharacterSpeed()
 end
 
 -- ====================================================
--- RAREST EGG SCANNER & DISTANCE ENGINE
--- (RULE: RAREST EGG = MAXIMUM DISTANCE FROM BASE/SPAWN)
+-- UNLOCKED RAREST EGG SCANNER & DISTANCE ENGINE
+-- (RULE: ONLY UNLOCKED EGGS, MAXIMUM DISTANCE = RAREST)
 -- ====================================================
 local function GetLocationKey(pos)
     return math.floor(pos.X / 4) .. "_" .. math.floor(pos.Y / 4) .. "_" .. math.floor(pos.Z / 4)
@@ -227,6 +227,67 @@ local function IsBaseOrPlotItem(obj)
     return false
 end
 
+-- Comprehensive Lock Inspector (Filters out locked zones, locked eggs & paywalled eggs)
+local function IsEggLocked(obj, prompt)
+    -- 1. Check ProximityPrompt state & texts
+    if prompt then
+        if not prompt.Enabled then return true end
+        local pt = (prompt.ActionText .. " " .. prompt.ObjectText):lower()
+        if pt:find("lock") or pt:find("requir") or pt:find("need") or pt:find("closed") or pt:find("cannot") or pt:find("reach") or pt:find("buy area") or pt:find("unlock zone") or pt:find("level req") or pt:find("rebirth req") then
+            return true
+        end
+    end
+
+    -- 2. Check Object & Ancestor Zone Lock Names/Attributes
+    if obj and obj:IsA("Instance") then
+        local current = obj
+        local depth = 0
+        while current and depth < 6 do
+            if current == Workspace or current == game then break end
+            local n = current.Name:lower()
+            if n:find("locked") or n:find("barrier") or n:find("zone_lock") or n:find("closed") or n:find("blocked") or n:find("levelreq") or n:find("rebirthreq") or n:find("lockedzone") or n:find("lockedegg") then
+                return true
+            end
+
+            -- Check Attributes for locked flags
+            local attrLocked = false
+            pcall(function()
+                for attr, val in pairs(current:GetAttributes()) do
+                    local an = tostring(attr):lower()
+                    if (an:find("lock") and val == true) or (an:find("unlock") and val == false) or (an:find("avail") and val == false) or (an:find("open") and val == false) then
+                        attrLocked = true
+                        break
+                    end
+                end
+            end)
+            if attrLocked then return true end
+
+            current = current.Parent
+            depth = depth + 1
+        end
+
+        -- 3. Check for Lock TextLabels, ForceFields or Lock Overlays inside egg model
+        local isTextLocked = false
+        pcall(function()
+            for _, desc in ipairs(obj:GetDescendants()) do
+                if desc:IsA("TextLabel") or desc:IsA("TextBox") then
+                    local txt = desc.Text:lower()
+                    if txt:find("locked") or txt:find("requires") or txt:find("need rebirth") or txt:find("reach zone") or txt:find("level req") or txt:find("unlock at") then
+                        isTextLocked = true
+                        break
+                    end
+                elseif desc:IsA("ForceField") then
+                    isTextLocked = true
+                    break
+                end
+            end
+        end)
+        if isTextLocked then return true end
+    end
+
+    return false
+end
+
 local function GetEggDisplayName(obj, prompt, distFromBase)
     local detectedName = "Brainrot Egg"
 
@@ -249,7 +310,7 @@ local function GetEggDisplayName(obj, prompt, distFromBase)
     return detectedName
 end
 
--- RAREST EGG FUNCTION: Evaluates ALL eggs and selects the one with the MAXIMUM distance from Base
+-- UNLOCKED RAREST EGG FUNCTION: Scans ONLY UNLOCKED eggs and picks the FURTHEST from Base
 local function FindRarestEgg(hrpPosition)
     local candidates = {}
     local now = os.clock()
@@ -259,7 +320,7 @@ local function FindRarestEgg(hrpPosition)
     end
     local basePos = SavedBaseCFrame and SavedBaseCFrame.Position or hrpPosition
 
-    -- 1. Gather all candidates from ProximityPrompts across Workspace (outside Base / Plots)
+    -- 1. Gather all UNLOCKED candidates from ProximityPrompts across Workspace
     for _, prompt in ipairs(Workspace:GetDescendants()) do
         if prompt:IsA("ProximityPrompt") then
             local pPart = prompt.Parent
@@ -280,8 +341,10 @@ local function FindRarestEgg(hrpPosition)
                 local locKey = GetLocationKey(targetPos.Position)
                 local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
                 local inBaseOrPlot = IsBaseOrPlotItem(pPart)
+                local locked = IsEggLocked(pPart, prompt)
 
-                if not isCoolingDown and not inBaseOrPlot then
+                -- Only consider active, UNLOCKED eggs outside Base
+                if not isCoolingDown and not inBaseOrPlot and not locked then
                     local distFromBase = (targetPos.Position - basePos).Magnitude
                     if distFromBase > 18 then
                         local act = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. pPart.Name):lower()
@@ -304,45 +367,48 @@ local function FindRarestEgg(hrpPosition)
         end
     end
 
-    -- 2. Gather candidates from Workspace models/parts as fallback (outside Base / Plots)
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        local name = obj.Name:lower()
-        if (name:find("egg") or name:find("brainrot") or name:find("block") or name:find("lucky")) and not name:find("gui") and not name:find("ui") then
-            local tCFrame = nil
-            local targetPart = nil
+    -- 2. Gather UNLOCKED candidates from Workspace models/parts as fallback
+    if #candidates == 0 then
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            local name = obj.Name:lower()
+            if (name:find("egg") or name:find("brainrot") or name:find("block") or name:find("lucky")) and not name:find("gui") and not name:find("ui") then
+                local tCFrame = nil
+                local targetPart = nil
 
-            if obj:IsA("BasePart") then
-                tCFrame = obj.CFrame
-                targetPart = obj
-            elseif obj:IsA("Model") and obj.PrimaryPart then
-                tCFrame = obj.PrimaryPart.CFrame
-                targetPart = obj.PrimaryPart
-            elseif obj:IsA("Model") then
-                local p = obj:FindFirstChildWhichIsA("BasePart")
-                if p then
-                    tCFrame = p.CFrame
-                    targetPart = p
+                if obj:IsA("BasePart") then
+                    tCFrame = obj.CFrame
+                    targetPart = obj
+                elseif obj:IsA("Model") and obj.PrimaryPart then
+                    tCFrame = obj.PrimaryPart.CFrame
+                    targetPart = obj.PrimaryPart
+                elseif obj:IsA("Model") then
+                    local p = obj:FindFirstChildWhichIsA("BasePart")
+                    if p then
+                        tCFrame = p.CFrame
+                        targetPart = p
+                    end
                 end
-            end
 
-            if tCFrame then
-                local locKey = GetLocationKey(tCFrame.Position)
-                local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
-                local inBaseOrPlot = IsBaseOrPlotItem(obj)
+                if tCFrame then
+                    local locKey = GetLocationKey(tCFrame.Position)
+                    local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
+                    local inBaseOrPlot = IsBaseOrPlotItem(obj)
+                    local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
+                    local locked = IsEggLocked(obj, prompt)
 
-                if not isCoolingDown and not inBaseOrPlot then
-                    local distFromBase = (tCFrame.Position - basePos).Magnitude
-                    if distFromBase > 18 then
-                        local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
-                        local eggName = GetEggDisplayName(obj, prompt, distFromBase)
-                        table.insert(candidates, {
-                            targetCFrame = tCFrame,
-                            prompt = prompt,
-                            part = targetPart,
-                            locKey = locKey,
-                            eggName = eggName,
-                            distFromBase = distFromBase
-                        })
+                    if not isCoolingDown and not inBaseOrPlot and not locked then
+                        local distFromBase = (tCFrame.Position - basePos).Magnitude
+                        if distFromBase > 18 then
+                            local eggName = GetEggDisplayName(obj, prompt, distFromBase)
+                            table.insert(candidates, {
+                                targetCFrame = tCFrame,
+                                prompt = prompt,
+                                part = targetPart,
+                                locKey = locKey,
+                                eggName = eggName,
+                                distFromBase = distFromBase
+                            })
+                        end
                     end
                 end
             end
@@ -350,10 +416,10 @@ local function FindRarestEgg(hrpPosition)
     end
 
     if #candidates == 0 then
-        return nil, nil, nil, nil, "No Rare Egg Found", 0
+        return nil, nil, nil, nil, "No Unlocked Egg Found", 0
     end
 
-    -- 3. STRICTLY SORT CANDIDATES BY MAXIMUM DISTANCE FROM BASE (FARTHEST EGG FIRST = RAREST EGG)
+    -- 3. STRICTLY SORT CANDIDATES BY MAXIMUM DISTANCE FROM BASE (FARTHEST UNLOCKED EGG FIRST)
     table.sort(candidates, function(a, b)
         return a.distFromBase > b.distFromBase
     end)
@@ -389,7 +455,7 @@ local function PerformEggBreakAttack(targetCFrame, prompt, eggPart)
     pcall(function()
         for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
             local n = rem.Name:lower()
-            if n:find("hit") or n:find("damage") or n:find("break") or n:find("attack") or n:find("smash") or n:find("click") then
+            if n:find("hit") or n:find("damage") or n:find("break") or n:find("attack") or n:find("smash") or n:find("click") or n:find("mine") then
                 if rem:IsA("RemoteEvent") then
                     if eggPart then rem:FireServer(eggPart) end
                     rem:FireServer()
@@ -401,7 +467,7 @@ local function PerformEggBreakAttack(targetCFrame, prompt, eggPart)
     end)
 end
 
--- 1-Click Action: Break Rare Egg (Teleports and breaks furthest rare egg on the spot)
+-- 1-Click Action: Break Unlocked Rare Egg (Teleports & breaks furthest unlocked egg on the spot)
 local function BreakRareEggAction()
     if not isAlive() then return end
     local char = LocalPlayer.Character
@@ -412,7 +478,7 @@ local function BreakRareEggAction()
     if targetCFrame then
         if locKey then CooldownEggs[locKey] = os.clock() + 3 end
 
-        ShowNotification("💎 Breaking Rare Egg", "👑 " .. eggName .. " (" .. tostring(distFromBase) .. " studs away)")
+        ShowNotification("💎 Breaking Unlocked Rare Egg", "👑 " .. eggName .. " (" .. tostring(distFromBase) .. " studs away)")
         hrp.AssemblyLinearVelocity = Vector3.zero
         hrp.AssemblyAngularVelocity = Vector3.zero
         hrp.CFrame = targetCFrame * CFrame.new(0, 2.5, 0)
@@ -423,13 +489,13 @@ local function BreakRareEggAction()
             task.wait(0.1)
         end
 
-        ShowNotification("✓ Rare Egg Hit!", "👑 Attacked " .. eggName .. " (" .. tostring(distFromBase) .. " studs from base)!")
+        ShowNotification("✓ Unlocked Rare Egg Hit!", "👑 Attacked " .. eggName .. " (" .. tostring(distFromBase) .. " studs from base)!")
     else
-        ShowNotification("No Rare Egg Found", "Scanning map... No active eggs found outside base.")
+        ShowNotification("No Unlocked Egg Found", "Scanning map... No active unlocked eggs found.")
     end
 end
 
--- 1-Click Action: Teleport to Rare Egg (Teleports to furthest rare egg and stays there)
+-- 1-Click Action: Teleport to Unlocked Rare Egg (Teleports to furthest unlocked egg and stays there)
 local function TeleportToRareEggAction()
     if not isAlive() then return end
     local char = LocalPlayer.Character
@@ -444,9 +510,9 @@ local function TeleportToRareEggAction()
         task.wait(0.15)
         if prompt then InstantTriggerPrompt(prompt) end
         if eggPart then InstantTouch(hrp, eggPart) end
-        ShowNotification("⚡ Teleported to Rare Egg", "👑 " .. eggName .. " (Furthest: " .. tostring(distFromBase) .. " studs)")
+        ShowNotification("⚡ Teleported to Unlocked Egg", "👑 " .. eggName .. " (Furthest: " .. tostring(distFromBase) .. " studs)")
     else
-        ShowNotification("No Rare Egg Found", "Scanning map... No active eggs found outside base.")
+        ShowNotification("No Unlocked Egg Found", "Scanning map... No active unlocked eggs found.")
     end
 end
 
@@ -665,37 +731,37 @@ end
 -- REGISTER ALL REQUESTED TOGGLES & ACTIONS
 -- ====================================================
 
--- 1. Break Rare Egg (1-Click Instant Action)
-AddActionButton("💎 Break Rare Egg (1-Click)", function(btn)
+-- 1. Break Unlocked Rare Egg (1-Click Instant Action)
+AddActionButton("💎 Break Unlocked Rare Egg", function(btn)
     btn.Text = "⏳ Breaking Rare Egg..."
     btn.TextColor3 = Color3.fromRGB(255, 215, 0)
     BreakRareEggAction()
     task.delay(1.5, function()
-        btn.Text = "💎 Break Rare Egg (1-Click)"
+        btn.Text = "💎 Break Unlocked Rare Egg"
         btn.TextColor3 = Color3.fromRGB(240, 240, 240)
     end)
 end)
 
--- 2. Teleport to Rare Egg (1-Click Instant Action)
-AddActionButton("⚡ Teleport to Rare Egg", function(btn)
+-- 2. Teleport to Unlocked Rare Egg (1-Click Instant Action)
+AddActionButton("⚡ Teleport to Unlocked Rare Egg", function(btn)
     btn.Text = "⏳ Teleporting..."
     btn.TextColor3 = Color3.fromRGB(220, 50, 255)
     TeleportToRareEggAction()
     task.delay(1.5, function()
-        btn.Text = "⚡ Teleport to Rare Egg"
+        btn.Text = "⚡ Teleport to Unlocked Rare Egg"
         btn.TextColor3 = Color3.fromRGB(240, 240, 240)
     end)
 end)
 
--- 3. Auto Break Rare Egg (Continuous Loop)
-AddToggleRow("Auto Break Rare Egg", "AutoBreakRare", function(state)
+-- 3. Auto Break Unlocked Rare Egg (Continuous Loop)
+AddToggleRow("Auto Break Unlocked Rare Egg", "AutoBreakRare", function(state)
     if state and isAlive() then
-        ShowNotification("Auto Break Rare Egg", "Active: Seeking & breaking furthest rare eggs across zones!")
+        ShowNotification("Auto Break Unlocked Rare Egg", "Active: Seeking & breaking furthest unlocked eggs across zones!")
     end
 end)
 
--- 4. Rare Egg ESP (Neon Magenta Glowing Highlight + Distance Billboard)
-AddToggleRow("Rare Egg ESP", "RareEggESP", function(state)
+-- 4. Unlocked Rare Egg ESP (Neon Magenta Glowing Highlight + Distance Billboard)
+AddToggleRow("Unlocked Rare Egg ESP", "RareEggESP", function(state)
     if not state then
         for _, inst in pairs(CurrentRareEggESPInstances) do
             pcall(function() inst:Destroy() end)
@@ -707,7 +773,7 @@ end)
 -- 5. Auto Buy Best Hammer & Upgrades
 AddToggleRow("Auto Buy Best Hammer", "AutoBuyHammer", function(state)
     if state then
-        ShowNotification("Auto Buy Hammer", "Active: Automatically purchasing best hammers & base upgrades!")
+        ShowNotification("Auto Buy Best Hammer", "Active: Purchasing best hammers & tool upgrades from shop!")
     end
 end)
 
@@ -904,7 +970,7 @@ FooterSub.Font = Enum.Font.GothamMedium
 FooterSub.Parent = Footer
 
 -- ====================================================
--- 1. CONTINUOUS AUTO BREAK RARE EGG ENGINE
+-- 1. CONTINUOUS AUTO BREAK UNLOCKED RARE EGG ENGINE
 -- ====================================================
 task.spawn(function()
     while true do
@@ -944,69 +1010,80 @@ task.spawn(function()
 end)
 
 -- ====================================================
--- 2. AUTO BUY BEST HAMMER & UPGRADES ENGINE
+-- 2. COMPREHENSIVE AUTO BUY BEST HAMMER ENGINE
 -- ====================================================
 task.spawn(function()
     while true do
-        task.wait(0.8)
+        task.wait(1.0)
         if Toggles.AutoBuyHammer and isAlive() then
-            local hrp = LocalPlayer.Character.HumanoidRootPart
+            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
 
-            -- 1. Shop / Upgrade Remotes Trigger
+            -- A. Fire Shop / Hammer Purchase Remotes in ReplicatedStorage
             pcall(function()
                 for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
                     local n = rem.Name:lower()
-                    if n:find("buy") or n:find("upgrade") or n:find("hammer") or n:find("tool") or n:find("unlock") or n:find("purchase") then
+                    if n:find("buy") or n:find("hammer") or n:find("tool") or n:find("weapon") or n:find("upgrade") or n:find("purchase") or n:find("craft") then
                         if rem:IsA("RemoteEvent") then
                             rem:FireServer()
-                            rem:FireServer(1)
-                            rem:FireServer("Hammer")
                             rem:FireServer("Best")
+                            rem:FireServer("Hammer")
+                            rem:FireServer(1)
+                            rem:FireServer(true)
+                            rem:FireServer("Tool")
                         elseif rem:IsA("RemoteFunction") then
                             rem:InvokeServer()
                             rem:InvokeServer("Best")
+                            rem:InvokeServer("Hammer")
                         end
                     end
                 end
             end)
 
-            -- 2. Shop Proximity Prompts
+            -- B. Proximity Prompts on Hammer Stands in Workspace
             pcall(function()
-                for _, prompt in ipairs(Workspace:GetDescendants()) do
-                    if prompt:IsA("ProximityPrompt") and prompt.Parent then
-                        local act = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Parent.Name):lower()
-                        if act:find("buy") or act:find("hammer") or act:find("upgrade") or act:find("shop") or act:find("tool") then
-                            local pPos = prompt.Parent:IsA("BasePart") and prompt.Parent.Position or nil
-                            if pPos and (pPos - hrp.Position).Magnitude < 150 then
-                                InstantTriggerPrompt(prompt)
+                if hrp then
+                    for _, prompt in ipairs(Workspace:GetDescendants()) do
+                        if prompt:IsA("ProximityPrompt") and prompt.Parent then
+                            local act = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Parent.Name):lower()
+                            if act:find("hammer") or act:find("buy") or act:find("upgrade") or act:find("tool") or act:find("shop") or act:find("weapon") then
+                                local pPos = prompt.Parent:IsA("BasePart") and prompt.Parent.Position or nil
+                                if pPos and (pPos - hrp.Position).Magnitude < 160 then
+                                    InstantTriggerPrompt(prompt)
+                                end
                             end
                         end
                     end
                 end
             end)
 
-            -- 3. Shop Touch Pads
+            -- C. Touch Pads on Hammer Shop in Workspace
             pcall(function()
-                for _, part in ipairs(Workspace:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        local n = part.Name:lower()
-                        if (n:find("buypad") or n:find("hammerpad") or n:find("upgradepad") or n:find("shop")) and (part.Position - hrp.Position).Magnitude < 100 then
-                            InstantTouch(hrp, part)
+                if hrp then
+                    for _, part in ipairs(Workspace:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            local n = part.Name:lower()
+                            if (n:find("hammerpad") or n:find("buypad") or n:find("upgradepad") or n:find("shop") or n:find("toolpad")) and (part.Position - hrp.Position).Magnitude < 120 then
+                                InstantTouch(hrp, part)
+                            end
                         end
                     end
                 end
             end)
 
-            -- 4. GUI Shop Buttons
+            -- D. PlayerGui Shop Button Simulator
             pcall(function()
                 local pgui = LocalPlayer:FindFirstChild("PlayerGui")
                 if pgui then
                     for _, btn in ipairs(pgui:GetDescendants()) do
                         if btn:IsA("TextButton") or btn:IsA("ImageButton") then
                             local txt = (btn.Name .. " " .. (btn:IsA("TextButton") and btn.Text or "")):lower()
-                            if (txt:find("buy best") or txt:find("upgrade hammer") or txt:find("buy hammer") or txt:find("upgrade all")) and not txt:find("robux") and not txt:find("pass") then
+                            local isBuyBtn = txt:find("buy") or txt:find("purchase") or txt:find("equip best") or txt:find("upgrade") or txt:find("unlock") or txt:find("max")
+                            local isRobux = txt:find("robux") or txt:find("r$") or txt:find("pass") or txt:find("gift") or txt:find("buy cash") or txt:find("gem")
+                            
+                            if isBuyBtn and not isRobux then
                                 if getconnections then
                                     for _, conn in ipairs(getconnections(btn.MouseButton1Click)) do conn:Fire() end
+                                    for _, conn in ipairs(getconnections(btn.MouseButton1Down)) do conn:Fire() end
                                     for _, conn in ipairs(getconnections(btn.Activated)) do conn:Fire() end
                                 end
                             end
@@ -1014,6 +1091,9 @@ task.spawn(function()
                     end
                 end
             end)
+
+            -- E. Auto-Equip newly purchased best hammer from backpack
+            EquipBestTool()
         end
     end
 end)
@@ -1093,7 +1173,7 @@ task.spawn(function()
 end)
 
 -- ====================================================
--- 4. RARE BRAINROT EGG ESP ENGINE (MAGENTA NEON & LIVE BILLBOARD)
+-- 4. UNLOCKED RARE BRAINROT EGG ESP ENGINE (MAGENTA NEON & LIVE BILLBOARD)
 -- ====================================================
 RunService.RenderStepped:Connect(function()
     if Toggles.RareEggESP then
@@ -1128,7 +1208,7 @@ RunService.RenderStepped:Connect(function()
                     tagLabel.Size = UDim2.new(1, 0, 0.5, 0)
                     tagLabel.Position = UDim2.new(0, 0, 0, 0)
                     tagLabel.BackgroundTransparency = 1
-                    tagLabel.Text = "👑 RAREST: " .. eggName
+                    tagLabel.Text = "👑 UNLOCKED RARE: " .. eggName
                     tagLabel.TextColor3 = Color3.fromRGB(255, 60, 255)
                     tagLabel.TextStrokeTransparency = 0
                     tagLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
