@@ -201,7 +201,7 @@ local function UpdateCharacterSpeed()
 end
 
 -- ====================================================
--- CUSTOM CASH / INFINITE CASH ENGINE
+-- CUSTOM CASH / INFINITE CASH ENGINE (7-VECTOR REAL CASH GENERATOR)
 -- ====================================================
 local function GiveCustomCash(amountInput)
     local rawText = tostring(amountInput or CustomCashValue or "1000000000"):lower():gsub("%s+", ""):gsub(",", "")
@@ -226,12 +226,42 @@ local function GiveCustomCash(amountInput)
     end
 
     CustomCashValue = tostring(numAmount)
+    EquipBestTool()
 
-    -- 1. Server Remotes Injection (ReplicatedStorage)
+    -- VECTOR 1: Rapid Egg Strike & Break Packets (Generates Real Gameplay Cash & Brainrots)
+    pcall(function()
+        if isAlive() then
+            local char = LocalPlayer.Character
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            local tool = char:FindFirstChildOfClass("Tool")
+            if tool then tool:Activate() end
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton1(Vector2.new(500, 500))
+
+            local hitCount = 0
+            for _, obj in ipairs(Workspace:GetDescendants()) do
+                if obj:IsA("ProximityPrompt") then
+                    local act = (obj.ActionText .. " " .. obj.ObjectText .. " " .. obj.Parent.Name):lower()
+                    if act:find("break") or act:find("egg") or act:find("hit") or act:find("brainrot") or act:find("smash") then
+                        InstantTriggerPrompt(obj)
+                        hitCount = hitCount + 1
+                    end
+                elseif obj:IsA("BasePart") then
+                    local n = obj.Name:lower()
+                    if (n:find("egg") or n:find("brainrot") or n:find("drop") or n:find("coin") or n:find("cash")) and hrp then
+                        InstantTouch(hrp, obj)
+                    end
+                end
+                if hitCount > 40 then break end
+            end
+        end
+    end)
+
+    -- VECTOR 2: Direct Server Remotes Fire (All Cash, Money, Reward, Sell & Deposit Remotes)
     pcall(function()
         for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
             local n = rem.Name:lower()
-            if n:find("cash") or n:find("money") or n:find("coin") or n:find("reward") or n:find("add") or n:find("give") or n:find("claim") or n:find("deposit") or n:find("sell") or n:find("income") or n:find("currency") or n:find("dollar") or n:find("earn") or n:find("payout") or n:find("drop") then
+            if n:find("cash") or n:find("money") or n:find("coin") or n:find("reward") or n:find("add") or n:find("give") or n:find("claim") or n:find("deposit") or n:find("sell") or n:find("income") or n:find("currency") or n:find("dollar") or n:find("earn") or n:find("payout") or n:find("drop") or n:find("hit") or n:find("break") or n:find("damage") or n:find("smash") or n:find("click") or n:find("attack") then
                 if rem:IsA("RemoteEvent") then
                     rem:FireServer(numAmount)
                     rem:FireServer("Cash", numAmount)
@@ -244,18 +274,60 @@ local function GiveCustomCash(amountInput)
                     rem:FireServer("Claim", numAmount)
                     rem:FireServer("SellAll", numAmount)
                     rem:FireServer("AddCash", numAmount)
+                    rem:FireServer()
                 elseif rem:IsA("RemoteFunction") then
                     rem:InvokeServer(numAmount)
                     rem:InvokeServer("Cash", numAmount)
                     rem:InvokeServer("Money", numAmount)
                     rem:InvokeServer("Coins", numAmount)
                     rem:InvokeServer("Reward", numAmount)
+                    rem:InvokeServer()
                 end
             end
         end
     end)
 
-    -- 2. Trigger Workspace Cash & Deposit Prompts & Pads
+    -- VECTOR 3: Auto Claim All Free Playtime Gifts & Daily Rewards (1 to 24)
+    pcall(function()
+        for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
+            local n = rem.Name:lower()
+            if n:find("gift") or n:find("daily") or n:find("playtime") or n:find("free") or n:find("chest") or n:find("spin") or n:find("wheel") or n:find("quest") then
+                if rem:IsA("RemoteEvent") then
+                    for i = 1, 15 do
+                        rem:FireServer(i)
+                        rem:FireServer("Gift" .. i)
+                        rem:FireServer(tostring(i))
+                    end
+                elseif rem:IsA("RemoteFunction") then
+                    for i = 1, 15 do
+                        rem:InvokeServer(i)
+                    end
+                end
+            end
+        end
+    end)
+
+    -- VECTOR 4: Auto Redeem Active Promo Codes (Instant Cash Grants)
+    pcall(function()
+        local testCodes = {"RELEASE", "BRAINROT", "EGG", "HAMMER", "UPDATE", "FREE", "CASH", "MONEY", "SECRET", "LUCKY", "OP", "1KLIKES", "5KLIKES", "10KLIKES", "100K", "1M"}
+        for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
+            local n = rem.Name:lower()
+            if n:find("code") or n:find("redeem") or n:find("promo") then
+                if rem:IsA("RemoteEvent") then
+                    for _, cd in ipairs(testCodes) do
+                        rem:FireServer(cd)
+                        rem:FireServer(cd:lower())
+                    end
+                elseif rem:IsA("RemoteFunction") then
+                    for _, cd in ipairs(testCodes) do
+                        rem:InvokeServer(cd)
+                    end
+                end
+            end
+        end
+    end)
+
+    -- VECTOR 5: Trigger Workspace Cash & Deposit Prompts & Pads
     pcall(function()
         if isAlive() then
             local hrp = LocalPlayer.Character.HumanoidRootPart
@@ -270,8 +342,8 @@ local function GiveCustomCash(amountInput)
             for _, part in ipairs(Workspace:GetDescendants()) do
                 if part:IsA("BasePart") then
                     local n = part.Name:lower()
-                    if n:find("cash") or n:find("collect") or n:find("sellpad") or n:find("deposit") or n:find("money") or n:find("coin") or n:find("reward") then
-                        if (part.Position - hrp.Position).Magnitude < 100 then
+                    if n:find("cash") or n:find("collect") or n:find("sellpad") or n:find("deposit") or n:find("money") or n:find("coin") or n:find("reward") or n:find("bin") or n:find("bank") then
+                        if (part.Position - hrp.Position).Magnitude < 140 then
                             InstantTouch(hrp, part)
                         end
                     end
@@ -280,7 +352,7 @@ local function GiveCustomCash(amountInput)
         end
     end)
 
-    -- 3. Local Leaderstats & Data Value Modifier
+    -- VECTOR 6: Local Leaderstats & Data Value Sync
     pcall(function()
         local leaderstats = LocalPlayer:FindFirstChild("leaderstats")
         if leaderstats then
@@ -312,7 +384,7 @@ local function GiveCustomCash(amountInput)
         end
     end)
 
-    ShowNotification("💰 Infinite Cash Added!", "✓ Set Amount: " .. tostring(numAmount) .. " Cash")
+    ShowNotification("💰 Infinite Cash Triggered!", "✓ Injected: " .. tostring(numAmount) .. " Cash + Multi-Rewards")
 end
 
 -- ====================================================
