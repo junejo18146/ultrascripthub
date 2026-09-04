@@ -655,7 +655,7 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
 
 ---
 
-## 38. Steal A Brainrot Egg
+## 38. Steal A Brainrot Egg (V10 Ultimate Edition)
 - **Game Name**: Steal A Brainrot Egg
 - **Raw Script Loadstring**:
   ```lua
@@ -663,17 +663,27 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   ```
 - **Key System Status**: Disabled (Direct Standalone Executable)
 - **Features Included**:
-  - Auto Steal & Hatch Loop (Auto 0s grab + instant teleport to base & deposit)
-  - Set Current Base Position (1-Click base location recorder)
-  - Teleport to Base (1-Click instant base recall)
+  - 💎 Steal Rare Egg (1-Click Action: Scans map for rarest egg, teleports to it, grabs with 0s prompt & returns to Base instantly)
+  - ⚡ Teleport to Rare Egg (1-Click Action: Instant direct teleport to the highest-tier/rarest egg on map)
+  - 👑 Rare Egg ESP (Neon Magenta Glowing Highlight + Live Rarity Score, Egg Name & Distance Billboard Tag)
+  - Auto Steal Rare Egg (Continuous automated pipeline seeking & depositing rarest eggs)
+  - Auto Steal Nearest Egg (Auto 0s grab + instant teleport to base & deposit)
+  - 1-Click Set Base Position (Saves player's exact base coordinates safely)
+  - 1-Click Instant Teleport to Base (Failsafe return with 0 velocity)
+  - Auto Sell Brainrots (Auto sells collected brainrots from base & instantly deposits cash)
+  - Auto Hatch Eggs (Auto hatches eggs stored in Base slots and nests)
+  - Auto Upgrade Base (Auto buys base capacity, egg slots & upgrades with screen notification)
+  - Player ESP & Base Defense Radar (Neon Red Player Highlight + Live Distance to Me & Base Indicator)
+  - Fly Mode (Smooth 3D WASD & Mobile Touch Flight Engine)
   - Best Egg ESP (Bright gold highlights on all map eggs)
   - Noclip Mode (Phase through walls, locked base doors & lasers)
   - Infinite Jump (Continuous multi-jump bypass)
   - WalkSpeed Boost (+ / - Pill Controller from 16 to 300 speed)
   - Instant Proximity Prompts (0s hold across whole game)
   - Anti-AFK Engine (Auto 20-minute idle disconnect protection)
-  - Official Classic Junejo Dark UI (Flat Borderless Rows Standard, 280x280px)
+  - Official Classic Junejo Dark UI (Compact 280x285px Scrolling Standard)
 
 ====================================================
-Updated: September 3, 2026
+Updated: September 4, 2026
 ====================================================
+
