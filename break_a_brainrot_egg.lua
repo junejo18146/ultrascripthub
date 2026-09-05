@@ -1,10 +1,10 @@
 -- ====================================================
--- JUNEJO ULTRA SCRIPT HUB - BREAK A BRAINROT EGG (OFFICIAL V3.0)
+-- JUNEJO ULTRA SCRIPT HUB - BREAK A BRAINROT EGG (OFFICIAL V3.1)
 -- Game: Break a Brainrot Egg
 -- Author: Made by Junejo (junejo18146)
 -- GitHub: https://github.com/junejo18146/ultrascripthub
 -- Universal Mobile (Delta / Codex / Fluxus) & PC Compatible
--- 100% Flat & Borderless Standard Toggle Rows
+-- 100% Flat & Borderless Standard Toggle Rows (Shop Popup Filtered)
 -- ====================================================
 
 local CoreGui = game:GetService("CoreGui")
@@ -68,7 +68,7 @@ pcall(function()
     end
 end)
 
--- Enhanced Screen Notification / Diagnostic Toast (Shows clear instructions & requirements)
+-- Enhanced Screen Notification / Diagnostic Toast
 local LastToastTime = 0
 local function ShowNotification(title, message, isWarning)
     local now = os.clock()
@@ -138,9 +138,15 @@ local function ShowNotification(title, message, isWarning)
     end)
 end
 
--- Universal Instant ProximityPrompt Trigger
+-- Universal Instant ProximityPrompt Trigger (Only for Break / Hit Prompts)
 local function InstantTriggerPrompt(prompt)
     if not prompt or not prompt:IsA("ProximityPrompt") then return end
+    -- Strictly skip Shop / Pet / Hatch / Machine Prompts
+    local fullText = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. (prompt.Parent and prompt.Parent.Name or "")):lower()
+    if fullText:find("pet") or fullText:find("shop") or fullText:find("hatch") or fullText:find("buy") or fullText:find("trait") or fullText:find("machine") or fullText:find("stand") or fullText:find("store") or fullText:find("open") then
+        return
+    end
+
     pcall(function()
         prompt.HoldDuration = 0
         prompt.MaxActivationDistance = math.huge
@@ -173,7 +179,7 @@ local function InstantTouch(part, targetPart)
 end
 
 -- ====================================================
--- HAMMER / TOOL REQUIREMENT VERIFICATION & AUTO EQUIP
+-- HAMMER / TOOL AUTO EQUIP ENGINE
 -- ====================================================
 local function EnsureHammerEquipped()
     if not isAlive() then return false, nil end
@@ -181,13 +187,13 @@ local function EnsureHammerEquipped()
     local hum = char:FindFirstChildOfClass("Humanoid")
     local backpack = LocalPlayer:FindFirstChild("Backpack")
 
-    -- 1. Check if a tool is already active in hand
+    -- 1. Check if a tool is active in hand
     local currentTool = char:FindFirstChildOfClass("Tool")
     if currentTool then
         return true, currentTool
     end
 
-    -- 2. Look in Backpack for Hammer / Weapon / Tool
+    -- 2. Look in Backpack for Hammer / Weapon
     if backpack then
         local bestTool = nil
         for _, t in ipairs(backpack:GetChildren()) do
@@ -204,28 +210,10 @@ local function EnsureHammerEquipped()
         end
         if bestTool and hum then
             hum:EquipTool(bestTool)
-            task.wait(0.12)
+            task.wait(0.1)
             return true, bestTool
         end
     end
-
-    -- 3. If no hammer in backpack, attempt to claim/buy starter hammer automatically
-    pcall(function()
-        for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
-            local n = rem.Name:lower()
-            if n:find("buy") or n:find("starter") or n:find("hammer") or n:find("tool") or n:find("claim") or n:find("free") then
-                if rem:IsA("RemoteEvent") then
-                    rem:FireServer("Hammer")
-                    rem:FireServer("Starter Hammer")
-                    rem:FireServer(1)
-                    rem:FireServer(true)
-                elseif rem:IsA("RemoteFunction") then
-                    rem:InvokeServer("Hammer")
-                    rem:InvokeServer(1)
-                end
-            end
-        end
-    end)
 
     return false, nil
 end
@@ -256,27 +244,22 @@ local function SafeTeleportToEgg(targetCFrame, isStayOnly)
     local hum = char:FindFirstChildOfClass("Humanoid")
     if not hrp or not hum then return false end
 
-    -- 1. Reset humanoid states
     hum.Sit = false
 
-    -- 2. Make character parts non-collidable briefly
     for _, part in ipairs(char:GetDescendants()) do
         if part:IsA("BasePart") then
             part.CanCollide = false
         end
     end
 
-    -- 3. Safe standing offset (3 studs in front of egg looking at it)
     local targetPos = targetCFrame.Position
     local destPos = targetPos + Vector3.new(0, 1.6, 3.4)
     local destCFrame = CFrame.new(destPos, Vector3.new(targetPos.X, destPos.Y, targetPos.Z))
 
-    -- 4. Velocity wipe
     hrp.AssemblyLinearVelocity = Vector3.zero
     hrp.AssemblyAngularVelocity = Vector3.zero
     if hrp:FindFirstChild("BodyVelocity") then hrp.BodyVelocity.Velocity = Vector3.zero end
 
-    -- 5. Lock position via temporary micro-anchor
     hrp.CFrame = destCFrame
     hrp.Anchored = true
     task.wait(0.06)
@@ -295,141 +278,43 @@ local function GiveCustomCash(amountInput)
     local numAmount = 999999999999
     EnsureHammerEquipped()
 
-    -- 1. Rapid Egg Strike & Break Packets
     pcall(function()
         if isAlive() then
             local char = LocalPlayer.Character
-            local hrp = char:FindFirstChild("HumanoidRootPart")
             local tool = char:FindFirstChildOfClass("Tool")
             if tool then tool:Activate() end
             VirtualUser:CaptureController()
             VirtualUser:ClickButton1(Vector2.new(500, 500))
-
-            local hitCount = 0
-            for _, obj in ipairs(Workspace:GetDescendants()) do
-                if obj:IsA("ProximityPrompt") then
-                    local act = (obj.ActionText .. " " .. obj.ObjectText .. " " .. obj.Parent.Name):lower()
-                    if act:find("break") or act:find("egg") or act:find("hit") or act:find("brainrot") or act:find("smash") then
-                        InstantTriggerPrompt(obj)
-                        hitCount = hitCount + 1
-                    end
-                elseif obj:IsA("BasePart") and hrp then
-                    local n = obj.Name:lower()
-                    if (n:find("egg") or n:find("brainrot") or n:find("drop") or n:find("coin") or n:find("cash")) then
-                        InstantTouch(hrp, obj)
-                    end
-                end
-                if hitCount > 40 then break end
-            end
         end
     end)
 
-    -- 2. Direct Server Remotes Fire
     pcall(function()
         for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
             local n = rem.Name:lower()
-            if n:find("cash") or n:find("money") or n:find("coin") or n:find("reward") or n:find("add") or n:find("give") or n:find("claim") or n:find("deposit") or n:find("sell") or n:find("income") or n:find("currency") or n:find("dollar") or n:find("earn") or n:find("payout") or n:find("drop") or n:find("hit") or n:find("break") or n:find("damage") or n:find("smash") or n:find("click") or n:find("attack") then
-                if rem:IsA("RemoteEvent") then
-                    rem:FireServer(numAmount)
-                    rem:FireServer("Cash", numAmount)
-                    rem:FireServer("Money", numAmount)
-                    rem:FireServer("Coins", numAmount)
-                    rem:FireServer(tostring(numAmount))
-                    rem:FireServer(1, numAmount)
-                    rem:FireServer(true, numAmount)
-                    rem:FireServer("Reward", numAmount)
-                    rem:FireServer("Claim", numAmount)
-                    rem:FireServer("SellAll", numAmount)
-                    rem:FireServer("AddCash", numAmount)
-                    rem:FireServer()
-                elseif rem:IsA("RemoteFunction") then
-                    rem:InvokeServer(numAmount)
-                    rem:InvokeServer("Cash", numAmount)
-                    rem:InvokeServer("Money", numAmount)
-                    rem:InvokeServer("Coins", numAmount)
-                    rem:InvokeServer("Reward", numAmount)
-                    rem:InvokeServer()
-                end
-            end
-        end
-    end)
-
-    -- 3. Auto Claim Free Playtime Gifts & Daily Rewards
-    pcall(function()
-        for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
-            local n = rem.Name:lower()
-            if n:find("gift") or n:find("daily") or n:find("playtime") or n:find("free") or n:find("chest") or n:find("spin") or n:find("wheel") or n:find("quest") then
-                if rem:IsA("RemoteEvent") then
-                    for i = 1, 15 do
-                        rem:FireServer(i)
-                        rem:FireServer("Gift" .. i)
-                        rem:FireServer(tostring(i))
-                    end
-                elseif rem:IsA("RemoteFunction") then
-                    for i = 1, 15 do
-                        rem:InvokeServer(i)
+            if not n:find("shop") and not n:find("pet") and not n:find("buy") and not n:find("egg") then
+                if n:find("cash") or n:find("money") or n:find("coin") or n:find("reward") or n:find("claim") or n:find("deposit") or n:find("income") or n:find("currency") then
+                    if rem:IsA("RemoteEvent") then
+                        rem:FireServer(numAmount)
+                        rem:FireServer("Cash", numAmount)
+                        rem:FireServer(1, numAmount)
+                        rem:FireServer()
+                    elseif rem:IsA("RemoteFunction") then
+                        rem:InvokeServer(numAmount)
+                        rem:InvokeServer()
                     end
                 end
             end
         end
     end)
 
-    -- 4. Auto Redeem Promo Codes
-    pcall(function()
-        local testCodes = {"RELEASE", "BRAINROT", "EGG", "HAMMER", "UPDATE", "FREE", "CASH", "MONEY", "SECRET", "LUCKY", "OP", "1KLIKES", "5KLIKES", "10KLIKES", "100K", "1M"}
-        for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
-            local n = rem.Name:lower()
-            if n:find("code") or n:find("redeem") or n:find("promo") then
-                if rem:IsA("RemoteEvent") then
-                    for _, cd in ipairs(testCodes) do
-                        rem:FireServer(cd)
-                        rem:FireServer(cd:lower())
-                    end
-                elseif rem:IsA("RemoteFunction") then
-                    for _, cd in ipairs(testCodes) do
-                        rem:InvokeServer(cd)
-                    end
-                end
-            end
-        end
-    end)
-
-    -- 5. Trigger Workspace Cash & Deposit Prompts & Sell Pads
-    pcall(function()
-        if isAlive() then
-            local hrp = LocalPlayer.Character.HumanoidRootPart
-            for _, prompt in ipairs(Workspace:GetDescendants()) do
-                if prompt:IsA("ProximityPrompt") and prompt.Parent then
-                    local act = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Parent.Name):lower()
-                    if act:find("cash") or act:find("money") or act:find("sell") or act:find("claim") or act:find("deposit") or act:find("collect") or act:find("coin") or act:find("reward") then
-                        InstantTriggerPrompt(prompt)
-                    end
-                end
-            end
-            for _, part in ipairs(Workspace:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    local n = part.Name:lower()
-                    if n:find("cash") or n:find("collect") or n:find("sellpad") or n:find("deposit") or n:find("money") or n:find("coin") or n:find("reward") or n:find("bin") or n:find("bank") or n:find("sell") then
-                        if (part.Position - hrp.Position).Magnitude < 160 then
-                            InstantTouch(hrp, part)
-                        end
-                    end
-                end
-            end
-        end
-    end)
-
-    -- 6. Local Leaderstats & Data Value Sync
     pcall(function()
         local leaderstats = LocalPlayer:FindFirstChild("leaderstats")
         if leaderstats then
             for _, val in ipairs(leaderstats:GetChildren()) do
                 local n = val.Name:lower()
-                if n:find("cash") or n:find("money") or n:find("coin") or n:find("currency") or n:find("dollar") or n:find("point") or n:find("score") then
+                if n:find("cash") or n:find("money") or n:find("coin") or n:find("currency") then
                     if val:IsA("NumberValue") or val:IsA("IntValue") then
                         val.Value = numAmount
-                    elseif val:IsA("StringValue") then
-                        val.Value = tostring(numAmount)
                     end
                 end
             end
@@ -438,24 +323,29 @@ local function GiveCustomCash(amountInput)
 end
 
 -- ====================================================
--- UNLOCKED RAREST EGG SCANNER & ATTACK ENGINE
+-- FIELD BREAKABLE EGG SCANNER (STRICT SHOP / PET FILTER)
 -- ====================================================
 local function GetLocationKey(pos)
     return math.floor(pos.X / 4) .. "_" .. math.floor(pos.Y / 4) .. "_" .. math.floor(pos.Z / 4)
 end
 
-local function IsBaseOrPlotItem(obj)
-    if not obj then return false end
+-- Filter out bases, plots, shops, hatcheries, trait machines, and pet stands
+local function IsBaseOrShopItem(obj)
+    if not obj then return true end
     local charModel = obj:FindFirstAncestorOfClass("Model")
     if charModel and Players:GetPlayerFromCharacter(charModel) then
         return true
     end
     local current = obj
     local depth = 0
-    while current and depth < 7 do
+    while current and depth < 8 do
         if current == Workspace or current == game then break end
         local n = current.Name:lower()
-        if n:find("plot") or n:find("base") or n:find("incubator") or n:find("hatchery") or n:find("tycoon") or n:find("house") or n:find("myslot") or n:find("mybase") or n:find("deposit") or n:find("stand") then
+        if n:find("plot") or n:find("base") or n:find("incubator") or n:find("hatchery") 
+           or n:find("tycoon") or n:find("house") or n:find("myslot") or n:find("mybase") 
+           or n:find("deposit") or n:find("stand") or n:find("shop") or n:find("store") 
+           or n:find("pet") or n:find("trait") or n:find("machine") or n:find("pedestal")
+           or n:find("market") or n:find("lobby") or n:find("spawn") or n:find("gui") or n:find("ui") then
             return true
         end
         current = current.Parent
@@ -464,7 +354,7 @@ local function IsBaseOrPlotItem(obj)
     return false
 end
 
--- Check if egg or zone is hard-locked
+-- Filter out locked zones
 local function IsEggLocked(obj, prompt)
     if prompt then
         if not prompt.Enabled then return true end
@@ -513,11 +403,10 @@ local function GetEggDisplayName(obj, prompt, distFromBase)
     return detectedName
 end
 
--- UNLOCKED RAREST EGG FUNCTION: Scans and ranks all active unlocked eggs
+-- UNLOCKED RAREST EGG FUNCTION: Scans ONLY true field breakable eggs
 local function FindRarestEgg(hrpPosition)
     local candidates = {}
     local now = os.clock()
-
     local basePos = SavedBaseCFrame and SavedBaseCFrame.Position or Vector3.zero
 
     -- 1. Gather candidates from ProximityPrompts across Workspace
@@ -540,12 +429,18 @@ local function FindRarestEgg(hrpPosition)
             if targetPos then
                 local locKey = GetLocationKey(targetPos.Position)
                 local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
-                local inBaseOrPlot = IsBaseOrPlotItem(pPart)
+                local inShopOrBase = IsBaseOrShopItem(pPart)
                 local locked = IsEggLocked(pPart, prompt)
 
-                if not isCoolingDown and not inBaseOrPlot and not locked then
-                    local act = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. pPart.Name):lower()
-                    local isEgg = act:find("break") or act:find("hit") or act:find("egg") or act:find("brainrot") or act:find("lucky") or act:find("smash") or act:find("click") or act:find("mine") or act == "" or act == " "
+                local fullPromptText = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. pPart.Name):lower()
+                local isShopPrompt = fullPromptText:find("pet") or fullPromptText:find("shop") or fullPromptText:find("stock") 
+                                  or fullPromptText:find("hatch") or fullPromptText:find("buy") or fullPromptText:find("trait") 
+                                  or fullPromptText:find("machine") or fullPromptText:find("stand") or fullPromptText:find("open")
+
+                if not isCoolingDown and not inShopOrBase and not locked and not isShopPrompt then
+                    local isEgg = fullPromptText:find("break") or fullPromptText:find("hit") or fullPromptText:find("egg") 
+                               or fullPromptText:find("brainrot") or fullPromptText:find("lucky") or fullPromptText:find("smash") 
+                               or fullPromptText:find("mine") or fullPromptText:find("attack") or fullPromptText == "" or fullPromptText == " "
 
                     if isEgg then
                         local distFromBase = (targetPos.Position - basePos).Magnitude
@@ -564,46 +459,50 @@ local function FindRarestEgg(hrpPosition)
         end
     end
 
-    -- 2. Gather candidates from Workspace models/parts
+    -- 2. Gather candidates from Workspace models/parts in map zones
     if #candidates == 0 then
         for _, obj in ipairs(Workspace:GetDescendants()) do
             local name = obj.Name:lower()
-            if (name:find("egg") or name:find("brainrot") or name:find("block") or name:find("lucky")) and not name:find("gui") and not name:find("ui") then
-                local tCFrame = nil
-                local targetPart = nil
+            if (name:find("egg") or name:find("brainrot") or name:find("block") or name:find("lucky")) 
+               and not name:find("pet") and not name:find("shop") and not name:find("hatch") and not name:find("gui") and not name:find("ui") then
+                
+                local inShopOrBase = IsBaseOrShopItem(obj)
+                if not inShopOrBase then
+                    local tCFrame = nil
+                    local targetPart = nil
 
-                if obj:IsA("BasePart") then
-                    tCFrame = obj.CFrame
-                    targetPart = obj
-                elseif obj:IsA("Model") and obj.PrimaryPart then
-                    tCFrame = obj.PrimaryPart.CFrame
-                    targetPart = obj.PrimaryPart
-                elseif obj:IsA("Model") then
-                    local p = obj:FindFirstChildWhichIsA("BasePart")
-                    if p then
-                        tCFrame = p.CFrame
-                        targetPart = p
+                    if obj:IsA("BasePart") then
+                        tCFrame = obj.CFrame
+                        targetPart = obj
+                    elseif obj:IsA("Model") and obj.PrimaryPart then
+                        tCFrame = obj.PrimaryPart.CFrame
+                        targetPart = obj.PrimaryPart
+                    elseif obj:IsA("Model") then
+                        local p = obj:FindFirstChildWhichIsA("BasePart")
+                        if p then
+                            tCFrame = p.CFrame
+                            targetPart = p
+                        end
                     end
-                end
 
-                if tCFrame then
-                    local locKey = GetLocationKey(tCFrame.Position)
-                    local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
-                    local inBaseOrPlot = IsBaseOrPlotItem(obj)
-                    local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
-                    local locked = IsEggLocked(obj, prompt)
+                    if tCFrame then
+                        local locKey = GetLocationKey(tCFrame.Position)
+                        local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
+                        local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
+                        local locked = IsEggLocked(obj, prompt)
 
-                    if not isCoolingDown and not inBaseOrPlot and not locked then
-                        local distFromBase = (tCFrame.Position - basePos).Magnitude
-                        local eggName = GetEggDisplayName(obj, prompt, distFromBase)
-                        table.insert(candidates, {
-                            targetCFrame = tCFrame,
-                            prompt = prompt,
-                            part = targetPart,
-                            locKey = locKey,
-                            eggName = eggName,
-                            distFromBase = distFromBase
-                        })
+                        if not isCoolingDown and not locked then
+                            local distFromBase = (tCFrame.Position - basePos).Magnitude
+                            local eggName = GetEggDisplayName(obj, prompt, distFromBase)
+                            table.insert(candidates, {
+                                targetCFrame = tCFrame,
+                                prompt = prompt,
+                                part = targetPart,
+                                locKey = locKey,
+                                eggName = eggName,
+                                distFromBase = distFromBase
+                            })
+                        end
                     end
                 end
             end
@@ -623,11 +522,11 @@ local function FindRarestEgg(hrpPosition)
     return best.targetCFrame, best.prompt, best.part, best.locKey, best.eggName, math.floor(best.distFromBase)
 end
 
--- Break Rare Egg Attack Engine on Target
+-- Break Rare Egg Attack Engine on Target (Strikes breakable egg only)
 local function PerformEggBreakAttack(targetCFrame, prompt, eggPart)
     local hasHammer, tool = EnsureHammerEquipped()
     if not hasHammer then
-        ShowNotification("⚠️ REQUIREMENT: Hammer Needed", "Aapke paas Hammer nahi hai! Shop se Hammer buy/equip karein.", true)
+        ShowNotification("⚠️ REQUIREMENT: Hammer Needed", "Aapke paas Hammer nahi hai! Pehle Shop se Hammer buy/equip karein.", true)
         return false
     end
 
@@ -660,21 +559,55 @@ local function PerformEggBreakAttack(targetCFrame, prompt, eggPart)
     pcall(function()
         for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
             local n = rem.Name:lower()
-            if n:find("hit") or n:find("damage") or n:find("break") or n:find("attack") or n:find("smash") or n:find("click") or n:find("mine") then
-                if rem:IsA("RemoteEvent") then
-                    if eggPart then rem:FireServer(eggPart) end
-                    rem:FireServer(1)
-                    rem:FireServer(true)
-                    rem:FireServer()
-                elseif rem:IsA("RemoteFunction") then
-                    if eggPart then rem:InvokeServer(eggPart) end
-                    rem:InvokeServer()
+            if not n:find("shop") and not n:find("pet") and not n:find("buy") then
+                if n:find("hit") or n:find("damage") or n:find("break") or n:find("attack") or n:find("smash") or n:find("click") or n:find("mine") then
+                    if rem:IsA("RemoteEvent") then
+                        if eggPart then rem:FireServer(eggPart) end
+                        rem:FireServer(1)
+                        rem:FireServer(true)
+                        rem:FireServer()
+                    elseif rem:IsA("RemoteFunction") then
+                        if eggPart then rem:InvokeServer(eggPart) end
+                        rem:InvokeServer()
+                    end
                 end
             end
         end
     end)
     return true
 end
+
+-- Auto-Close Accidental Game Shop Popups
+task.spawn(function()
+    while true do
+        task.wait(0.4)
+        pcall(function()
+            local pgui = LocalPlayer:FindFirstChild("PlayerGui")
+            if pgui then
+                for _, g in ipairs(pgui:GetChildren()) do
+                    if g:IsA("ScreenGui") and g.Name ~= "JunejoHubUI_BreakBrainrotEgg" then
+                        local n = g.Name:lower()
+                        if n:find("shop") or n:find("eggshop") or n:find("pet") or n:find("trait") or n:find("store") then
+                            for _, frame in ipairs(g:GetDescendants()) do
+                                if frame:IsA("Frame") and frame.Visible then
+                                    local fn = frame.Name:lower()
+                                    if fn:find("shop") or fn:find("pet") or fn:find("trait") or fn:find("egg") then
+                                        local closeBtn = frame:FindFirstChild("Close", true) or frame:FindFirstChild("Exit", true) or frame:FindFirstChild("X", true)
+                                        if closeBtn and closeBtn:IsA("GuiButton") and getconnections then
+                                            for _, c in ipairs(getconnections(closeBtn.MouseButton1Click)) do c:Fire() end
+                                        else
+                                            frame.Visible = false
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+    end
+end)
 
 -- ====================================================
 -- OFFICIAL JUNEJO BORDERLESS SCROLLING UI (280x285px)
@@ -878,7 +811,7 @@ AddToggleRow("Teleport to Rare Egg", "TeleportToRare", function(state)
             SafeTeleportToEgg(targetCFrame, true)
             ShowNotification("⚡ Teleported to Rare Egg", "👑 " .. eggName .. " (" .. tostring(distFromBase) .. " studs) - Holding Position!")
         else
-            ShowNotification("⚠️ No Unlocked Egg Found", "No active eggs found in unlocked zones.", true)
+            ShowNotification("⚠️ No Unlocked Egg Found", "No active breakable eggs found in open zones.", true)
         end
     end
 end)
@@ -888,7 +821,7 @@ AddToggleRow("Auto Break Rare Egg", "AutoBreakRare", function(state)
     if state then
         local hasHammer, tool = EnsureHammerEquipped()
         if not hasHammer then
-            ShowNotification("⚠️ REQUIREMENT: Hammer Needed", "Aapke paas Hammer nahi hai! Pehle Shop se Hammer lein.", true)
+            ShowNotification("⚠️ REQUIREMENT: Hammer Needed", "Aapke paas Hammer nahi hai! Pehle Hammer buy ya equip karein.", true)
         end
     end
 end)
@@ -1110,16 +1043,6 @@ task.spawn(function()
 
                         -- Attack and Break Egg
                         PerformEggBreakAttack(targetCFrame, prompt, eggPart)
-
-                        -- Trigger any nearby drops or prompts
-                        for _, p in ipairs(Workspace:GetDescendants()) do
-                            if p:IsA("ProximityPrompt") and p.Parent then
-                                local pPos = p.Parent:IsA("BasePart") and p.Parent.Position or nil
-                                if pPos and (pPos - hrp.Position).Magnitude < 30 then
-                                    InstantTriggerPrompt(p)
-                                end
-                            end
-                        end
                         task.wait(0.12)
                     else
                         task.wait(0.6)
@@ -1151,81 +1074,25 @@ task.spawn(function()
         if Toggles.AutoBuyHammer and isAlive() then
             local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
 
-            -- A. Fire Shop / Hammer Purchase Remotes in ReplicatedStorage
             pcall(function()
                 for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
                     local n = rem.Name:lower()
-                    if n:find("buy") or n:find("hammer") or n:find("tool") or n:find("weapon") or n:find("upgrade") or n:find("purchase") or n:find("craft") then
-                        if rem:IsA("RemoteEvent") then
-                            rem:FireServer()
-                            rem:FireServer("Best")
-                            rem:FireServer("Hammer")
-                            rem:FireServer(1)
-                            rem:FireServer(true)
-                            rem:FireServer("Tool")
-                        elseif rem:IsA("RemoteFunction") then
-                            rem:InvokeServer()
-                            rem:InvokeServer("Best")
-                            rem:InvokeServer("Hammer")
-                        end
-                    end
-                end
-            end)
-
-            -- B. Proximity Prompts on Hammer Stands in Workspace
-            pcall(function()
-                if hrp then
-                    for _, prompt in ipairs(Workspace:GetDescendants()) do
-                        if prompt:IsA("ProximityPrompt") and prompt.Parent then
-                            local act = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Parent.Name):lower()
-                            if act:find("hammer") or act:find("buy") or act:find("upgrade") or act:find("tool") or act:find("shop") or act:find("weapon") then
-                                local pPos = prompt.Parent:IsA("BasePart") and prompt.Parent.Position or nil
-                                if pPos and (pPos - hrp.Position).Magnitude < 160 then
-                                    InstantTriggerPrompt(prompt)
-                                end
+                    if n:find("hammer") or n:find("tool") or n:find("weapon") or n:find("upgrade") then
+                        if not n:find("pet") and not n:find("eggshop") then
+                            if rem:IsA("RemoteEvent") then
+                                rem:FireServer("Best")
+                                rem:FireServer("Hammer")
+                                rem:FireServer(1)
+                                rem:FireServer(true)
+                            elseif rem:IsA("RemoteFunction") then
+                                rem:InvokeServer("Best")
+                                rem:InvokeServer("Hammer")
                             end
                         end
                     end
                 end
             end)
 
-            -- C. Touch Pads on Hammer Shop in Workspace
-            pcall(function()
-                if hrp then
-                    for _, part in ipairs(Workspace:GetDescendants()) do
-                        if part:IsA("BasePart") then
-                            local n = part.Name:lower()
-                            if (n:find("hammerpad") or n:find("buypad") or n:find("upgradepad") or n:find("shop") or n:find("toolpad")) and (part.Position - hrp.Position).Magnitude < 120 then
-                                InstantTouch(hrp, part)
-                            end
-                        end
-                    end
-                end
-            end)
-
-            -- D. PlayerGui Shop Button Simulator
-            pcall(function()
-                local pgui = LocalPlayer:FindFirstChild("PlayerGui")
-                if pgui then
-                    for _, btn in ipairs(pgui:GetDescendants()) do
-                        if btn:IsA("TextButton") or btn:IsA("ImageButton") then
-                            local txt = (btn.Name .. " " .. (btn:IsA("TextButton") and btn.Text or "")):lower()
-                            local isBuyBtn = txt:find("buy") or txt:find("purchase") or txt:find("equip best") or txt:find("upgrade") or txt:find("unlock") or txt:find("max")
-                            local isRobux = txt:find("robux") or txt:find("r$") or txt:find("pass") or txt:find("gift") or txt:find("buy cash") or txt:find("gem")
-                            
-                            if isBuyBtn and not isRobux then
-                                if getconnections then
-                                    for _, conn in ipairs(getconnections(btn.MouseButton1Click)) do conn:Fire() end
-                                    for _, conn in ipairs(getconnections(btn.MouseButton1Down)) do conn:Fire() end
-                                    for _, conn in ipairs(getconnections(btn.Activated)) do conn:Fire() end
-                                end
-                            end
-                        end
-                    end
-                end
-            end)
-
-            -- E. Auto-Equip newly purchased best hammer from backpack
             EnsureHammerEquipped()
         end
     end
@@ -1240,7 +1107,6 @@ task.spawn(function()
         if Toggles.AutoRebirth and isAlive() then
             local hrp = LocalPlayer.Character.HumanoidRootPart
 
-            -- 1. Rebirth Remotes Trigger
             pcall(function()
                 for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
                     local n = rem.Name:lower()
@@ -1252,51 +1118,6 @@ task.spawn(function()
                         elseif rem:IsA("RemoteFunction") then
                             rem:InvokeServer()
                             rem:InvokeServer(1)
-                        end
-                    end
-                end
-            end)
-
-            -- 2. Rebirth Proximity Prompts
-            pcall(function()
-                for _, prompt in ipairs(Workspace:GetDescendants()) do
-                    if prompt:IsA("ProximityPrompt") and prompt.Parent then
-                        local act = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Parent.Name):lower()
-                        if act:find("rebirth") or act:find("prestige") or act:find("ascend") then
-                            local pPos = prompt.Parent:IsA("BasePart") and prompt.Parent.Position or nil
-                            if pPos and (pPos - hrp.Position).Magnitude < 120 then
-                                InstantTriggerPrompt(prompt)
-                            end
-                        end
-                    end
-                end
-            end)
-
-            -- 3. Rebirth Touch Pads
-            pcall(function()
-                for _, part in ipairs(Workspace:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        local n = part.Name:lower()
-                        if (n:find("rebirth") or n:find("prestige") or n:find("ascend")) and (part.Position - hrp.Position).Magnitude < 90 then
-                            InstantTouch(hrp, part)
-                        end
-                    end
-                end
-            end)
-
-            -- 4. GUI Rebirth Buttons
-            pcall(function()
-                local pgui = LocalPlayer:FindFirstChild("PlayerGui")
-                if pgui then
-                    for _, btn in ipairs(pgui:GetDescendants()) do
-                        if btn:IsA("TextButton") or btn:IsA("ImageButton") then
-                            local txt = (btn.Name .. " " .. (btn:IsA("TextButton") and btn.Text or "")):lower()
-                            if (txt:find("rebirth") or txt:find("prestige")) and not txt:find("robux") and not txt:find("pass") and not txt:find("shop") then
-                                if getconnections then
-                                    for _, conn in ipairs(getconnections(btn.MouseButton1Click)) do conn:Fire() end
-                                    for _, conn in ipairs(getconnections(btn.Activated)) do conn:Fire() end
-                                end
-                            end
                         end
                     end
                 end
@@ -1495,4 +1316,4 @@ LocalPlayer.Idled:Connect(function()
     end
 end)
 
-print("[JunejoHub] Break a Brainrot Egg V3.0 (Pure Flat UI) Loaded Successfully!")
+print("[JunejoHub] Break a Brainrot Egg V3.1 (Shop Popup Filtered) Loaded Successfully!")
