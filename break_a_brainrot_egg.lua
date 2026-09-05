@@ -1,9 +1,10 @@
 -- ====================================================
--- JUNEJO ULTRA SCRIPT HUB - BREAK A BRAINROT EGG (OFFICIAL V2.1)
+-- JUNEJO ULTRA SCRIPT HUB - BREAK A BRAINROT EGG (OFFICIAL V3.0)
 -- Game: Break a Brainrot Egg
 -- Author: Made by Junejo (junejo18146)
 -- GitHub: https://github.com/junejo18146/ultrascripthub
 -- Universal Mobile (Delta / Codex / Fluxus) & PC Compatible
+-- 100% Flat & Borderless Standard Toggle Rows
 -- ====================================================
 
 local CoreGui = game:GetService("CoreGui")
@@ -26,13 +27,16 @@ for _, name in ipairs({"JunejoHubUI_BreakBrainrotEgg", "JunejoBreakBrainrotUI", 
     end)
 end
 
--- Global Configuration & State
+-- Global Configuration & State (All Flat Toggles)
 local Toggles = {
+    BreakRareEgg = false,
+    TeleportToRare = false,
     AutoBreakRare = false,
     RareEggESP = false,
-    AutoInfiniteCash = false,
+    InfiniteCash = false,
     AutoBuyHammer = false,
     AutoRebirth = false,
+    TeleportToBase = false,
     FlyMode = false,
     Noclip = false,
     InfiniteJump = false,
@@ -40,7 +44,7 @@ local Toggles = {
     AntiAFK = true
 }
 
-local CustomCashValue = "1000000000"
+local CustomCashValue = "999999999999"
 local CustomSpeedValue = 100
 local SavedBaseCFrame = nil
 local CurrentRareEggESPInstances = {}
@@ -244,7 +248,6 @@ end
 
 -- ====================================================
 -- SAFE ANTI-RUBBERBAND TELEPORTATION ENGINE
--- (Eliminates physics bounces, barrier pushes & reset triggers)
 -- ====================================================
 local function SafeTeleportToEgg(targetCFrame, isStayOnly)
     if not isAlive() then return false end
@@ -253,27 +256,27 @@ local function SafeTeleportToEgg(targetCFrame, isStayOnly)
     local hum = char:FindFirstChildOfClass("Humanoid")
     if not hrp or not hum then return false end
 
-    -- 1. Reset humanoid states that trigger physics falls
+    -- 1. Reset humanoid states
     hum.Sit = false
 
-    -- 2. Make character parts non-collidable briefly so neither barriers nor egg mesh ejects player
+    -- 2. Make character parts non-collidable briefly
     for _, part in ipairs(char:GetDescendants()) do
         if part:IsA("BasePart") then
             part.CanCollide = false
         end
     end
 
-    -- 3. Calculate safe standing spot (3 studs in front of egg looking at it, not inside mesh)
+    -- 3. Safe standing offset (3 studs in front of egg looking at it)
     local targetPos = targetCFrame.Position
     local destPos = targetPos + Vector3.new(0, 1.6, 3.4)
     local destCFrame = CFrame.new(destPos, Vector3.new(targetPos.X, destPos.Y, targetPos.Z))
 
-    -- 4. Complete velocity wipe
+    -- 4. Velocity wipe
     hrp.AssemblyLinearVelocity = Vector3.zero
     hrp.AssemblyAngularVelocity = Vector3.zero
     if hrp:FindFirstChild("BodyVelocity") then hrp.BodyVelocity.Velocity = Vector3.zero end
 
-    -- 5. Lock position via temporary micro-anchor (guarantees server physics sync)
+    -- 5. Lock position via temporary micro-anchor
     hrp.CFrame = destCFrame
     hrp.Anchored = true
     task.wait(0.06)
@@ -286,31 +289,10 @@ local function SafeTeleportToEgg(targetCFrame, isStayOnly)
 end
 
 -- ====================================================
--- CUSTOM CASH / INFINITE CASH ENGINE
+-- CUSTOM CASH / INFINITE CASH ENGINE (+999B)
 -- ====================================================
 local function GiveCustomCash(amountInput)
-    local rawText = tostring(amountInput or CustomCashValue or "1000000000"):lower():gsub("%s+", ""):gsub(",", "")
-    local numAmount = 1000000000
-
-    if rawText:find("inf") or rawText:find("max") then
-        numAmount = 999999999999
-    elseif rawText:find("t") then
-        local n = tonumber(rawText:gsub("t", ""))
-        numAmount = (n or 1) * 1000000000000
-    elseif rawText:find("b") then
-        local n = tonumber(rawText:gsub("b", ""))
-        numAmount = (n or 1) * 1000000000
-    elseif rawText:find("m") then
-        local n = tonumber(rawText:gsub("m", ""))
-        numAmount = (n or 1) * 1000000
-    elseif rawText:find("k") then
-        local n = tonumber(rawText:gsub("k", ""))
-        numAmount = (n or 1) * 1000
-    else
-        numAmount = tonumber(rawText) or 1000000000
-    end
-
-    CustomCashValue = tostring(numAmount)
+    local numAmount = 999999999999
     EnsureHammerEquipped()
 
     -- 1. Rapid Egg Strike & Break Packets
@@ -448,21 +430,6 @@ local function GiveCustomCash(amountInput)
                         val.Value = numAmount
                     elseif val:IsA("StringValue") then
                         val.Value = tostring(numAmount)
-                    end
-                end
-            end
-        end
-        local dataFolders = {LocalPlayer:FindFirstChild("Data"), LocalPlayer:FindFirstChild("PlayerData"), LocalPlayer:FindFirstChild("Stats"), LocalPlayer:FindFirstChild("Values")}
-        for _, dataFolder in ipairs(dataFolders) do
-            if dataFolder then
-                for _, val in ipairs(dataFolder:GetChildren()) do
-                    local n = val.Name:lower()
-                    if n:find("cash") or n:find("money") or n:find("coin") or n:find("currency") then
-                        if val:IsA("NumberValue") or val:IsA("IntValue") then
-                            val.Value = numAmount
-                        elseif val:IsA("StringValue") then
-                            val.Value = tostring(numAmount)
-                        end
                     end
                 end
             end
@@ -709,57 +676,9 @@ local function PerformEggBreakAttack(targetCFrame, prompt, eggPart)
     return true
 end
 
--- 1-Click Action: Break Unlocked Rare Egg
-local function BreakRareEggAction()
-    if not isAlive() then return end
-    local char = LocalPlayer.Character
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-
-    -- Verify Hammer
-    local hasHammer, tool = EnsureHammerEquipped()
-    if not hasHammer then
-        ShowNotification("⚠️ REQUIREMENT: Hammer Needed", "Aapke paas Hammer nahi hai! Shop se Hammer lein.", true)
-        return
-    end
-
-    local targetCFrame, prompt, eggPart, locKey, eggName, distFromBase = FindRarestEgg(hrp.Position)
-    if targetCFrame then
-        if locKey then CooldownEggs[locKey] = os.clock() + 2.5 end
-
-        ShowNotification("💎 Breaking Rare Egg", "👑 " .. eggName .. " (" .. tostring(distFromBase) .. " studs) | 🔨 " .. (tool and tool.Name or "Hammer"))
-        SafeTeleportToEgg(targetCFrame, false)
-        task.wait(0.12)
-
-        for i = 1, 5 do
-            PerformEggBreakAttack(targetCFrame, prompt, eggPart)
-            task.wait(0.1)
-        end
-
-        ShowNotification("✓ Rare Egg Attacked!", "👑 Hit " .. eggName .. " successfully!")
-    else
-        ShowNotification("⚠️ No Unlocked Egg Found", "Map scan completed: No active eggs found in unlocked zones.", true)
-    end
-end
-
--- 1-Click Action: Teleport to Unlocked Rare Egg (Teleports and STAYS there permanently)
-local function TeleportToRareEggAction()
-    if not isAlive() then return end
-    local char = LocalPlayer.Character
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-
-    local targetCFrame, prompt, eggPart, _, eggName, distFromBase = FindRarestEgg(hrp.Position)
-    if targetCFrame then
-        SafeTeleportToEgg(targetCFrame, true)
-        ShowNotification("⚡ Teleported to Unlocked Egg", "👑 " .. eggName .. " (Furthest: " .. tostring(distFromBase) .. " studs) - Holding Position!")
-    else
-        ShowNotification("⚠️ No Unlocked Egg Found", "Map scan completed: No active eggs found in unlocked zones.", true)
-    end
-end
-
 -- ====================================================
--- OFFICIAL JUNEJO COMPACT SCROLLING UI (280x285px)
+-- OFFICIAL JUNEJO BORDERLESS SCROLLING UI (280x285px)
+-- STRICT FLAT BORDERLESS TOGGLE ROWS ONLY
 -- ====================================================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoHubUI_BreakBrainrotEgg"
@@ -873,10 +792,10 @@ UIList.SortOrder = Enum.SortOrder.LayoutOrder
 UIList.Padding = UDim.new(0, 4)
 UIList.Parent = ContentFrame
 
--- Helper Function: Add Debounced Toggle Row
+-- Helper Function: Add Strictly Flat & Borderless Toggle Row
 local function AddToggleRow(text, configKey, callback)
     local Row = Instance.new("Frame")
-    Row.Size = UDim2.new(1, -6, 0, 24)
+    Row.Size = UDim2.new(1, -6, 0, 23)
     Row.BackgroundTransparency = 1
     Row.Parent = ContentFrame
     
@@ -936,134 +855,36 @@ local function AddToggleRow(text, configKey, callback)
     end)
 end
 
--- Helper Function: Add Action Button Row
-local function AddActionButton(text, callback)
-    local Row = Instance.new("Frame")
-    Row.Size = UDim2.new(1, -6, 0, 24)
-    Row.BackgroundTransparency = 1
-    Row.Parent = ContentFrame
-    
-    local Btn = Instance.new("TextButton")
-    Btn.Size = UDim2.new(1, 0, 1, 0)
-    Btn.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-    Btn.BorderSizePixel = 0
-    Btn.Text = text
-    Btn.TextColor3 = Color3.fromRGB(240, 240, 240)
-    Btn.Font = Enum.Font.GothamBold
-    Btn.TextSize = 11
-    Btn.Parent = Row
-    
-    local BtnCorner = Instance.new("UICorner")
-    BtnCorner.CornerRadius = UDim.new(0, 4)
-    BtnCorner.Parent = Btn
-    
-    local BtnStroke = Instance.new("UIStroke")
-    BtnStroke.Color = Color3.fromRGB(45, 45, 55)
-    BtnStroke.Thickness = 1
-    BtnStroke.Parent = Btn
-    
-    local lastClick = 0
-    Btn.MouseButton1Click:Connect(function()
-        local now = os.clock()
-        if now - lastClick < 0.25 then return end
-        lastClick = now
-        if callback then callback(Btn) end
-    end)
-end
-
--- Helper Function: Add Custom Cash Input Row
-local function AddCashInputRow()
-    local Row = Instance.new("Frame")
-    Row.Size = UDim2.new(1, -6, 0, 24)
-    Row.BackgroundTransparency = 1
-    Row.Parent = ContentFrame
-
-    local InputBox = Instance.new("TextBox")
-    InputBox.Size = UDim2.new(0.64, 0, 1, 0)
-    InputBox.Position = UDim2.new(0, 0, 0, 0)
-    InputBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-    InputBox.BorderSizePixel = 0
-    InputBox.Text = "1000000000"
-    InputBox.PlaceholderText = "Cash (e.g. 1B)"
-    InputBox.PlaceholderColor3 = Color3.fromRGB(140, 140, 150)
-    InputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-    InputBox.Font = Enum.Font.GothamBold
-    InputBox.TextSize = 11
-    InputBox.ClearTextOnFocus = false
-    InputBox.Parent = Row
-
-    local BoxCorner = Instance.new("UICorner")
-    BoxCorner.CornerRadius = UDim.new(0, 4)
-    BoxCorner.Parent = InputBox
-
-    local BoxStroke = Instance.new("UIStroke")
-    BoxStroke.Color = Color3.fromRGB(45, 45, 55)
-    BoxStroke.Thickness = 1
-    BoxStroke.Parent = InputBox
-
-    local AddBtn = Instance.new("TextButton")
-    AddBtn.Size = UDim2.new(0.33, 0, 1, 0)
-    AddBtn.Position = UDim2.new(0.67, 0, 0, 0)
-    AddBtn.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-    AddBtn.BorderSizePixel = 0
-    AddBtn.Text = "+ Add Cash"
-    AddBtn.TextColor3 = Color3.fromRGB(255, 215, 0)
-    AddBtn.Font = Enum.Font.GothamBold
-    AddBtn.TextSize = 10
-    AddBtn.Parent = Row
-
-    local BtnCorner = Instance.new("UICorner")
-    BtnCorner.CornerRadius = UDim.new(0, 4)
-    BtnCorner.Parent = AddBtn
-
-    local BtnStroke = Instance.new("UIStroke")
-    BtnStroke.Color = Color3.fromRGB(45, 45, 55)
-    BtnStroke.Thickness = 1
-    BtnStroke.Parent = AddBtn
-
-    local lastAddClick = 0
-    AddBtn.MouseButton1Click:Connect(function()
-        local now = os.clock()
-        if now - lastAddClick < 0.25 then return end
-        lastAddClick = now
-        AddBtn.Text = "✓ Added!"
-        AddBtn.TextColor3 = Color3.fromRGB(80, 255, 120)
-        GiveCustomCash(InputBox.Text)
-        task.delay(1.2, function()
-            AddBtn.Text = "+ Add Cash"
-            AddBtn.TextColor3 = Color3.fromRGB(255, 215, 0)
-        end)
-    end)
-end
-
 -- ====================================================
--- REGISTER ALL REQUESTED TOGGLES & ACTIONS
+-- REGISTER ALL REQUESTED FEATURES AS STRICT FLAT TOGGLES
 -- ====================================================
 
--- 1. Break Unlocked Rare Egg (1-Click Instant Action)
-AddActionButton("💎 Break Unlocked Rare Egg", function(btn)
-    btn.Text = "⏳ Breaking Rare Egg..."
-    btn.TextColor3 = Color3.fromRGB(255, 215, 0)
-    BreakRareEggAction()
-    task.delay(1.5, function()
-        btn.Text = "💎 Break Unlocked Rare Egg"
-        btn.TextColor3 = Color3.fromRGB(240, 240, 240)
-    end)
+-- 1. Break Rare Egg (Flat Toggle Row)
+AddToggleRow("Break Rare Egg", "BreakRareEgg", function(state)
+    if state then
+        local hasHammer, tool = EnsureHammerEquipped()
+        if not hasHammer then
+            ShowNotification("⚠️ REQUIREMENT: Hammer Needed", "Aapke paas Hammer nahi hai! Pehle Hammer buy ya equip karein.", true)
+        end
+    end
 end)
 
--- 2. Teleport to Unlocked Rare Egg (1-Click Instant Action - STAYS at destination)
-AddActionButton("⚡ Teleport to Unlocked Rare Egg", function(btn)
-    btn.Text = "⏳ Teleporting..."
-    btn.TextColor3 = Color3.fromRGB(220, 50, 255)
-    TeleportToRareEggAction()
-    task.delay(1.5, function()
-        btn.Text = "⚡ Teleport to Unlocked Rare Egg"
-        btn.TextColor3 = Color3.fromRGB(240, 240, 240)
-    end)
+-- 2. Teleport to Rare Egg (Flat Toggle Row)
+AddToggleRow("Teleport to Rare Egg", "TeleportToRare", function(state)
+    if state and isAlive() then
+        local hrp = LocalPlayer.Character.HumanoidRootPart
+        local targetCFrame, prompt, eggPart, _, eggName, distFromBase = FindRarestEgg(hrp.Position)
+        if targetCFrame then
+            SafeTeleportToEgg(targetCFrame, true)
+            ShowNotification("⚡ Teleported to Rare Egg", "👑 " .. eggName .. " (" .. tostring(distFromBase) .. " studs) - Holding Position!")
+        else
+            ShowNotification("⚠️ No Unlocked Egg Found", "No active eggs found in unlocked zones.", true)
+        end
+    end
 end)
 
--- 3. Auto Break Unlocked Rare Egg (Continuous Loop)
-AddToggleRow("Auto Break Unlocked Rare Egg", "AutoBreakRare", function(state)
+-- 3. Auto Break Unlocked Rare Egg (Flat Toggle Row)
+AddToggleRow("Auto Break Rare Egg", "AutoBreakRare", function(state)
     if state then
         local hasHammer, tool = EnsureHammerEquipped()
         if not hasHammer then
@@ -1072,8 +893,8 @@ AddToggleRow("Auto Break Unlocked Rare Egg", "AutoBreakRare", function(state)
     end
 end)
 
--- 4. Unlocked Rare Egg ESP (Neon Magenta Glowing Highlight + Distance Billboard)
-AddToggleRow("Unlocked Rare Egg ESP", "RareEggESP", function(state)
+-- 4. Unlocked Rare Egg ESP (Flat Toggle Row)
+AddToggleRow("Rare Egg ESP", "RareEggESP", function(state)
     if not state then
         for _, inst in pairs(CurrentRareEggESPInstances) do
             pcall(function() inst:Destroy() end)
@@ -1082,45 +903,23 @@ AddToggleRow("Unlocked Rare Egg ESP", "RareEggESP", function(state)
     end
 end)
 
--- 5. Infinite Cash: Custom Cash Input Row (Type any amount & click + Add Cash)
-AddCashInputRow()
-
--- 6. Infinite Cash: Max Cash (+999B) 1-Click Action Button
-AddActionButton("💰 Max Cash (+999 Billion)", function(btn)
-    btn.Text = "✓ +999B Added!"
-    btn.TextColor3 = Color3.fromRGB(80, 255, 120)
-    GiveCustomCash(999999999999)
-    task.delay(1.2, function()
-        btn.Text = "💰 Max Cash (+999 Billion)"
-        btn.TextColor3 = Color3.fromRGB(240, 240, 240)
-    end)
-end)
-
--- 7. Infinite Cash: Auto Infinite Cash Loop Toggle
-AddToggleRow("Auto Infinite Cash (Loop)", "AutoInfiniteCash", function(state) end)
-
--- 8. Auto Buy Best Hammer & Upgrades
-AddToggleRow("Auto Buy Best Hammer", "AutoBuyHammer", function(state) end)
-
--- 9. Auto Rebirth (Automatic Prestige Engine)
-AddToggleRow("Auto Rebirth", "AutoRebirth", function(state) end)
-
--- 10. Action Button: Set Current Base Position
-AddActionButton("📍 Set Current Base Position", function(btn)
-    if isAlive() then
-        SavedBaseCFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
-        btn.Text = "✓ Base Location Saved!"
-        btn.TextColor3 = Color3.fromRGB(80, 255, 120)
-        task.delay(1.5, function()
-            btn.Text = "📍 Set Current Base Position"
-            btn.TextColor3 = Color3.fromRGB(240, 240, 240)
-        end)
+-- 5. Infinite Cash (+999B) (Flat Toggle Row)
+AddToggleRow("Infinite Cash (+999B)", "InfiniteCash", function(state)
+    if state then
+        GiveCustomCash(999999999999)
+        ShowNotification("💰 Infinite Cash Activated", "+999 Billion Cash Injected!")
     end
 end)
 
--- 11. Action Button: Teleport to Base
-AddActionButton("⚡ Teleport to Base", function(btn)
-    if isAlive() then
+-- 6. Auto Buy Best Hammer (Flat Toggle Row)
+AddToggleRow("Auto Buy Best Hammer", "AutoBuyHammer", function(state) end)
+
+-- 7. Auto Rebirth (Flat Toggle Row)
+AddToggleRow("Auto Rebirth", "AutoRebirth", function(state) end)
+
+-- 8. Teleport to Base (Flat Toggle Row)
+AddToggleRow("Teleport to Base", "TeleportToBase", function(state)
+    if state and isAlive() then
         if not SavedBaseCFrame then
             SavedBaseCFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
         end
@@ -1128,25 +927,22 @@ AddActionButton("⚡ Teleport to Base", function(btn)
         hrp.AssemblyLinearVelocity = Vector3.zero
         hrp.AssemblyAngularVelocity = Vector3.zero
         hrp.CFrame = SavedBaseCFrame * CFrame.new(0, 2, 0)
-        btn.Text = "✓ Teleported to Base!"
-        task.delay(1.2, function()
-            btn.Text = "⚡ Teleport to Base"
-        end)
+        ShowNotification("⚡ Base Teleport", "Teleported to base safely!")
     end
 end)
 
--- 12. Fly Mode (Smooth 3D Flight)
-AddToggleRow("Fly Mode (3D Flight)", "FlyMode", function(state) end)
+-- 9. Fly Mode (Flat Toggle Row)
+AddToggleRow("Fly Mode", "FlyMode", function(state) end)
 
--- 13. Noclip Mode
-AddToggleRow("Noclip (Phase Walls)", "Noclip", function(state) end)
+-- 10. Noclip (Flat Toggle Row)
+AddToggleRow("Noclip", "Noclip", function(state) end)
 
--- 14. Infinite Jump
+-- 11. Infinite Jump (Flat Toggle Row)
 AddToggleRow("Infinite Jump", "InfiniteJump", function(state) end)
 
--- 15. Integrated WalkSpeed Row with - / + Pill Adjuster
+-- 12. Integrated WalkSpeed Row with - / + Pill Adjuster
 local SpeedRow = Instance.new("Frame")
-SpeedRow.Size = UDim2.new(1, -6, 0, 24)
+SpeedRow.Size = UDim2.new(1, -6, 0, 23)
 SpeedRow.BackgroundTransparency = 1
 SpeedRow.Parent = ContentFrame
 
@@ -1296,7 +1092,7 @@ FooterSub.Parent = Footer
 task.spawn(function()
     while true do
         task.wait(0.18)
-        if Toggles.AutoBreakRare and isAlive() then
+        if (Toggles.AutoBreakRare or Toggles.BreakRareEgg) and isAlive() then
             local char = LocalPlayer.Character
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
 
@@ -1335,13 +1131,13 @@ task.spawn(function()
 end)
 
 -- ====================================================
--- 2. AUTO INFINITE CASH ENGINE (CONTINUOUS REFILL)
+-- 2. AUTO INFINITE CASH ENGINE (+999B CONTINUOUS REFILL)
 -- ====================================================
 task.spawn(function()
     while true do
         task.wait(0.6)
-        if Toggles.AutoInfiniteCash and isAlive() then
-            GiveCustomCash(CustomCashValue or "1000000000")
+        if Toggles.InfiniteCash and isAlive() then
+            GiveCustomCash(999999999999)
         end
     end
 end)
@@ -1649,7 +1445,7 @@ end)
 -- ====================================================
 RunService.Stepped:Connect(function()
     if isAlive() then
-        if Toggles.Noclip or Toggles.AutoBreakRare then
+        if Toggles.Noclip or Toggles.AutoBreakRare or Toggles.BreakRareEgg then
             for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
                 if part:IsA("BasePart") then
                     part.CanCollide = false
@@ -1699,4 +1495,4 @@ LocalPlayer.Idled:Connect(function()
     end
 end)
 
-print("[JunejoHub] Break a Brainrot Egg V2.1 Loaded Successfully!")
+print("[JunejoHub] Break a Brainrot Egg V3.0 (Pure Flat UI) Loaded Successfully!")
