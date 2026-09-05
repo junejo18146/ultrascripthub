@@ -1,7 +1,6 @@
 --[[
     JUNEJO ULTRA SCRIPT HUB - 99 NIGHTS IN THE FOREST
     Target Game: 99 Nights in the Forest (Roblox)
-    Developer: Grandma's Favourite Games
     Author: Made by Junejo (junejo18146)
     Repository: junejo18146/ultrascripthub
     Theme: Unified Junejo Executive Dark UI (#0F0F11) - Flat & Borderless Standard
@@ -9,477 +8,183 @@
 --]]
 
 local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local VirtualUser = game:GetService("VirtualUser")
-local CoreGui = game:GetService("CoreGui")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local VirtualUser = game:GetService("VirtualUser")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local Lighting = game:GetService("Lighting")
+local CoreGui = game:GetService("CoreGui")
 
-local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
+local LocalPlayer = Players.LocalPlayer
+while not LocalPlayer do
+    task.wait(0.1)
+    LocalPlayer = Players.LocalPlayer
+end
 
--- Safe UI Parent getter (Delta, Arceus X, Fluxus, PC/Mobile compatible)
-local function GetUIContainer()
-    local success, res = pcall(function()
-        if gethui then return gethui() end
-        if syn and syn.protect_gui then return CoreGui end
-        return CoreGui
+-- Global Feature State Flags (Strictly Preserved)
+_G.KillAuraActive = false
+_G.FlyActive = false
+_G.FlySpeed = 60
+_G.AutoFillCampfire = false
+_G.FullBrightActive = false
+
+-- Prevent duplicate UI
+pcall(function()
+    if CoreGui:FindFirstChild("Forest99UI_Badshah") then CoreGui.Forest99UI_Badshah:Destroy() end
+    if CoreGui:FindFirstChild("JunejoHubUI_NightsForest") then CoreGui.JunejoHubUI_NightsForest:Destroy() end
+    if CoreGui:FindFirstChild("JunejoHubUI") then CoreGui.JunejoHubUI:Destroy() end
+end)
+pcall(function()
+    if LocalPlayer:FindFirstChild("PlayerGui") then
+        if LocalPlayer.PlayerGui:FindFirstChild("Forest99UI_Badshah") then LocalPlayer.PlayerGui.Forest99UI_Badshah:Destroy() end
+        if LocalPlayer.PlayerGui:FindFirstChild("JunejoHubUI_NightsForest") then LocalPlayer.PlayerGui.JunejoHubUI_NightsForest:Destroy() end
+        if LocalPlayer.PlayerGui:FindFirstChild("JunejoHubUI") then LocalPlayer.PlayerGui.JunejoHubUI:Destroy() end
+    end
+end)
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "JunejoHubUI_NightsForest"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.DisplayOrder = 999999
+
+-- Universal Safe Parenting
+local function getParentUI()
+    if gethui then
+        local success, res = pcall(gethui)
+        if success and res then return res end
+    end
+    local coreSuccess = pcall(function()
+        ScreenGui.Parent = CoreGui
     end)
-    if success and res then return res end
+    if coreSuccess and ScreenGui.Parent == CoreGui then
+        return CoreGui
+    end
     return LocalPlayer:WaitForChild("PlayerGui")
 end
 
-local UIContainer = GetUIContainer()
+ScreenGui.Parent = getParentUI()
 
--- Cleanup previous UI instances
-for _, name in ipairs({"JunejoHubUI_NightsForest", "JunejoNightsInTheForestUI", "JunejoHubUI"}) do
-    if CoreGui:FindFirstChild(name) then CoreGui[name]:Destroy() end
-    if LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild(name) then
-        LocalPlayer.PlayerGui[name]:Destroy()
+-- =================================================================
+-- HELPER: FIND CAMPFIRE IN WORKSPACE (EXACT LOGIC PRESERVED)
+-- =================================================================
+local cachedCampfire = nil
+local lastFireSearch = 0
+
+local function getCampfire()
+    local now = tick()
+    if cachedCampfire and cachedCampfire.Parent and (now - lastFireSearch < 5) then
+        return cachedCampfire
     end
-end
+    lastFireSearch = now
 
---------------------------------------------------------------------
--- CONFIGURATION & STATE (5 SELECTED FEATURES)
---------------------------------------------------------------------
-local Toggles = {
-    ChildrenESP = false,
-    ItemsESP = false,
-    Fly = false,
-    InfiniteJump = false
-}
-
-local FlySpeed = 50
-local CampfirePosition = nil
-local SavedSpawnPosition = nil
-
--- Record initial spawn position as safe campfire backup
-pcall(function()
-    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    local hrp = char:WaitForChild("HumanoidRootPart", 5)
-    if hrp then
-        SavedSpawnPosition = hrp.Position
-    end
-end)
-
---------------------------------------------------------------------
--- ANTI-AFK SYSTEM (20 MINUTE DISCONNECT PROTECTION)
---------------------------------------------------------------------
-LocalPlayer.Idled:Connect(function()
-    pcall(function()
-        VirtualUser:Button2Down(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
-        task.wait(1)
-        VirtualUser:Button2Up(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
-    end)
-end)
-
---------------------------------------------------------------------
--- 1. INFINITE JUMP ENGINE
---------------------------------------------------------------------
-UserInputService.JumpRequest:Connect(function()
-    if Toggles.InfiniteJump and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-        pcall(function()
-            LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
-        end)
-    end
-end)
-
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not gameProcessed and Toggles.InfiniteJump and input.KeyCode == Enum.KeyCode.Space then
-        pcall(function()
-            local char = LocalPlayer.Character
-            local hum = char and char:FindFirstChildOfClass("Humanoid")
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            if hum and hrp then
-                hum:ChangeState(Enum.HumanoidStateType.Jumping)
-                hrp.Velocity = Vector3.new(hrp.Velocity.X, 50, hrp.Velocity.Z)
-            end
-        end)
-    end
-end)
-
---------------------------------------------------------------------
--- 2. CAMPFIRE LOCATOR & TELEPORT ENGINE
---------------------------------------------------------------------
-local function FindCampfire()
-    -- Priority 1: Check known workspace paths
-    local candidates = {
-        Workspace:FindFirstChild("Campground"),
-        Workspace:FindFirstChild("Campfire"),
-        Workspace:FindFirstChild("Camp"),
-        Workspace:FindFirstChild("Fire"),
-        Workspace:FindFirstChild("MainCamp")
-    }
-    for _, obj in ipairs(candidates) do
-        if obj then
-            if obj:IsA("BasePart") then
-                return obj
-            elseif obj:IsA("Model") then
-                return obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
-            end
-        end
-    end
-    
-    -- Priority 2: Recursive search for campfire keyword
-    for _, desc in ipairs(Workspace:GetDescendants()) do
-        if desc:IsA("BasePart") or desc:IsA("Model") then
-            local lowerName = string.lower(desc.Name)
-            if string.find(lowerName, "campfire") or string.find(lowerName, "firepit") or string.find(lowerName, "camp_fire") then
-                if desc:IsA("BasePart") then
-                    return desc
-                elseif desc:IsA("Model") and (desc.PrimaryPart or desc:FindFirstChildWhichIsA("BasePart")) then
-                    return desc.PrimaryPart or desc:FindFirstChildWhichIsA("BasePart")
+    -- Search for Campfire object
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") or obj:IsA("Model") then
+            local nameLower = string.lower(obj.Name)
+            if string.find(nameLower, "campfire") or string.find(nameLower, "fire_pit") or string.find(nameLower, "camp_fire") or string.find(nameLower, "firepit") then
+                local part = obj:IsA("Model") and (obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Fire") or obj:FindFirstChildWhichIsA("BasePart")) or obj
+                if part and part:IsA("BasePart") then
+                    cachedCampfire = part
+                    return part
                 end
             end
         end
     end
-    
-    -- Priority 3: Search for Fire particle emitters
-    for _, desc in ipairs(Workspace:GetDescendants()) do
-        if desc:IsA("Fire") and desc.Parent and desc.Parent:IsA("BasePart") then
-            return desc.Parent
+
+    -- Fallback: check for fire emitter / light
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("Fire") or obj:IsA("PointLight") then
+            if obj.Parent and obj.Parent:IsA("BasePart") and (string.find(string.lower(obj.Parent.Name), "fire") or string.find(string.lower(obj.Parent.Parent.Name), "camp")) then
+                cachedCampfire = obj.Parent
+                return obj.Parent
+            end
         end
     end
 
     return nil
 end
 
-local function TeleportToCampfire()
-    pcall(function()
-        local char = LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
-        
-        local campPart = FindCampfire()
-        if campPart then
-            hrp.CFrame = CFrame.new(campPart.Position + Vector3.new(0, 4, 0))
-        elseif CampfirePosition then
-            hrp.CFrame = CFrame.new(CampfirePosition + Vector3.new(0, 4, 0))
-        elseif SavedSpawnPosition then
-            hrp.CFrame = CFrame.new(SavedSpawnPosition + Vector3.new(0, 4, 0))
-        end
-    end)
-end
-
---------------------------------------------------------------------
--- 3. MISSING CHILDREN ESP
---------------------------------------------------------------------
-local ChildrenESPFolder = Instance.new("Folder")
-ChildrenESPFolder.Name = "Junejo_ChildrenESP"
-ChildrenESPFolder.Parent = UIContainer
-
-local function ClearChildrenESP()
-    for _, obj in ipairs(ChildrenESPFolder:GetChildren()) do
-        obj:Destroy()
-    end
-end
-
-local function IsChildModel(model)
-    if not model or not model:IsA("Model") then return false end
-    if model == LocalPlayer.Character then return false end
-    local name = string.lower(model.Name)
-    
-    if string.find(name, "child") or string.find(name, "kid") or string.find(name, "missing") or string.find(name, "lost") or string.find(name, "orphan") then
-        return true
-    end
-    
-    if model:GetAttribute("IsChild") or model:GetAttribute("MissingChild") then
-        return true
-    end
-    
-    return false
-end
-
-local function CreateChildESP(model)
-    local root = model.PrimaryPart or model:FindFirstChild("HumanoidRootPart") or model:FindFirstChildWhichIsA("BasePart")
-    if not root then return end
-    
-    local id = "ChildESP_" .. tostring(model:GetDebugId(0))
-    if ChildrenESPFolder:FindFirstChild(id) then return end
-    
-    local espHolder = Instance.new("Folder")
-    espHolder.Name = id
-    espHolder.Parent = ChildrenESPFolder
-    
-    -- Cyan Highlight
-    local hl = Instance.new("Highlight")
-    hl.Adornee = model
-    hl.FillColor = Color3.fromRGB(0, 230, 255)
-    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-    hl.FillTransparency = 0.45
-    hl.OutlineTransparency = 0
-    hl.Parent = espHolder
-    
-    -- Billboard Text
-    local bb = Instance.new("BillboardGui")
-    bb.Adornee = root
-    bb.Size = UDim2.new(0, 160, 0, 36)
-    bb.StudsOffset = Vector3.new(0, 3, 0)
-    bb.AlwaysOnTop = true
-    bb.Parent = espHolder
-    
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, 0, 1, 0)
-    label.BackgroundTransparency = 1
-    label.TextColor3 = Color3.fromRGB(0, 240, 255)
-    label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-    label.TextStrokeTransparency = 0.2
-    label.TextSize = 11
-    label.Font = Enum.Font.GothamBold
-    label.Text = "👦 MISSING CHILD"
-    label.Parent = bb
-    
-    -- Distance Updater
+-- =================================================================
+-- HELPER: BRING SPECIFIC ITEMS TO PLAYER (EXACT LOGIC PRESERVED)
+-- =================================================================
+local function bringItemCategory(keywords)
     task.spawn(function()
-        while espHolder.Parent and model.Parent do
-            task.wait(0.25)
-            pcall(function()
-                local char = LocalPlayer.Character
-                local myHrp = char and char:FindFirstChild("HumanoidRootPart")
-                if myHrp and root.Parent then
-                    local dist = math.floor((myHrp.Position - root.Position).Magnitude)
-                    label.Text = "👦 MISSING CHILD\n[" .. tostring(dist) .. "m]"
-                end
-            end)
-        end
-        espHolder:Destroy()
-    end)
-end
+        pcall(function()
+            local char = LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if not hrp then return end
 
-task.spawn(function()
-    while true do
-        task.wait(1.5)
-        if Toggles.ChildrenESP then
-            pcall(function()
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if obj:IsA("Model") and IsChildModel(obj) then
-                        CreateChildESP(obj)
+            local broughtCount = 0
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                if obj:IsA("BasePart") or obj:IsA("Model") then
+                    local nameLower = string.lower(obj.Name)
+                    local matches = false
+                    
+                    for _, kw in ipairs(keywords) do
+                        if string.find(nameLower, kw) then
+                            matches = true
+                            break
+                        end
                     end
-                end
-            end)
-        else
-            ClearChildrenESP()
-        end
-    end
-end)
 
---------------------------------------------------------------------
--- 4. ITEMS & CHESTS ESP
---------------------------------------------------------------------
-local ItemsESPFolder = Instance.new("Folder")
-ItemsESPFolder.Name = "Junejo_ItemsESP"
-ItemsESPFolder.Parent = UIContainer
+                    if matches then
+                        local part = obj:IsA("Model") and (obj:FindFirstChild("Handle") or obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChildWhichIsA("BasePart")) or obj
+                        if part and part:IsA("BasePart") and not part:IsA("Terrain") and (part.Position - hrp.Position).Magnitude > 4 then
+                            part.CFrame = hrp.CFrame + (hrp.CFrame.LookVector * 4) + Vector3.new(0, 1.5, 0)
+                            
+                            pcall(function()
+                                firetouchinterest(hrp, part, 0)
+                                task.wait(0.02)
+                                firetouchinterest(hrp, part, 1)
+                            end)
+                            
+                            for _, prompt in ipairs(obj:GetDescendants()) do
+                                if prompt:IsA("ProximityPrompt") then
+                                    fireproximityprompt(prompt)
+                                end
+                            end
 
-local function ClearItemsESP()
-    for _, obj in ipairs(ItemsESPFolder:GetChildren()) do
-        obj:Destroy()
-    end
-end
-
-local function IsLootItem(item)
-    if not item then return false, "" end
-    local name = string.lower(item.Name)
-    
-    if string.find(name, "chest") or string.find(name, "crate") or string.find(name, "box") then
-        return true, "📦 CHEST"
-    elseif string.find(name, "scrap") or string.find(name, "metal") or string.find(name, "gear") then
-        return true, "⚙️ SCRAP"
-    elseif string.find(name, "food") or string.find(name, "can") or string.find(name, "meat") or string.find(name, "bread") or string.find(name, "apple") then
-        return true, "🍖 FOOD"
-    elseif string.find(name, "medkit") or string.find(name, "bandage") or string.find(name, "potion") then
-        return true, "💊 HEAL"
-    elseif string.find(name, "axe") or string.find(name, "chainsaw") or string.find(name, "sword") or string.find(name, "gun") or string.find(name, "weapon") then
-        return true, "🗡️ WEAPON"
-    end
-    
-    return false, ""
-end
-
-local function CreateItemESP(target, labelText)
-    local adorneePart = target:IsA("BasePart") and target or (target:IsA("Model") and (target.PrimaryPart or target:FindFirstChildWhichIsA("BasePart")))
-    if not adorneePart then return end
-    
-    local id = "ItemESP_" .. tostring(target:GetDebugId(0))
-    if ItemsESPFolder:FindFirstChild(id) then return end
-    
-    local espHolder = Instance.new("Folder")
-    espHolder.Name = id
-    espHolder.Parent = ItemsESPFolder
-    
-    -- Gold Highlight
-    local hl = Instance.new("Highlight")
-    hl.Adornee = target
-    hl.FillColor = Color3.fromRGB(255, 200, 0)
-    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-    hl.FillTransparency = 0.5
-    hl.OutlineTransparency = 0
-    hl.Parent = espHolder
-    
-    -- Billboard Label
-    local bb = Instance.new("BillboardGui")
-    bb.Adornee = adorneePart
-    bb.Size = UDim2.new(0, 140, 0, 30)
-    bb.StudsOffset = Vector3.new(0, 2, 0)
-    bb.AlwaysOnTop = true
-    bb.Parent = espHolder
-    
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, 0, 1, 0)
-    label.BackgroundTransparency = 1
-    label.TextColor3 = Color3.fromRGB(255, 220, 50)
-    label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-    label.TextStrokeTransparency = 0.2
-    label.TextSize = 10
-    label.Font = Enum.Font.GothamBold
-    label.Text = labelText
-    label.Parent = bb
-    
-    -- Distance Loop
-    task.spawn(function()
-        while espHolder.Parent and target.Parent do
-            task.wait(0.3)
-            pcall(function()
-                local char = LocalPlayer.Character
-                local myHrp = char and char:FindFirstChild("HumanoidRootPart")
-                if myHrp and adorneePart.Parent then
-                    local dist = math.floor((myHrp.Position - adorneePart.Position).Magnitude)
-                    label.Text = labelText .. "\n[" .. tostring(dist) .. "m]"
-                end
-            end)
-        end
-        espHolder:Destroy()
-    end)
-end
-
-task.spawn(function()
-    while true do
-        task.wait(2)
-        if Toggles.ItemsESP then
-            pcall(function()
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if obj:IsA("Model") or obj:IsA("BasePart") then
-                        local isLoot, labelText = IsLootItem(obj)
-                        if isLoot then
-                            CreateItemESP(obj, labelText)
+                            broughtCount = broughtCount + 1
+                            if broughtCount >= 25 then
+                                task.wait(0.1)
+                                broughtCount = 0
+                            end
                         end
                     end
                 end
-            end)
-        else
-            ClearItemsESP()
-        end
-    end
-end)
-
---------------------------------------------------------------------
--- 5. FLY ENGINE (SMOOTH 3D WASD & MOBILE FLIGHT)
---------------------------------------------------------------------
-local FlyBodyVel = nil
-local FlyBodyGyro = nil
-local FlyConnection = nil
-
-local function StartFly()
-    pcall(function()
-        local char = LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        if not hrp or not hum then return end
-
-        if FlyBodyVel then FlyBodyVel:Destroy() end
-        if FlyBodyGyro then FlyBodyGyro:Destroy() end
-
-        FlyBodyVel = Instance.new("BodyVelocity")
-        FlyBodyVel.Velocity = Vector3.zero
-        FlyBodyVel.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-        FlyBodyVel.Parent = hrp
-
-        FlyBodyGyro = Instance.new("BodyGyro")
-        FlyBodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
-        FlyBodyGyro.CFrame = hrp.CFrame
-        FlyBodyGyro.P = 15000
-        FlyBodyGyro.Parent = hrp
-
-        hum.PlatformStand = true
-
-        FlyConnection = RunService.RenderStepped:Connect(function()
-            if not Toggles.Fly or not hrp.Parent then
-                return
             end
-
-            local cam = Workspace.CurrentCamera
-            local moveDir = Vector3.zero
-
-            if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-                moveDir = moveDir + cam.CFrame.LookVector
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-                moveDir = moveDir - cam.CFrame.LookVector
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-                moveDir = moveDir - cam.CFrame.RightVector
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-                moveDir = moveDir + cam.CFrame.RightVector
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-                moveDir = moveDir + Vector3.new(0, 1, 0)
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
-                moveDir = moveDir - Vector3.new(0, 1, 0)
-            end
-
-            -- Mobile Touch Movement Fallback
-            if hum.MoveDirection.Magnitude > 0 then
-                moveDir = moveDir + (cam.CFrame:VectorToWorldSpace(hum.MoveDirection))
-            end
-
-            FlyBodyGyro.CFrame = cam.CFrame
-            FlyBodyVel.Velocity = moveDir.Magnitude > 0 and (moveDir.Unit * FlySpeed) or Vector3.zero
         end)
     end)
 end
 
-local function StopFly()
+-- Helper: Auto-Equip Weapon (Axe / Torch / Spear / Knife / Tool)
+local function equipBestWeapon()
     pcall(function()
-        if FlyConnection then
-            FlyConnection:Disconnect()
-            FlyConnection = nil
-        end
-        if FlyBodyVel then
-            FlyBodyVel:Destroy()
-            FlyBodyVel = nil
-        end
-        if FlyBodyGyro then
-            FlyBodyGyro:Destroy()
-            FlyBodyGyro = nil
-        end
         local char = LocalPlayer.Character
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        if hum then
-            hum.PlatformStand = false
+        local backpack = LocalPlayer:FindFirstChild("Backpack")
+        if not char or not backpack then return end
+        
+        local currentTool = char:FindFirstChildOfClass("Tool")
+        if not currentTool then
+            for _, tool in ipairs(backpack:GetChildren()) do
+                if tool:IsA("Tool") then
+                    char.Humanoid:EquipTool(tool)
+                    break
+                end
+            end
         end
     end)
 end
 
---------------------------------------------------------------------
--- 6. JUNEJO ULTRA SCRIPT HUB - OFFICIAL MASTER UI (5 ROWS COMPACT)
---------------------------------------------------------------------
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "JunejoHubUI_NightsForest"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.DisplayOrder = 999999
-ScreenGui.Parent = UIContainer
-
--- Total Height calculation:
--- Header (32) + Line (1) + Spacing (5) + (5 rows * 27) + Footer (36) = ~212px
-local TotalFrameHeight = 215
-
+-- =================================================================
+-- OFFICIAL JUNEJO FLAT & BORDERLESS UI STANDARD
+-- =================================================================
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, TotalFrameHeight)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -math.floor(TotalFrameHeight / 2))
+MainFrame.Size = UDim2.new(0, 280, 0, 275)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -137)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -495,7 +200,7 @@ MainStroke.Color = Color3.fromRGB(35, 35, 42)
 MainStroke.Thickness = 1
 MainStroke.Parent = MainFrame
 
--- Header Bar
+-- Header
 local Header = Instance.new("Frame")
 Header.Name = "Header"
 Header.Size = UDim2.new(1, 0, 0, 32)
@@ -503,7 +208,6 @@ Header.BackgroundTransparency = 1
 Header.Parent = MainFrame
 
 local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Name = "TitleLabel"
 TitleLabel.Size = UDim2.new(1, -40, 1, 0)
 TitleLabel.Position = UDim2.new(0, 12, 0, 0)
 TitleLabel.BackgroundTransparency = 1
@@ -514,72 +218,42 @@ TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.Parent = Header
 
-local CloseBtn = Instance.new("TextButton")
-CloseBtn.Name = "CloseButton"
-CloseBtn.Size = UDim2.new(0, 24, 0, 24)
-CloseBtn.Position = UDim2.new(1, -28, 0, 4)
-CloseBtn.BackgroundTransparency = 1
-CloseBtn.Text = "X"
-CloseBtn.TextColor3 = Color3.fromRGB(160, 160, 160)
-CloseBtn.TextSize = 13
-CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.Parent = Header
-
-CloseBtn.MouseButton1Click:Connect(function()
-    StopFly()
-    ClearChildrenESP()
-    ClearItemsESP()
-    Toggles.ChildrenESP = false
-    Toggles.ItemsESP = false
-    Toggles.Fly = false
-    Toggles.InfiniteJump = false
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0, 24, 0, 24)
+CloseButton.Position = UDim2.new(1, -28, 0, 4)
+CloseButton.BackgroundTransparency = 1
+CloseButton.Text = "X"
+CloseButton.TextColor3 = Color3.fromRGB(160, 160, 160)
+CloseButton.TextSize = 13
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.Parent = Header
+CloseButton.MouseButton1Click:Connect(function()
+    _G.KillAuraActive = false
+    _G.FlyActive = false
+    _G.AutoFillCampfire = false
+    _G.FullBrightActive = false
     ScreenGui:Destroy()
 end)
 
 -- Header Separation Line
 local HeaderLine = Instance.new("Frame")
-HeaderLine.Name = "HeaderLine"
 HeaderLine.Size = UDim2.new(1, -24, 0, 1)
 HeaderLine.Position = UDim2.new(0, 12, 0, 32)
 HeaderLine.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
 HeaderLine.BorderSizePixel = 0
 HeaderLine.Parent = MainFrame
 
--- Draggable Functionality
-local dragging, dragInput, dragStart, startPos
-Header.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = MainFrame.Position
-        
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
-    end
-end)
-
-Header.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        dragInput = input
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        local delta = input.Position - dragStart
-        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-end)
-
--- Content Frame (5 rows)
-local ContentFrame = Instance.new("Frame")
+-- Content Frame (ScrollingFrame for seamless compact access)
+local ContentFrame = Instance.new("ScrollingFrame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -24, 0, 138)
+ContentFrame.Size = UDim2.new(1, -24, 0, 196)
 ContentFrame.Position = UDim2.new(0, 12, 0, 38)
 ContentFrame.BackgroundTransparency = 1
+ContentFrame.BorderSizePixel = 0
+ContentFrame.ScrollBarThickness = 2
+ContentFrame.ScrollBarImageColor3 = Color3.fromRGB(60, 60, 75)
+ContentFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 ContentFrame.Parent = MainFrame
 
 local UIList = Instance.new("UIListLayout")
@@ -587,10 +261,9 @@ UIList.SortOrder = Enum.SortOrder.LayoutOrder
 UIList.Padding = UDim.new(0, 4)
 UIList.Parent = ContentFrame
 
--- Helper function for Toggle Rows (Flat & Borderless)
-local function AddToggleRow(text, configKey, callback)
+-- Helper function for Flat & Borderless Toggle Rows
+local function AddToggleRow(text, getStatus, setStatus)
     local Row = Instance.new("Frame")
-    Row.Name = text .. "_Row"
     Row.Size = UDim2.new(1, 0, 0, 23)
     Row.BackgroundTransparency = 1
     Row.Parent = ContentFrame
@@ -632,7 +305,7 @@ local function AddToggleRow(text, configKey, callback)
     CheckMark.Size = UDim2.new(0, 10, 0, 10)
     CheckMark.Position = UDim2.new(0.5, -5, 0.5, -5)
     CheckMark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    CheckMark.BackgroundTransparency = Toggles[configKey] and 0 or 1
+    CheckMark.BackgroundTransparency = getStatus() and 0 or 1
     CheckMark.BorderSizePixel = 0
     CheckMark.Parent = CheckBox
     
@@ -641,22 +314,28 @@ local function AddToggleRow(text, configKey, callback)
     MarkCorner.Parent = CheckMark
     
     RowBtn.MouseButton1Click:Connect(function()
-        Toggles[configKey] = not Toggles[configKey]
-        CheckMark.BackgroundTransparency = Toggles[configKey] and 0 or 1
-        if callback then callback(Toggles[configKey]) end
+        local newState = not getStatus()
+        setStatus(newState)
+        CheckMark.BackgroundTransparency = newState and 0 or 1
     end)
 end
 
--- Helper function for Action Button Rows (Teleports)
-local function AddActionRow(text, btnText, callback)
+-- Helper function for Flat & Borderless Action Button Rows
+local function AddButtonRow(text, callback)
     local Row = Instance.new("Frame")
-    Row.Name = text .. "_Row"
     Row.Size = UDim2.new(1, 0, 0, 23)
     Row.BackgroundTransparency = 1
     Row.Parent = ContentFrame
     
+    local RowBtn = Instance.new("TextButton")
+    RowBtn.Size = UDim2.new(1, 0, 1, 0)
+    RowBtn.BackgroundTransparency = 1
+    RowBtn.Text = ""
+    RowBtn.ZIndex = 5
+    RowBtn.Parent = Row
+    
     local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(1, -75, 1, 0)
+    Label.Size = UDim2.new(1, -50, 1, 0)
     Label.BackgroundTransparency = 1
     Label.Text = text
     Label.TextColor3 = Color3.fromRGB(240, 240, 240)
@@ -665,74 +344,196 @@ local function AddActionRow(text, btnText, callback)
     Label.TextXAlignment = Enum.TextXAlignment.Left
     Label.Parent = Row
     
-    local ActionBtn = Instance.new("TextButton")
-    ActionBtn.Size = UDim2.new(0, 70, 0, 20)
-    ActionBtn.Position = UDim2.new(1, -70, 0.5, -10)
-    ActionBtn.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-    ActionBtn.BorderSizePixel = 0
-    ActionBtn.Text = btnText
-    ActionBtn.TextColor3 = Color3.fromRGB(34, 197, 94)
-    ActionBtn.TextSize = 11
-    ActionBtn.Font = Enum.Font.GothamBold
-    ActionBtn.Parent = Row
+    local ActionPill = Instance.new("Frame")
+    ActionPill.Size = UDim2.new(0, 42, 0, 18)
+    ActionPill.Position = UDim2.new(1, -42, 0.5, -9)
+    ActionPill.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+    ActionPill.BorderSizePixel = 0
+    ActionPill.Parent = Row
     
-    local BtnCorner = Instance.new("UICorner")
-    BtnCorner.CornerRadius = UDim.new(0, 4)
-    BtnCorner.Parent = ActionBtn
+    local PillCorner = Instance.new("UICorner")
+    PillCorner.CornerRadius = UDim.new(0, 4)
+    PillCorner.Parent = ActionPill
     
-    local BtnStroke = Instance.new("UIStroke")
-    BtnStroke.Color = Color3.fromRGB(45, 45, 55)
-    BtnStroke.Thickness = 1
-    BtnStroke.Parent = ActionBtn
+    local PillStroke = Instance.new("UIStroke")
+    PillStroke.Color = Color3.fromRGB(45, 45, 55)
+    PillStroke.Thickness = 1.2
+    PillStroke.Parent = ActionPill
     
-    ActionBtn.MouseButton1Click:Connect(function()
-        ActionBtn.Text = "Done!"
-        ActionBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        if callback then callback() end
-        task.delay(0.8, function()
-            if ActionBtn and ActionBtn.Parent then
-                ActionBtn.Text = btnText
-                ActionBtn.TextColor3 = Color3.fromRGB(34, 197, 94)
-            end
+    local PillText = Instance.new("TextLabel")
+    PillText.Size = UDim2.new(1, 0, 1, 0)
+    PillText.BackgroundTransparency = 1
+    PillText.Text = "USE"
+    PillText.TextColor3 = Color3.fromRGB(200, 200, 210)
+    PillText.Font = Enum.Font.GothamBold
+    PillText.TextSize = 9
+    PillText.Parent = ActionPill
+    
+    RowBtn.MouseButton1Click:Connect(function()
+        ActionPill.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
+        task.delay(0.12, function()
+            ActionPill.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
         end)
+        if callback then callback() end
     end)
 end
 
---------------------------------------------------------------------
--- POPULATE ROWS (EXACT 5 USER REQUESTED FEATURES)
---------------------------------------------------------------------
--- 1. Missing Children ESP
-AddToggleRow("Missing Children ESP", "ChildrenESP", function(enabled)
-    if not enabled then ClearChildrenESP() end
+-- =================================================================
+-- FEATURE ROWS CONFIGURATION (ALL 11 FEATURES)
+-- =================================================================
+
+-- 1. Kill Aura Toggle
+AddToggleRow("Kill Aura", function() return _G.KillAuraActive end, function(val)
+    _G.KillAuraActive = val
 end)
 
--- 2. Items & Chests ESP
-AddToggleRow("Items & Chests ESP", "ItemsESP", function(enabled)
-    if not enabled then ClearItemsESP() end
+-- 2. Auto Fill Campfire Toggle
+AddToggleRow("Auto Fill Campfire", function() return _G.AutoFillCampfire end, function(val)
+    _G.AutoFillCampfire = val
 end)
 
--- 3. Campfire Teleport
-AddActionRow("Campfire Teleport", "Teleport", function()
-    TeleportToCampfire()
+-- 3. Fly Mode Toggle
+AddToggleRow("Fly", function() return _G.FlyActive end, function(val)
+    _G.FlyActive = val
 end)
 
--- 4. Fly Mode
-AddToggleRow("Fly Mode", "Fly", function(enabled)
-    if enabled then
-        StartFly()
-    else
-        StopFly()
-    end
+-- 4. Integrated Fly Speed Row (- / + Pill Controller)
+local SpeedRow = Instance.new("Frame")
+SpeedRow.Size = UDim2.new(1, 0, 0, 23)
+SpeedRow.BackgroundTransparency = 1
+SpeedRow.Parent = ContentFrame
+
+local SpeedLabel = Instance.new("TextLabel")
+SpeedLabel.Size = UDim2.new(0.55, 0, 1, 0)
+SpeedLabel.BackgroundTransparency = 1
+SpeedLabel.Text = "Fly Speed"
+SpeedLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
+SpeedLabel.TextSize = 12
+SpeedLabel.Font = Enum.Font.GothamBold
+SpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
+SpeedLabel.Parent = SpeedRow
+
+local SpeedControlFrame = Instance.new("Frame")
+SpeedControlFrame.Size = UDim2.new(0.42, 0, 1, 0)
+SpeedControlFrame.Position = UDim2.new(0.58, 0, 0, 0)
+SpeedControlFrame.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+SpeedControlFrame.BorderSizePixel = 0
+SpeedControlFrame.Parent = SpeedRow
+
+local CtrlCorner = Instance.new("UICorner")
+CtrlCorner.CornerRadius = UDim.new(0, 4)
+CtrlCorner.Parent = SpeedControlFrame
+
+local CtrlStroke = Instance.new("UIStroke")
+CtrlStroke.Color = Color3.fromRGB(45, 45, 55)
+CtrlStroke.Thickness = 1
+CtrlStroke.Parent = SpeedControlFrame
+
+local MinusBtn = Instance.new("TextButton")
+MinusBtn.Size = UDim2.new(0, 22, 1, 0)
+MinusBtn.Position = UDim2.new(0, 0, 0, 0)
+MinusBtn.BackgroundTransparency = 1
+MinusBtn.Text = "-"
+MinusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
+MinusBtn.TextSize = 14
+MinusBtn.Font = Enum.Font.GothamBold
+MinusBtn.Parent = SpeedControlFrame
+
+local SpeedDisplay = Instance.new("TextLabel")
+SpeedDisplay.Size = UDim2.new(1, -44, 1, 0)
+SpeedDisplay.Position = UDim2.new(0, 22, 0, 0)
+SpeedDisplay.BackgroundTransparency = 1
+SpeedDisplay.Text = tostring(_G.FlySpeed)
+SpeedDisplay.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedDisplay.TextSize = 11
+SpeedDisplay.Font = Enum.Font.GothamBold
+SpeedDisplay.Parent = SpeedControlFrame
+
+local PlusBtn = Instance.new("TextButton")
+PlusBtn.Size = UDim2.new(0, 22, 1, 0)
+PlusBtn.Position = UDim2.new(1, -22, 0, 0)
+PlusBtn.BackgroundTransparency = 1
+PlusBtn.Text = "+"
+PlusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
+PlusBtn.TextSize = 14
+PlusBtn.Font = Enum.Font.GothamBold
+PlusBtn.Parent = SpeedControlFrame
+
+MinusBtn.MouseButton1Click:Connect(function()
+    _G.FlySpeed = math.max(20, (_G.FlySpeed or 60) - 10)
+    SpeedDisplay.Text = tostring(_G.FlySpeed)
 end)
 
--- 5. Infinite Jump
-AddToggleRow("Infinite Jump", "InfiniteJump")
+PlusBtn.MouseButton1Click:Connect(function()
+    _G.FlySpeed = math.min(250, (_G.FlySpeed or 60) + 10)
+    SpeedDisplay.Text = tostring(_G.FlySpeed)
+end)
 
---------------------------------------------------------------------
--- FOOTER (PERMANENT OFFICIAL BRANDING)
---------------------------------------------------------------------
+-- 5. FullBright Toggle
+AddToggleRow("Bright", function() return _G.FullBrightActive end, function(state)
+    _G.FullBrightActive = state
+    pcall(function()
+        if state then
+            Lighting.Brightness = 2
+            Lighting.ClockTime = 14
+            Lighting.FogEnd = 100000
+            Lighting.GlobalShadows = false
+            Lighting.OutdoorAmbient = Color3.fromRGB(180, 180, 180)
+        else
+            Lighting.Brightness = 1
+            Lighting.ClockTime = 0
+            Lighting.FogEnd = 500
+            Lighting.GlobalShadows = true
+            Lighting.OutdoorAmbient = Color3.fromRGB(50, 50, 50)
+        end
+    end)
+end)
+
+-- 6. Bring Fuel Action
+AddButtonRow("Bring Fuel", function()
+    bringItemCategory({"fuel", "gas", "oil", "igniter", "coal"})
+end)
+
+-- 7. Bring Food Action
+AddButtonRow("Bring Food", function()
+    bringItemCategory({"food", "carrot", "apple", "berry", "corn", "mushroom", "meat", "cooked"})
+end)
+
+-- 8. Bring Medicine Action
+AddButtonRow("Bring Medicine", function()
+    bringItemCategory({"medicine", "medkit", "med", "pill", "heal", "aid"})
+end)
+
+-- 9. Bring Scrap Action
+AddButtonRow("Bring Scrap", function()
+    bringItemCategory({"scrap", "metal", "gear", "iron", "wire", "pipe"})
+end)
+
+-- 10. Bring Bandages Action
+AddButtonRow("Bring Bandages", function()
+    bringItemCategory({"bandage", "bandages", "gauze"})
+end)
+
+-- 11. Teleport Campfire Action
+AddButtonRow("Teleport Campfire", function()
+    task.spawn(function()
+        pcall(function()
+            local char = LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if not hrp then return end
+
+            local fire = getCampfire()
+            if fire then
+                hrp.CFrame = fire.CFrame + Vector3.new(0, 3.5, 0)
+            else
+                hrp.CFrame = CFrame.new(0, 10, 0)
+            end
+        end)
+    end)
+end)
+
+-- Footer (Pinned at bottom)
 local Footer = Instance.new("Frame")
-Footer.Name = "Footer"
 Footer.Size = UDim2.new(1, 0, 0, 36)
 Footer.Position = UDim2.new(0, 0, 1, -38)
 Footer.BackgroundTransparency = 1
@@ -758,4 +559,225 @@ FooterSub.TextSize = 9
 FooterSub.Font = Enum.Font.GothamMedium
 FooterSub.Parent = Footer
 
-print("[JUNEJO SCRIPT HUB] 99 Nights in the Forest Loaded (5 Verified Features)!")
+-- Smooth Dragging Mechanism
+local dragging = false
+local dragInput, dragStart, startPos
+
+Header.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+Header.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- =================================================================
+-- GAMEPLAY ENGINE & FEATURE IMPLEMENTATIONS (EXACT LOGIC PRESERVED)
+-- =================================================================
+
+-- 1. Fly Mode (Mobile Joystick & PC Keyboard Compatible)
+task.spawn(function()
+    while true do
+        task.wait(0.03)
+        if _G.FlyActive then
+            pcall(function()
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                local hum = char and char:FindFirstChildOfClass("Humanoid")
+                local camera = workspace.CurrentCamera
+                
+                if hrp and hum and camera then
+                    local bv = hrp:FindFirstChild("ForestFlyBV") or Instance.new("BodyVelocity")
+                    bv.Name = "ForestFlyBV"
+                    bv.MaxForce = Vector3.new(1e8, 1e8, 1e8)
+                    bv.Parent = hrp
+                    
+                    local bg = hrp:FindFirstChild("ForestFlyBG") or Instance.new("BodyGyro")
+                    bg.Name = "ForestFlyBG"
+                    bg.MaxTorque = Vector3.new(1e8, 1e8, 1e8)
+                    bg.P = 10000
+                    bg.Parent = hrp
+                    
+                    hum.PlatformStand = true
+                    bg.CFrame = camera.CFrame
+                    
+                    local speed = _G.FlySpeed or 60
+                    local moveDir = hum.MoveDirection
+                    if moveDir.Magnitude > 0 then
+                        local flyVel = camera.CFrame.LookVector * speed
+                        if math.abs(moveDir.Z) < 0.2 and math.abs(moveDir.X) > 0.5 then
+                            flyVel = camera.CFrame.RightVector * speed * (moveDir.X > 0 and 1 or -1)
+                        end
+                        bv.Velocity = flyVel
+                    else
+                        bv.Velocity = Vector3.new(0, 0, 0)
+                    end
+                end
+            end)
+        else
+            pcall(function()
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                local hum = char and char:FindFirstChildOfClass("Humanoid")
+                if hum and hum.PlatformStand then
+                    hum.PlatformStand = false
+                end
+                if hrp then
+                    if hrp:FindFirstChild("ForestFlyBV") then hrp.ForestFlyBV:Destroy() end
+                    if hrp:FindFirstChild("ForestFlyBG") then hrp.ForestFlyBG:Destroy() end
+                end
+            end)
+        end
+    end
+end)
+
+-- 2. Powerful Multi-Method Kill Aura Engine (Attacks Animals & Mobs in 60 studs)
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        if _G.KillAuraActive then
+            pcall(function()
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                if not hrp then return end
+                
+                equipBestWeapon()
+                local tool = char:FindFirstChildOfClass("Tool")
+
+                -- Find all nearby animals and hostiles across workspace
+                for _, model in ipairs(workspace:GetDescendants()) do
+                    if model:IsA("Model") and model ~= char and not Players:GetPlayerFromCharacter(model) then
+                        local enemyHum = model:FindFirstChildOfClass("Humanoid")
+                        local enemyPart = model:FindFirstChild("HumanoidRootPart") or model:FindFirstChild("Head") or model:FindFirstChild("Torso") or model:FindFirstChildWhichIsA("BasePart")
+                        
+                        if enemyHum and enemyHum.Health > 0 and enemyPart then
+                            local dist = (enemyPart.Position - hrp.Position).Magnitude
+                            if dist <= 60 then
+                                -- Aim and attack
+                                local targetAimCFrame = CFrame.lookAt(hrp.Position, enemyPart.Position)
+
+                                -- 1. Tool Activation
+                                if tool then
+                                    tool:Activate()
+                                    for _, sub in ipairs(tool:GetDescendants()) do
+                                        if sub:IsA("RemoteEvent") then
+                                            sub:FireServer(enemyPart, enemyPart.Position)
+                                        elseif sub:IsA("RemoteFunction") then
+                                            sub:InvokeServer(enemyPart, enemyPart.Position)
+                                        end
+                                    end
+                                end
+
+                                -- 2. Virtual User Click towards target
+                                VirtualUser:CaptureController()
+                                VirtualUser:Button1Down(Vector2.new(500, 500), targetAimCFrame)
+                                task.wait(0.02)
+                                VirtualUser:Button1Up(Vector2.new(500, 500), targetAimCFrame)
+
+                                -- 3. Trigger ProximityPrompts if animal has them
+                                for _, prompt in ipairs(model:GetDescendants()) do
+                                    if prompt:IsA("ProximityPrompt") then
+                                        fireproximityprompt(prompt)
+                                    end
+                                end
+
+                                -- 4. Remote attack hooks
+                                for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
+                                    if rem:IsA("RemoteEvent") then
+                                        local rName = string.lower(rem.Name)
+                                        if string.find(rName, "hurt") or string.find(rName, "attack") or string.find(rName, "damage") or string.find(rName, "hit") then
+                                            rem:FireServer(model, enemyPart)
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- 3. Robust Auto Fill Campfire Engine (Gathers all Coal & Fuel from all folders directly into Campfire)
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        if _G.AutoFillCampfire then
+            pcall(function()
+                local fire = getCampfire()
+                if not fire then return end
+
+                local firePos = fire.CFrame + Vector3.new(0, 1.5, 0)
+                local fuelCount = 0
+
+                -- Scan all workspace descendants for Coal, Fuel, Wood, Gas, Sticks
+                for _, obj in ipairs(workspace:GetDescendants()) do
+                    if obj:IsA("BasePart") or obj:IsA("Model") then
+                        local nameLower = string.lower(obj.Name)
+                        if string.find(nameLower, "coal") or string.find(nameLower, "fuel") or string.find(nameLower, "gas") or string.find(nameLower, "wood") or string.find(nameLower, "log") or string.find(nameLower, "stick") then
+                            local part = obj:IsA("Model") and (obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart")) or obj
+                            if part and part:IsA("BasePart") and not part:IsA("Terrain") and part ~= fire then
+                                local dist = (part.Position - fire.Position).Magnitude
+                                if dist > 2 then
+                                    part.CFrame = firePos
+                                    part.Velocity = Vector3.new(0, -5, 0)
+                                    
+                                    pcall(function()
+                                        firetouchinterest(part, fire, 0)
+                                        task.wait(0.01)
+                                        firetouchinterest(part, fire, 1)
+                                    end)
+
+                                    for _, prompt in ipairs(obj:GetDescendants()) do
+                                        if prompt:IsA("ProximityPrompt") then
+                                            fireproximityprompt(prompt)
+                                        end
+                                    end
+
+                                    fuelCount = fuelCount + 1
+                                    if fuelCount >= 20 then
+                                        task.wait(0.05)
+                                        fuelCount = 0
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+
+                -- Trigger campfire prompts
+                if fire.Parent then
+                    for _, prompt in ipairs(fire.Parent:GetDescendants()) do
+                        if prompt:IsA("ProximityPrompt") then
+                            fireproximityprompt(prompt)
+                        end
+                    end
+                end
+                for _, prompt in ipairs(fire:GetChildren()) do
+                    if prompt:IsA("ProximityPrompt") then
+                        fireproximityprompt(prompt)
+                    end
+                end
+            end)
+        end
+    end
+end)
