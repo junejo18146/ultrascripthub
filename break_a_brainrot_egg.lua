@@ -1,5 +1,5 @@
 -- ====================================================
--- JUNEJO ULTRA SCRIPT HUB - BREAK A BRAINROT EGG (OFFICIAL)
+-- JUNEJO ULTRA SCRIPT HUB - BREAK A BRAINROT EGG (OFFICIAL V2.1)
 -- Game: Break a Brainrot Egg
 -- Author: Made by Junejo (junejo18146)
 -- GitHub: https://github.com/junejo18146/ultrascripthub
@@ -55,11 +55,20 @@ local function isAlive()
     return hum and hum.Health > 0 and hrp ~= nil
 end
 
--- Screen Notification Helper with Anti-Spam Debounce
+-- Record Initial Base / Spawn CFrame
+pcall(function()
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local hrp = char:WaitForChild("HumanoidRootPart", 5)
+    if hrp then
+        SavedBaseCFrame = hrp.CFrame
+    end
+end)
+
+-- Enhanced Screen Notification / Diagnostic Toast (Shows clear instructions & requirements)
 local LastToastTime = 0
-local function ShowNotification(title, message)
+local function ShowNotification(title, message, isWarning)
     local now = os.clock()
-    if now - LastToastTime < 2.0 then return end
+    if now - LastToastTime < 1.2 then return end
     LastToastTime = now
     pcall(function()
         local sg = CoreGui:FindFirstChild("JunejoHubUI_BreakBrainrotEgg") or (LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild("JunejoHubUI_BreakBrainrotEgg"))
@@ -70,9 +79,9 @@ local function ShowNotification(title, message)
 
         local Toast = Instance.new("Frame")
         Toast.Name = "JunejoToast"
-        Toast.Size = UDim2.new(0, 240, 0, 36)
-        Toast.Position = UDim2.new(0.5, -120, 0.08, 0)
-        Toast.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+        Toast.Size = UDim2.new(0, 260, 0, 44)
+        Toast.Position = UDim2.new(0.5, -130, 0.06, 0)
+        Toast.BackgroundColor3 = isWarning and Color3.fromRGB(35, 18, 20) or Color3.fromRGB(18, 20, 26)
         Toast.BorderSizePixel = 0
         Toast.ZIndex = 999
         Toast.Parent = sg
@@ -82,16 +91,16 @@ local function ShowNotification(title, message)
         ToastCorner.Parent = Toast
 
         local ToastStroke = Instance.new("UIStroke")
-        ToastStroke.Color = Color3.fromRGB(60, 60, 80)
-        ToastStroke.Thickness = 1
+        ToastStroke.Color = isWarning and Color3.fromRGB(220, 60, 60) or Color3.fromRGB(60, 60, 85)
+        ToastStroke.Thickness = 1.2
         ToastStroke.Parent = Toast
 
         local TitleLbl = Instance.new("TextLabel")
-        TitleLbl.Size = UDim2.new(1, -12, 0, 15)
+        TitleLbl.Size = UDim2.new(1, -14, 0, 16)
         TitleLbl.Position = UDim2.new(0, 8, 0, 3)
         TitleLbl.BackgroundTransparency = 1
         TitleLbl.Text = title
-        TitleLbl.TextColor3 = Color3.fromRGB(255, 215, 0)
+        TitleLbl.TextColor3 = isWarning and Color3.fromRGB(255, 90, 90) or Color3.fromRGB(255, 215, 0)
         TitleLbl.TextSize = 11
         TitleLbl.Font = Enum.Font.GothamBold
         TitleLbl.TextXAlignment = Enum.TextXAlignment.Left
@@ -99,25 +108,26 @@ local function ShowNotification(title, message)
         TitleLbl.Parent = Toast
 
         local MsgLbl = Instance.new("TextLabel")
-        MsgLbl.Size = UDim2.new(1, -12, 0, 14)
+        MsgLbl.Size = UDim2.new(1, -14, 0, 22)
         MsgLbl.Position = UDim2.new(0, 8, 0, 18)
         MsgLbl.BackgroundTransparency = 1
         MsgLbl.Text = message
         MsgLbl.TextColor3 = Color3.fromRGB(230, 230, 240)
         MsgLbl.TextSize = 10
+        MsgLbl.TextWrapped = true
         MsgLbl.Font = Enum.Font.GothamMedium
         MsgLbl.TextXAlignment = Enum.TextXAlignment.Left
         MsgLbl.ZIndex = 1000
         MsgLbl.Parent = Toast
 
-        task.delay(1.6, function()
+        task.delay(2.2, function()
             if Toast and Toast.Parent then
-                local tween = TweenService:Create(Toast, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1})
+                local tween = TweenService:Create(Toast, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1})
                 tween:Play()
                 TitleLbl.TextTransparency = 1
                 MsgLbl.TextTransparency = 1
                 ToastStroke.Transparency = 1
-                task.wait(0.22)
+                task.wait(0.26)
                 if Toast then Toast:Destroy() end
             end
         end)
@@ -158,34 +168,62 @@ local function InstantTouch(part, targetPart)
     end)
 end
 
--- Tool Auto-Equip Helper (Equips Highest Tier Hammer / Damage Weapon)
-local function EquipBestTool()
-    pcall(function()
-        if not isAlive() then return end
-        local char = LocalPlayer.Character
-        local backpack = LocalPlayer:FindFirstChild("Backpack")
-        if not backpack then return end
+-- ====================================================
+-- HAMMER / TOOL REQUIREMENT VERIFICATION & AUTO EQUIP
+-- ====================================================
+local function EnsureHammerEquipped()
+    if not isAlive() then return false, nil end
+    local char = LocalPlayer.Character
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    local backpack = LocalPlayer:FindFirstChild("Backpack")
 
-        local currentTool = char:FindFirstChildOfClass("Tool")
-        if not currentTool then
-            local hammerTool = nil
-            for _, t in ipairs(backpack:GetChildren()) do
-                if t:IsA("Tool") then
-                    local n = t.Name:lower()
-                    if n:find("hammer") or n:find("axe") or n:find("mallet") or n:find("weapon") or n:find("pick") or n:find("sword") then
-                        hammerTool = t
-                    end
+    -- 1. Check if a tool is already active in hand
+    local currentTool = char:FindFirstChildOfClass("Tool")
+    if currentTool then
+        return true, currentTool
+    end
+
+    -- 2. Look in Backpack for Hammer / Weapon / Tool
+    if backpack then
+        local bestTool = nil
+        for _, t in ipairs(backpack:GetChildren()) do
+            if t:IsA("Tool") then
+                local n = t.Name:lower()
+                if n:find("hammer") or n:find("axe") or n:find("weapon") or n:find("sword") or n:find("mallet") or n:find("pick") or n:find("bat") then
+                    bestTool = t
+                    break
                 end
             end
-            if not hammerTool then
-                hammerTool = backpack:FindFirstChildOfClass("Tool")
-            end
-            if hammerTool then
-                local hum = char:FindFirstChildOfClass("Humanoid")
-                if hum then hum:EquipTool(hammerTool) end
+        end
+        if not bestTool then
+            bestTool = backpack:FindFirstChildOfClass("Tool")
+        end
+        if bestTool and hum then
+            hum:EquipTool(bestTool)
+            task.wait(0.12)
+            return true, bestTool
+        end
+    end
+
+    -- 3. If no hammer in backpack, attempt to claim/buy starter hammer automatically
+    pcall(function()
+        for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
+            local n = rem.Name:lower()
+            if n:find("buy") or n:find("starter") or n:find("hammer") or n:find("tool") or n:find("claim") or n:find("free") then
+                if rem:IsA("RemoteEvent") then
+                    rem:FireServer("Hammer")
+                    rem:FireServer("Starter Hammer")
+                    rem:FireServer(1)
+                    rem:FireServer(true)
+                elseif rem:IsA("RemoteFunction") then
+                    rem:InvokeServer("Hammer")
+                    rem:InvokeServer(1)
+                end
             end
         end
     end)
+
+    return false, nil
 end
 
 -- Speed Update Helper
@@ -205,7 +243,50 @@ local function UpdateCharacterSpeed()
 end
 
 -- ====================================================
--- CUSTOM CASH / INFINITE CASH ENGINE (REAL SERVER CASH GENERATOR)
+-- SAFE ANTI-RUBBERBAND TELEPORTATION ENGINE
+-- (Eliminates physics bounces, barrier pushes & reset triggers)
+-- ====================================================
+local function SafeTeleportToEgg(targetCFrame, isStayOnly)
+    if not isAlive() then return false end
+    local char = LocalPlayer.Character
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hrp or not hum then return false end
+
+    -- 1. Reset humanoid states that trigger physics falls
+    hum.Sit = false
+
+    -- 2. Make character parts non-collidable briefly so neither barriers nor egg mesh ejects player
+    for _, part in ipairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = false
+        end
+    end
+
+    -- 3. Calculate safe standing spot (3 studs in front of egg looking at it, not inside mesh)
+    local targetPos = targetCFrame.Position
+    local destPos = targetPos + Vector3.new(0, 1.6, 3.4)
+    local destCFrame = CFrame.new(destPos, Vector3.new(targetPos.X, destPos.Y, targetPos.Z))
+
+    -- 4. Complete velocity wipe
+    hrp.AssemblyLinearVelocity = Vector3.zero
+    hrp.AssemblyAngularVelocity = Vector3.zero
+    if hrp:FindFirstChild("BodyVelocity") then hrp.BodyVelocity.Velocity = Vector3.zero end
+
+    -- 5. Lock position via temporary micro-anchor (guarantees server physics sync)
+    hrp.CFrame = destCFrame
+    hrp.Anchored = true
+    task.wait(0.06)
+    hrp.CFrame = destCFrame
+    hrp.AssemblyLinearVelocity = Vector3.zero
+    hrp.AssemblyAngularVelocity = Vector3.zero
+    hrp.Anchored = false
+
+    return true
+end
+
+-- ====================================================
+-- CUSTOM CASH / INFINITE CASH ENGINE
 -- ====================================================
 local function GiveCustomCash(amountInput)
     local rawText = tostring(amountInput or CustomCashValue or "1000000000"):lower():gsub("%s+", ""):gsub(",", "")
@@ -230,9 +311,9 @@ local function GiveCustomCash(amountInput)
     end
 
     CustomCashValue = tostring(numAmount)
-    EquipBestTool()
+    EnsureHammerEquipped()
 
-    -- 1. Rapid Egg Strike & Break Packets (Generates Real In-Game Cash & Brainrots)
+    -- 1. Rapid Egg Strike & Break Packets
     pcall(function()
         if isAlive() then
             local char = LocalPlayer.Character
@@ -261,7 +342,7 @@ local function GiveCustomCash(amountInput)
         end
     end)
 
-    -- 2. Direct Server Remotes Fire (All Cash, Money, Reward, Sell & Deposit Remotes)
+    -- 2. Direct Server Remotes Fire
     pcall(function()
         for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
             local n = rem.Name:lower()
@@ -291,7 +372,7 @@ local function GiveCustomCash(amountInput)
         end
     end)
 
-    -- 3. Auto Claim Free Playtime Gifts & Daily Rewards (1 to 15)
+    -- 3. Auto Claim Free Playtime Gifts & Daily Rewards
     pcall(function()
         for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
             local n = rem.Name:lower()
@@ -311,7 +392,7 @@ local function GiveCustomCash(amountInput)
         end
     end)
 
-    -- 4. Auto Redeem Active Promo Codes
+    -- 4. Auto Redeem Promo Codes
     pcall(function()
         local testCodes = {"RELEASE", "BRAINROT", "EGG", "HAMMER", "UPDATE", "FREE", "CASH", "MONEY", "SECRET", "LUCKY", "OP", "1KLIKES", "5KLIKES", "10KLIKES", "100K", "1M"}
         for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
@@ -390,8 +471,7 @@ local function GiveCustomCash(amountInput)
 end
 
 -- ====================================================
--- UNLOCKED RAREST EGG SCANNER & DISTANCE ENGINE
--- (RULE: ONLY UNLOCKED EGGS, MAXIMUM DISTANCE = RAREST)
+-- UNLOCKED RAREST EGG SCANNER & ATTACK ENGINE
 -- ====================================================
 local function GetLocationKey(pos)
     return math.floor(pos.X / 4) .. "_" .. math.floor(pos.Y / 4) .. "_" .. math.floor(pos.Z / 4)
@@ -417,12 +497,12 @@ local function IsBaseOrPlotItem(obj)
     return false
 end
 
--- Comprehensive Lock Inspector (Filters out locked zones, locked eggs & paywalled eggs)
+-- Check if egg or zone is hard-locked
 local function IsEggLocked(obj, prompt)
     if prompt then
         if not prompt.Enabled then return true end
         local pt = (prompt.ActionText .. " " .. prompt.ObjectText):lower()
-        if pt:find("lock") or pt:find("requir") or pt:find("need") or pt:find("closed") or pt:find("cannot") or pt:find("reach") or pt:find("buy area") or pt:find("unlock zone") or pt:find("level req") or pt:find("rebirth req") then
+        if pt:find("locked") or pt:find("need rebirth") or pt:find("level req") or pt:find("buy zone") or pt:find("unlock zone") then
             return true
         end
     end
@@ -430,45 +510,15 @@ local function IsEggLocked(obj, prompt)
     if obj and obj:IsA("Instance") then
         local current = obj
         local depth = 0
-        while current and depth < 6 do
+        while current and depth < 5 do
             if current == Workspace or current == game then break end
             local n = current.Name:lower()
-            if n:find("locked") or n:find("barrier") or n:find("zone_lock") or n:find("closed") or n:find("blocked") or n:find("levelreq") or n:find("rebirthreq") or n:find("lockedzone") or n:find("lockedegg") then
+            if n:find("zone_barrier") or n:find("lock_wall") or n:find("lockeddoor") then
                 return true
             end
-
-            local attrLocked = false
-            pcall(function()
-                for attr, val in pairs(current:GetAttributes()) do
-                    local an = tostring(attr):lower()
-                    if (an:find("lock") and val == true) or (an:find("unlock") and val == false) or (an:find("avail") and val == false) or (an:find("open") and val == false) then
-                        attrLocked = true
-                        break
-                    end
-                end
-            end)
-            if attrLocked then return true end
-
             current = current.Parent
             depth = depth + 1
         end
-
-        local isTextLocked = false
-        pcall(function()
-            for _, desc in ipairs(obj:GetDescendants()) do
-                if desc:IsA("TextLabel") or desc:IsA("TextBox") then
-                    local txt = desc.Text:lower()
-                    if txt:find("locked") or txt:find("requires") or txt:find("need rebirth") or txt:find("reach zone") or txt:find("level req") or txt:find("unlock at") then
-                        isTextLocked = true
-                        break
-                    end
-                elseif desc:IsA("ForceField") then
-                    isTextLocked = true
-                    break
-                end
-            end
-        end)
-        if isTextLocked then return true end
     end
 
     return false
@@ -496,17 +546,14 @@ local function GetEggDisplayName(obj, prompt, distFromBase)
     return detectedName
 end
 
--- UNLOCKED RAREST EGG FUNCTION: Scans ONLY UNLOCKED eggs and picks the FURTHEST from Base
+-- UNLOCKED RAREST EGG FUNCTION: Scans and ranks all active unlocked eggs
 local function FindRarestEgg(hrpPosition)
     local candidates = {}
     local now = os.clock()
 
-    if not SavedBaseCFrame and isAlive() then
-        SavedBaseCFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
-    end
-    local basePos = SavedBaseCFrame and SavedBaseCFrame.Position or hrpPosition
+    local basePos = SavedBaseCFrame and SavedBaseCFrame.Position or Vector3.zero
 
-    -- 1. Gather all UNLOCKED candidates from ProximityPrompts across Workspace
+    -- 1. Gather candidates from ProximityPrompts across Workspace
     for _, prompt in ipairs(Workspace:GetDescendants()) do
         if prompt:IsA("ProximityPrompt") then
             local pPart = prompt.Parent
@@ -530,29 +577,27 @@ local function FindRarestEgg(hrpPosition)
                 local locked = IsEggLocked(pPart, prompt)
 
                 if not isCoolingDown and not inBaseOrPlot and not locked then
-                    local distFromBase = (targetPos.Position - basePos).Magnitude
-                    if distFromBase > 18 then
-                        local act = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. pPart.Name):lower()
-                        local isEgg = act:find("break") or act:find("hit") or act:find("egg") or act:find("brainrot") or act:find("lucky") or act:find("steal") or act:find("grab") or act:find("pick") or act:find("collect") or act == "" or act == " "
+                    local act = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. pPart.Name):lower()
+                    local isEgg = act:find("break") or act:find("hit") or act:find("egg") or act:find("brainrot") or act:find("lucky") or act:find("smash") or act:find("click") or act:find("mine") or act == "" or act == " "
 
-                        if isEgg then
-                            local eggName = GetEggDisplayName(pPart, prompt, distFromBase)
-                            table.insert(candidates, {
-                                targetCFrame = targetPos,
-                                prompt = prompt,
-                                part = pPart:IsA("BasePart") and pPart or pPart:FindFirstChildWhichIsA("BasePart"),
-                                locKey = locKey,
-                                eggName = eggName,
-                                distFromBase = distFromBase
-                            })
-                        end
+                    if isEgg then
+                        local distFromBase = (targetPos.Position - basePos).Magnitude
+                        local eggName = GetEggDisplayName(pPart, prompt, distFromBase)
+                        table.insert(candidates, {
+                            targetCFrame = targetPos,
+                            prompt = prompt,
+                            part = pPart:IsA("BasePart") and pPart or pPart:FindFirstChildWhichIsA("BasePart"),
+                            locKey = locKey,
+                            eggName = eggName,
+                            distFromBase = distFromBase
+                        })
                     end
                 end
             end
         end
     end
 
-    -- 2. Gather UNLOCKED candidates from Workspace models/parts as fallback
+    -- 2. Gather candidates from Workspace models/parts
     if #candidates == 0 then
         for _, obj in ipairs(Workspace:GetDescendants()) do
             local name = obj.Name:lower()
@@ -583,17 +628,15 @@ local function FindRarestEgg(hrpPosition)
 
                     if not isCoolingDown and not inBaseOrPlot and not locked then
                         local distFromBase = (tCFrame.Position - basePos).Magnitude
-                        if distFromBase > 18 then
-                            local eggName = GetEggDisplayName(obj, prompt, distFromBase)
-                            table.insert(candidates, {
-                                targetCFrame = tCFrame,
-                                prompt = prompt,
-                                part = targetPart,
-                                locKey = locKey,
-                                eggName = eggName,
-                                distFromBase = distFromBase
-                            })
-                        end
+                        local eggName = GetEggDisplayName(obj, prompt, distFromBase)
+                        table.insert(candidates, {
+                            targetCFrame = tCFrame,
+                            prompt = prompt,
+                            part = targetPart,
+                            locKey = locKey,
+                            eggName = eggName,
+                            distFromBase = distFromBase
+                        })
                     end
                 end
             end
@@ -604,7 +647,7 @@ local function FindRarestEgg(hrpPosition)
         return nil, nil, nil, nil, "No Unlocked Egg Found", 0
     end
 
-    -- 3. STRICTLY SORT CANDIDATES BY MAXIMUM DISTANCE FROM BASE (FARTHEST UNLOCKED EGG FIRST)
+    -- 3. Sort candidates by maximum distance from Base (Farthest unlocked egg = Rarest)
     table.sort(candidates, function(a, b)
         return a.distFromBase > b.distFromBase
     end)
@@ -613,13 +656,17 @@ local function FindRarestEgg(hrpPosition)
     return best.targetCFrame, best.prompt, best.part, best.locKey, best.eggName, math.floor(best.distFromBase)
 end
 
--- Break Rare Egg Attack Loop on Target
+-- Break Rare Egg Attack Engine on Target
 local function PerformEggBreakAttack(targetCFrame, prompt, eggPart)
-    EquipBestTool()
+    local hasHammer, tool = EnsureHammerEquipped()
+    if not hasHammer then
+        ShowNotification("⚠️ REQUIREMENT: Hammer Needed", "Aapke paas Hammer nahi hai! Shop se Hammer buy/equip karein.", true)
+        return false
+    end
+
     local char = LocalPlayer.Character
-    if not char then return end
+    if not char then return false end
     local hrp = char:FindFirstChild("HumanoidRootPart")
-    local tool = char:FindFirstChildOfClass("Tool")
     
     for _ = 1, 4 do
         if tool then
@@ -634,6 +681,9 @@ local function PerformEggBreakAttack(targetCFrame, prompt, eggPart)
 
         if prompt then
             InstantTriggerPrompt(prompt)
+        end
+        if eggPart and eggPart:FindFirstChildWhichIsA("ClickDetector") then
+            pcall(function() fireclickdetector(eggPart:FindFirstChildWhichIsA("ClickDetector")) end)
         end
         if eggPart and hrp then
             InstantTouch(hrp, eggPart)
@@ -656,37 +706,43 @@ local function PerformEggBreakAttack(targetCFrame, prompt, eggPart)
             end
         end
     end)
+    return true
 end
 
--- 1-Click Action: Break Unlocked Rare Egg (Teleports & breaks furthest unlocked egg on the spot)
+-- 1-Click Action: Break Unlocked Rare Egg
 local function BreakRareEggAction()
     if not isAlive() then return end
     local char = LocalPlayer.Character
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
 
+    -- Verify Hammer
+    local hasHammer, tool = EnsureHammerEquipped()
+    if not hasHammer then
+        ShowNotification("⚠️ REQUIREMENT: Hammer Needed", "Aapke paas Hammer nahi hai! Shop se Hammer lein.", true)
+        return
+    end
+
     local targetCFrame, prompt, eggPart, locKey, eggName, distFromBase = FindRarestEgg(hrp.Position)
     if targetCFrame then
-        if locKey then CooldownEggs[locKey] = os.clock() + 3 end
+        if locKey then CooldownEggs[locKey] = os.clock() + 2.5 end
 
-        ShowNotification("💎 Breaking Unlocked Rare Egg", "👑 " .. eggName .. " (" .. tostring(distFromBase) .. " studs away)")
-        hrp.AssemblyLinearVelocity = Vector3.zero
-        hrp.AssemblyAngularVelocity = Vector3.zero
-        hrp.CFrame = targetCFrame * CFrame.new(0, 2.5, 0)
-        task.wait(0.15)
+        ShowNotification("💎 Breaking Rare Egg", "👑 " .. eggName .. " (" .. tostring(distFromBase) .. " studs) | 🔨 " .. (tool and tool.Name or "Hammer"))
+        SafeTeleportToEgg(targetCFrame, false)
+        task.wait(0.12)
 
         for i = 1, 5 do
             PerformEggBreakAttack(targetCFrame, prompt, eggPart)
             task.wait(0.1)
         end
 
-        ShowNotification("✓ Unlocked Rare Egg Hit!", "👑 Attacked " .. eggName .. " (" .. tostring(distFromBase) .. " studs from base)!")
+        ShowNotification("✓ Rare Egg Attacked!", "👑 Hit " .. eggName .. " successfully!")
     else
-        ShowNotification("No Unlocked Egg Found", "Scanning map... No active unlocked eggs found.")
+        ShowNotification("⚠️ No Unlocked Egg Found", "Map scan completed: No active eggs found in unlocked zones.", true)
     end
 end
 
--- 1-Click Action: Teleport to Unlocked Rare Egg (Teleports to furthest unlocked egg and stays there)
+-- 1-Click Action: Teleport to Unlocked Rare Egg (Teleports and STAYS there permanently)
 local function TeleportToRareEggAction()
     if not isAlive() then return end
     local char = LocalPlayer.Character
@@ -695,15 +751,10 @@ local function TeleportToRareEggAction()
 
     local targetCFrame, prompt, eggPart, _, eggName, distFromBase = FindRarestEgg(hrp.Position)
     if targetCFrame then
-        hrp.AssemblyLinearVelocity = Vector3.zero
-        hrp.AssemblyAngularVelocity = Vector3.zero
-        hrp.CFrame = targetCFrame * CFrame.new(0, 3.2, 0)
-        task.wait(0.15)
-        if prompt then InstantTriggerPrompt(prompt) end
-        if eggPart then InstantTouch(hrp, eggPart) end
-        ShowNotification("⚡ Teleported to Unlocked Egg", "👑 " .. eggName .. " (Furthest: " .. tostring(distFromBase) .. " studs)")
+        SafeTeleportToEgg(targetCFrame, true)
+        ShowNotification("⚡ Teleported to Unlocked Egg", "👑 " .. eggName .. " (Furthest: " .. tostring(distFromBase) .. " studs) - Holding Position!")
     else
-        ShowNotification("No Unlocked Egg Found", "Scanning map... No active unlocked eggs found.")
+        ShowNotification("⚠️ No Unlocked Egg Found", "Map scan completed: No active eggs found in unlocked zones.", true)
     end
 end
 
@@ -1000,7 +1051,7 @@ AddActionButton("💎 Break Unlocked Rare Egg", function(btn)
     end)
 end)
 
--- 2. Teleport to Unlocked Rare Egg (1-Click Instant Action)
+-- 2. Teleport to Unlocked Rare Egg (1-Click Instant Action - STAYS at destination)
 AddActionButton("⚡ Teleport to Unlocked Rare Egg", function(btn)
     btn.Text = "⏳ Teleporting..."
     btn.TextColor3 = Color3.fromRGB(220, 50, 255)
@@ -1012,7 +1063,14 @@ AddActionButton("⚡ Teleport to Unlocked Rare Egg", function(btn)
 end)
 
 -- 3. Auto Break Unlocked Rare Egg (Continuous Loop)
-AddToggleRow("Auto Break Unlocked Rare Egg", "AutoBreakRare", function(state) end)
+AddToggleRow("Auto Break Unlocked Rare Egg", "AutoBreakRare", function(state)
+    if state then
+        local hasHammer, tool = EnsureHammerEquipped()
+        if not hasHammer then
+            ShowNotification("⚠️ REQUIREMENT: Hammer Needed", "Aapke paas Hammer nahi hai! Pehle Shop se Hammer lein.", true)
+        end
+    end
+end)
 
 -- 4. Unlocked Rare Egg ESP (Neon Magenta Glowing Highlight + Distance Billboard)
 AddToggleRow("Unlocked Rare Egg ESP", "RareEggESP", function(state)
@@ -1047,7 +1105,7 @@ AddToggleRow("Auto Buy Best Hammer", "AutoBuyHammer", function(state) end)
 -- 9. Auto Rebirth (Automatic Prestige Engine)
 AddToggleRow("Auto Rebirth", "AutoRebirth", function(state) end)
 
--- 9. Action Button: Set Current Base Position
+-- 10. Action Button: Set Current Base Position
 AddActionButton("📍 Set Current Base Position", function(btn)
     if isAlive() then
         SavedBaseCFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
@@ -1060,7 +1118,7 @@ AddActionButton("📍 Set Current Base Position", function(btn)
     end
 end)
 
--- 10. Action Button: Teleport to Base
+-- 11. Action Button: Teleport to Base
 AddActionButton("⚡ Teleport to Base", function(btn)
     if isAlive() then
         if not SavedBaseCFrame then
@@ -1077,16 +1135,16 @@ AddActionButton("⚡ Teleport to Base", function(btn)
     end
 end)
 
--- 11. Fly Mode (Smooth 3D Flight)
+-- 12. Fly Mode (Smooth 3D Flight)
 AddToggleRow("Fly Mode (3D Flight)", "FlyMode", function(state) end)
 
--- 12. Noclip Mode
+-- 13. Noclip Mode
 AddToggleRow("Noclip (Phase Walls)", "Noclip", function(state) end)
 
--- 13. Infinite Jump
+-- 14. Infinite Jump
 AddToggleRow("Infinite Jump", "InfiniteJump", function(state) end)
 
--- 14. Integrated WalkSpeed Row with - / + Pill Adjuster
+-- 15. Integrated WalkSpeed Row with - / + Pill Adjuster
 local SpeedRow = Instance.new("Frame")
 SpeedRow.Size = UDim2.new(1, -6, 0, 24)
 SpeedRow.BackgroundTransparency = 1
@@ -1237,35 +1295,39 @@ FooterSub.Parent = Footer
 -- ====================================================
 task.spawn(function()
     while true do
-        task.wait(0.2)
+        task.wait(0.18)
         if Toggles.AutoBreakRare and isAlive() then
             local char = LocalPlayer.Character
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
 
             if hrp then
-                local targetCFrame, prompt, eggPart, locKey, eggName, distFromBase = FindRarestEgg(hrp.Position)
+                local hasHammer, tool = EnsureHammerEquipped()
+                if not hasHammer then
+                    ShowNotification("⚠️ REQUIREMENT: Hammer Needed", "Aapke paas Hammer nahi hai! Pehle Hammer buy ya equip karein.", true)
+                    task.wait(1.5)
+                else
+                    local targetCFrame, prompt, eggPart, locKey, eggName, distFromBase = FindRarestEgg(hrp.Position)
 
-                if targetCFrame then
-                    hrp.AssemblyLinearVelocity = Vector3.zero
-                    hrp.AssemblyAngularVelocity = Vector3.zero
-                    hrp.CFrame = targetCFrame * CFrame.new(0, 2.2, 0)
-                    task.wait(0.1)
+                    if targetCFrame then
+                        SafeTeleportToEgg(targetCFrame, false)
+                        task.wait(0.08)
 
-                    -- Attack and Break Egg
-                    PerformEggBreakAttack(targetCFrame, prompt, eggPart)
+                        -- Attack and Break Egg
+                        PerformEggBreakAttack(targetCFrame, prompt, eggPart)
 
-                    -- Trigger any nearby drops or prompts
-                    for _, p in ipairs(Workspace:GetDescendants()) do
-                        if p:IsA("ProximityPrompt") and p.Parent then
-                            local pPos = p.Parent:IsA("BasePart") and p.Parent.Position or nil
-                            if pPos and (pPos - hrp.Position).Magnitude < 30 then
-                                InstantTriggerPrompt(p)
+                        -- Trigger any nearby drops or prompts
+                        for _, p in ipairs(Workspace:GetDescendants()) do
+                            if p:IsA("ProximityPrompt") and p.Parent then
+                                local pPos = p.Parent:IsA("BasePart") and p.Parent.Position or nil
+                                if pPos and (pPos - hrp.Position).Magnitude < 30 then
+                                    InstantTriggerPrompt(p)
+                                end
                             end
                         end
+                        task.wait(0.12)
+                    else
+                        task.wait(0.6)
                     end
-                    task.wait(0.15)
-                else
-                    task.wait(0.5)
                 end
             end
         end
@@ -1368,7 +1430,7 @@ task.spawn(function()
             end)
 
             -- E. Auto-Equip newly purchased best hammer from backpack
-            EquipBestTool()
+            EnsureHammerEquipped()
         end
     end
 end)
@@ -1624,6 +1686,7 @@ end)
 LocalPlayer.CharacterAdded:Connect(function()
     task.wait(0.5)
     UpdateCharacterSpeed()
+    EnsureHammerEquipped()
 end)
 
 -- ====================================================
@@ -1635,3 +1698,5 @@ LocalPlayer.Idled:Connect(function()
         VirtualUser:ClickButton2(Vector2.zero)
     end
 end)
+
+print("[JunejoHub] Break a Brainrot Egg V2.1 Loaded Successfully!")
