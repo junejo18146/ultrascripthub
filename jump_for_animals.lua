@@ -22,6 +22,7 @@ end
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
 local VirtualUser = nil
@@ -100,6 +101,16 @@ local Settings = {
 
 _G.Settings = Settings
 
+local SavedBaseCFrame = nil
+pcall(function()
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local hrp = char:WaitForChild("HumanoidRootPart", 5)
+    if hrp then
+        SavedBaseCFrame = hrp.CFrame
+        Settings.PlotCFrame = hrp.CFrame
+    end
+end)
+
 local function isAlive()
     local char = LocalPlayer.Character
     return char and char:FindFirstChild("Humanoid") and char.Humanoid.Health > 0 and char:FindFirstChild("HumanoidRootPart")
@@ -109,17 +120,16 @@ local function hasEggCarried()
     if not isAlive() then return false end
     local char = LocalPlayer.Character
     for _, obj in pairs(char:GetChildren()) do
-        if obj:IsA("Tool") and obj.Name:lower():find("egg") then
-            return true
-        end
-        if (obj:IsA("Model") or obj:IsA("BasePart")) and obj.Name:lower():find("egg") then
+        local n = obj.Name:lower()
+        if (obj:IsA("Tool") or obj:IsA("Model") or obj:IsA("BasePart") or obj:IsA("Accessory")) and (n:find("egg") or n:find("animal") or n:find("carry") or n:find("pet")) then
             return true
         end
     end
     local bp = LocalPlayer:FindFirstChild("Backpack")
     if bp then
         for _, tool in pairs(bp:GetChildren()) do
-            if tool.Name:lower():find("egg") then
+            local n = tool.Name:lower()
+            if n:find("egg") or n:find("animal") or n:find("carry") or n:find("pet") then
                 return true
             end
         end
@@ -127,21 +137,30 @@ local function hasEggCarried()
     return false
 end
 
-local function triggerPrompt(prompt)
+-- Instant Proximity Prompt Trigger
+local function FirePromptInstantly(prompt)
     if not prompt or not prompt:IsA("ProximityPrompt") then return end
     pcall(function()
+        prompt.HoldDuration = 0
+        prompt.MaxActivationDistance = math.huge
+        prompt.RequiresLineOfSight = false
+        prompt.Enabled = true
+
         if fireproximityprompt then
+            fireproximityprompt(prompt, 0)
+            fireproximityprompt(prompt, 1)
             fireproximityprompt(prompt)
-        else
+        end
+        if prompt.InputHoldBegin and prompt.InputHoldEnd then
             prompt:InputHoldBegin()
-            task.wait(prompt.HoldDuration or 0)
+            task.wait(0.01)
             prompt:InputHoldEnd()
         end
     end)
 end
 
--- Touch Interest Helper
-local function triggerTouch(part, targetPart)
+-- Universal Touch Interest Trigger
+local function InstantTouch(part, targetPart)
     if not part or not targetPart then return end
     pcall(function()
         if firetouchinterest then
@@ -153,10 +172,11 @@ local function triggerTouch(part, targetPart)
     end)
 end
 
--- Smart Dynamic Egg / Nest Finder
-local function findEggLocation()
+-- Find all egg targets dynamically
+local function getAllEggTargets()
+    local targets = {}
     if Settings.EggNestCFrame then
-        return Settings.EggNestCFrame, nil, nil
+        table.insert(targets, {cframe = Settings.EggNestCFrame, prompt = nil, part = nil})
     end
 
     -- Scan for ProximityPrompts for eggs
@@ -166,97 +186,142 @@ local function findEggLocation()
             if text:find("egg") or text:find("steal") or text:find("take") or text:find("grab") or text:find("nest") or text:find("pick") then
                 local part = prompt.Parent:IsA("BasePart") and prompt.Parent or prompt.Parent:FindFirstChildWhichIsA("BasePart")
                 if part then
-                    return part.CFrame * CFrame.new(0, 3, 0), prompt, part
+                    table.insert(targets, {cframe = part.CFrame * CFrame.new(0, 3, 0), prompt = prompt, part = part})
                 end
             end
         end
     end
 
-    -- Fallback: Scan workspace models named Egg or Nest
+    -- Scan workspace models named Egg or Nest
     for _, obj in pairs(Workspace:GetDescendants()) do
         if (obj:IsA("Model") or obj:IsA("BasePart")) then
             local n = obj.Name:lower()
             if (n:find("egg") or n:find("nest")) and not n:find("highlight") and not n:find("gui") then
                 local part = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
                 if part and (not LocalPlayer.Character or not part:IsDescendantOf(LocalPlayer.Character)) then
-                    return part.CFrame * CFrame.new(0, 3, 0), nil, part
+                    table.insert(targets, {cframe = part.CFrame * CFrame.new(0, 3, 0), prompt = nil, part = part})
                 end
             end
         end
     end
 
-    return nil, nil, nil
+    return targets
 end
 
+local isStealingInProgress = false
+
 local function performStealAndReturn()
-    if not isAlive() then return false end
+    if isStealingInProgress or not isAlive() then return false end
+    isStealingInProgress = true
+
     local char = LocalPlayer.Character
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return false end
-
-    -- Auto-record Base if not set
-    if not Settings.PlotCFrame then
-        Settings.PlotCFrame = hrp.CFrame
-        notify("Base Saved", "Current location automatically saved as Base Plot!", 2)
-    end
-
-    local eggCF, targetPrompt, eggPart = findEggLocation()
-    if not eggCF then
-        notify("No Egg Found", "Egg/Nest nahi mila! Pehle 'Record Egg Nest' click karein.", 2.5)
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if not hrp or not hum then
+        isStealingInProgress = false
         return false
     end
 
-    -- 1. Teleport to Egg
+    -- Ensure Base CFrame is safely set
+    local baseCF = Settings.PlotCFrame or SavedBaseCFrame or hrp.CFrame
+    Settings.PlotCFrame = baseCF
+    SavedBaseCFrame = baseCF
+
+    local targets = getAllEggTargets()
+    if #targets == 0 then
+        notify("No Egg Found", "Pehle 'Record Egg Nest' click karein ya Egg ke paas jayein!", 2.5)
+        isStealingInProgress = false
+        return false
+    end
+
+    local target = targets[1]
+
+    -- Step 1: Temporarily disable collisions and Teleport to Egg
+    for _, p in ipairs(char:GetDescendants()) do
+        if p:IsA("BasePart") then p.CanCollide = false end
+    end
+    hum.Sit = false
     hrp.AssemblyLinearVelocity = Vector3.zero
     hrp.AssemblyAngularVelocity = Vector3.zero
-    hrp.CFrame = eggCF
-    task.wait(0.2)
+    hrp.CFrame = target.cframe
+    task.wait(0.12)
+    hrp.CFrame = target.cframe
+    hrp.AssemblyLinearVelocity = Vector3.zero
 
-    -- 2. Trigger Pick / Steal Prompt
-    for _ = 1, 4 do
-        if targetPrompt then triggerPrompt(targetPrompt) end
-        if eggPart then triggerTouch(hrp, eggPart) end
+    -- Step 2: Spam trigger prompts, touches, and remotes at Egg
+    for _ = 1, 5 do
+        if target.prompt then FirePromptInstantly(target.prompt) end
+        if target.part then InstantTouch(hrp, target.part) end
+
         for _, prompt in pairs(Workspace:GetDescendants()) do
             if prompt:IsA("ProximityPrompt") and prompt.Parent then
                 local part = prompt.Parent:IsA("BasePart") and prompt.Parent or prompt.Parent:FindFirstChildWhichIsA("BasePart")
-                if part and (part.Position - hrp.Position).Magnitude < 25 then
-                    triggerPrompt(prompt)
+                if part and (part.Position - hrp.Position).Magnitude < 30 then
+                    FirePromptInstantly(prompt)
+                    InstantTouch(hrp, part)
                 end
             end
         end
+
+        pcall(function()
+            for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
+                if rem:IsA("RemoteEvent") then
+                    local rn = rem.Name:lower()
+                    if rn:find("steal") or rn:find("egg") or rn:find("take") or rn:find("grab") or rn:find("claim") then
+                        rem:FireServer()
+                        if target.part then rem:FireServer(target.part) end
+                    end
+                end
+            end
+        end)
+
         if VirtualUser then
             VirtualUser:CaptureController()
             VirtualUser:ClickButton1(Vector2.new(500, 500))
         end
-        task.wait(0.08)
+        task.wait(0.06)
     end
 
     task.wait(0.15)
 
-    -- 3. Teleport back to Base
-    if Settings.PlotCFrame then
-        hrp.AssemblyLinearVelocity = Vector3.zero
-        hrp.AssemblyAngularVelocity = Vector3.zero
-        hrp.CFrame = Settings.PlotCFrame
-        task.wait(0.2)
+    -- Step 3: Teleport back to Base
+    hrp.AssemblyLinearVelocity = Vector3.zero
+    hrp.AssemblyAngularVelocity = Vector3.zero
+    hrp.CFrame = baseCF
+    task.wait(0.12)
+    hrp.CFrame = baseCF
+    hrp.AssemblyLinearVelocity = Vector3.zero
 
-        -- 4. Trigger Deposit / Hatch Prompts
-        for _ = 1, 4 do
-            for _, prompt in pairs(Workspace:GetDescendants()) do
-                if prompt:IsA("ProximityPrompt") and prompt.Parent then
-                    local part = prompt.Parent:IsA("BasePart") and prompt.Parent or prompt.Parent:FindFirstChildWhichIsA("BasePart")
-                    if part and (part.Position - hrp.Position).Magnitude < 25 then
-                        local txt = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Parent.Name):lower()
-                        if txt:find("place") or txt:find("drop") or txt:find("deliver") or txt:find("deposit") or txt:find("hatch") or txt:find("egg") or txt:find("base") then
-                            triggerPrompt(prompt)
-                        end
+    -- Step 4: Deposit / Hatch Prompts at Base
+    for _ = 1, 5 do
+        for _, prompt in pairs(Workspace:GetDescendants()) do
+            if prompt:IsA("ProximityPrompt") and prompt.Parent then
+                local part = prompt.Parent:IsA("BasePart") and prompt.Parent or prompt.Parent:FindFirstChildWhichIsA("BasePart")
+                if part and (part.Position - hrp.Position).Magnitude < 30 then
+                    local txt = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Parent.Name):lower()
+                    if txt:find("place") or txt:find("drop") or txt:find("deliver") or txt:find("deposit") or txt:find("hatch") or txt:find("egg") or txt:find("base") or txt:find("nest") then
+                        FirePromptInstantly(prompt)
+                        InstantTouch(hrp, part)
                     end
                 end
             end
-            task.wait(0.08)
         end
+
+        pcall(function()
+            for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
+                if rem:IsA("RemoteEvent") then
+                    local rn = rem.Name:lower()
+                    if rn:find("deposit") or rn:find("deliver") or rn:find("hatch") or rn:find("place") or rn:find("drop") then
+                        rem:FireServer()
+                    end
+                end
+            end
+        end)
+
+        task.wait(0.06)
     end
 
+    isStealingInProgress = false
     return true
 end
 
@@ -510,12 +575,14 @@ AddSectionHeader("Main Automation")
 
 AddToggleRow("Auto Steal Egg Loop", "AutoFarmEggs", function(state)
     if state then
-        if not Settings.PlotCFrame and isAlive() then
+        if isAlive() and not Settings.PlotCFrame then
             Settings.PlotCFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
-            notify("Auto Steal", "Base automatically saved & Steal Loop Active!", 2.5)
-        else
-            notify("Auto Steal", "Auto Steal Loop Started!", 2)
+            SavedBaseCFrame = Settings.PlotCFrame
         end
+        notify("Auto Steal", "Auto Steal Egg Loop Started!", 2)
+        spawnTask(performStealAndReturn)
+    else
+        notify("Auto Steal", "Auto Steal Paused.", 1.5)
     end
 end)
 
@@ -536,6 +603,7 @@ end)
 AddActionRow("Record Base / Plot", "Set", function(btn)
     if isAlive() then
         Settings.PlotCFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
+        SavedBaseCFrame = Settings.PlotCFrame
         btn.Text = "Saved!"
         notify("Waypoint", "Base Plot Position Saved!", 2)
         task.delay(1.5, function() btn.Text = "Set" end)
@@ -564,8 +632,8 @@ end)
 AddSectionHeader("Teleport Waypoints")
 
 AddActionRow("Teleport to Base", "TP", function()
-    if isAlive() and Settings.PlotCFrame then
-        LocalPlayer.Character.HumanoidRootPart.CFrame = Settings.PlotCFrame
+    if isAlive() and (Settings.PlotCFrame or SavedBaseCFrame) then
+        LocalPlayer.Character.HumanoidRootPart.CFrame = Settings.PlotCFrame or SavedBaseCFrame
         notify("Teleport", "Teleported to Base!", 2)
     else
         notify("Error", "Base position not recorded yet!", 2)
@@ -894,9 +962,10 @@ FooterSub.Parent = Footer
 -- Egg Steal Route With Verification
 spawnTask(function()
     while true do
-        task.wait(0.5)
+        task.wait(0.3)
         if Settings.AutoFarmEggs and isAlive() then
             pcall(performStealAndReturn)
+            task.wait(0.3)
         end
     end
 end)
