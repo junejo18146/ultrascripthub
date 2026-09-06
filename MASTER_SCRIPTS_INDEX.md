@@ -627,14 +627,23 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   ```
 - **Key System Status**: Disabled (Direct Standalone Executable)
 - **Features Included**:
-  - Teleport Safe Zone (One-click instant lobby/spawn escape)
-  - Player ESP (Dynamic highlights, Player names, HP% and distance tracker)
+  - Zero-Delay Rapid Kill Aura (Instant M1 attacks + direct melee damage packets)
+  - Auto Counter Attack / Revenge Aura (Automatically targets and fights back when attacked)
+  - Instant Auto Get Up / Anti-Ragdoll (< 0.1s instant recovery from knockdowns/trips)
   - Hitbox Expander (18x18 Studs Neon Red expanded target hitboxes)
-  - Fly Mode (Smooth 3D Flight with WASD / Mobile Touch support)
-  - WalkSpeed (+ / - Pill Controller from 16 to 250 speed)
-  - Infinite Jump (Continuous Space / Mobile Multi-Jump bypass)
+  - Target Lowest HP Player (Smart Yen & Bounty Farm)
+  - Auto Cast Skills (Q, E, R Ability Keys)
+  - Anti-Void / Fall-Proof (Automatic terrain recovery if pushed off map)
+  - WalkSpeed Boost + Integrated Pill Controller (- / +: 16 to 150)
+  - Infinite Jump
+  - Arena Fly Mode + Integrated Pill Controller (- / +: 10 to 120)
+  - Auto NoClip
+  - Teleport Safe Zone (1-Click instant lobby/spawn escape)
+  - Teleport Behind Nearest Enemy (Instant Backstab)
+  - Click-to-TP Tool (Backpack)
+  - Player ESP Highlights, Health & Distance Tags, ESP Tracers
   - Anti-AFK Engine (Auto 20-minute idle disconnect protection)
-  - Official Classic Junejo Dark UI (Flat Borderless Rows Standard, 280x245px)
+  - Official Classic Junejo Dark UI (Flat Borderless Rows Standard, 280x285px)
 ---
 
 ## 37. Jump for Animals
