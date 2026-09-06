@@ -140,6 +140,126 @@ local function triggerPrompt(prompt)
     end)
 end
 
+-- Touch Interest Helper
+local function triggerTouch(part, targetPart)
+    if not part or not targetPart then return end
+    pcall(function()
+        if firetouchinterest then
+            firetouchinterest(part, targetPart, 0)
+            firetouchinterest(part, targetPart, 1)
+            firetouchinterest(targetPart, part, 0)
+            firetouchinterest(targetPart, part, 1)
+        end
+    end)
+end
+
+-- Smart Dynamic Egg / Nest Finder
+local function findEggLocation()
+    if Settings.EggNestCFrame then
+        return Settings.EggNestCFrame, nil, nil
+    end
+
+    -- Scan for ProximityPrompts for eggs
+    for _, prompt in pairs(Workspace:GetDescendants()) do
+        if prompt:IsA("ProximityPrompt") and prompt.Enabled and prompt.Parent then
+            local text = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Parent.Name):lower()
+            if text:find("egg") or text:find("steal") or text:find("take") or text:find("grab") or text:find("nest") or text:find("pick") then
+                local part = prompt.Parent:IsA("BasePart") and prompt.Parent or prompt.Parent:FindFirstChildWhichIsA("BasePart")
+                if part then
+                    return part.CFrame * CFrame.new(0, 3, 0), prompt, part
+                end
+            end
+        end
+    end
+
+    -- Fallback: Scan workspace models named Egg or Nest
+    for _, obj in pairs(Workspace:GetDescendants()) do
+        if (obj:IsA("Model") or obj:IsA("BasePart")) then
+            local n = obj.Name:lower()
+            if (n:find("egg") or n:find("nest")) and not n:find("highlight") and not n:find("gui") then
+                local part = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
+                if part and (not LocalPlayer.Character or not part:IsDescendantOf(LocalPlayer.Character)) then
+                    return part.CFrame * CFrame.new(0, 3, 0), nil, part
+                end
+            end
+        end
+    end
+
+    return nil, nil, nil
+end
+
+local function performStealAndReturn()
+    if not isAlive() then return false end
+    local char = LocalPlayer.Character
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return false end
+
+    -- Auto-record Base if not set
+    if not Settings.PlotCFrame then
+        Settings.PlotCFrame = hrp.CFrame
+        notify("Base Saved", "Current location automatically saved as Base Plot!", 2)
+    end
+
+    local eggCF, targetPrompt, eggPart = findEggLocation()
+    if not eggCF then
+        notify("No Egg Found", "Egg/Nest nahi mila! Pehle 'Record Egg Nest' click karein.", 2.5)
+        return false
+    end
+
+    -- 1. Teleport to Egg
+    hrp.AssemblyLinearVelocity = Vector3.zero
+    hrp.AssemblyAngularVelocity = Vector3.zero
+    hrp.CFrame = eggCF
+    task.wait(0.2)
+
+    -- 2. Trigger Pick / Steal Prompt
+    for _ = 1, 4 do
+        if targetPrompt then triggerPrompt(targetPrompt) end
+        if eggPart then triggerTouch(hrp, eggPart) end
+        for _, prompt in pairs(Workspace:GetDescendants()) do
+            if prompt:IsA("ProximityPrompt") and prompt.Parent then
+                local part = prompt.Parent:IsA("BasePart") and prompt.Parent or prompt.Parent:FindFirstChildWhichIsA("BasePart")
+                if part and (part.Position - hrp.Position).Magnitude < 25 then
+                    triggerPrompt(prompt)
+                end
+            end
+        end
+        if VirtualUser then
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton1(Vector2.new(500, 500))
+        end
+        task.wait(0.08)
+    end
+
+    task.wait(0.15)
+
+    -- 3. Teleport back to Base
+    if Settings.PlotCFrame then
+        hrp.AssemblyLinearVelocity = Vector3.zero
+        hrp.AssemblyAngularVelocity = Vector3.zero
+        hrp.CFrame = Settings.PlotCFrame
+        task.wait(0.2)
+
+        -- 4. Trigger Deposit / Hatch Prompts
+        for _ = 1, 4 do
+            for _, prompt in pairs(Workspace:GetDescendants()) do
+                if prompt:IsA("ProximityPrompt") and prompt.Parent then
+                    local part = prompt.Parent:IsA("BasePart") and prompt.Parent or prompt.Parent:FindFirstChildWhichIsA("BasePart")
+                    if part and (part.Position - hrp.Position).Magnitude < 25 then
+                        local txt = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Parent.Name):lower()
+                        if txt:find("place") or txt:find("drop") or txt:find("deliver") or txt:find("deposit") or txt:find("hatch") or txt:find("egg") or txt:find("base") then
+                            triggerPrompt(prompt)
+                        end
+                    end
+                end
+            end
+            task.wait(0.08)
+        end
+    end
+
+    return true
+end
+
 -- ====================================================
 -- OFFICIAL JUNEJO BORDERLESS UI (280x285px)
 -- STRICT FLAT BORDERLESS ROWS ONLY
@@ -390,12 +510,17 @@ AddSectionHeader("Main Automation")
 
 AddToggleRow("Auto Steal Egg Loop", "AutoFarmEggs", function(state)
     if state then
-        if not Settings.PlotCFrame or not Settings.EggNestCFrame then
-            notify("Setup Needed", "Pehle 'Record Base' aur 'Record Egg Nest' click karein!", 3.5)
+        if not Settings.PlotCFrame and isAlive() then
+            Settings.PlotCFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
+            notify("Auto Steal", "Base automatically saved & Steal Loop Active!", 2.5)
         else
             notify("Auto Steal", "Auto Steal Loop Started!", 2)
         end
     end
+end)
+
+AddActionRow("Steal Egg (1-Click)", "Steal", function()
+    spawnTask(performStealAndReturn)
 end)
 
 AddToggleRow("Auto Train Spot", "AutoTrain", function(state)
@@ -771,51 +896,7 @@ spawnTask(function()
     while true do
         task.wait(0.5)
         if Settings.AutoFarmEggs and isAlive() then
-            if Settings.EggNestCFrame and Settings.PlotCFrame then
-                local hrp = LocalPlayer.Character.HumanoidRootPart
-
-                if not hasEggCarried() then
-                    hrp.CFrame = Settings.EggNestCFrame
-                    task.wait(0.3)
-
-                    local pickAttempts = 0
-                    repeat
-                        for _, prompt in pairs(Workspace:GetDescendants()) do
-                            if prompt:IsA("ProximityPrompt") and prompt.Parent then
-                                local part = prompt.Parent:IsA("BasePart") and prompt.Parent or prompt.Parent:FindFirstChildWhichIsA("BasePart")
-                                if part and (part.Position - hrp.Position).Magnitude < 22 then
-                                    triggerPrompt(prompt)
-                                end
-                            end
-                        end
-                        task.wait(0.2)
-                        pickAttempts = pickAttempts + 1
-                    until hasEggCarried() or pickAttempts > 15 or not Settings.AutoFarmEggs or not isAlive()
-                end
-
-                if hasEggCarried() then
-                    hrp.CFrame = Settings.PlotCFrame
-                    task.wait(0.3)
-
-                    local dropAttempts = 0
-                    repeat
-                        for _, prompt in pairs(Workspace:GetDescendants()) do
-                            if prompt:IsA("ProximityPrompt") and prompt.Parent then
-                                local part = prompt.Parent:IsA("BasePart") and prompt.Parent or prompt.Parent:FindFirstChildWhichIsA("BasePart")
-                                if part and (part.Position - hrp.Position).Magnitude < 22 then
-                                    local txt = (prompt.ActionText .. " " .. prompt.ObjectText):lower()
-                                    if txt:find("place") or txt:find("drop") or txt:find("deliver") or txt:find("deposit") or txt:find("hatch") then
-                                        triggerPrompt(prompt)
-                                    end
-                                end
-                            end
-                        end
-                        task.wait(0.2)
-                        dropAttempts = dropAttempts + 1
-                    until not hasEggCarried() or dropAttempts > 12 or not Settings.AutoFarmEggs or not isAlive()
-                    task.wait(0.4)
-                end
-            end
+            pcall(performStealAndReturn)
         end
     end
 end)
