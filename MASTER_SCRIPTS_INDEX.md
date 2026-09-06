@@ -804,6 +804,31 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   - Anti-AFK Engine (Auto 20-minute idle disconnect protection)
   - Official Classic Junejo Dark UI (Flat Borderless Standard, 280x285px)
 
+---
+
+## 43. Climb and Jump Tower
+- **Game Name**: Climb and Jump Tower
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/climb_and_jump_tower.lua"))()
+  ```
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included**:
+  - Auto Win / Instant Top Trophy Farm (Automatic Tower completion)
+  - Auto Jump Coin Farm (Auto Top Teleport + Max fall distance coins)
+  - Fast Speed Climb + Boost Pill Controller (- / +: 20 to 200 speed)
+  - Auto Hatch Eggs (Instant Cutscene Skip)
+  - Auto Claim Free Gifts, Lucky Spins & Daily Chests
+  - WalkSpeed Boost + Integrated Pill Controller (- / +: 16 to 200 speed)
+  - Infinite Jump
+  - Tower Fly Mode + Integrated Pill Controller (- / +: 10 to 150 speed)
+  - Auto NoClip
+  - Teleport to Top (1-Click)
+  - Teleport to Base / Spawn Area (1-Click)
+  - Click-to-TP Tool (Backpack)
+  - Anti-AFK Engine (Auto 20-minute idle disconnect protection)
+  - Official Classic Junejo Dark UI (Flat Borderless Standard, 280x285px)
+
 ====================================================
 Updated: September 6, 2026
 ====================================================
