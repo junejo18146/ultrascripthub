@@ -694,10 +694,10 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   ```
 - **Key System Status**: Disabled (Direct Standalone Executable)
 - **Features Included**:
-  - 💎 Steal Rare Egg (1-Click Action: Scans map for rarest lucky egg, teleports to it, grabs with 0s prompt & returns to Base instantly)
-  - ⚡ Teleport to Rare Egg (1-Click Action: Instant direct teleport to the highest-tier/rarest lucky egg on map)
-  - 👑 Rare Egg ESP (Neon Magenta Glowing Highlight + Live Rarity Score, Egg Name & Distance Billboard Tag)
-  - Auto Steal Rare Egg (Continuous automated pipeline seeking & depositing rarest lucky eggs)
+  - 💎 Steal Rare Egg (1-Click Action: Scans map for furthest lucky egg, teleports to it, grabs on the spot & stays at rare egg location)
+  - ⚡ Teleport to Rare Egg (1-Click Action: Instant direct teleport to the furthest lucky egg on map, stays at location)
+  - 👑 Rare Egg ESP (Neon Magenta Glowing Highlight + Live Furthest Distance from Base & Me Billboard Tag)
+  - Auto Steal Rare Egg (Continuous automated loop seeking & collecting furthest lucky eggs across zones without returning to base)
   - Auto Steal Nearest Egg (Auto 0s grab + instant teleport to base & deposit)
   - 1-Click Set Base Position (Saves player's exact base coordinates safely)
   - 1-Click Instant Teleport to Base (Failsafe return with 0 velocity)
@@ -717,9 +717,88 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   - Anti-AFK Engine (Auto 20-minute idle disconnect protection)
   - Official Classic Junejo Dark UI (Compact 280x285px Scrolling Standard)
 
+---
+
+## 40. Break a Brainrot Egg (V3.0 - 100% Flat & Borderless Standard UI)
+- **Game Name**: Break a Brainrot Egg
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/break_a_brainrot_egg.lua"))()
+  ```
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included (All Flat Borderless Toggle Rows)**:
+  - Break Rare Egg (Flat Toggle Row with Checkbox)
+  - Teleport to Rare Egg (Flat Toggle Row with Checkbox)
+  - Auto Break Rare Egg (Flat Toggle Row with Checkbox)
+  - Rare Egg ESP (Flat Toggle Row with Checkbox)
+  - Infinite Cash (+999B) (Flat Toggle Row with Checkbox)
+  - Auto Buy Best Hammer (Flat Toggle Row with Checkbox)
+  - Auto Rebirth (Flat Toggle Row with Checkbox)
+  - Teleport to Base (Flat Toggle Row with Checkbox)
+  - Fly Mode (Flat Toggle Row with Checkbox)
+  - Noclip (Flat Toggle Row with Checkbox)
+  - Infinite Jump (Flat Toggle Row with Checkbox)
+  - WalkSpeed (+ / - Pill Controller from 16 to 300 speed)
+  - Instant Proximity Prompts (0s hold across whole game)
+  - Anti-AFK Engine (Auto 20-minute idle disconnect protection)
+  - Official Classic Junejo Dark UI (Compact 280x285px Scrolling Standard)
+
+---
+
+## 41. Muscle Legends
+- **Game Name**: Muscle Legends
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/muscle_legends.lua"))()
+  ```
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included**:
+  - Smart Auto Rebirth (Automatic requirement fulfillment & chain rebirths)
+  - Auto Boost Push for Rebirth
+  - Auto Swap Rebirth Perk Pets (Tribal Overlord + Speedy Sally)
+  - Auto Upgrade Ultimates
+  - Fast Stat Farm (Strength, Agility, Durability, Rotate)
+  - Strength Source Selector (Tools vs Machines)
+  - King's Gym Tool Farm
+  - Auto Use Timed Boosts & Instant Shake/Bar Consumer
+  - Automatic Reward Claims (6h Chests, Group Rewards, Free Gifts, Fortune Wheel, Quests)
+  - Auto Hatch Crystals & Select Crystal
+  - Auto Equip Best Pets & Auto Evolve Ready Pets (x5)
+  - WalkSpeed Boost + Integrated Pill Controller (- / +: 16 to 300)
+  - Infinite Jump
+  - Area Teleports & Rejoin Server
+  - Anti-AFK Engine
+  - Official Classic Junejo Dark UI (Flat Borderless Standard, 280x285px)
+
+---
+
+## 42. Dungeon Quest Reborn
+- **Game Name**: Dungeon Quest Reborn
+- **Game ID**: 77649408247578
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/dungeon_quest_reborn.lua"))()
+  ```
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included**:
+  - Auto Attack / Kill Aura (Radius Adjuster Pill Controller)
+  - Auto Cast Skills & Spells (Q, E, R Ability Keys)
+  - Boss Focus Priority Targeting
+  - WalkSpeed Boost + Integrated Pill Controller (- / +: 16 to 100)
+  - Auto NoClip (Bypass Dungeon Gates & Locked Doors)
+  - Infinite Jump (Dodge Ground AOE Traps)
+  - Dungeon Fly Mode + Integrated Pill Controller (- / +: 10 to 100)
+  - Mob & Boss ESP with Dynamic Health Tracking
+  - ESP Tracers (Direct line from screen bottom to mobs)
+  - Chest, Key & Rare Loot Drop ESP
+  - Party Player ESP
+  - Anti-AFK Engine (Auto 20-minute idle disconnect protection)
+  - Official Classic Junejo Dark UI (Flat Borderless Standard, 280x285px)
+
 ====================================================
-Updated: September 4, 2026
+Updated: September 6, 2026
 ====================================================
+
 
 
 
