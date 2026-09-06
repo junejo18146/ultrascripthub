@@ -121,7 +121,7 @@ local function hasEggCarried()
     local char = LocalPlayer.Character
     for _, obj in pairs(char:GetChildren()) do
         local n = obj.Name:lower()
-        if (obj:IsA("Tool") or obj:IsA("Model") or obj:IsA("BasePart") or obj:IsA("Accessory")) and (n:find("egg") or n:find("animal") or n:find("carry") or n:find("pet")) then
+        if (obj:IsA("Tool") or obj:IsA("Model") or obj:IsA("BasePart") or obj:IsA("Accessory")) and (n:find("egg") or n:find("animal") or n:find("carry") or n:find("pet") or n:find("hold")) then
             return true
         end
     end
@@ -129,7 +129,7 @@ local function hasEggCarried()
     if bp then
         for _, tool in pairs(bp:GetChildren()) do
             local n = tool.Name:lower()
-            if n:find("egg") or n:find("animal") or n:find("carry") or n:find("pet") then
+            if n:find("egg") or n:find("animal") or n:find("carry") or n:find("pet") or n:find("hold") then
                 return true
             end
         end
@@ -208,21 +208,22 @@ local function getAllEggTargets()
     return targets
 end
 
-local isStealingInProgress = false
+local isStealingActive = false
+local autoStealToggleController = nil
 
 local function performStealAndReturn()
-    if isStealingInProgress or not isAlive() then return false end
-    isStealingInProgress = true
+    if isStealingActive or not isAlive() then return false end
+    isStealingActive = true
 
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
     local hum = char and char:FindFirstChildOfClass("Humanoid")
     if not hrp or not hum then
-        isStealingInProgress = false
+        isStealingActive = false
         return false
     end
 
-    -- Ensure Base CFrame is safely set
+    -- 1. Ensure Base CFrame is safely locked
     local baseCF = Settings.PlotCFrame or SavedBaseCFrame or hrp.CFrame
     Settings.PlotCFrame = baseCF
     SavedBaseCFrame = baseCF
@@ -230,13 +231,15 @@ local function performStealAndReturn()
     local targets = getAllEggTargets()
     if #targets == 0 then
         notify("No Egg Found", "Pehle 'Record Egg Nest' click karein ya Egg ke paas jayein!", 2.5)
-        isStealingInProgress = false
+        isStealingActive = false
+        if autoStealToggleController then autoStealToggleController.Set(false) end
         return false
     end
 
     local target = targets[1]
+    notify("Stealing Egg", "Egg Nest par ja rahe hain...", 2)
 
-    -- Step 1: Temporarily disable collisions and Teleport to Egg
+    -- Step 1: Disable collisions temporarily and Teleport to Egg
     for _, p in ipairs(char:GetDescendants()) do
         if p:IsA("BasePart") then p.CanCollide = false end
     end
@@ -244,19 +247,30 @@ local function performStealAndReturn()
     hrp.AssemblyLinearVelocity = Vector3.zero
     hrp.AssemblyAngularVelocity = Vector3.zero
     hrp.CFrame = target.cframe
-    task.wait(0.12)
-    hrp.CFrame = target.cframe
-    hrp.AssemblyLinearVelocity = Vector3.zero
+    task.wait(0.1)
 
-    -- Step 2: Spam trigger prompts, touches, and remotes at Egg
-    for _ = 1, 5 do
-        if target.prompt then FirePromptInstantly(target.prompt) end
-        if target.part then InstantTouch(hrp, target.part) end
+    -- Step 2: Stay at the egg and continuously grab until egg is in hands/inventory
+    local startTime = os.clock()
+
+    while os.clock() - startTime < 3.5 do
+        if not isAlive() then break end
+
+        -- Hold position directly at egg
+        hrp.AssemblyLinearVelocity = Vector3.zero
+        hrp.CFrame = target.cframe
+
+        -- Trigger prompt
+        if target.prompt then
+            FirePromptInstantly(target.prompt)
+        end
+        if target.part then
+            InstantTouch(hrp, target.part)
+        end
 
         for _, prompt in pairs(Workspace:GetDescendants()) do
             if prompt:IsA("ProximityPrompt") and prompt.Parent then
                 local part = prompt.Parent:IsA("BasePart") and prompt.Parent or prompt.Parent:FindFirstChildWhichIsA("BasePart")
-                if part and (part.Position - hrp.Position).Magnitude < 30 then
+                if part and (part.Position - hrp.Position).Magnitude < 25 then
                     FirePromptInstantly(prompt)
                     InstantTouch(hrp, part)
                 end
@@ -267,7 +281,7 @@ local function performStealAndReturn()
             for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
                 if rem:IsA("RemoteEvent") then
                     local rn = rem.Name:lower()
-                    if rn:find("steal") or rn:find("egg") or rn:find("take") or rn:find("grab") or rn:find("claim") then
+                    if rn:find("steal") or rn:find("egg") or rn:find("take") or rn:find("grab") or rn:find("claim") or rn:find("pick") then
                         rem:FireServer()
                         if target.part then rem:FireServer(target.part) end
                     end
@@ -279,21 +293,27 @@ local function performStealAndReturn()
             VirtualUser:CaptureController()
             VirtualUser:ClickButton1(Vector2.new(500, 500))
         end
-        task.wait(0.06)
+
+        if hasEggCarried() then
+            break
+        end
+
+        task.wait(0.12)
     end
 
     task.wait(0.15)
+    notify("Returning to Base", "Egg le kar Base par wapis ja rahe hain...", 2)
 
-    -- Step 3: Teleport back to Base
+    -- Step 3: Teleport directly back to Base Plot
     hrp.AssemblyLinearVelocity = Vector3.zero
     hrp.AssemblyAngularVelocity = Vector3.zero
     hrp.CFrame = baseCF
-    task.wait(0.12)
+    task.wait(0.1)
     hrp.CFrame = baseCF
     hrp.AssemblyLinearVelocity = Vector3.zero
 
-    -- Step 4: Deposit / Hatch Prompts at Base
-    for _ = 1, 5 do
+    -- Step 4: Deposit / Deliver egg at base
+    for _ = 1, 6 do
         for _, prompt in pairs(Workspace:GetDescendants()) do
             if prompt:IsA("ProximityPrompt") and prompt.Parent then
                 local part = prompt.Parent:IsA("BasePart") and prompt.Parent or prompt.Parent:FindFirstChildWhichIsA("BasePart")
@@ -318,10 +338,17 @@ local function performStealAndReturn()
             end
         end)
 
-        task.wait(0.06)
+        task.wait(0.08)
     end
 
-    isStealingInProgress = false
+    -- Step 5: Automatically turn OFF toggle and stop once safely at base!
+    Settings.AutoFarmEggs = false
+    if autoStealToggleController then
+        autoStealToggleController.Set(false)
+    end
+
+    notify("Egg Delivered!", "Egg base par safely pohnch gaya!", 3)
+    isStealingActive = false
     return true
 end
 
@@ -522,6 +549,14 @@ local function AddToggleRow(text, configKey, callback, defaultVal)
         CheckMark.BackgroundTransparency = Settings[configKey] and 0 or 1
         if callback then callback(Settings[configKey]) end
     end)
+
+    return {
+        Set = function(val)
+            Settings[configKey] = val
+            CheckMark.BackgroundTransparency = val and 0 or 1
+            if callback then callback(val) end
+        end
+    }
 end
 
 -- Helper Function: Add Action / Click Button Row
@@ -573,16 +608,14 @@ end
 -- 1. MAIN AUTOMATION
 AddSectionHeader("Main Automation")
 
-AddToggleRow("Auto Steal Egg Loop", "AutoFarmEggs", function(state)
+autoStealToggleController = AddToggleRow("Auto Steal Egg", "AutoFarmEggs", function(state)
     if state then
         if isAlive() and not Settings.PlotCFrame then
             Settings.PlotCFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
             SavedBaseCFrame = Settings.PlotCFrame
         end
-        notify("Auto Steal", "Auto Steal Egg Loop Started!", 2)
+        notify("Auto Steal", "Stealing egg and returning to base...", 2)
         spawnTask(performStealAndReturn)
-    else
-        notify("Auto Steal", "Auto Steal Paused.", 1.5)
     end
 end)
 
@@ -958,17 +991,6 @@ FooterSub.Parent = Footer
 -- ====================================================
 -- ORIGINAL VERIFIED GAME LOOPS & BACKGROUND ENGINES
 -- ====================================================
-
--- Egg Steal Route With Verification
-spawnTask(function()
-    while true do
-        task.wait(0.3)
-        if Settings.AutoFarmEggs and isAlive() then
-            pcall(performStealAndReturn)
-            task.wait(0.3)
-        end
-    end
-end)
 
 -- Safe, Death-Proof Auto Train Loop
 local isTeleportedToTrain = false
