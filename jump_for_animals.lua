@@ -116,6 +116,20 @@ local function isAlive()
     return char and char:FindFirstChild("Humanoid") and char.Humanoid.Health > 0 and char:FindFirstChild("HumanoidRootPart")
 end
 
+-- Inventory snapshot & possession detection
+local function takeSnapshot()
+    local snap = {}
+    if isAlive() then
+        local char = LocalPlayer.Character
+        for _, o in ipairs(char:GetChildren()) do snap[o] = true end
+        local bp = LocalPlayer:FindFirstChild("Backpack")
+        if bp then
+            for _, o in ipairs(bp:GetChildren()) do snap[o] = true end
+        end
+    end
+    return snap
+end
+
 local function hasEggCarried()
     if not isAlive() then return false end
     local char = LocalPlayer.Character
@@ -137,23 +151,61 @@ local function hasEggCarried()
     return false
 end
 
--- Instant Proximity Prompt Trigger
-local function FirePromptInstantly(prompt)
+local function isEggInPossession(initialSnap)
+    if not isAlive() then return false end
+    if hasEggCarried() then return true end
+
+    local char = LocalPlayer.Character
+    local bp = LocalPlayer:FindFirstChild("Backpack")
+
+    -- Delta snapshot check (new item added)
+    if initialSnap then
+        for _, obj in ipairs(char:GetChildren()) do
+            if not initialSnap[obj] and not obj:IsA("Highlight") and not obj:IsA("UIStroke") and not obj:IsA("BodyVelocity") and not obj:IsA("BodyGyro") and not obj:IsA("Humanoid") and not obj:IsA("BasePart") then
+                return true
+            end
+        end
+        if bp then
+            for _, obj in ipairs(bp:GetChildren()) do
+                if not initialSnap[obj] then
+                    return true
+                end
+            end
+        end
+    end
+
+    -- Attribute checks
+    for k, v in pairs(char:GetAttributes()) do
+        local kl = tostring(k):lower()
+        if (kl:find("egg") or kl:find("carry") or kl:find("hold") or kl:find("stolen")) and v ~= false and v ~= nil and v ~= 0 and v ~= "" then
+            return true
+        end
+    end
+    for k, v in pairs(LocalPlayer:GetAttributes()) do
+        local kl = tostring(k):lower()
+        if (kl:find("egg") or kl:find("carry") or kl:find("hold") or kl:find("stolen")) and v ~= false and v ~= nil and v ~= 0 and v ~= "" then
+            return true
+        end
+    end
+
+    return false
+end
+
+-- Clean Proximity Prompt Trigger
+local function triggerPromptClean(prompt)
     if not prompt or not prompt:IsA("ProximityPrompt") then return end
     pcall(function()
         prompt.HoldDuration = 0
-        prompt.MaxActivationDistance = math.huge
         prompt.RequiresLineOfSight = false
+        prompt.MaxActivationDistance = 9999
         prompt.Enabled = true
 
         if fireproximityprompt then
-            fireproximityprompt(prompt, 0)
-            fireproximityprompt(prompt, 1)
-            fireproximityprompt(prompt)
+            pcall(fireproximityprompt, prompt)
         end
         if prompt.InputHoldBegin and prompt.InputHoldEnd then
             prompt:InputHoldBegin()
-            task.wait(0.01)
+            task.wait(0.06)
             prompt:InputHoldEnd()
         end
     end)
@@ -172,40 +224,50 @@ local function InstantTouch(part, targetPart)
     end)
 end
 
--- Find all egg targets dynamically
-local function getAllEggTargets()
-    local targets = {}
+-- Dynamic Egg Nest Resolver
+local function getEggNestLocation()
     if Settings.EggNestCFrame then
-        table.insert(targets, {cframe = Settings.EggNestCFrame, prompt = nil, part = nil})
+        return Settings.EggNestCFrame
     end
 
-    -- Scan for ProximityPrompts for eggs
-    for _, prompt in pairs(Workspace:GetDescendants()) do
+    local basePos = (Settings.PlotCFrame or SavedBaseCFrame) and (Settings.PlotCFrame or SavedBaseCFrame).Position or nil
+
+    -- 1. Scan ProximityPrompts for eggs/nests
+    local bestPromptCF = nil
+    for _, prompt in ipairs(Workspace:GetDescendants()) do
         if prompt:IsA("ProximityPrompt") and prompt.Enabled and prompt.Parent then
-            local text = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Parent.Name):lower()
-            if text:find("egg") or text:find("steal") or text:find("take") or text:find("grab") or text:find("nest") or text:find("pick") then
-                local part = prompt.Parent:IsA("BasePart") and prompt.Parent or prompt.Parent:FindFirstChildWhichIsA("BasePart")
-                if part then
-                    table.insert(targets, {cframe = part.CFrame * CFrame.new(0, 3, 0), prompt = prompt, part = part})
+            local part = prompt.Parent:IsA("BasePart") and prompt.Parent or prompt.Parent:FindFirstChildWhichIsA("BasePart")
+            if part then
+                local txt = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Parent.Name):lower()
+                local distFromBase = basePos and (part.Position - basePos).Magnitude or 100
+                if txt:find("egg") or txt:find("steal") or txt:find("nest") or txt:find("take") or txt:find("grab") or txt:find("pick") then
+                    return part.CFrame * CFrame.new(0, 2, 0)
+                end
+                if distFromBase > 30 and not bestPromptCF then
+                    bestPromptCF = part.CFrame * CFrame.new(0, 2, 0)
                 end
             end
         end
     end
+    if bestPromptCF then return bestPromptCF end
 
-    -- Scan workspace models named Egg or Nest
-    for _, obj in pairs(Workspace:GetDescendants()) do
-        if (obj:IsA("Model") or obj:IsA("BasePart")) then
+    -- 2. Scan Workspace models/parts for Egg / Nest
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("Model") or obj:IsA("BasePart") then
             local n = obj.Name:lower()
-            if (n:find("egg") or n:find("nest")) and not n:find("highlight") and not n:find("gui") then
+            if (n:find("egg") or n:find("nest")) and not n:find("highlight") and not n:find("gui") and not n:find("player") then
                 local part = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
                 if part and (not LocalPlayer.Character or not part:IsDescendantOf(LocalPlayer.Character)) then
-                    table.insert(targets, {cframe = part.CFrame * CFrame.new(0, 3, 0), prompt = nil, part = part})
+                    local distFromBase = basePos and (part.Position - basePos).Magnitude or 100
+                    if distFromBase > 30 then
+                        return part.CFrame * CFrame.new(0, 2, 0)
+                    end
                 end
             end
         end
     end
 
-    return targets
+    return nil
 end
 
 local isStealingActive = false
@@ -220,70 +282,87 @@ local function performStealAndReturn()
     local hum = char and char:FindFirstChildOfClass("Humanoid")
     if not hrp or not hum then
         isStealingActive = false
-        return false
-    end
-
-    -- 1. Ensure Base CFrame is safely locked
-    local baseCF = Settings.PlotCFrame or SavedBaseCFrame or hrp.CFrame
-    Settings.PlotCFrame = baseCF
-    SavedBaseCFrame = baseCF
-
-    local targets = getAllEggTargets()
-    if #targets == 0 then
-        notify("No Egg Found", "Pehle 'Record Egg Nest' click karein ya Egg ke paas jayein!", 2.5)
-        isStealingActive = false
         if autoStealToggleController then autoStealToggleController.Set(false) end
         return false
     end
 
-    local target = targets[1]
-    notify("Stealing Egg", "Egg Nest par ja rahe hain...", 2)
+    -- 1. Ensure Base CFrame is locked
+    local baseCF = Settings.PlotCFrame or SavedBaseCFrame or hrp.CFrame
+    Settings.PlotCFrame = baseCF
+    SavedBaseCFrame = baseCF
 
-    -- Step 1: Disable collisions temporarily and Teleport to Egg
+    -- 2. Resolve Egg Nest Target
+    local nestCF = getEggNestLocation()
+    if not nestCF then
+        notify("Setup Needed", "Egg Nest ke paas ja kar 'Record Egg Nest' click karein!", 3)
+        isStealingActive = false
+        Settings.AutoFarmEggs = false
+        if autoStealToggleController then autoStealToggleController.Set(false) end
+        return false
+    end
+
+    notify("Stealing Egg", "Egg Nest par teleport ho rahe hain...", 2)
+
+    -- Disable collisions temporarily
     for _, p in ipairs(char:GetDescendants()) do
         if p:IsA("BasePart") then p.CanCollide = false end
     end
     hum.Sit = false
+
+    local initialSnap = takeSnapshot()
+
+    -- Step 1: Teleport to Egg Nest
     hrp.AssemblyLinearVelocity = Vector3.zero
     hrp.AssemblyAngularVelocity = Vector3.zero
-    hrp.CFrame = target.cframe
-    task.wait(0.1)
+    hrp.CFrame = nestCF
+    task.wait(0.2)
+    hrp.CFrame = nestCF
+    hrp.AssemblyLinearVelocity = Vector3.zero
 
-    -- Step 2: Stay at the egg and continuously grab until egg is in hands/inventory
+    -- Step 2: Hold position at Egg Nest and trigger steal
     local startTime = os.clock()
+    local stolen = false
 
-    while os.clock() - startTime < 3.5 do
+    while (os.clock() - startTime < 4.5) do
         if not isAlive() then break end
 
-        -- Hold position directly at egg
+        -- Keep character locked at nest
         hrp.AssemblyLinearVelocity = Vector3.zero
-        hrp.CFrame = target.cframe
+        hrp.CFrame = nestCF
 
-        -- Trigger prompt
-        if target.prompt then
-            FirePromptInstantly(target.prompt)
-        end
-        if target.part then
-            InstantTouch(hrp, target.part)
-        end
-
-        for _, prompt in pairs(Workspace:GetDescendants()) do
+        -- Trigger all prompts within 28 studs
+        for _, prompt in ipairs(Workspace:GetDescendants()) do
             if prompt:IsA("ProximityPrompt") and prompt.Parent then
                 local part = prompt.Parent:IsA("BasePart") and prompt.Parent or prompt.Parent:FindFirstChildWhichIsA("BasePart")
-                if part and (part.Position - hrp.Position).Magnitude < 25 then
-                    FirePromptInstantly(prompt)
+                if part and (part.Position - hrp.Position).Magnitude < 28 then
+                    triggerPromptClean(prompt)
                     InstantTouch(hrp, part)
+                    if part:FindFirstChildWhichIsA("ClickDetector") then
+                        pcall(function() fireclickdetector(part:FindFirstChildWhichIsA("ClickDetector")) end)
+                    end
                 end
             end
         end
 
+        -- Fire touch on any nearby egg models
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if obj:IsA("BasePart") and obj.Name:lower():find("egg") and not obj:IsDescendantOf(char) then
+                if (obj.Position - hrp.Position).Magnitude < 25 then
+                    InstantTouch(hrp, obj)
+                    if obj:FindFirstChildWhichIsA("ClickDetector") then
+                        pcall(function() fireclickdetector(obj:FindFirstChildWhichIsA("ClickDetector")) end)
+                    end
+                end
+            end
+        end
+
+        -- Fire steal remotes
         pcall(function()
             for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
                 if rem:IsA("RemoteEvent") then
                     local rn = rem.Name:lower()
-                    if rn:find("steal") or rn:find("egg") or rn:find("take") or rn:find("grab") or rn:find("claim") or rn:find("pick") then
+                    if rn:find("steal") or rn:find("egg") or rn:find("take") or rn:find("grab") or rn:find("claim") or rn:find("pick") or rn:find("interact") then
                         rem:FireServer()
-                        if target.part then rem:FireServer(target.part) end
                     end
                 end
             end
@@ -294,33 +373,37 @@ local function performStealAndReturn()
             VirtualUser:ClickButton1(Vector2.new(500, 500))
         end
 
-        if hasEggCarried() then
+        -- Check if egg was picked up
+        if isEggInPossession(initialSnap) then
+            stolen = true
             break
         end
 
-        task.wait(0.12)
+        task.wait(0.2)
     end
 
     task.wait(0.15)
-    notify("Returning to Base", "Egg le kar Base par wapis ja rahe hain...", 2)
+    notify("Returning to Base", "Egg le kar Base par wapis teleport ho rahe hain...", 2)
 
     -- Step 3: Teleport directly back to Base Plot
     hrp.AssemblyLinearVelocity = Vector3.zero
     hrp.AssemblyAngularVelocity = Vector3.zero
     hrp.CFrame = baseCF
-    task.wait(0.1)
+    task.wait(0.2)
     hrp.CFrame = baseCF
     hrp.AssemblyLinearVelocity = Vector3.zero
 
-    -- Step 4: Deposit / Deliver egg at base
-    for _ = 1, 6 do
-        for _, prompt in pairs(Workspace:GetDescendants()) do
+    -- Step 4: Deposit egg at Base
+    for _ = 1, 8 do
+        if not isAlive() then break end
+
+        for _, prompt in ipairs(Workspace:GetDescendants()) do
             if prompt:IsA("ProximityPrompt") and prompt.Parent then
                 local part = prompt.Parent:IsA("BasePart") and prompt.Parent or prompt.Parent:FindFirstChildWhichIsA("BasePart")
                 if part and (part.Position - hrp.Position).Magnitude < 30 then
                     local txt = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Parent.Name):lower()
-                    if txt:find("place") or txt:find("drop") or txt:find("deliver") or txt:find("deposit") or txt:find("hatch") or txt:find("egg") or txt:find("base") or txt:find("nest") then
-                        FirePromptInstantly(prompt)
+                    if txt:find("place") or txt:find("drop") or txt:find("deliver") or txt:find("deposit") or txt:find("hatch") or txt:find("claim") or txt:find("egg") or txt:find("nest") then
+                        triggerPromptClean(prompt)
                         InstantTouch(hrp, part)
                     end
                 end
@@ -331,23 +414,23 @@ local function performStealAndReturn()
             for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
                 if rem:IsA("RemoteEvent") then
                     local rn = rem.Name:lower()
-                    if rn:find("deposit") or rn:find("deliver") or rn:find("hatch") or rn:find("place") or rn:find("drop") then
+                    if rn:find("deposit") or rn:find("deliver") or rn:find("hatch") or rn:find("place") or rn:find("drop") or rn:find("claim") then
                         rem:FireServer()
                     end
                 end
             end
         end)
 
-        task.wait(0.08)
+        task.wait(0.15)
     end
 
-    -- Step 5: Automatically turn OFF toggle and stop once safely at base!
+    -- Step 5: Automatically turn OFF toggle and STOP at Base!
     Settings.AutoFarmEggs = false
     if autoStealToggleController then
         autoStealToggleController.Set(false)
     end
 
-    notify("Egg Delivered!", "Egg base par safely pohnch gaya!", 3)
+    notify("Egg Delivered!", "Egg base par safely pohnch gaya aur auto steal stop ho gaya!", 3)
     isStealingActive = false
     return true
 end
@@ -614,7 +697,7 @@ autoStealToggleController = AddToggleRow("Auto Steal Egg", "AutoFarmEggs", funct
             Settings.PlotCFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
             SavedBaseCFrame = Settings.PlotCFrame
         end
-        notify("Auto Steal", "Stealing egg and returning to base...", 2)
+        notify("Auto Steal", "Egg Nest par ja kar egg steal ho raha hai...", 2)
         spawnTask(performStealAndReturn)
     end
 end)
