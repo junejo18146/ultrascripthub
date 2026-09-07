@@ -899,8 +899,27 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   - Anti-AFK Engine (Auto 20-minute idle disconnect protection)
   - Official Classic Junejo Dark UI (Flat Borderless Standard, 280x280px)
 
+## 47. +1 Long Arm Toy Escape!
+- **Game Name**: +1 Long Arm Toy Escape!
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/long_arm_toy_escape.lua"))()
+  ```
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included (8 Features)**:
+  - Auto Train Arms (Touch Overhead Pull-Up Bars, Fire Growth Remotes, Auto-Equip & Click)
+  - Auto Wins (Touch Win/Victory Pads & Fire Win Remotes)
+  - Auto Rebirth (Automatic Prestige Engine)
+  - WalkSpeed Boost + Integrated Pill Controller (- / +: 16 to 300)
+  - Noclip Mode (Walk & Phase Through Walls & Doors)
+  - Infinite Jump (Continuous Airborne Jump Engine)
+  - Fly Mode (Smooth 3D Flight)
+  - Anti-AFK Engine (Auto 20-minute idle disconnect protection)
+  - Official Classic Junejo Dark UI (Flat Borderless Standard, 280x275px)
+
 ====================================================
 Updated: September 7, 2026
 ====================================================
+
 
 
