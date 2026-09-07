@@ -1,6 +1,6 @@
 --[[
     ========================================================================
-    JUNEJO ULTRA SCRIPT HUB - THROW A COIN
+    JUNEJO ULTRA SCRIPT HUB - THROW A COIN (V2.0 WITH AUTO THROW)
     ========================================================================
     Author: Made by Junejo (junejo18146)
     Target Game: Throw a Coin (Roblox)
@@ -8,16 +8,17 @@
     File: throw_a_coin.lua
     UI Standard: Junejo Classic Dark UI (#0F0F11) - Flat & Borderless Standard
     
-    Features Included (All Core Game Logic 100% Intact & Preserved):
-        1. Auto Sell Items (Continuous Sell Hitbox Touch, PlayerGui & Remotes Sweep)
-        2. Auto Upgrade Luck (Continuous Upgrade Pads, PlayerGui & Remotes Sweep)
-        3. Teleport to Fountain (Instant 1-Click Action to Wishing Fountain / Well)
-        4. Teleport to Sell Area (Instant 1-Click Action to Sell Shop / Merchant)
-        5. WalkSpeed Boost + Integrated Pill Controller (- / +: 16 to 300)
-        6. Jump Power Boost + Integrated Pill Controller (- / +: 50 to 300)
-        7. Infinite Jump (Continuous Multi-Jump Engine)
-        8. Fly Mode (Smooth 3D Flight with WASD/Space/Shift controls)
-        9. Anti-AFK Engine (Auto 20-minute idle disconnect protection)
+    Features Included (All Original Core Mechanics 100% Preserved):
+        1. Auto Throw Coin (Throws Every 0.5s Directly - No Waiting for Coin Full)
+        2. Auto Sell Items (Continuous Sell Hitbox Touch, PlayerGui & Remotes Sweep)
+        3. Auto Upgrade Luck (Continuous Upgrade Pads, PlayerGui & Remotes Sweep)
+        4. Teleport to Fountain (Instant 1-Click Action to Wishing Fountain / Well)
+        5. Teleport to Sell Area (Instant 1-Click Action to Sell Shop / Merchant)
+        6. WalkSpeed Boost + Integrated Pill Controller (- / +: 16 to 300)
+        7. Jump Power Boost + Integrated Pill Controller (- / +: 50 to 300)
+        8. Infinite Jump (Continuous Multi-Jump Engine)
+        9. Fly Mode (Smooth 3D Flight with WASD/Space/Shift controls)
+        10. Anti-AFK Engine (Auto 20-minute idle disconnect protection)
     ========================================================================
 --]]
 
@@ -76,6 +77,7 @@ CleanupOldGui()
 
 -- Global Feature States & Configuration
 local Toggles = {
+    AutoThrow = false,
     AutoSell = false,
     AutoUpgradeLuck = false,
     WalkSpeedBoost = false,
@@ -125,7 +127,105 @@ local function triggerGuiButton(btn)
 end
 
 -- =================================================================
--- 1. AUTO SELL ENGINE (Workspace Hitboxes, PlayerGui & Remotes)
+-- 1. AUTO THROW COIN ENGINE (Every 0.5s Fast Throw - No Waiting)
+-- =================================================================
+local function executeThrowCoin()
+    pcall(function()
+        local char, root, hum = getPlayerChar()
+
+        -- 1. Auto Equip & Fast Activate Coin Tool
+        if char then
+            local tool = char:FindFirstChildOfClass("Tool")
+            if tool then
+                tool:Activate()
+            else
+                local bpTool = LocalPlayer.Backpack:FindFirstChildOfClass("Tool")
+                if bpTool and hum then
+                    hum:EquipTool(bpTool)
+                    task.wait(0.02)
+                    bpTool:Activate()
+                end
+            end
+        end
+
+        -- 2. Fire Throw / Toss / Coin Remotes in ReplicatedStorage
+        for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
+            if rem:IsA("RemoteEvent") then
+                local rName = string.lower(rem.Name)
+                if string.find(rName, "throw") or string.find(rName, "toss") or string.find(rName, "flip") or string.find(rName, "coin") or string.find(rName, "fountain") or string.find(rName, "drop") then
+                    if not string.find(rName, "sell") and not string.find(rName, "upgrade") and not string.find(rName, "shop") and not string.find(rName, "buy") then
+                        pcall(function() rem:FireServer() end)
+                        pcall(function() rem:FireServer(1) end)
+                        pcall(function() rem:FireServer(true) end)
+                        pcall(function() rem:FireServer("Throw") end)
+                    end
+                end
+            elseif rem:IsA("RemoteFunction") then
+                local rName = string.lower(rem.Name)
+                if string.find(rName, "throw") or string.find(rName, "toss") or string.find(rName, "flip") or string.find(rName, "coin") or string.find(rName, "fountain") then
+                    if not string.find(rName, "sell") and not string.find(rName, "upgrade") and not string.find(rName, "shop") and not string.find(rName, "buy") then
+                        task.spawn(function()
+                            pcall(function() rem:InvokeServer() end)
+                            pcall(function() rem:InvokeServer(1) end)
+                            pcall(function() rem:InvokeServer(true) end)
+                        end)
+                    end
+                end
+            end
+        end
+
+        -- 3. Trigger Fountain ProximityPrompts & ClickDetectors
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if obj:IsA("ProximityPrompt") then
+                local pName = string.lower(obj.Parent.Name)
+                if string.find(pName, "fountain") or string.find(pName, "well") or string.find(pName, "coin") or string.find(pName, "wishing") or string.find(pName, "pit") or string.find(pName, "target") then
+                    pcall(function()
+                        obj.HoldDuration = 0
+                        obj.MaxActivationDistance = 99999
+                    end)
+                    if fireproximityprompt then fireproximityprompt(obj) end
+                end
+            elseif obj:IsA("ClickDetector") then
+                local pName = string.lower(obj.Parent.Name)
+                if string.find(pName, "fountain") or string.find(pName, "well") or string.find(pName, "coin") or string.find(pName, "wishing") then
+                    if fireclickdetector then fireclickdetector(obj) end
+                end
+            end
+        end
+
+        -- 4. Trigger In-Game Throw Button in PlayerGui if available
+        local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
+        if playerGui then
+            for _, btn in ipairs(playerGui:GetDescendants()) do
+                if btn:IsA("TextButton") or btn:IsA("ImageButton") then
+                    local nameL = string.lower(btn.Name)
+                    local textL = btn:IsA("TextButton") and string.lower(btn.Text) or ""
+                    if string.find(nameL, "throw") or string.find(textL, "throw") or string.find(nameL, "toss") or string.find(textL, "toss") or string.find(nameL, "flip") then
+                        triggerGuiButton(btn)
+                    end
+                end
+            end
+        end
+
+        -- 5. Virtual Screen Click Simulation
+        pcall(function()
+            VirtualUser:ClickButton1(Vector2.new(500, 500))
+        end)
+    end)
+end
+
+-- Continuous Auto Throw Loop (Every 0.5s Fast Direct Throw)
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        if Toggles.AutoThrow then
+            executeThrowCoin()
+        end
+    end
+end)
+
+-- =================================================================
+-- 2. AUTO SELL ENGINE (Workspace Hitboxes, PlayerGui & Remotes)
 -- =================================================================
 local function executeSellCycle()
     pcall(function()
@@ -203,7 +303,7 @@ task.spawn(function()
 end)
 
 -- =================================================================
--- 2. AUTO UPGRADE LUCK & STATS ENGINE
+-- 3. AUTO UPGRADE LUCK & STATS ENGINE
 -- =================================================================
 local function executeUpgradeCycle()
     pcall(function()
@@ -278,10 +378,10 @@ task.spawn(function()
 end)
 
 -- =================================================================
--- 3. PLAYER ENHANCEMENTS (WalkSpeed, JumpPower, InfJump, Fly)
+-- 4. PLAYER ENHANCEMENTS (WalkSpeed, JumpPower, InfJump, Fly)
 -- =================================================================
 
--- WalkSpeed Enforcer (RenderStepped Smooth Delta-Boost & Humanoid)
+-- WalkSpeed Enforcer
 RunService.RenderStepped:Connect(function(deltaTime)
     pcall(function()
         if Toggles.WalkSpeedBoost and CustomSpeedValue and CustomSpeedValue > 16 then
@@ -410,7 +510,7 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999999
 
 -- Dynamic Compact Window Height
-local MainWindowHeight = 285
+local MainWindowHeight = 300
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
@@ -459,6 +559,7 @@ CloseButton.TextSize = 13
 CloseButton.Font = Enum.Font.GothamBold
 CloseButton.Parent = Header
 CloseButton.MouseButton1Click:Connect(function()
+    Toggles.AutoThrow = false
     Toggles.AutoSell = false
     Toggles.AutoUpgradeLuck = false
     Toggles.WalkSpeedBoost = false
@@ -487,7 +588,7 @@ HeaderLine.Parent = MainFrame
 -- Content Frame
 local ContentFrame = Instance.new("ScrollingFrame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -24, 0, 205)
+ContentFrame.Size = UDim2.new(1, -24, 0, 220)
 ContentFrame.Position = UDim2.new(0, 12, 0, 38)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.BorderSizePixel = 0
@@ -610,23 +711,26 @@ end
 -- BUILD FEATURE ROWS
 -- =================================================================
 
--- 1. Auto Sell Items
+-- 1. Auto Throw Coin (Throws Every 0.5s)
+AddToggleRow("Auto Throw Coin", "AutoThrow")
+
+-- 2. Auto Sell Items
 AddToggleRow("Auto Sell Items", "AutoSell")
 
--- 2. Auto Upgrade Luck
+-- 3. Auto Upgrade Luck
 AddToggleRow("Auto Upgrade Luck", "AutoUpgradeLuck")
 
--- 3. Teleport to Fountain
+-- 4. Teleport to Fountain
 AddActionRow("Teleport Fountain", "Teleport", function()
     teleportToKeyword({"fountain", "well", "wishing", "pit", "pool", "target"}, 5)
 end)
 
--- 4. Teleport to Sell Area
+-- 5. Teleport to Sell Area
 AddActionRow("Teleport Sell Area", "Teleport", function()
     teleportToKeyword({"sell", "shop", "merchant", "cashier", "exchange"}, 5)
 end)
 
--- 5. WalkSpeed with Integrated - / + Pill Controller
+-- 6. WalkSpeed with Integrated - / + Pill Controller
 local SpeedRow = Instance.new("Frame")
 SpeedRow.Size = UDim2.new(1, 0, 0, 23)
 SpeedRow.BackgroundTransparency = 1
@@ -738,7 +842,7 @@ PlusBtn.MouseButton1Click:Connect(function()
     SpeedDisplay.Text = tostring(CustomSpeedValue)
 end)
 
--- 6. Jump Power Boost with Integrated - / + Pill Controller
+-- 7. Jump Power Boost with Integrated - / + Pill Controller
 local JumpRow = Instance.new("Frame")
 JumpRow.Size = UDim2.new(1, 0, 0, 23)
 JumpRow.BackgroundTransparency = 1
@@ -854,13 +958,13 @@ JumpPlusBtn.MouseButton1Click:Connect(function()
     JumpDisplay.Text = tostring(CustomJumpValue)
 end)
 
--- 7. Infinite Jump
+-- 8. Infinite Jump
 AddToggleRow("Infinite Jump", "InfiniteJump")
 
--- 8. Fly Mode
+-- 9. Fly Mode
 AddToggleRow("Fly Mode", "FlyMode")
 
--- 9. Anti-AFK Engine
+-- 10. Anti-AFK Engine
 AddToggleRow("Anti-AFK Engine", "AntiAFK")
 
 -- Pinned Footer
@@ -929,4 +1033,4 @@ end)
 -- Mount GUI
 ScreenGui.Parent = GetSafeGuiParent()
 
-print("[Junejo Script Hub]: Throw a Coin Script Loaded Successfully!")
+print("[Junejo Script Hub]: Throw a Coin Script (V2.0 with Auto Throw) Loaded Successfully!")
