@@ -1,6 +1,6 @@
 --[[
     ========================================================================
-    JUNEJO ULTRA SCRIPT HUB - +1 LONG ARM TOY ESCAPE! (V3.0 ULTIMATE)
+    JUNEJO ULTRA SCRIPT HUB - +1 LONG ARM TOY ESCAPE! (V4.0 SMOOTH & LAG-FREE)
     ========================================================================
     Author: Made by Junejo (junejo18146)
     Target Game: +1 Long Arm Toy Escape! (Roblox)
@@ -8,15 +8,16 @@
     File: long_arm_toy_escape.lua
     UI Standard: Junejo Classic Dark UI (#0F0F11) - Flat & Borderless Standard
     
-    Verified High-Power Features:
-        1. Auto Train Arms (Rapid Multi-Clicker 25x/sec + Tool Auto-Equip + Remotes + Pull-Up Bars)
-        2. Auto Wins (Fast Teleport-Touch Sequence to End Win Pads + Remote Sweeper + Instant Wins)
-        3. Auto Rebirth (Automatic Prestige Engine + UI Dialog Bypass + Rebirth Pads)
+    Verified Features (Zero Screen Vibration / Zero Dialog Spam):
+        1. Auto Train Arms (Multi-Tap 25x/sec + Tool Rapid Equip + Remotes + Pull-Up Bars)
+        2. Auto Wins (Physical Teleport-Touch to Win Pads + Remote Sweeper + Instant Wins)
+        3. Auto Rebirth (Smooth Zero-Vibration Prestige Engine + Direct Remotes + No Popup Spam)
         4. WalkSpeed Boost + Integrated Pill Controller (- / +: 16 to 300)
         5. Noclip Mode (Walk & Phase Through Obstacles, Bars & Doors)
         6. Infinite Jump (Continuous Airborne Jump Loop)
         7. Fly Mode (Smooth 3D Flight with WASD/Space/Shift controls)
         8. Anti-AFK Engine (Auto 20-minute idle disconnect protection)
+        9. Anti-Screen Shake / Camera Stabilizer (Zero Wobble Engine)
     ========================================================================
 --]]
 
@@ -88,6 +89,20 @@ local Toggles = {
 }
 
 local CustomSpeedValue = 24
+
+-- =================================================================
+-- ZERO SCREEN VIBRATION & CAMERA STABILIZER
+-- =================================================================
+-- Completely eliminates camera shake and screen vibrations
+RunService.RenderStepped:Connect(function()
+    pcall(function()
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if hum and hum.CameraOffset ~= Vector3.zero then
+            hum.CameraOffset = Vector3.zero
+        end
+    end)
+end)
 
 -- =================================================================
 -- CHARACTER ACCESS & HELPERS
@@ -466,24 +481,6 @@ task.spawn(function()
 
                 -- Layer 4: Deep Remotes Sweep
                 fireDeepRemotes(trainKeywords)
-
-                -- Layer 5: UI Train Buttons
-                local pgui = LocalPlayer:FindFirstChild("PlayerGui")
-                if pgui then
-                    for _, btn in ipairs(pgui:GetDescendants()) do
-                        if (btn:IsA("TextButton") or btn:IsA("ImageButton")) and btn.Visible then
-                            local bName = btn.Name:lower()
-                            local bText = btn:IsA("TextButton") and btn.Text:lower() or ""
-                            local fullB = bName .. " " .. bText
-                            if (fullB:find("train") or fullB:find("click") or fullB:find("tap") or fullB:find("arm") or fullB:find("grow") or fullB:find("stretch")) and not fullB:find("shop") and not fullB:find("buy") then
-                                if firesignal then
-                                    firesignal(btn.MouseButton1Click)
-                                    firesignal(btn.Activated)
-                                end
-                            end
-                        end
-                    end
-                end
             end)
         end
     end
@@ -512,8 +509,6 @@ local function ClaimAllWins()
 
         -- Step B: Sweep Win Pads in Workspace (Direct physical proximity bypass)
         if #cachedWinPads > 0 then
-            local originalCF = root.CFrame
-
             for _, pad in ipairs(cachedWinPads) do
                 if not Toggles.AutoWins then break end
                 if pad and pad.Parent then
@@ -527,7 +522,7 @@ local function ClaimAllWins()
                         end
                     end
 
-                    -- 2. Physical Teleport to Win Pad for 0.15s (Server Position Verification Bypass)
+                    -- 2. Physical Teleport to Win Pad for 0.12s (Server Position Verification Bypass)
                     pcall(function()
                         root.CFrame = pad.CFrame + Vector3.new(0, 3.2, 0)
                         root.Velocity = Vector3.zero
@@ -550,22 +545,6 @@ local function ClaimAllWins()
                 end
             end
         end
-
-        -- Step C: UI Claim Buttons
-        local pgui = LocalPlayer:FindFirstChild("PlayerGui")
-        if pgui and firesignal then
-            for _, btn in ipairs(pgui:GetDescendants()) do
-                if (btn:IsA("TextButton") or btn:IsA("ImageButton")) and btn.Visible then
-                    local bName = btn.Name:lower()
-                    local bText = btn:IsA("TextButton") and btn.Text:lower() or ""
-                    local fullB = bName .. " " .. bText
-                    if (fullB:find("claim") or fullB:find("collect") or fullB:find("win") or fullB:find("reward")) and not fullB:find("shop") and not fullB:find("buy") then
-                        firesignal(btn.MouseButton1Click)
-                        firesignal(btn.Activated)
-                    end
-                end
-            end
-        end
     end)
 
     isWinningBusy = false
@@ -580,26 +559,81 @@ task.spawn(function()
     end
 end)
 
--- 3. ULTRA-ROBUST AUTO REBIRTH LOOP
+-- 3. SMOOTH & SILENT AUTO REBIRTH LOOP (Zero Screen Shake / Zero Popup Spam)
+local isRebirthing = false
+local lastRebirthAttempt = 0
+
+local function DismissErrorPopups()
+    pcall(function()
+        local pgui = LocalPlayer:FindFirstChild("PlayerGui")
+        if not pgui then return end
+        for _, gui in ipairs(pgui:GetChildren()) do
+            if gui:IsA("ScreenGui") and gui.Name ~= "JunejoHub_LongArmEscape" then
+                for _, obj in ipairs(gui:GetDescendants()) do
+                    if obj:IsA("TextLabel") or obj:IsA("TextButton") then
+                        local t = obj.Text:lower()
+                        -- Detect requirement error notifications (e.g. "not enough arms", "need x wins", "requirement")
+                        if t:find("need") or t:find("require") or t:find("not enough") or t:find("reach") then
+                            local parentFrame = obj:FindFirstAncestorWhichIsA("Frame") or obj:FindFirstAncestorWhichIsA("ImageLabel")
+                            if parentFrame and parentFrame.Visible then
+                                -- Check for a close / X button inside this notification
+                                for _, btn in ipairs(parentFrame:GetDescendants()) do
+                                    if (btn:IsA("TextButton") or btn:IsA("ImageButton")) and (btn.Name:lower():find("close") or btn.Name:lower():find("exit") or btn.Name:lower() == "x") then
+                                        if firesignal then
+                                            firesignal(btn.MouseButton1Click)
+                                            firesignal(btn.Activated)
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end)
+end
+
 task.spawn(function()
     while true do
-        task.wait(0.6)
-        if Toggles.AutoRebirth then
+        task.wait(2.2) -- Smooth 2.2s gentle interval (Prevents camera vibration and lag)
+        if Toggles.AutoRebirth and not isRebirthing then
+            isRebirthing = true
             pcall(function()
-                -- Step 1: Deep Remotes Fire
-                fireDeepRemotes(rebirthKeywords)
+                -- Step 1: Fire Verified Backend Rebirth Remotes (Zero GUI interference)
+                for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
+                    if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
+                        local n = obj.Name:lower()
+                        local pName = obj.Parent and obj.Parent.Name:lower() or ""
+                        local full = n .. " " .. pName
+                        
+                        if (full:find("rebirth") or full:find("prestige") or full:find("ascend")) and not full:find("shop") and not full:find("pass") then
+                            if obj:IsA("RemoteEvent") then
+                                obj:FireServer()
+                                obj:FireServer(1)
+                                obj:FireServer(true)
+                                obj:FireServer("Rebirth")
+                            elseif obj:IsA("RemoteFunction") then
+                                task.spawn(function()
+                                    pcall(function() obj:InvokeServer() end)
+                                    pcall(function() obj:InvokeServer(1) end)
+                                    pcall(function() obj:InvokeServer(true) end)
+                                    pcall(function() obj:InvokeServer("Rebirth") end)
+                                end)
+                            end
+                        end
+                    end
+                end
 
-                -- Step 2: Physical / Touch Pads in Workspace
+                -- Step 2: Trigger Workspace Rebirth Pads if available
                 local root = getCharParts()
                 if root and #cachedRebirthPads > 0 then
                     for _, pad in ipairs(cachedRebirthPads) do
                         if not Toggles.AutoRebirth then break end
-                        if pad and pad.Parent then
-                            if firetouchinterest then
-                                firetouchinterest(root, pad, 0)
-                                firetouchinterest(root, pad, 1)
-                            end
-                            local prompt = pad:FindFirstChildWhichIsA("ProximityPrompt", true) or (pad.Parent and pad.Parent:FindFirstChildWhichIsA("ProximityPrompt", true))
+                        if pad and pad.Parent and firetouchinterest then
+                            firetouchinterest(root, pad, 0)
+                            firetouchinterest(root, pad, 1)
+                            local prompt = pad:FindFirstChildWhichIsA("ProximityPrompt", true)
                             if prompt and prompt.Enabled then
                                 UniversalTriggerPrompt(prompt)
                             end
@@ -607,22 +641,12 @@ task.spawn(function()
                     end
                 end
 
-                -- Step 3: PlayerGui Rebirth Buttons & Dialog Popups Auto-Click
-                local pgui = LocalPlayer:FindFirstChild("PlayerGui")
-                if pgui and firesignal then
-                    for _, btn in ipairs(pgui:GetDescendants()) do
-                        if (btn:IsA("TextButton") or btn:IsA("ImageButton")) and btn.Visible then
-                            local bName = btn.Name:lower()
-                            local bText = btn:IsA("TextButton") and btn.Text:lower() or ""
-                            local fullB = bName .. " " .. bText
-                            if (fullB:find("rebirth") or fullB:find("prestige") or fullB:find("ascend") or fullB:find("confirm") or fullB:find("yes")) and not fullB:find("shop") and not fullB:find("pass") and not fullB:find("cancel") and not fullB:find("close") and not fullB:find("no") then
-                                firesignal(btn.MouseButton1Click)
-                                firesignal(btn.Activated)
-                            end
-                        end
-                    end
-                end
+                -- Step 3: Handle in-game Rebirth Confirmations silently without spamming error popups
+                task.delay(0.3, function()
+                    DismissErrorPopups()
+                end)
             end)
+            isRebirthing = false
         end
     end
 end)
@@ -991,4 +1015,4 @@ end)
 -- Mount GUI
 ScreenGui.Parent = GetSafeGuiParent()
 
-print("[Junejo Script Hub]: +1 Long Arm Toy Escape Script (V3.0 Ultimate) Loaded Successfully!")
+print("[Junejo Script Hub]: +1 Long Arm Toy Escape Script (V4.0 Smooth) Loaded Successfully!")
