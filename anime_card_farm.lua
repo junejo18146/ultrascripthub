@@ -283,24 +283,123 @@ task.spawn(function()
 end)
 
 -- =================================================================
--- 3. AUTO OPEN PACKS ENGINE
+-- 3. AUTO OPEN / ROLL PACKS ENGINE (MULTI-LAYER FAST PACK ROLLER)
 -- =================================================================
 task.spawn(function()
     while true do
-        task.wait(0.5)
+        task.wait(0.25)
         if Toggles.AutoOpenPacks then
             pcall(function()
+                local _, root = getPlayerChar()
+
+                -- Layer A: Workspace ProximityPrompts for Packs / Stands / Rolls
+                for _, prompt in ipairs(Workspace:GetDescendants()) do
+                    if prompt:IsA("ProximityPrompt") and prompt.Enabled then
+                        local pName = string.lower(prompt.Parent and prompt.Parent.Name or "")
+                        local act = string.lower(prompt.ActionText or "")
+                        local objText = string.lower(prompt.ObjectText or "")
+                        
+                        if string.find(pName, "pack") or string.find(pName, "roll") or string.find(pName, "card") or string.find(pName, "gacha") or string.find(pName, "stand") or string.find(pName, "shop") or string.find(pName, "draw") or string.find(pName, "summon") or
+                           string.find(act, "pack") or string.find(act, "roll") or string.find(act, "open") or string.find(act, "draw") or string.find(act, "buy") or string.find(act, "gacha") or string.find(act, "summon") or
+                           string.find(objText, "pack") or string.find(objText, "roll") or string.find(objText, "card") then
+                            
+                            -- Don't trigger sell or plot buy prompts here
+                            if not string.find(pName, "sell") and not string.find(act, "sell") and not string.find(pName, "plot") and not string.find(act, "plot") then
+                                triggerPrompt(prompt)
+                            end
+                        end
+                    end
+                end
+
+                -- Layer B: Workspace ClickDetectors & Touch on Pack Stands
+                for _, stand in ipairs(Workspace:GetDescendants()) do
+                    if stand:IsA("ClickDetector") then
+                        local sName = string.lower(stand.Parent and stand.Parent.Name or "")
+                        if string.find(sName, "pack") or string.find(sName, "roll") or string.find(sName, "gacha") or string.find(sName, "card") or string.find(sName, "draw") then
+                            if fireclickdetector then
+                                fireclickdetector(stand)
+                            end
+                        end
+                    elseif root and firetouchinterest and stand:IsA("BasePart") and not stand:IsDescendantOf(LocalPlayer.Character) then
+                        local sName = string.lower(stand.Name)
+                        local pName = stand.Parent and string.lower(stand.Parent.Name) or ""
+                        if (string.find(sName, "pack") or string.find(sName, "roll") or string.find(sName, "gacha") or string.find(pName, "pack") or string.find(pName, "roll") or string.find(pName, "gacha")) and not string.find(sName, "sell") and not string.find(pName, "sell") then
+                            if (stand.Position - root.Position).Magnitude <= 80 then
+                                firetouchinterest(root, stand, 0)
+                                firetouchinterest(root, stand, 1)
+                            end
+                        end
+                    end
+                end
+
+                -- Layer C: ReplicatedStorage Universal Network Remote Sweeper
                 for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
-                    local lower = string.lower(obj.Name)
-                    if string.find(lower, "pack") or string.find(lower, "roll") or string.find(lower, "buyegg") or string.find(lower, "draw") then
-                        if obj:IsA("RemoteFunction") then
-                            pcall(function() obj:InvokeServer("Basic Pack", 1) end)
-                            pcall(function() obj:InvokeServer("Pack", 1) end)
-                            pcall(function() obj:InvokeServer(1) end)
-                        elseif obj:IsA("RemoteEvent") then
-                            pcall(function() obj:FireServer("Basic Pack", 1) end)
-                            pcall(function() obj:FireServer("Pack", 1) end)
-                            pcall(function() obj:FireServer(1) end)
+                    if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
+                        local lower = string.lower(obj.Name)
+                        if string.find(lower, "pack") or string.find(lower, "roll") or string.find(lower, "gacha") or string.find(lower, "draw") or string.find(lower, "summon") or string.find(lower, "buycard") or string.find(lower, "opencard") or string.find(lower, "buyegg") or string.find(lower, "openegg") or string.find(lower, "openbox") or string.find(lower, "rollcard") then
+                            if not string.find(lower, "sell") and not string.find(lower, "upgrade") and not string.find(lower, "slot") then
+                                if obj:IsA("RemoteEvent") then
+                                    pcall(function() obj:FireServer() end)
+                                    pcall(function() obj:FireServer(1) end)
+                                    pcall(function() obj:FireServer("Basic Pack", 1) end)
+                                    pcall(function() obj:FireServer("Basic", 1) end)
+                                    pcall(function() obj:FireServer("Pack", 1) end)
+                                    pcall(function() obj:FireServer("Basic Pack") end)
+                                    pcall(function() obj:FireServer(1, false) end)
+                                    pcall(function() obj:FireServer("Basic Pack", 1, false) end)
+                                    pcall(function() obj:FireServer("Basic Pack", 1, true) end)
+                                    pcall(function() obj:FireServer(true) end)
+                                    pcall(function() obj:FireServer("1") end)
+                                elseif obj:IsA("RemoteFunction") then
+                                    pcall(function() obj:InvokeServer() end)
+                                    pcall(function() obj:InvokeServer(1) end)
+                                    pcall(function() obj:InvokeServer("Basic Pack", 1) end)
+                                    pcall(function() obj:InvokeServer("Basic", 1) end)
+                                    pcall(function() obj:InvokeServer("Pack", 1) end)
+                                    pcall(function() obj:InvokeServer("Basic Pack") end)
+                                    pcall(function() obj:InvokeServer(1, false) end)
+                                    pcall(function() obj:InvokeServer("Basic Pack", 1, false) end)
+                                    pcall(function() obj:InvokeServer("Basic Pack", 1, true) end)
+                                end
+                            end
+                        end
+                    end
+                end
+
+                -- Layer D: In-Game UI Buttons Clicker & Animation Skip
+                local pGui = LocalPlayer:FindFirstChild("PlayerGui")
+                if pGui then
+                    for _, gui in ipairs(pGui:GetChildren()) do
+                        if gui.Name ~= "JunejoHubUI_AnimeCardFarm" then
+                            for _, btn in ipairs(gui:GetDescendants()) do
+                                if btn:IsA("TextButton") or btn:IsA("ImageButton") then
+                                    if btn.Visible and (btn.Active or btn.Selectable) then
+                                        local bText = string.lower(btn:IsA("TextButton") and btn.Text or "")
+                                        local bName = string.lower(btn.Name)
+                                        
+                                        -- Click Roll / Open buttons
+                                        if (string.find(bText, "roll") or string.find(bText, "open") or string.find(bText, "draw") or string.find(bText, "gacha") or string.find(bText, "summon") or string.find(bText, "pack") or string.find(bText, "1x") or
+                                            string.find(bName, "roll") or string.find(bName, "open") or string.find(bName, "draw") or string.find(bName, "gacha") or string.find(bName, "summon") or string.find(bName, "pack") or string.find(bName, "buy")) and
+                                           not string.find(bText, "sell") and not string.find(bName, "sell") and not string.find(bText, "robux") and not string.find(bText, "r%$") and not string.find(bName, "gamepass") then
+                                            
+                                            fireSignalDirect(btn.MouseButton1Click)
+                                            fireSignalDirect(btn.Activated)
+                                            pcall(function()
+                                                if firesignal then
+                                                    firesignal(btn.MouseButton1Down)
+                                                    firesignal(btn.MouseButton1Up)
+                                                end
+                                            end)
+                                        end
+                                        
+                                        -- Auto Skip Animation / Auto Claim
+                                        if string.find(bText, "skip") or string.find(bName, "skip") or string.find(bText, "claim") or string.find(bName, "claim") or string.find(bText, "continue") or string.find(bText, "ok") or string.find(bName, "close") then
+                                            fireSignalDirect(btn.MouseButton1Click)
+                                            fireSignalDirect(btn.Activated)
+                                        end
+                                    end
+                                end
+                            end
                         end
                     end
                 end
