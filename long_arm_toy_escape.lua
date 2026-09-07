@@ -1,6 +1,6 @@
 --[[
     ========================================================================
-    JUNEJO ULTRA SCRIPT HUB - +1 LONG ARM TOY ESCAPE! (MASTER EDITION)
+    JUNEJO ULTRA SCRIPT HUB - +1 LONG ARM TOY ESCAPE!
     ========================================================================
     Author: Made by Junejo (junejo18146)
     Target Game: +1 Long Arm Toy Escape! (Roblox)
@@ -8,15 +8,14 @@
     File: long_arm_toy_escape.lua
     UI Standard: Junejo Classic Dark UI (#0F0F11) - Flat & Borderless Standard
     
-    Verified Working Features:
-        1. Auto Train Arms (Touch Overhead Bars, Growth Remotes, Auto-Equip & Click)
-        2. Auto Wins (Touch Win/Victory Pads & Fire Win Remotes)
-        3. Auto Rebirth (Zero-Vibration & Anti-Spam Notification Engine)
-        4. WalkSpeed Boost + Integrated Pill Controller (- / +: 16 to 300)
-        5. Noclip (Walk & Phase Through Walls & Doors)
-        6. Infinite Jump (Continuous Airborne Jump Loop)
-        7. Fly Mode (Smooth 3D Flight with WASD/Space/Shift controls)
-        8. Anti-AFK Engine (Auto 20-minute idle disconnect protection)
+    Features Included:
+        1. Auto Train Arms (Touch Overhead Pull-Up Bars, Growth Remotes, Tools & Click Engine)
+        2. Auto Rebirth (Automatic Prestige Engine with in-game Requirement Display)
+        3. WalkSpeed Boost + Integrated Pill Controller (- / +: 16 to 300)
+        4. Noclip (Walk & Phase Through Walls & Doors)
+        5. Infinite Jump (Continuous Airborne Jump Loop)
+        6. Fly Mode (Smooth 3D Flight with WASD/Space/Shift controls)
+        7. Anti-AFK Engine (Auto 20-minute idle disconnect protection)
     ========================================================================
 --]]
 
@@ -73,7 +72,6 @@ CleanupOldGui()
 -- Global Feature Toggles & State
 local Toggles = {
     AutoTrain = false,
-    AutoWins = false,
     AutoRebirth = false,
     Noclip = false,
     InfiniteJump = false,
@@ -85,9 +83,8 @@ local Toggles = {
 local CustomSpeedValue = 24
 
 -- =================================================================
--- ZERO SCREEN VIBRATION & CAMERA STABILIZER ENGINE
+-- ZERO SCREEN VIBRATION & CAMERA STABILIZER
 -- =================================================================
--- Neutralizes any camera shake, error vibration, or wobble triggered by game scripts
 RunService.RenderStepped:Connect(function()
     pcall(function()
         local char = LocalPlayer.Character
@@ -111,36 +108,26 @@ local function getCharParts()
     return root, hum, rHand, lHand
 end
 
--- Cached training bars & win pads to prevent lag
+-- Cached training bars to prevent lag
 local cachedBars = {}
-local cachedWinPads = {}
 local lastCacheUpdate = 0
 
 local function refreshWorkspaceCache()
     cachedBars = {}
-    cachedWinPads = {}
     for _, obj in ipairs(Workspace:GetDescendants()) do
         if obj:IsA("BasePart") then
             local n = obj.Name:lower()
             local pName = obj.Parent and obj.Parent.Name:lower() or ""
             
-            -- Check for Training Bars
             if n:find("bar") or n:find("pullup") or n:find("train") or n:find("hang") or pName:find("bar") or pName:find("train") or n:find("stretch") or pName:find("stretch") then
                 table.insert(cachedBars, obj)
-            end
-            
-            -- Check for Win Pads
-            if n:find("win") or n:find("finish") or n:find("victory") or n:find("end") or n:find("trophy") or n:find("checkpoint") or n:find("door") or n:find("stage") or pName:find("win") or pName:find("finish") then
-                table.insert(cachedWinPads, obj)
             end
         elseif obj:IsA("TouchTransmitter") then
             local parent = obj.Parent
             if parent and parent:IsA("BasePart") then
                 local n = parent.Name:lower()
                 local pName = parent.Parent and parent.Parent.Name:lower() or ""
-                if n:find("win") or n:find("finish") or n:find("victory") or n:find("end") or n:find("trophy") or n:find("checkpoint") or n:find("door") or pName:find("win") or pName:find("finish") then
-                    table.insert(cachedWinPads, parent)
-                elseif n:find("bar") or n:find("pullup") or n:find("train") or n:find("hang") or pName:find("bar") or pName:find("train") then
+                if n:find("bar") or n:find("pullup") or n:find("train") or n:find("hang") or pName:find("bar") or pName:find("train") then
                     table.insert(cachedBars, parent)
                 end
             end
@@ -164,6 +151,7 @@ local function fireRemotesMatching(keywords)
                             pcall(function() obj:FireServer() end)
                             pcall(function() obj:FireServer(1) end)
                             pcall(function() obj:FireServer(true) end)
+                            pcall(function() obj:FireServer("Rebirth") end)
                             break
                         end
                     end
@@ -178,6 +166,7 @@ local function fireRemotesMatching(keywords)
                                 pcall(function() obj:InvokeServer() end)
                                 pcall(function() obj:InvokeServer(1) end)
                                 pcall(function() obj:InvokeServer(true) end)
+                                pcall(function() obj:InvokeServer("Rebirth") end)
                             end)
                             break
                         end
@@ -335,11 +324,10 @@ local function DisableFly()
 end
 
 -- =================================================================
--- 3. CORE GAME LOOPS (PROVEN WORKING LOGIC)
+-- 3. CORE GAME LOOPS
 -- =================================================================
 
 local trainKeywords = {"train", "stretch", "arm", "length", "grow", "pullup", "click", "tap", "add"}
-local winKeywords = {"win", "finish", "victory", "checkpoint", "door", "reward"}
 local rebirthKeywords = {"rebirth", "prestige", "ascend", "reset"}
 
 -- Continuous Auto Train Arms Loop
@@ -420,93 +408,32 @@ task.spawn(function()
     end
 end)
 
--- Continuous Auto Wins Loop
+-- Continuous Auto Rebirth Loop (Smooth Remote & UI Trigger)
 task.spawn(function()
     while true do
-        task.wait(0.25)
-        if Toggles.AutoWins then
-            pcall(function()
-                if tick() - lastCacheUpdate > 15 then
-                    refreshWorkspaceCache()
-                end
-                
-                local root, _ = getCharParts()
-                if root then
-                    -- 1. Trigger Win Pads via firetouchinterest on root and character
-                    if #cachedWinPads > 0 and firetouchinterest then
-                        for _, pad in ipairs(cachedWinPads) do
-                            if not Toggles.AutoWins then break end
-                            if pad and pad.Parent then
-                                firetouchinterest(root, pad, 0)
-                                task.wait(0.005)
-                                firetouchinterest(root, pad, 1)
-                            end
-                        end
-                    end
-                    
-                    -- 2. Fire Win Remotes in ReplicatedStorage
-                    fireRemotesMatching(winKeywords)
-                end
-            end)
-        end
-    end
-end)
-
--- =================================================================
--- SMART AUTO REBIRTH (ANTI-VIBRATION & ANTI-NOTIFICATION SPAM)
--- =================================================================
-local lastRebirthPauseUntil = 0
-
--- Automatically hide and dismiss requirement error popups so they don't stay on screen
-local function CleanRequirementPopups()
-    pcall(function()
-        local pgui = LocalPlayer:FindFirstChild("PlayerGui")
-        if not pgui then return end
-        for _, gui in ipairs(pgui:GetChildren()) do
-            if gui:IsA("ScreenGui") and gui.Name ~= "JunejoHub_LongArmEscape" then
-                for _, obj in ipairs(gui:GetDescendants()) do
-                    if obj:IsA("TextLabel") or obj:IsA("TextButton") then
-                        local t = obj.Text:lower()
-                        if t:find("not enough") or t:find("need") or t:find("require") then
-                            local parentFrame = obj:FindFirstAncestorWhichIsA("Frame") or obj:FindFirstAncestorWhichIsA("ImageLabel")
-                            if parentFrame and parentFrame.Visible then
-                                -- Pause rebirth attempts for 6 seconds so notification won't pop up again
-                                lastRebirthPauseUntil = tick() + 6
-                                -- Try to close notification
-                                for _, btn in ipairs(parentFrame:GetDescendants()) do
-                                    if (btn:IsA("TextButton") or btn:IsA("ImageButton")) and (btn.Name:lower():find("close") or btn.Name:lower() == "x") then
-                                        if firesignal then
-                                            firesignal(btn.MouseButton1Click)
-                                            firesignal(btn.Activated)
-                                        end
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end)
-end
-
--- Continuous Auto Rebirth Loop (Gentle 2.0s interval + Zero Shake)
-task.spawn(function()
-    while true do
-        task.wait(2.0)
+        task.wait(1.5)
         if Toggles.AutoRebirth then
             pcall(function()
-                -- Check if on pause due to unmet requirement notification
-                if tick() < lastRebirthPauseUntil then
-                    CleanRequirementPopups()
-                    return
-                end
-
-                -- 1. Fire verified Rebirth Remotes
+                -- 1. Fire verified Rebirth Remotes in ReplicatedStorage
                 fireRemotesMatching(rebirthKeywords)
 
-                -- 2. Check for and clean any popup notification immediately
-                task.delay(0.2, CleanRequirementPopups)
+                -- 2. Trigger Rebirth in PlayerGui (Opens dialog / performs rebirth if requirement is met or shows requirements)
+                local pgui = LocalPlayer:FindFirstChild("PlayerGui")
+                if pgui and firesignal then
+                    for _, btn in ipairs(pgui:GetDescendants()) do
+                        if (btn:IsA("TextButton") or btn:IsA("ImageButton")) and btn.Visible then
+                            local bName = btn.Name:lower()
+                            local bText = btn:IsA("TextButton") and btn.Text:lower() or ""
+                            local fullB = bName .. " " .. bText
+                            
+                            -- Trigger Confirm / Rebirth button
+                            if (fullB:find("rebirth") or fullB:find("prestige") or fullB:find("ascend") or fullB:find("confirm") or fullB:find("yes")) and not fullB:find("shop") and not fullB:find("pass") and not fullB:find("close") and not fullB:find("cancel") and not fullB:find("no") then
+                                firesignal(btn.MouseButton1Click)
+                                firesignal(btn.Activated)
+                            end
+                        end
+                    end
+                end
             end)
         end
     end
@@ -522,7 +449,8 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999999
 
-local MainWindowHeight = 275
+-- Compact Height without Auto Wins
+local MainWindowHeight = 250
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
@@ -572,7 +500,6 @@ CloseButton.Font = Enum.Font.GothamBold
 CloseButton.Parent = Header
 CloseButton.MouseButton1Click:Connect(function()
     Toggles.AutoTrain = false
-    Toggles.AutoWins = false
     Toggles.AutoRebirth = false
     Toggles.Noclip = false
     Toggles.InfiniteJump = false
@@ -594,7 +521,7 @@ HeaderLine.Parent = MainFrame
 -- Content Frame
 local ContentFrame = Instance.new("ScrollingFrame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -24, 0, 195)
+ContentFrame.Size = UDim2.new(1, -24, 0, 170)
 ContentFrame.Position = UDim2.new(0, 12, 0, 38)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.BorderSizePixel = 0
@@ -675,13 +602,10 @@ end
 -- 1. Auto Train Arms
 AddToggleRow("Auto Train Arms", "AutoTrain")
 
--- 2. Auto Wins
-AddToggleRow("Auto Wins", "AutoWins")
-
--- 3. Auto Rebirth
+-- 2. Auto Rebirth
 AddToggleRow("Auto Rebirth", "AutoRebirth")
 
--- 4. WalkSpeed with Integrated - / + Pill Controller
+-- 3. WalkSpeed with Integrated - / + Pill Controller
 local SpeedRow = Instance.new("Frame")
 SpeedRow.Size = UDim2.new(1, 0, 0, 23)
 SpeedRow.BackgroundTransparency = 1
@@ -796,18 +720,18 @@ PlusBtn.MouseButton1Click:Connect(function()
     UpdateCharacterSpeed()
 end)
 
--- 5. Noclip (Walk Thru Walls)
+-- 4. Noclip (Walk Thru Walls)
 AddToggleRow("Noclip (Walk Thru Walls)", "Noclip")
 
--- 6. Infinite Jump
+-- 5. Infinite Jump
 AddToggleRow("Infinite Jump", "InfiniteJump")
 
--- 7. Fly Mode
+-- 6. Fly Mode
 AddToggleRow("Fly Mode", "FlyMode", function(enabled)
     if enabled then EnableFly() else DisableFly() end
 end)
 
--- 8. Anti-AFK Engine
+-- 7. Anti-AFK Engine
 AddToggleRow("Anti-AFK Engine", "AntiAFK")
 
 -- Pinned Footer
@@ -876,4 +800,4 @@ end)
 -- Mount GUI
 ScreenGui.Parent = GetSafeGuiParent()
 
-print("[Junejo Script Hub]: +1 Long Arm Toy Escape Script (Master Edition) Loaded Successfully!")
+print("[Junejo Script Hub]: +1 Long Arm Toy Escape Script Loaded Successfully!")
