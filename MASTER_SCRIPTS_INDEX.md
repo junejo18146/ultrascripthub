@@ -916,9 +916,29 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   - Anti-AFK Engine (Auto 20-minute idle disconnect protection)
   - Official Classic Junejo Dark UI (Flat Borderless Standard, 280x250px)
 
+## 48. Throw a Coin
+- **Game Name**: Throw a Coin
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/throw_a_coin.lua"))()
+  ```
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included (9 Features)**:
+  - Auto Sell Items (Continuous Sell Hitbox Touch, PlayerGui & Remotes Sweep)
+  - Auto Upgrade Luck (Continuous Upgrade Pads, PlayerGui & Remotes Sweep)
+  - Teleport to Fountain (Instant 1-Click Action to Wishing Fountain / Well)
+  - Teleport to Sell Area (Instant 1-Click Action to Sell Shop / Merchant)
+  - WalkSpeed Boost + Integrated Pill Controller (- / +: 16 to 300)
+  - Jump Power Boost + Integrated Pill Controller (- / +: 50 to 300)
+  - Infinite Jump (Continuous Airborne Jump Loop)
+  - Fly Mode (Smooth 3D Flight)
+  - Anti-AFK Engine (Auto 20-minute idle disconnect protection)
+  - Official Classic Junejo Dark UI (Flat Borderless Standard, 280x285px)
+
 ====================================================
 Updated: September 7, 2026
 ====================================================
+
 
 
 
