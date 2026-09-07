@@ -162,18 +162,19 @@ end)
 
 local function fireSignalDirect(sig, ...)
     if not sig then return end
+    local args = {...}
     pcall(function()
         if firesignal then
-            firesignal(sig, ...)
+            firesignal(sig, table.unpack(args))
         end
     end)
     pcall(function()
         if getconnections then
             for _, conn in ipairs(getconnections(sig)) do
                 if conn.Function then
-                    task.spawn(pcall, conn.Function, ...)
+                    task.spawn(pcall, conn.Function, table.unpack(args))
                 elseif conn.Fire then
-                    task.spawn(pcall, function() conn:Fire(...) end)
+                    task.spawn(pcall, function() conn:Fire(table.unpack(args)) end)
                 end
             end
         end
