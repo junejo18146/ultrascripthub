@@ -1,6 +1,6 @@
 --[[
     ========================================================================
-    JUNEJO ULTRA SCRIPT HUB - THROW A COIN (V2.0 WITH AUTO THROW)
+    JUNEJO ULTRA SCRIPT HUB - THROW A COIN (V3.0 AUTO BAR CLICKER)
     ========================================================================
     Author: Made by Junejo (junejo18146)
     Target Game: Throw a Coin (Roblox)
@@ -9,7 +9,7 @@
     UI Standard: Junejo Classic Dark UI (#0F0F11) - Flat & Borderless Standard
     
     Features Included (All Original Core Mechanics 100% Preserved):
-        1. Auto Throw Coin (Throws Every 0.5s Directly - No Waiting for Coin Full)
+        1. Auto Throw Coin (Auto-Clicks Fountain Side Bar & Throws Every 0.5s Without Tapping)
         2. Auto Sell Items (Continuous Sell Hitbox Touch, PlayerGui & Remotes Sweep)
         3. Auto Upgrade Luck (Continuous Upgrade Pads, PlayerGui & Remotes Sweep)
         4. Teleport to Fountain (Instant 1-Click Action to Wishing Fountain / Well)
@@ -33,6 +33,11 @@ local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VirtualUser = game:GetService("VirtualUser")
 local CoreGui = game:GetService("CoreGui")
+
+local VirtualInputManager = nil
+pcall(function()
+    VirtualInputManager = game:GetService("VirtualInputManager")
+end)
 
 local LocalPlayer = Players.LocalPlayer
 while not LocalPlayer do
@@ -123,11 +128,17 @@ local function triggerGuiButton(btn)
             if btn.MouseButton1Down then firesignal(btn.MouseButton1Down) end
             if btn.MouseButton1Up then firesignal(btn.MouseButton1Up) end
         end
+        if VirtualInputManager and btn.AbsoluteSize and btn.AbsoluteSize.X > 0 then
+            local center = btn.AbsolutePosition + (btn.AbsoluteSize / 2)
+            VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, true, game, 0)
+            task.wait(0.01)
+            VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, false, game, 0)
+        end
     end)
 end
 
 -- =================================================================
--- 1. AUTO THROW COIN ENGINE (Every 0.5s Fast Throw - No Waiting)
+-- 1. AUTO THROW COIN & SIDE BAR AUTO-CLICKER ENGINE (Every 0.5s)
 -- =================================================================
 local function executeThrowCoin()
     pcall(function()
@@ -148,15 +159,78 @@ local function executeThrowCoin()
             end
         end
 
-        -- 2. Fire Throw / Toss / Coin Remotes in ReplicatedStorage
+        -- 2. Scan & Click the Side Bar / Power Bar / Throw Button in PlayerGui
+        local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
+        if playerGui then
+            for _, gui in ipairs(playerGui:GetChildren()) do
+                if gui:IsA("ScreenGui") and gui.Name ~= "JunejoHub_ThrowACoin" then
+                    for _, obj in ipairs(gui:GetDescendants()) do
+                        if (obj:IsA("TextButton") or obj:IsA("ImageButton") or obj:IsA("Frame") or obj:IsA("ImageLabel")) and obj.Visible then
+                            local n = obj.Name:lower()
+                            local pName = obj.Parent and obj.Parent.Name:lower() or ""
+                            local full = n .. " " .. pName
+                            
+                            -- Detect any Side Bar, Power Meter, Charging Bar, or Throw Button
+                            if full:find("bar") or full:find("throw") or full:find("power") or full:find("charge") or full:find("meter") or full:find("coin") or full:find("side") or full:find("click") or full:find("tap") or full:find("target") or full:find("fountain") or full:find("gauge") then
+                                if not full:find("shop") and not full:find("sell") and not full:find("upgrade") and not full:find("rebirth") and not full:find("setting") then
+                                    if obj:IsA("TextButton") or obj:IsA("ImageButton") then
+                                        triggerGuiButton(obj)
+                                    elseif obj:IsA("Frame") or obj:IsA("ImageLabel") then
+                                        -- Click center of frame/bar directly via VirtualInputManager
+                                        pcall(function()
+                                            local absPos = obj.AbsolutePosition
+                                            local absSize = obj.AbsoluteSize
+                                            if absSize.X > 0 and absSize.Y > 0 and VirtualInputManager then
+                                                local center = absPos + (absSize / 2)
+                                                VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, true, game, 0)
+                                                VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, false, game, 0)
+                                            end
+                                        end)
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+
+        -- 3. Side & Center Screen Tap Simulation (Clicks exact screen spots where Side Bar appears)
+        local camera = Workspace.CurrentCamera
+        if camera and camera.ViewportSize then
+            local vp = camera.ViewportSize
+            local tapSpots = {
+                Vector2.new(vp.X * 0.82, vp.Y * 0.50), -- Right Side Bar (Primary)
+                Vector2.new(vp.X * 0.85, vp.Y * 0.60), -- Right Side Lower Bar
+                Vector2.new(vp.X * 0.75, vp.Y * 0.50), -- Right-Mid Bar
+                Vector2.new(vp.X * 0.50, vp.Y * 0.50), -- Center Screen
+                Vector2.new(vp.X * 0.50, vp.Y * 0.70)  -- Bottom Center Bar
+            }
+
+            for _, spot in ipairs(tapSpots) do
+                if VirtualInputManager then
+                    pcall(function()
+                        VirtualInputManager:SendMouseButtonEvent(spot.X, spot.Y, 0, true, game, 0)
+                        VirtualInputManager:SendMouseButtonEvent(spot.X, spot.Y, 0, false, game, 0)
+                    end)
+                end
+                pcall(function()
+                    VirtualUser:ClickButton1(spot)
+                end)
+            end
+        end
+
+        -- 4. Fire Throw / Toss / Coin Remotes in ReplicatedStorage with power args
         for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
             if rem:IsA("RemoteEvent") then
                 local rName = string.lower(rem.Name)
-                if string.find(rName, "throw") or string.find(rName, "toss") or string.find(rName, "flip") or string.find(rName, "coin") or string.find(rName, "fountain") or string.find(rName, "drop") then
+                if string.find(rName, "throw") or string.find(rName, "toss") or string.find(rName, "flip") or string.find(rName, "coin") or string.find(rName, "fountain") or string.find(rName, "drop") or string.find(rName, "power") then
                     if not string.find(rName, "sell") and not string.find(rName, "upgrade") and not string.find(rName, "shop") and not string.find(rName, "buy") then
                         pcall(function() rem:FireServer() end)
+                        pcall(function() rem:FireServer(100) end)
                         pcall(function() rem:FireServer(1) end)
                         pcall(function() rem:FireServer(true) end)
+                        pcall(function() rem:FireServer("Throw", 100) end)
                         pcall(function() rem:FireServer("Throw") end)
                     end
                 end
@@ -166,6 +240,7 @@ local function executeThrowCoin()
                     if not string.find(rName, "sell") and not string.find(rName, "upgrade") and not string.find(rName, "shop") and not string.find(rName, "buy") then
                         task.spawn(function()
                             pcall(function() rem:InvokeServer() end)
+                            pcall(function() rem:InvokeServer(100) end)
                             pcall(function() rem:InvokeServer(1) end)
                             pcall(function() rem:InvokeServer(true) end)
                         end)
@@ -174,7 +249,7 @@ local function executeThrowCoin()
             end
         end
 
-        -- 3. Trigger Fountain ProximityPrompts & ClickDetectors
+        -- 5. Trigger Fountain ProximityPrompts & ClickDetectors
         for _, obj in ipairs(Workspace:GetDescendants()) do
             if obj:IsA("ProximityPrompt") then
                 local pName = string.lower(obj.Parent.Name)
@@ -192,29 +267,10 @@ local function executeThrowCoin()
                 end
             end
         end
-
-        -- 4. Trigger In-Game Throw Button in PlayerGui if available
-        local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
-        if playerGui then
-            for _, btn in ipairs(playerGui:GetDescendants()) do
-                if btn:IsA("TextButton") or btn:IsA("ImageButton") then
-                    local nameL = string.lower(btn.Name)
-                    local textL = btn:IsA("TextButton") and string.lower(btn.Text) or ""
-                    if string.find(nameL, "throw") or string.find(textL, "throw") or string.find(nameL, "toss") or string.find(textL, "toss") or string.find(nameL, "flip") then
-                        triggerGuiButton(btn)
-                    end
-                end
-            end
-        end
-
-        -- 5. Virtual Screen Click Simulation
-        pcall(function()
-            VirtualUser:ClickButton1(Vector2.new(500, 500))
-        end)
     end)
 end
 
--- Continuous Auto Throw Loop (Every 0.5s Fast Direct Throw)
+-- Continuous Auto Throw Loop (Every 0.5s Fast Throw - No Manual Tapping Needed)
 task.spawn(function()
     while true do
         task.wait(0.5)
@@ -711,7 +767,7 @@ end
 -- BUILD FEATURE ROWS
 -- =================================================================
 
--- 1. Auto Throw Coin (Throws Every 0.5s)
+-- 1. Auto Throw Coin (Auto Side Bar Clicker & 0.5s Fast Throw)
 AddToggleRow("Auto Throw Coin", "AutoThrow")
 
 -- 2. Auto Sell Items
@@ -1033,4 +1089,4 @@ end)
 -- Mount GUI
 ScreenGui.Parent = GetSafeGuiParent()
 
-print("[Junejo Script Hub]: Throw a Coin Script (V2.0 with Auto Throw) Loaded Successfully!")
+print("[Junejo Script Hub]: Throw a Coin Script (V3.0 Auto Bar Clicker) Loaded Successfully!")
