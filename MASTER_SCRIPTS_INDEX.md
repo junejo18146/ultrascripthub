@@ -872,7 +872,35 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   - Infinite Jump (Multi-Jump Bypass)
   - Official Classic Junejo Dark UI (Flat Borderless Standard, 280x235px)
 
+## 46. Jump To Steal SCP Monsters
+- **Game Name**: Jump To Steal SCP Monsters
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/jump_to_steal_scp.lua"))()
+  ```
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included (17 Features)**:
+  - Instant Steal (1-Click Action Button)
+  - Target Zone Selector (Auto Highest & All Floor Zones)
+  - Auto Steal Loop (Lag-Free 2-Teleport Direct Grab & Deposit)
+  - Auto Collect Cash (CollectPads & Remote Sweep)
+  - Auto Upgrade Jump (Speed & Jump Multipliers)
+  - Auto Upgrade Capacity (Carry Limit Multiplier)
+  - Auto Rebirth (Automatic Prestige Engine)
+  - Auto Open Lucky Blocks (Stands Sweep)
+  - Anti-Guard Godmode (Guardian Touch Disabled)
+  - Monster ESP (Rarity Neon Highlights & Billboard Tags)
+  - Guard ESP (Red Danger Highlights & Billboard Tags)
+  - Player ESP & Health (Live HP & Distance Wallhack)
+  - WalkSpeed Boost + Integrated Pill Controller (- / +: 16 to 300)
+  - Infinite Jump (Multi-Jump Engine)
+  - Fly Mode (Smooth 3D Flight)
+  - Noclip Mode (Phase Through Barriers & Doors)
+  - Anti-AFK Engine (Auto 20-minute idle disconnect protection)
+  - Official Classic Junejo Dark UI (Flat Borderless Standard, 280x280px)
+
 ====================================================
 Updated: September 7, 2026
 ====================================================
+
 
