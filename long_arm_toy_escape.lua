@@ -1,6 +1,6 @@
 --[[
     ========================================================================
-    JUNEJO ULTRA SCRIPT HUB - +1 LONG ARM TOY ESCAPE!
+    JUNEJO ULTRA SCRIPT HUB - +1 LONG ARM TOY ESCAPE! (V2.0 HIGH POWER)
     ========================================================================
     Author: Made by Junejo (junejo18146)
     Target Game: +1 Long Arm Toy Escape! (Roblox)
@@ -8,13 +8,13 @@
     File: long_arm_toy_escape.lua
     UI Standard: Junejo Classic Dark UI (#0F0F11) - Flat & Borderless Standard
     
-    Features Included (All Core Game Logic 100% Intact & Preserved):
-        1. Auto Train Arms (Touch Overhead Bars, Fire Growth Remotes & Tools)
-        2. Auto Wins (Touch Win/Victory Pads & Fire Win Remotes)
-        3. Auto Rebirth (Automatic Prestige Loop)
-        4. Noclip Mode (Walk & Phase Through Walls & Doors)
-        5. Infinite Jump (Continuous Multi-Jump Engine)
-        6. WalkSpeed Boost + Integrated Pill Controller (- / +: 16 to 300)
+    Enhanced High-Power Systems:
+        1. Auto Train Arms (Multi-Layer: Remote Sweep + Screen Auto-Tap + Tool Rapid Click + Pull-Up Bars Touch + UI Signals)
+        2. Auto Wins (Multi-Layer: Win Pads Multi-Touch + Prompt Trigger + Win Remotes Sweep + Teleport Touch)
+        3. Auto Rebirth (Multi-Layer: Rebirth Remotes Sweep + UI Dialog Auto-Trigger + Workspace Rebirth Pads)
+        4. WalkSpeed Boost + Integrated Pill Controller (- / +: 16 to 300 with Anti-Rubberband Sync)
+        5. Noclip (Walk & Phase Through Walls & Doors)
+        6. Infinite Jump (Continuous Airborne Multi-Jump)
         7. Fly Mode (Smooth 3D Flight with WASD/Space/Shift controls)
         8. Anti-AFK Engine (Auto 20-minute idle disconnect protection)
     ========================================================================
@@ -31,6 +31,11 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
 local CoreGui = game:GetService("CoreGui")
+
+local VirtualInputManager = nil
+pcall(function()
+    VirtualInputManager = game:GetService("VirtualInputManager")
+end)
 
 local LocalPlayer = Players.LocalPlayer
 while not LocalPlayer do
@@ -85,46 +90,85 @@ local Toggles = {
 local CustomSpeedValue = 24
 
 -- =================================================================
--- 1. HELPER FUNCTIONS & CACHED SEARCH
+-- HELPER FUNCTIONS & CHARACTER ACCESS
 -- =================================================================
 local function getCharParts()
     local char = LocalPlayer.Character
-    if not char then return nil, nil, nil, nil end
-    local root = char:FindFirstChild("HumanoidRootPart")
+    if not char then return nil, nil, nil, nil, nil, nil end
+    local root = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
     local hum = char:FindFirstChildOfClass("Humanoid")
     local rHand = char:FindFirstChild("RightHand") or char:FindFirstChild("Right Arm")
     local lHand = char:FindFirstChild("LeftHand") or char:FindFirstChild("Left Arm")
-    return root, hum, rHand, lHand
+    local head = char:FindFirstChild("Head")
+    local rFoot = char:FindFirstChild("RightFoot") or char:FindFirstChild("Right Leg")
+    return root, hum, rHand, lHand, head, rFoot
 end
 
--- Cached training bars & win pads to prevent lag
+-- Universal Proximity Prompt Trigger
+local function UniversalTriggerPrompt(prompt)
+    if not prompt or not prompt.Parent then return end
+    pcall(function()
+        prompt.HoldDuration = 0
+        prompt.RequiresLineOfSight = false
+        prompt.MaxActivationDistance = 99999
+    end)
+    if fireproximityprompt then
+        pcall(function() fireproximityprompt(prompt, 0) end)
+        pcall(function() fireproximityprompt(prompt) end)
+    end
+    pcall(function()
+        prompt:InputHoldBegin()
+        task.wait(0.04)
+        prompt:InputHoldEnd()
+    end)
+end
+
+-- =================================================================
+-- WORKSPACE OBJECTS CACHE SCANNER
+-- =================================================================
 local cachedBars = {}
 local cachedWinPads = {}
+local cachedRebirthPads = {}
 local lastCacheUpdate = 0
 
 local function refreshWorkspaceCache()
     cachedBars = {}
     cachedWinPads = {}
+    cachedRebirthPads = {}
+    
     for _, obj in ipairs(Workspace:GetDescendants()) do
         if obj:IsA("BasePart") then
             local n = obj.Name:lower()
             local pName = obj.Parent and obj.Parent.Name:lower() or ""
+            local combined = n .. " " .. pName
             
-            -- Check for Training Bars
-            if n:find("bar") or n:find("pullup") or n:find("train") or n:find("hang") or pName:find("bar") or pName:find("train") then
+            -- Check for Training Bars / Gym Objects
+            if combined:find("bar") or combined:find("pullup") or combined:find("train") or combined:find("hang") or combined:find("grip") or combined:find("arm") or combined:find("gym") or combined:find("workout") then
                 table.insert(cachedBars, obj)
             end
             
-            -- Check for Win Pads
-            if n:find("win") or n:find("finish") or n:find("victory") or n:find("end") or n:find("trophy") or n:find("checkpoint") then
+            -- Check for Win / Finish / Checkpoint Pads
+            if combined:find("win") or combined:find("finish") or combined:find("victory") or combined:find("end") or combined:find("trophy") or combined:find("checkpoint") or combined:find("reward") or combined:find("door") or combined:find("stage") or combined:find("portal") then
                 table.insert(cachedWinPads, obj)
+            end
+
+            -- Check for Rebirth Pads
+            if combined:find("rebirth") or combined:find("prestige") or combined:find("ascend") or combined:find("reset") then
+                table.insert(cachedRebirthPads, obj)
             end
         elseif obj:IsA("TouchTransmitter") then
             local parent = obj.Parent
             if parent and parent:IsA("BasePart") then
                 local n = parent.Name:lower()
-                if n:find("win") or n:find("finish") or n:find("victory") or n:find("end") or n:find("trophy") or n:find("checkpoint") then
+                local pName = parent.Parent and parent.Parent.Name:lower() or ""
+                local combined = n .. " " .. pName
+                
+                if combined:find("win") or combined:find("finish") or combined:find("victory") or combined:find("end") or combined:find("trophy") or combined:find("checkpoint") or combined:find("reward") or combined:find("door") then
                     table.insert(cachedWinPads, parent)
+                elseif combined:find("bar") or combined:find("pullup") or combined:find("train") or combined:find("hang") then
+                    table.insert(cachedBars, parent)
+                elseif combined:find("rebirth") or combined:find("prestige") then
+                    table.insert(cachedRebirthPads, parent)
                 end
             end
         end
@@ -134,33 +178,47 @@ end
 
 refreshWorkspaceCache()
 
--- Fire matching ReplicatedStorage remotes safely
-local function fireRemotesMatching(keywords)
+-- =================================================================
+-- DEEP REMOTE SCANNER & FIRER
+-- =================================================================
+local function fireDeepRemotes(keywords)
     pcall(function()
         for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
             if obj:IsA("RemoteEvent") then
                 local n = obj.Name:lower()
-                local isShop = n:find("shop") or n:find("buy") or n:find("purchase") or n:find("menu") or n:find("pass")
+                local pName = obj.Parent and obj.Parent.Name:lower() or ""
+                local full = n .. " " .. pName
+                
+                local isShop = full:find("shop") or full:find("buy") or full:find("purchase") or full:find("pass") or full:find("robux") or full:find("devproduct")
                 if not isShop then
                     for _, kw in ipairs(keywords) do
-                        if n:find(kw) then
+                        if full:find(kw) then
                             pcall(function() obj:FireServer() end)
                             pcall(function() obj:FireServer(1) end)
                             pcall(function() obj:FireServer(true) end)
+                            pcall(function() obj:FireServer("Train") end)
+                            pcall(function() obj:FireServer("Win") end)
+                            pcall(function() obj:FireServer("Rebirth") end)
                             break
                         end
                     end
                 end
             elseif obj:IsA("RemoteFunction") then
                 local n = obj.Name:lower()
-                local isShop = n:find("shop") or n:find("buy") or n:find("purchase") or n:find("menu")
+                local pName = obj.Parent and obj.Parent.Name:lower() or ""
+                local full = n .. " " .. pName
+                
+                local isShop = full:find("shop") or full:find("buy") or full:find("purchase") or full:find("pass") or full:find("robux")
                 if not isShop then
                     for _, kw in ipairs(keywords) do
-                        if n:find(kw) then
+                        if full:find(kw) then
                             task.spawn(function()
                                 pcall(function() obj:InvokeServer() end)
                                 pcall(function() obj:InvokeServer(1) end)
                                 pcall(function() obj:InvokeServer(true) end)
+                                pcall(function() obj:InvokeServer("Train") end)
+                                pcall(function() obj:InvokeServer("Win") end)
+                                pcall(function() obj:InvokeServer("Rebirth") end)
                             end)
                             break
                         end
@@ -172,7 +230,7 @@ local function fireRemotesMatching(keywords)
 end
 
 -- =================================================================
--- 2. AUTOMATION ENGINES & UTILITIES
+-- AUTOMATION ENGINES & UTILITIES
 -- =================================================================
 
 -- Anti-AFK Engine
@@ -188,9 +246,10 @@ end)
 -- Infinite Jump Engine
 UserInputService.JumpRequest:Connect(function()
     if Toggles.InfiniteJump then
-        local _, hum = getCharParts()
-        if hum then
+        local root, hum = getCharParts()
+        if hum and root then
             hum:ChangeState(Enum.HumanoidStateType.Jumping)
+            root.Velocity = Vector3.new(root.Velocity.X, 52, root.Velocity.Z)
         end
     end
 end)
@@ -239,7 +298,7 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     task.spawn(function()
         local hum = char:WaitForChild("Humanoid", 4)
         if hum then
-            task.wait(0.5)
+            task.wait(0.4)
             UpdateCharacterSpeed()
         end
     end)
@@ -252,9 +311,7 @@ local FlyBodyGyro, FlyBodyVelocity
 local FlyConnection
 
 local function EnableFly()
-    local char = LocalPlayer.Character
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    local root, hum = getCharParts()
     if not root or not hum then return end
 
     if FlyBodyGyro then FlyBodyGyro:Destroy() end
@@ -314,87 +371,174 @@ local function DisableFly()
     end
     if FlyBodyGyro then FlyBodyGyro:Destroy() FlyBodyGyro = nil end
     if FlyBodyVelocity then FlyBodyVelocity:Destroy() FlyBodyVelocity = nil end
-    local char = LocalPlayer.Character
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    local _, hum = getCharParts()
     if hum then hum.PlatformStand = false end
 end
 
 -- =================================================================
--- 3. WORKABLE GAME LOOPS
+-- HIGH-POWER FEATURE LOOPS
 -- =================================================================
 
-local trainKeywords = {"train", "stretch", "arm", "length", "grow", "pullup", "click", "tap", "add"}
-local winKeywords = {"win", "finish", "victory", "checkpoint", "door", "reward"}
-local rebirthKeywords = {"rebirth", "prestige", "ascend", "reset"}
+local trainKeywords = {
+    "train", "stretch", "arm", "length", "grow", "pullup", "click", "tap",
+    "add", "power", "gain", "lift", "give", "increase", "punch", "swing", "exercise"
+}
 
--- Continuous Auto Train Arms Loop
+local winKeywords = {
+    "win", "finish", "victory", "checkpoint", "door", "reward", "trophy",
+    "claim", "stage", "complete", "portal", "end"
+}
+
+local rebirthKeywords = {
+    "rebirth", "prestige", "ascend", "reset", "buyrebirth", "dorebirth", "requestrebirth"
+}
+
+-- 1. HIGH POWER AUTO TRAIN ARMS LOOP (Multi-Engine)
 task.spawn(function()
     while true do
-        task.wait(0.1)
+        task.wait(0.06)
         if Toggles.AutoTrain then
             pcall(function()
-                -- 1. Refresh cache every 15s
-                if tick() - lastCacheUpdate > 15 then
+                if tick() - lastCacheUpdate > 10 then
                     refreshWorkspaceCache()
                 end
-                
-                local root, hum, rHand, lHand = getCharParts()
-                if root then
-                    -- 2. Touch Overhead Bars directly with hands (Pull-Up reps)
-                    if #cachedBars > 0 and firetouchinterest then
-                        for _, bar in ipairs(cachedBars) do
-                            if not Toggles.AutoTrain then break end
-                            if bar and bar.Parent then
-                                local dist = (Vector2.new(root.Position.X, root.Position.Z) - Vector2.new(bar.Position.X, bar.Position.Z)).Magnitude
-                                if dist <= 120 then
+
+                local root, hum, rHand, lHand, head, rFoot = getCharParts()
+
+                -- Engine A: Screen Click / Tap Simulation (Triggers games that listen to screen taps for +1 Arm)
+                local vp = Workspace.CurrentCamera and Workspace.CurrentCamera.ViewportSize or Vector2.new(500, 500)
+                if VirtualInputManager then
+                    pcall(function()
+                        VirtualInputManager:SendMouseButtonEvent(vp.X / 2, vp.Y / 2, 0, true, game, 0)
+                        VirtualInputManager:SendMouseButtonEvent(vp.X / 2, vp.Y / 2, 0, false, game, 0)
+                    end)
+                end
+                pcall(function()
+                    VirtualUser:ClickButton1(Vector2.new(vp.X / 2, vp.Y / 2))
+                end)
+
+                -- Engine B: Tool Auto-Equip & Rapid Activation
+                local char = LocalPlayer.Character
+                if char then
+                    local tool = char:FindFirstChildOfClass("Tool")
+                    if tool then
+                        tool:Activate()
+                    else
+                        local bpTool = LocalPlayer.Backpack:FindFirstChildOfClass("Tool")
+                        if bpTool and hum then
+                            hum:EquipTool(bpTool)
+                            task.wait(0.02)
+                            bpTool:Activate()
+                        end
+                    end
+                end
+
+                -- Engine C: Touch Overhead Pull-Up / Training Bars in Workspace
+                if #cachedBars > 0 and root then
+                    for _, bar in ipairs(cachedBars) do
+                        if not Toggles.AutoTrain then break end
+                        if bar and bar.Parent then
+                            local dist = (Vector2.new(root.Position.X, root.Position.Z) - Vector2.new(bar.Position.X, bar.Position.Z)).Magnitude
+                            if dist <= 150 then
+                                if firetouchinterest then
                                     if rHand then
                                         firetouchinterest(rHand, bar, 0)
-                                        task.wait(0.005)
                                         firetouchinterest(rHand, bar, 1)
                                     end
                                     if lHand then
                                         firetouchinterest(lHand, bar, 0)
-                                        task.wait(0.005)
                                         firetouchinterest(lHand, bar, 1)
                                     end
                                     firetouchinterest(root, bar, 0)
-                                    task.wait(0.005)
                                     firetouchinterest(root, bar, 1)
+                                end
+                                
+                                local prompt = bar:FindFirstChildWhichIsA("ProximityPrompt", true) or (bar.Parent and bar.Parent:FindFirstChildWhichIsA("ProximityPrompt", true))
+                                if prompt and prompt.Enabled then
+                                    UniversalTriggerPrompt(prompt)
                                 end
                             end
                         end
                     end
-                    
-                    -- 3. Fire Game Remotes for arm growth
-                    fireRemotesMatching(trainKeywords)
-                    
-                    -- 4. Equip & activate tool if available
-                    local char = LocalPlayer.Character
-                    if char then
-                        local tool = char:FindFirstChildOfClass("Tool")
-                        if tool then
-                            tool:Activate()
-                        else
-                            local bpTool = LocalPlayer.Backpack:FindFirstChildOfClass("Tool")
-                            if bpTool and hum then
-                                hum:EquipTool(bpTool)
-                                task.wait(0.04)
-                                bpTool:Activate()
+                end
+
+                -- Engine D: Deep Remotes Fire
+                fireDeepRemotes(trainKeywords)
+
+                -- Engine E: PlayerGui Training Buttons Fast Fire
+                local pgui = LocalPlayer:FindFirstChild("PlayerGui")
+                if pgui then
+                    for _, btn in ipairs(pgui:GetDescendants()) do
+                        if (btn:IsA("TextButton") or btn:IsA("ImageButton")) and btn.Visible then
+                            local bName = btn.Name:lower()
+                            local bText = btn:IsA("TextButton") and btn.Text:lower() or ""
+                            local fullB = bName .. " " .. bText
+                            if (fullB:find("train") or fullB:find("click") or fullB:find("tap") or fullB:find("arm") or fullB:find("grow") or fullB:find("stretch")) and not fullB:find("shop") and not fullB:find("buy") then
+                                if firesignal then
+                                    firesignal(btn.MouseButton1Click)
+                                    firesignal(btn.Activated)
+                                end
                             end
                         end
                     end
-                    
-                    -- 5. Trigger PlayerGui Train button if available via firesignal
+                end
+            end)
+        end
+    end
+end)
+
+-- 2. HIGH POWER AUTO WINS LOOP (Multi-Engine)
+task.spawn(function()
+    while true do
+        task.wait(0.25)
+        if Toggles.AutoWins then
+            pcall(function()
+                if tick() - lastCacheUpdate > 10 then
+                    refreshWorkspaceCache()
+                end
+
+                local root, hum, rHand, lHand, head, rFoot = getCharParts()
+                if root then
+                    -- Engine A: Trigger All Cached Win / Trophy / Finish Pads
+                    if #cachedWinPads > 0 then
+                        for _, pad in ipairs(cachedWinPads) do
+                            if not Toggles.AutoWins then break end
+                            if pad and pad.Parent then
+                                if firetouchinterest then
+                                    firetouchinterest(root, pad, 0)
+                                    firetouchinterest(root, pad, 1)
+                                    if rFoot then
+                                        firetouchinterest(rFoot, pad, 0)
+                                        firetouchinterest(rFoot, pad, 1)
+                                    end
+                                    if head then
+                                        firetouchinterest(head, pad, 0)
+                                        firetouchinterest(head, pad, 1)
+                                    end
+                                end
+
+                                local prompt = pad:FindFirstChildWhichIsA("ProximityPrompt", true) or (pad.Parent and pad.Parent:FindFirstChildWhichIsA("ProximityPrompt", true))
+                                if prompt and prompt.Enabled then
+                                    UniversalTriggerPrompt(prompt)
+                                end
+                            end
+                        end
+                    end
+
+                    -- Engine B: Deep Remotes Fire for Wins
+                    fireDeepRemotes(winKeywords)
+
+                    -- Engine C: PlayerGui Win Claim Buttons
                     local pgui = LocalPlayer:FindFirstChild("PlayerGui")
                     if pgui and firesignal then
                         for _, btn in ipairs(pgui:GetDescendants()) do
                             if (btn:IsA("TextButton") or btn:IsA("ImageButton")) and btn.Visible then
                                 local bName = btn.Name:lower()
                                 local bText = btn:IsA("TextButton") and btn.Text:lower() or ""
-                                if (bName:find("train") or bText:find("train")) and not bName:find("shop") and not bText:find("shop") then
+                                local fullB = bName .. " " .. bText
+                                if (fullB:find("claim") or fullB:find("collect") or fullB:find("win") or fullB:find("reward")) and not fullB:find("shop") and not fullB:find("buy") then
                                     firesignal(btn.MouseButton1Click)
                                     firesignal(btn.Activated)
-                                    break
                                 end
                             end
                         end
@@ -405,45 +549,48 @@ task.spawn(function()
     end
 end)
 
--- Continuous Auto Wins Loop
+-- 3. HIGH POWER AUTO REBIRTH LOOP (Multi-Engine)
 task.spawn(function()
     while true do
-        task.wait(0.3)
-        if Toggles.AutoWins then
+        task.wait(0.8)
+        if Toggles.AutoRebirth then
             pcall(function()
-                if tick() - lastCacheUpdate > 15 then
-                    refreshWorkspaceCache()
-                end
-                
-                local root, _ = getCharParts()
-                if root then
-                    -- 1. Trigger Win Pads via firetouchinterest
-                    if #cachedWinPads > 0 and firetouchinterest then
-                        for _, pad in ipairs(cachedWinPads) do
-                            if not Toggles.AutoWins then break end
-                            if pad and pad.Parent then
+                -- Engine A: Deep Remotes Fire
+                fireDeepRemotes(rebirthKeywords)
+
+                -- Engine B: Rebirth Pads in Workspace
+                local root = getCharParts()
+                if root and #cachedRebirthPads > 0 then
+                    for _, pad in ipairs(cachedRebirthPads) do
+                        if not Toggles.AutoRebirth then break end
+                        if pad and pad.Parent then
+                            if firetouchinterest then
                                 firetouchinterest(root, pad, 0)
-                                task.wait(0.01)
                                 firetouchinterest(root, pad, 1)
+                            end
+                            local prompt = pad:FindFirstChildWhichIsA("ProximityPrompt", true) or (pad.Parent and pad.Parent:FindFirstChildWhichIsA("ProximityPrompt", true))
+                            if prompt and prompt.Enabled then
+                                UniversalTriggerPrompt(prompt)
                             end
                         end
                     end
-                    
-                    -- 2. Fire Win Remotes in ReplicatedStorage
-                    fireRemotesMatching(winKeywords)
                 end
-            end)
-        end
-    end
-end)
 
--- Continuous Auto Rebirth Loop
-task.spawn(function()
-    while true do
-        task.wait(1.0)
-        if Toggles.AutoRebirth then
-            pcall(function()
-                fireRemotesMatching(rebirthKeywords)
+                -- Engine C: PlayerGui Rebirth Buttons & Dialogs Auto-Click
+                local pgui = LocalPlayer:FindFirstChild("PlayerGui")
+                if pgui and firesignal then
+                    for _, btn in ipairs(pgui:GetDescendants()) do
+                        if (btn:IsA("TextButton") or btn:IsA("ImageButton")) and btn.Visible then
+                            local bName = btn.Name:lower()
+                            local bText = btn:IsA("TextButton") and btn.Text:lower() or ""
+                            local fullB = bName .. " " .. bText
+                            if (fullB:find("rebirth") or fullB:find("prestige") or fullB:find("ascend") or fullB:find("confirm")) and not fullB:find("shop") and not fullB:find("pass") and not fullB:find("cancel") and not fullB:find("close") then
+                                firesignal(btn.MouseButton1Click)
+                                firesignal(btn.Activated)
+                            end
+                        end
+                    end
+                end
             end)
         end
     end
@@ -459,8 +606,6 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999999
 
--- Calculate Dynamic Window Height
--- Header (32) + Gap/Padding (10) + (7 items * 27px) + Footer (38) = ~270px
 local MainWindowHeight = 275
 
 local MainFrame = Instance.new("Frame")
@@ -815,4 +960,4 @@ end)
 -- Mount GUI
 ScreenGui.Parent = GetSafeGuiParent()
 
-print("[Junejo Script Hub]: +1 Long Arm Toy Escape Script Loaded Successfully!")
+print("[Junejo Script Hub]: +1 Long Arm Toy Escape Script (V2.0 Enhanced) Loaded Successfully!")
