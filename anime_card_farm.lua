@@ -524,55 +524,119 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
--- Fly Engine
-task.spawn(function()
-    while true do
-        task.wait(0.03)
-        if Toggles.FlyMode then
-            pcall(function()
-                local _, hrp, hum = getPlayerChar()
-                local camera = Workspace.CurrentCamera
-                
-                if hrp and hum and camera then
-                    local bv = hrp:FindFirstChild("CardFlyBV") or Instance.new("BodyVelocity")
-                    bv.Name = "CardFlyBV"
-                    bv.MaxForce = Vector3.new(1e8, 1e8, 1e8)
-                    bv.Parent = hrp
-                    
-                    local bg = hrp:FindFirstChild("CardFlyBG") or Instance.new("BodyGyro")
-                    bg.Name = "CardFlyBG"
-                    bg.MaxTorque = Vector3.new(1e8, 1e8, 1e8)
-                    bg.P = 10000
-                    bg.Parent = hrp
-                    
-                    hum.PlatformStand = true
-                    bg.CFrame = camera.CFrame
-                    
-                    local speed = FlySpeedValue or 60
-                    local moveDir = hum.MoveDirection
-                    if moveDir.Magnitude > 0 then
-                        local flyVel = camera.CFrame.LookVector * speed
-                        if math.abs(moveDir.Z) < 0.2 and math.abs(moveDir.X) > 0.5 then
-                            flyVel = camera.CFrame.RightVector * speed * (moveDir.X > 0 and 1 or -1)
-                        end
-                        bv.Velocity = flyVel
-                    else
-                        bv.Velocity = Vector3.new(0, 0, 0)
-                    end
-                end
-            end)
-        else
-            pcall(function()
-                local _, hrp, hum = getPlayerChar()
-                if hum and hum.PlatformStand then
-                    hum.PlatformStand = false
-                end
-                if hrp then
-                    if hrp:FindFirstChild("CardFlyBV") then hrp.CardFlyBV:Destroy() end
-                    if hrp:FindFirstChild("CardFlyBG") then hrp.CardFlyBG:Destroy() end
-                end
-            end)
+-- Fly Engine (Full 3D Smooth WASD & Mobile Touch Control)
+local FlyBodyGyro = nil
+local FlyBodyVelocity = nil
+local FlyConnection = nil
+local Flying = false
+
+local function DisableFly()
+    Flying = false
+    if FlyConnection then
+        FlyConnection:Disconnect()
+        FlyConnection = nil
+    end
+    if FlyBodyVelocity then
+        pcall(function() FlyBodyVelocity:Destroy() end)
+        FlyBodyVelocity = nil
+    end
+    if FlyBodyGyro then
+        pcall(function() FlyBodyGyro:Destroy() end)
+        FlyBodyGyro = nil
+    end
+    pcall(function()
+        local _, hrp, hum = getPlayerChar()
+        if hum then hum.PlatformStand = false end
+        if hrp then
+            hrp.Velocity = Vector3.zero
+            hrp.RotVelocity = Vector3.zero
+            if hrp:FindFirstChild("CardFlyBV") then hrp.CardFlyBV:Destroy() end
+            if hrp:FindFirstChild("CardFlyBG") then hrp.CardFlyBG:Destroy() end
         end
+    end)
+end
+
+local function EnableFly()
+    DisableFly()
+    local char, hrp, hum = getPlayerChar()
+    if not hrp or not hum then return end
+
+    Flying = true
+    
+    FlyBodyGyro = Instance.new("BodyGyro")
+    FlyBodyGyro.Name = "CardFlyBG"
+    FlyBodyGyro.P = 9e4
+    FlyBodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+    FlyBodyGyro.CFrame = hrp.CFrame
+    FlyBodyGyro.Parent = hrp
+
+    FlyBodyVelocity = Instance.new("BodyVelocity")
+    FlyBodyVelocity.Name = "CardFlyBV"
+    FlyBodyVelocity.Velocity = Vector3.zero
+    FlyBodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+    FlyBodyVelocity.Parent = hrp
+
+    FlyConnection = RunService.RenderStepped:Connect(function()
+        if not Toggles.FlyMode or not Flying or not hrp or not hrp.Parent or not hum or hum.Health <= 0 then
+            DisableFly()
+            return
+        end
+
+        local cam = Workspace.CurrentCamera
+        if not cam then return end
+
+        FlyBodyGyro.CFrame = cam.CFrame
+
+        local flySpeed = math.clamp(CustomSpeedValue * 2.2, 50, 220)
+        local moveDirection = Vector3.zero
+
+        -- PC Keyboard WASD Controls
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+            moveDirection = moveDirection + cam.CFrame.LookVector
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+            moveDirection = moveDirection - cam.CFrame.LookVector
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+            moveDirection = moveDirection - cam.CFrame.RightVector
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+            moveDirection = moveDirection + cam.CFrame.RightVector
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+            moveDirection = moveDirection + Vector3.new(0, 1, 0)
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or UserInputService:IsKeyDown(Enum.KeyCode.E) then
+            moveDirection = moveDirection - Vector3.new(0, 1, 0)
+        end
+
+        -- Mobile Touch / Dynamic Thumbstick Support
+        if hum.MoveDirection.Magnitude > 0 then
+            local rawMove = hum.MoveDirection
+            local forwardDot = rawMove:Dot(cam.CFrame.LookVector)
+            local rightDot = rawMove:Dot(cam.CFrame.RightVector)
+            
+            local mobileDir = (cam.CFrame.LookVector * forwardDot) + (cam.CFrame.RightVector * rightDot)
+            if mobileDir.Magnitude > 0.1 then
+                moveDirection = moveDirection + mobileDir.Unit
+            else
+                moveDirection = moveDirection + (cam.CFrame.LookVector * rawMove.Magnitude)
+            end
+        end
+
+        if moveDirection.Magnitude > 0 then
+            FlyBodyVelocity.Velocity = moveDirection.Unit * flySpeed
+        else
+            FlyBodyVelocity.Velocity = Vector3.zero
+        end
+    end)
+end
+
+-- Re-enable Fly on Character Respawn if enabled
+LocalPlayer.CharacterAdded:Connect(function(char)
+    task.wait(0.6)
+    if Toggles.FlyMode then
+        EnableFly()
     end
 end)
 
@@ -650,14 +714,7 @@ CloseButton.MouseButton1Click:Connect(function()
     Toggles.JumpPowerBoost = false
     Toggles.InfiniteJump = false
     Toggles.FlyMode = false
-    pcall(function()
-        local _, hrp, hum = getPlayerChar()
-        if hum then hum.PlatformStand = false end
-        if hrp then
-            if hrp:FindFirstChild("CardFlyBV") then hrp.CardFlyBV:Destroy() end
-            if hrp:FindFirstChild("CardFlyBG") then hrp.CardFlyBG:Destroy() end
-        end
-    end)
+    DisableFly()
     ScreenGui:Destroy()
 end)
 
@@ -997,7 +1054,13 @@ end)
 AddToggleRow("Infinite Jump", "InfiniteJump")
 
 -- 9. Fly Mode
-AddToggleRow("Fly Mode", "FlyMode")
+AddToggleRow("Fly Mode", "FlyMode", function(enabled)
+    if enabled then
+        EnableFly()
+    else
+        DisableFly()
+    end
+end)
 
 -- 10. Anti-AFK Engine
 AddToggleRow("Anti-AFK Engine", "AntiAFK")
