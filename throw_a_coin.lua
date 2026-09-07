@@ -1,6 +1,6 @@
 --[[
     ========================================================================
-    JUNEJO ULTRA SCRIPT HUB - THROW A COIN (V3.0 AUTO BAR CLICKER)
+    JUNEJO ULTRA SCRIPT HUB - THROW A COIN (V4.0 ZERO-VIBRATION EDITION)
     ========================================================================
     Author: Made by Junejo (junejo18146)
     Target Game: Throw a Coin (Roblox)
@@ -8,8 +8,8 @@
     File: throw_a_coin.lua
     UI Standard: Junejo Classic Dark UI (#0F0F11) - Flat & Borderless Standard
     
-    Features Included (All Original Core Mechanics 100% Preserved):
-        1. Auto Throw Coin (Auto-Clicks Fountain Side Bar & Throws Every 0.5s Without Tapping)
+    Features Included (Zero Screen Vibration / Pure Clean Auto-Throw):
+        1. Auto Throw Coin (Direct 0.5s Clean Throw into Fountain - Zero Screen Shake)
         2. Auto Sell Items (Continuous Sell Hitbox Touch, PlayerGui & Remotes Sweep)
         3. Auto Upgrade Luck (Continuous Upgrade Pads, PlayerGui & Remotes Sweep)
         4. Teleport to Fountain (Instant 1-Click Action to Wishing Fountain / Well)
@@ -19,6 +19,7 @@
         8. Infinite Jump (Continuous Multi-Jump Engine)
         9. Fly Mode (Smooth 3D Flight with WASD/Space/Shift controls)
         10. Anti-AFK Engine (Auto 20-minute idle disconnect protection)
+        11. Camera Stabilizer (Anti-Screen Vibration Engine)
     ========================================================================
 --]]
 
@@ -33,11 +34,6 @@ local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VirtualUser = game:GetService("VirtualUser")
 local CoreGui = game:GetService("CoreGui")
-
-local VirtualInputManager = nil
-pcall(function()
-    VirtualInputManager = game:GetService("VirtualInputManager")
-end)
 
 local LocalPlayer = Players.LocalPlayer
 while not LocalPlayer do
@@ -97,6 +93,19 @@ local CustomJumpValue = 100
 local FlySpeedValue = 60
 
 -- =================================================================
+-- ZERO SCREEN VIBRATION & CAMERA STABILIZER ENGINE
+-- =================================================================
+RunService.RenderStepped:Connect(function()
+    pcall(function()
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if hum and hum.CameraOffset ~= Vector3.zero then
+            hum.CameraOffset = Vector3.zero
+        end
+    end)
+end)
+
+-- =================================================================
 -- HELPER FUNCTIONS & CHARACTER ACCESS
 -- =================================================================
 local function getPlayerChar()
@@ -128,17 +137,11 @@ local function triggerGuiButton(btn)
             if btn.MouseButton1Down then firesignal(btn.MouseButton1Down) end
             if btn.MouseButton1Up then firesignal(btn.MouseButton1Up) end
         end
-        if VirtualInputManager and btn.AbsoluteSize and btn.AbsoluteSize.X > 0 then
-            local center = btn.AbsolutePosition + (btn.AbsoluteSize / 2)
-            VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, true, game, 0)
-            task.wait(0.01)
-            VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, false, game, 0)
-        end
     end)
 end
 
 -- =================================================================
--- 1. AUTO THROW COIN & SIDE BAR AUTO-CLICKER ENGINE (Every 0.5s)
+-- 1. CLEAN AUTO THROW COIN ENGINE (0.5s Fast Throw - ZERO Camera Vibration)
 -- =================================================================
 local function executeThrowCoin()
     pcall(function()
@@ -153,38 +156,35 @@ local function executeThrowCoin()
                 local bpTool = LocalPlayer.Backpack:FindFirstChildOfClass("Tool")
                 if bpTool and hum then
                     hum:EquipTool(bpTool)
-                    task.wait(0.02)
+                    task.wait(0.01)
                     bpTool:Activate()
                 end
             end
         end
 
-        -- 2. Scan & Click the Side Bar / Power Bar / Throw Button in PlayerGui
+        -- 2. Clean PlayerGui Throw Bar / Button Trigger (100% Silent Signal - No 3D Screen Taps)
         local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
         if playerGui then
             for _, gui in ipairs(playerGui:GetChildren()) do
                 if gui:IsA("ScreenGui") and gui.Name ~= "JunejoHub_ThrowACoin" then
                     for _, obj in ipairs(gui:GetDescendants()) do
-                        if (obj:IsA("TextButton") or obj:IsA("ImageButton") or obj:IsA("Frame") or obj:IsA("ImageLabel")) and obj.Visible then
+                        if obj.Visible then
                             local n = obj.Name:lower()
                             local pName = obj.Parent and obj.Parent.Name:lower() or ""
                             local full = n .. " " .. pName
                             
-                            -- Detect any Side Bar, Power Meter, Charging Bar, or Throw Button
-                            if full:find("bar") or full:find("throw") or full:find("power") or full:find("charge") or full:find("meter") or full:find("coin") or full:find("side") or full:find("click") or full:find("tap") or full:find("target") or full:find("fountain") or full:find("gauge") then
-                                if not full:find("shop") and not full:find("sell") and not full:find("upgrade") and not full:find("rebirth") and not full:find("setting") then
+                            -- Target the in-game throw button, side bar, power bar or meter
+                            if full:find("throw") or full:find("bar") or full:find("power") or full:find("charge") or full:find("meter") or full:find("coin") or full:find("click") or full:find("tap") or full:find("target") or full:find("fountain") then
+                                if not full:find("shop") and not full:find("sell") and not full:find("upgrade") and not full:find("rebirth") and not full:find("setting") and not full:find("close") then
                                     if obj:IsA("TextButton") or obj:IsA("ImageButton") then
                                         triggerGuiButton(obj)
-                                    elseif obj:IsA("Frame") or obj:IsA("ImageLabel") then
-                                        -- Click center of frame/bar directly via VirtualInputManager
+                                    elseif (obj:IsA("Frame") or obj:IsA("ImageLabel")) and firesignal then
                                         pcall(function()
-                                            local absPos = obj.AbsolutePosition
-                                            local absSize = obj.AbsoluteSize
-                                            if absSize.X > 0 and absSize.Y > 0 and VirtualInputManager then
-                                                local center = absPos + (absSize / 2)
-                                                VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, true, game, 0)
-                                                VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, false, game, 0)
-                                            end
+                                            firesignal(obj.InputBegan, {
+                                                UserInputType = Enum.UserInputType.MouseButton1,
+                                                UserInputState = Enum.UserInputState.Begin,
+                                                Position = Vector3.new(0, 0, 0)
+                                            })
                                         end)
                                     end
                                 end
@@ -195,32 +195,7 @@ local function executeThrowCoin()
             end
         end
 
-        -- 3. Side & Center Screen Tap Simulation (Clicks exact screen spots where Side Bar appears)
-        local camera = Workspace.CurrentCamera
-        if camera and camera.ViewportSize then
-            local vp = camera.ViewportSize
-            local tapSpots = {
-                Vector2.new(vp.X * 0.82, vp.Y * 0.50), -- Right Side Bar (Primary)
-                Vector2.new(vp.X * 0.85, vp.Y * 0.60), -- Right Side Lower Bar
-                Vector2.new(vp.X * 0.75, vp.Y * 0.50), -- Right-Mid Bar
-                Vector2.new(vp.X * 0.50, vp.Y * 0.50), -- Center Screen
-                Vector2.new(vp.X * 0.50, vp.Y * 0.70)  -- Bottom Center Bar
-            }
-
-            for _, spot in ipairs(tapSpots) do
-                if VirtualInputManager then
-                    pcall(function()
-                        VirtualInputManager:SendMouseButtonEvent(spot.X, spot.Y, 0, true, game, 0)
-                        VirtualInputManager:SendMouseButtonEvent(spot.X, spot.Y, 0, false, game, 0)
-                    end)
-                end
-                pcall(function()
-                    VirtualUser:ClickButton1(spot)
-                end)
-            end
-        end
-
-        -- 4. Fire Throw / Toss / Coin Remotes in ReplicatedStorage with power args
+        -- 3. Fire Backend Throw / Toss / Coin Remotes in ReplicatedStorage
         for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
             if rem:IsA("RemoteEvent") then
                 local rName = string.lower(rem.Name)
@@ -249,7 +224,7 @@ local function executeThrowCoin()
             end
         end
 
-        -- 5. Trigger Fountain ProximityPrompts & ClickDetectors
+        -- 4. Trigger Fountain ProximityPrompts & ClickDetectors in Workspace
         for _, obj in ipairs(Workspace:GetDescendants()) do
             if obj:IsA("ProximityPrompt") then
                 local pName = string.lower(obj.Parent.Name)
@@ -270,7 +245,7 @@ local function executeThrowCoin()
     end)
 end
 
--- Continuous Auto Throw Loop (Every 0.5s Fast Throw - No Manual Tapping Needed)
+-- Continuous Auto Throw Loop (Every 0.5s Fast Throw)
 task.spawn(function()
     while true do
         task.wait(0.5)
@@ -767,7 +742,7 @@ end
 -- BUILD FEATURE ROWS
 -- =================================================================
 
--- 1. Auto Throw Coin (Auto Side Bar Clicker & 0.5s Fast Throw)
+-- 1. Auto Throw Coin (Pure Silent Signals - Zero Screen Shake)
 AddToggleRow("Auto Throw Coin", "AutoThrow")
 
 -- 2. Auto Sell Items
@@ -1089,4 +1064,4 @@ end)
 -- Mount GUI
 ScreenGui.Parent = GetSafeGuiParent()
 
-print("[Junejo Script Hub]: Throw a Coin Script (V3.0 Auto Bar Clicker) Loaded Successfully!")
+print("[Junejo Script Hub]: Throw a Coin Script (V4.0 Zero-Vibration) Loaded Successfully!")
