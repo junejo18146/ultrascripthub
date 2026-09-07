@@ -856,27 +856,23 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   - Anti-AFK Engine (Auto 20-minute idle disconnect protection)
   - Official Classic Junejo Dark UI (Flat Borderless Standard, 280x285px)
 
-## 45. Fight in a School (V4.0 Ultimate)
+## 45. Fight in a School (Ultra-Fast Lite Edition)
 - **Game Name**: Fight in a School
 - **Raw Script Loadstring**:
   ```lua
   loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/fight_in_a_school.lua"))()
   ```
 - **Key System Status**: Disabled (Direct Standalone Executable)
-- **Features Included (11 Selected Features)**:
+- **Features Included (Optimized Lite Edition)**:
   - Hitbox Expander (15x15x15 Reach Multiplier)
-  - Fast Attack / Kill Aura (Auto Strike Nearby Enemies)
-  - Auto Throw Aimbot (Throwable Objects Direct Aim)
-  - Anti-Ragdoll & Anti-Knockback (Fall & Stun Shield)
-  - Auto Gym Trainer (Workout Farm)
-  - Player ESP & Live Health Wallhack
-  - Weapon & Item ESP (Bats, Boomboxes & Tools)
+  - Player ESP & Live Health (Real-Time Wallhack & HP Display)
   - WalkSpeed Boost + Integrated Pill Controller (- / +: 16 to 300)
   - Fly Mode (Smooth 3D Flight)
   - Noclip Mode (Phase Through Walls & Doors)
   - Infinite Jump (Multi-Jump Bypass)
-  - Official Classic Junejo Dark UI (Flat Borderless Standard, 280x285px)
+  - Official Classic Junejo Dark UI (Flat Borderless Standard, 280x235px)
 
 ====================================================
 Updated: September 7, 2026
 ====================================================
+
