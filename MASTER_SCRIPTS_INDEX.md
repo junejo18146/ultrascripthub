@@ -829,10 +829,33 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   - Anti-AFK Engine (Auto 20-minute idle disconnect protection)
   - Official Classic Junejo Dark UI (Flat Borderless Standard, 280x285px)
 
+## 44. Steal an Egg (V3.0 Ultimate)
+- **Game Name**: Steal an Egg
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/steal_an_egg.lua"))()
+  ```
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included (17 Features)**:
+  - Auto Steal Rare Egg (Furthest Rare Farm)
+  - Auto Steal Nearest Egg (Fast Chain Loop)
+  - Steal Rare Egg (1-Click Action)
+  - Set Base Position (1-Click Action)
+  - Teleport to Base (1-Click Action)
+  - Auto Hatch Base Eggs
+  - Auto Treadmill Trainer (Speed Boost)
+  - Auto Claim XP & Rewards
+  - Rare Egg ESP (Neon Magenta + Distance Tag)
+  - All Egg ESP (Golden Glow + Tag)
+  - Player ESP & Base Defense Radar
+  - WalkSpeed Boost + Integrated Pill Controller (- / +: 16 to 300)
+  - Fly Mode (Smooth 3D Flight)
+  - Noclip Mode (Phase Through Walls & Doors)
+  - Infinite Jump (Multi-Jump Bypass)
+  - Instant Proximity Prompts (0s Hold Sweeper)
+  - Anti-AFK Engine (Auto 20-minute idle disconnect protection)
+  - Official Classic Junejo Dark UI (Flat Borderless Standard, 280x285px)
+
 ====================================================
-Updated: September 6, 2026
+Updated: September 7, 2026
 ====================================================
-
-
-
-
