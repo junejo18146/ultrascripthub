@@ -1,21 +1,22 @@
 --[[
     ========================================================================
-    JUNEJO ULTRA SCRIPT HUB - +1 LONG ARM TOY ESCAPE!
+    JUNEJO ULTRA SCRIPT HUB - +1 LONG ARM TOY ESCAPE! (OFFICIAL V2.0)
     ========================================================================
     Author: Made by Junejo (junejo18146)
-    Target Game: +1 Long Arm Toy Escape! (Roblox)
+    Target Game: +1 Long Arm Toy Escape! / +1 Long Arm Escape (Roblox)
     Repository: junejo18146/ultrascripthub
     File: long_arm_toy_escape.lua
     UI Standard: Junejo Classic Dark UI (#0F0F11) - Flat & Borderless Standard
     
     Features Included:
-        1. Auto Train Arms (Touch Overhead Pull-Up Bars, Growth Remotes, Tools & Click Engine)
-        2. Auto Rebirth (Automatic Prestige Engine with in-game Requirement Display)
-        3. WalkSpeed Boost + Integrated Pill Controller (- / +: 16 to 300)
-        4. Noclip (Walk & Phase Through Walls & Doors)
-        5. Infinite Jump (Continuous Airborne Jump Loop)
-        6. Fly Mode (Smooth 3D Flight with WASD/Space/Shift controls)
-        7. Anti-AFK Engine (Auto 20-minute idle disconnect protection)
+        1. Auto Train Arms (Visual Arm Stretch + Overhead Bars Touch + Growth Remotes + Tool Spammer)
+        2. Auto Wins (Exact Yellow Pad & Trophy Teleport + Instant Win Collector)
+        3. Auto Rebirth (Automatic Prestige Engine & Remote Invocations)
+        4. WalkSpeed Boost + Integrated Pill Controller (- / +: 16 to 300)
+        5. Infinite Jump (Airborne Continuous Multi-Jump Engine)
+        6. NoClip Mode (Walk & Phase Through Walls & Barriers)
+        7. Fly Mode + Integrated Pill Controller (- / +: 20 to 250 with WASD & Mobile Joystick)
+        8. Anti-AFK Engine (Auto 20-minute idle disconnect protection)
     ========================================================================
 --]]
 
@@ -41,401 +42,684 @@ end
 -- SAFE GUI PARENT RESOLVER & DUPLICATE CLEANER
 -- =================================================================
 local function GetSafeGuiParent()
+    local targetParent = nil
     if gethui then
         local s, r = pcall(gethui)
-        if s and r then return r end
+        if s and r then targetParent = r end
     end
-    local s, _ = pcall(function() local _ = CoreGui.Name end)
-    if s then return CoreGui end
-    return LocalPlayer:WaitForChild("PlayerGui")
+    if not targetParent then
+        local s, _ = pcall(function()
+            local test = Instance.new("Folder")
+            test.Parent = CoreGui
+            test:Destroy()
+        end)
+        if s then targetParent = CoreGui end
+    end
+    if not targetParent then
+        targetParent = LocalPlayer:WaitForChild("PlayerGui", 5) or LocalPlayer:FindFirstChildOfClass("PlayerGui")
+    end
+    return targetParent or CoreGui or LocalPlayer:FindFirstChild("PlayerGui")
 end
 
 local function CleanupOldGui()
     pcall(function()
         local parent = GetSafeGuiParent()
-        local old = parent:FindFirstChild("JunejoHub_LongArmEscape") or parent:FindFirstChild("RobloxScriptUI_LongArmEscape") or parent:FindFirstChild("RobloxScriptUI_LongArmEscapeHub")
-        if old then old:Destroy() end
-    end)
-    pcall(function()
-        if CoreGui:FindFirstChild("JunejoHub_LongArmEscape") then
-            CoreGui.JunejoHub_LongArmEscape:Destroy()
+        local names = {"JunejoHubUI_LongArmEscape", "SakiScriptsLongArmUI", "RobloxScriptUI_LongArmEscape", "RobloxScriptUI_LongArmEscapeHub", "SakiScriptsUI"}
+        for _, name in ipairs(names) do
+            local old = parent:FindFirstChild(name)
+            if old then old:Destroy() end
         end
     end)
     pcall(function()
-        if LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild("JunejoHub_LongArmEscape") then
-            LocalPlayer.PlayerGui.JunejoHub_LongArmEscape:Destroy()
+        for _, name in ipairs({"JunejoHubUI_LongArmEscape", "SakiScriptsLongArmUI", "RobloxScriptUI_LongArmEscape", "RobloxScriptUI_LongArmEscapeHub", "SakiScriptsUI"}) do
+            if CoreGui:FindFirstChild(name) then
+                CoreGui[name]:Destroy()
+            end
+            if LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild(name) then
+                LocalPlayer.PlayerGui[name]:Destroy()
+            end
         end
     end)
 end
 CleanupOldGui()
 
--- Global Feature Toggles & State
+-- Global Feature States & Configuration
 local Toggles = {
     AutoTrain = false,
+    AutoWins = false,
     AutoRebirth = false,
-    Noclip = false,
-    InfiniteJump = false,
     WalkSpeedBoost = false,
+    InfiniteJump = false,
+    Noclip = false,
     FlyMode = false,
     AntiAFK = true
 }
 
-local CustomSpeedValue = 24
+local CustomSpeedValue = 45
+local CustomFlySpeed = 60
 
 -- =================================================================
--- ZERO SCREEN VIBRATION & CAMERA STABILIZER
--- =================================================================
-RunService.RenderStepped:Connect(function()
-    pcall(function()
-        local char = LocalPlayer.Character
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        if hum and hum.CameraOffset ~= Vector3.zero then
-            hum.CameraOffset = Vector3.zero
-        end
-    end)
-end)
-
--- =================================================================
--- 1. HELPER FUNCTIONS & CACHED SEARCH
+-- HELPER FUNCTIONS & CHARACTER ACCESS
 -- =================================================================
 local function getCharParts()
     local char = LocalPlayer.Character
-    if not char then return nil, nil, nil, nil end
-    local root = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
+    if not char then return nil, nil, nil, nil, nil end
+    local root = char:FindFirstChild("HumanoidRootPart")
     local hum = char:FindFirstChildOfClass("Humanoid")
-    local rHand = char:FindFirstChild("RightHand") or char:FindFirstChild("Right Arm")
-    local lHand = char:FindFirstChild("LeftHand") or char:FindFirstChild("Left Arm")
-    return root, hum, rHand, lHand
+    local rHand = char:FindFirstChild("RightHand") or char:FindFirstChild("Right Arm") or char:FindFirstChild("RightUpperArm")
+    local lHand = char:FindFirstChild("LeftHand") or char:FindFirstChild("Left Arm") or char:FindFirstChild("LeftUpperArm")
+    local head = char:FindFirstChild("Head")
+    return root, hum, rHand, lHand, head
 end
 
--- Cached training bars to prevent lag
-local cachedBars = {}
-local lastCacheUpdate = 0
-
-local function refreshWorkspaceCache()
-    cachedBars = {}
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj:IsA("BasePart") then
-            local n = obj.Name:lower()
-            local pName = obj.Parent and obj.Parent.Name:lower() or ""
-            
-            if n:find("bar") or n:find("pullup") or n:find("train") or n:find("hang") or pName:find("bar") or pName:find("train") or n:find("stretch") or pName:find("stretch") then
-                table.insert(cachedBars, obj)
-            end
-        elseif obj:IsA("TouchTransmitter") then
-            local parent = obj.Parent
-            if parent and parent:IsA("BasePart") then
-                local n = parent.Name:lower()
-                local pName = parent.Parent and parent.Parent.Name:lower() or ""
-                if n:find("bar") or n:find("pullup") or n:find("train") or n:find("hang") or pName:find("bar") or pName:find("train") then
-                    table.insert(cachedBars, parent)
-                end
-            end
-        end
-    end
-    lastCacheUpdate = tick()
-end
-
-refreshWorkspaceCache()
-
--- Fire matching ReplicatedStorage remotes safely
-local function fireRemotesMatching(keywords)
+local function triggerPrompt(prompt)
+    if not prompt or not prompt:IsA("ProximityPrompt") then return end
     pcall(function()
-        for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
-            if obj:IsA("RemoteEvent") then
-                local n = obj.Name:lower()
-                local isShop = n:find("shop") or n:find("buy") or n:find("purchase") or n:find("menu") or n:find("pass") or n:find("robux")
-                if not isShop then
-                    for _, kw in ipairs(keywords) do
-                        if n:find(kw) then
-                            pcall(function() obj:FireServer() end)
-                            pcall(function() obj:FireServer(1) end)
-                            pcall(function() obj:FireServer(true) end)
-                            pcall(function() obj:FireServer("Rebirth") end)
-                            break
-                        end
-                    end
-                end
-            elseif obj:IsA("RemoteFunction") then
-                local n = obj.Name:lower()
-                local isShop = n:find("shop") or n:find("buy") or n:find("purchase") or n:find("menu") or n:find("pass") or n:find("robux")
-                if not isShop then
-                    for _, kw in ipairs(keywords) do
-                        if n:find(kw) then
-                            task.spawn(function()
-                                pcall(function() obj:InvokeServer() end)
-                                pcall(function() obj:InvokeServer(1) end)
-                                pcall(function() obj:InvokeServer(true) end)
-                                pcall(function() obj:InvokeServer("Rebirth") end)
-                            end)
-                            break
-                        end
-                    end
-                end
-            end
+        prompt.MaxActivationDistance = 999999
+        prompt.RequiresLineOfSight = false
+        prompt.HoldDuration = 0
+    end)
+    pcall(function()
+        if fireproximityprompt then
+            fireproximityprompt(prompt, 0)
+            fireproximityprompt(prompt, 1)
+        else
+            prompt:InputHoldBegin()
+            task.wait(0.01)
+            prompt:InputHoldEnd()
         end
     end)
 end
-
--- =================================================================
--- 2. AUTOMATION ENGINES
--- =================================================================
 
 -- Anti-AFK Engine
 LocalPlayer.Idled:Connect(function()
     if Toggles.AntiAFK then
         pcall(function()
             VirtualUser:CaptureController()
-            VirtualUser:ClickButton2(Vector2.new())
+            VirtualUser:ClickButton2(Vector2.new(0, 0))
         end)
     end
 end)
 
--- Infinite Jump Engine
-UserInputService.JumpRequest:Connect(function()
-    if Toggles.InfiniteJump then
-        local root, hum = getCharParts()
-        if hum and root then
-            hum:ChangeState(Enum.HumanoidStateType.Jumping)
-            root.Velocity = Vector3.new(root.Velocity.X, 52, root.Velocity.Z)
-        end
-    end
-end)
+-- Cached training bars & win pads
+local cachedBars = {}
+local cachedWinPads = {}
+local lastCacheUpdate = 0
 
--- NoClip Engine
-RunService.Stepped:Connect(function()
-    if Toggles.Noclip then
-        local char = LocalPlayer.Character
-        if char then
-            for _, part in ipairs(char:GetDescendants()) do
-                if part:IsA("BasePart") and part.CanCollide then
-                    part.CanCollide = false
+local function refreshWorkspaceCache()
+    cachedBars = {}
+    cachedWinPads = {}
+    pcall(function()
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if obj:IsA("BasePart") then
+                local n = obj.Name:lower()
+                local pName = obj.Parent and obj.Parent.Name:lower() or ""
+                local isYellow = (obj.BrickColor.Name:lower():find("yellow") or (obj.Color.R > 0.65 and obj.Color.G > 0.65 and obj.Color.B < 0.45))
+                
+                -- Check for Training Bars / Equipment / Pullup / Dumbbell / Workout zones
+                if n:find("bar") or n:find("pullup") or n:find("train") or n:find("hang") or n:find("stretch") or n:find("weight") or n:find("dumbbell") or n:find("gym") or n:find("arm") or pName:find("bar") or pName:find("train") or pName:find("workout") or pName:find("equipment") then
+                    table.insert(cachedBars, obj)
+                end
+                
+                -- Check for Win Pads / Yellow Stage Pads / Trophies / Finish lines
+                if n:find("win") or n:find("finish") or n:find("victory") or n:find("end") or n:find("trophy") or n:find("checkpoint") or n:find("reward") or n:find("goal") or (isYellow and (n:find("pad") or pName:find("stage") or pName:find("win") or pName:find("finish"))) then
+                    table.insert(cachedWinPads, obj)
+                end
+            elseif obj:IsA("TouchTransmitter") then
+                local parent = obj.Parent
+                if parent and parent:IsA("BasePart") then
+                    local n = parent.Name:lower()
+                    if n:find("win") or n:find("finish") or n:find("victory") or n:find("end") or n:find("trophy") or n:find("checkpoint") or n:find("pad") then
+                        table.insert(cachedWinPads, parent)
+                    elseif n:find("bar") or n:find("train") or n:find("stretch") or n:find("hang") then
+                        table.insert(cachedBars, parent)
+                    end
                 end
             end
         end
-    end
-end)
+    end)
+    lastCacheUpdate = tick()
+end
 
--- WalkSpeed Continuous Enforcer
-local function UpdateCharacterSpeed()
-    local _, hum = getCharParts()
-    if hum then
-        if Toggles.WalkSpeedBoost then
-            hum.WalkSpeed = CustomSpeedValue
-        else
-            hum.WalkSpeed = 16
+refreshWorkspaceCache()
+
+-- Universal matching Remotes dispatcher
+local trainKeywords = {
+    "train", "stretch", "arm", "length", "grow", "pullup", "click", "tap", 
+    "add", "gain", "power", "workout", "exercise", "rep", "give", "increase", 
+    "stat", "farm", "punch", "lift", "strength", "long"
+}
+
+local function fireRemotesMatching(keywords)
+    pcall(function()
+        local containers = {ReplicatedStorage, Workspace}
+        for _, container in ipairs(containers) do
+            for _, obj in ipairs(container:GetDescendants()) do
+                if obj:IsA("RemoteEvent") then
+                    local n = obj.Name:lower()
+                    local isShop = n:find("shop") or n:find("buy") or n:find("purchase") or n:find("pass") or n:find("gamepass") or n:find("egg")
+                    if not isShop then
+                        for _, kw in ipairs(keywords) do
+                            if n:find(kw) then
+                                pcall(function() obj:FireServer() end)
+                                pcall(function() obj:FireServer(1) end)
+                                pcall(function() obj:FireServer(true) end)
+                                pcall(function() obj:FireServer("Arm") end)
+                                pcall(function() obj:FireServer("Train") end)
+                                pcall(function() obj:FireServer("Trophy") end)
+                                pcall(function() obj:FireServer(LocalPlayer) end)
+                                break
+                            end
+                        end
+                    end
+                elseif obj:IsA("RemoteFunction") then
+                    local n = obj.Name:lower()
+                    local isShop = n:find("shop") or n:find("buy") or n:find("purchase") or n:find("egg")
+                    if not isShop then
+                        for _, kw in ipairs(keywords) do
+                            if n:find(kw) then
+                                task.spawn(function()
+                                    pcall(function() obj:InvokeServer() end)
+                                    pcall(function() obj:InvokeServer(1) end)
+                                    pcall(function() obj:InvokeServer(true) end)
+                                    pcall(function() obj:InvokeServer("Arm") end)
+                                    pcall(function() obj:InvokeServer("Trophy") end)
+                                end)
+                                break
+                            end
+                        end
+                    end
+                end
+            end
         end
-    end
+    end)
+end
+
+-- =================================================================
+-- 1. AUTO TRAIN ARMS (VISUAL ARM STRETCH & MULTI-TRAIN FARM)
+-- =================================================================
+local originalArmSizes = {}
+local currentStretchMultiplier = 1.0
+
+local function stretchArms(multiplier)
+    local char = LocalPlayer.Character
+    if not char then return end
+    pcall(function()
+        local armNames = {
+            "Right Arm", "Left Arm",
+            "RightUpperArm", "RightLowerArm", "RightHand",
+            "LeftUpperArm", "LeftLowerArm", "LeftHand"
+        }
+        for _, name in ipairs(armNames) do
+            local part = char:FindFirstChild(name)
+            if part and part:IsA("BasePart") then
+                if not originalArmSizes[name] then
+                    originalArmSizes[name] = part.Size
+                end
+                local base = originalArmSizes[name]
+                part.Size = Vector3.new(base.X, base.Y * multiplier, base.Z * (1 + (multiplier - 1) * 0.35))
+            end
+        end
+    end)
+end
+
+local function resetArms()
+    local char = LocalPlayer.Character
+    if not char then return end
+    pcall(function()
+        for name, size in pairs(originalArmSizes) do
+            local part = char:FindFirstChild(name)
+            if part and part:IsA("BasePart") then
+                part.Size = size
+            end
+        end
+        currentStretchMultiplier = 1.0
+    end)
 end
 
 task.spawn(function()
     while true do
-        task.wait(0.2)
-        pcall(function()
-            if Toggles.WalkSpeedBoost then
-                local _, hum = getCharParts()
-                if hum and hum.WalkSpeed ~= CustomSpeedValue then
-                    hum.WalkSpeed = CustomSpeedValue
-                end
-            end
-        end)
-    end
-end)
-
-LocalPlayer.CharacterAdded:Connect(function(char)
-    task.spawn(function()
-        local hum = char:WaitForChild("Humanoid", 4)
-        if hum then
-            task.wait(0.4)
-            UpdateCharacterSpeed()
-        end
-    end)
-end)
-
--- =================================================================
--- FLY SYSTEM
--- =================================================================
-local FlyBodyGyro, FlyBodyVelocity
-local FlyConnection
-
-local function EnableFly()
-    local root, hum = getCharParts()
-    if not root or not hum then return end
-
-    if FlyBodyGyro then FlyBodyGyro:Destroy() end
-    if FlyBodyVelocity then FlyBodyVelocity:Destroy() end
-
-    FlyBodyGyro = Instance.new("BodyGyro")
-    FlyBodyGyro.P = 9e4
-    FlyBodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
-    FlyBodyGyro.CFrame = root.CFrame
-    FlyBodyGyro.Parent = root
-
-    FlyBodyVelocity = Instance.new("BodyVelocity")
-    FlyBodyVelocity.Velocity = Vector3.zero
-    FlyBodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-    FlyBodyVelocity.Parent = root
-
-    hum.PlatformStand = true
-
-    local Camera = Workspace.CurrentCamera
-    if FlyConnection then FlyConnection:Disconnect() end
-    FlyConnection = RunService.RenderStepped:Connect(function()
-        if not Toggles.FlyMode or not root or not hum or not FlyBodyVelocity or not FlyBodyGyro then
-            if FlyConnection then FlyConnection:Disconnect() end
-            return
-        end
-        FlyBodyGyro.CFrame = Camera.CFrame
-
-        local flyDirection = Vector3.zero
-        if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-            flyDirection = flyDirection + Camera.CFrame.LookVector
-        end
-        if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-            flyDirection = flyDirection - Camera.CFrame.LookVector
-        end
-        if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-            flyDirection = flyDirection - Camera.CFrame.RightVector
-        end
-        if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-            flyDirection = flyDirection + Camera.CFrame.RightVector
-        end
-        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-            flyDirection = flyDirection + Vector3.new(0, 1, 0)
-        end
-        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
-            flyDirection = flyDirection - Vector3.new(0, 1, 0)
-        end
-
-        local flySpeed = math.clamp(CustomSpeedValue * 2, 40, 180)
-        FlyBodyVelocity.Velocity = flyDirection * flySpeed
-    end)
-end
-
-local function DisableFly()
-    if FlyConnection then
-        FlyConnection:Disconnect()
-        FlyConnection = nil
-    end
-    if FlyBodyGyro then FlyBodyGyro:Destroy() FlyBodyGyro = nil end
-    if FlyBodyVelocity then FlyBodyVelocity:Destroy() FlyBodyVelocity = nil end
-    local _, hum = getCharParts()
-    if hum then hum.PlatformStand = false end
-end
-
--- =================================================================
--- 3. CORE GAME LOOPS
--- =================================================================
-
-local trainKeywords = {"train", "stretch", "arm", "length", "grow", "pullup", "click", "tap", "add"}
-local rebirthKeywords = {"rebirth", "prestige", "ascend", "reset"}
-
--- Continuous Auto Train Arms Loop
-task.spawn(function()
-    while true do
-        task.wait(0.1)
+        task.wait(0.06)
         if Toggles.AutoTrain then
             pcall(function()
-                -- 1. Refresh cache every 15s
-                if tick() - lastCacheUpdate > 15 then
+                -- Gradually stretch arms smoothly
+                if currentStretchMultiplier < 4.5 then
+                    currentStretchMultiplier = currentStretchMultiplier + 0.05
+                end
+                stretchArms(currentStretchMultiplier)
+                
+                if tick() - lastCacheUpdate > 10 then
                     refreshWorkspaceCache()
                 end
                 
-                local root, hum, rHand, lHand = getCharParts()
-                if root then
-                    -- 2. Touch Overhead Bars directly with hands (Pull-Up reps)
-                    if #cachedBars > 0 and firetouchinterest then
-                        for _, bar in ipairs(cachedBars) do
-                            if not Toggles.AutoTrain then break end
-                            if bar and bar.Parent then
-                                local dist = (Vector2.new(root.Position.X, root.Position.Z) - Vector2.new(bar.Position.X, bar.Position.Z)).Magnitude
-                                if dist <= 120 then
-                                    if rHand then
-                                        firetouchinterest(rHand, bar, 0)
-                                        task.wait(0.005)
-                                        firetouchinterest(rHand, bar, 1)
-                                    end
-                                    if lHand then
-                                        firetouchinterest(lHand, bar, 0)
-                                        task.wait(0.005)
-                                        firetouchinterest(lHand, bar, 1)
-                                    end
-                                    firetouchinterest(root, bar, 0)
-                                    task.wait(0.005)
-                                    firetouchinterest(root, bar, 1)
+                local root, hum, rHand, lHand, _ = getCharParts()
+                
+                -- A) Touch Overhead Bars & Racks across Workspace
+                if root and #cachedBars > 0 and firetouchinterest then
+                    for _, bar in ipairs(cachedBars) do
+                        if not Toggles.AutoTrain then break end
+                        if bar and bar.Parent then
+                            local dist = (Vector2.new(root.Position.X, root.Position.Z) - Vector2.new(bar.Position.X, bar.Position.Z)).Magnitude
+                            if dist <= 300 then
+                                if rHand then
+                                    firetouchinterest(rHand, bar, 0)
+                                    firetouchinterest(rHand, bar, 1)
                                 end
-                            end
-                        end
-                    end
-                    
-                    -- 3. Fire Game Remotes for arm growth
-                    fireRemotesMatching(trainKeywords)
-                    
-                    -- 4. Equip & activate tool if available
-                    local char = LocalPlayer.Character
-                    if char then
-                        local tool = char:FindFirstChildOfClass("Tool")
-                        if tool then
-                            tool:Activate()
-                        else
-                            local bpTool = LocalPlayer.Backpack:FindFirstChildOfClass("Tool")
-                            if bpTool and hum then
-                                hum:EquipTool(bpTool)
-                                task.wait(0.04)
-                                bpTool:Activate()
-                            end
-                        end
-                    end
-                    
-                    -- 5. Trigger PlayerGui Train button if available via firesignal
-                    local pgui = LocalPlayer:FindFirstChild("PlayerGui")
-                    if pgui and firesignal then
-                        for _, btn in ipairs(pgui:GetDescendants()) do
-                            if (btn:IsA("TextButton") or btn:IsA("ImageButton")) and btn.Visible then
-                                local bName = btn.Name:lower()
-                                local bText = btn:IsA("TextButton") and btn.Text:lower() or ""
-                                if (bName:find("train") or bText:find("train")) and not bName:find("shop") and not bText:find("shop") then
-                                    firesignal(btn.MouseButton1Click)
-                                    firesignal(btn.Activated)
-                                    break
+                                if lHand then
+                                    firetouchinterest(lHand, bar, 0)
+                                    firetouchinterest(lHand, bar, 1)
                                 end
+                                firetouchinterest(root, bar, 0)
+                                firetouchinterest(root, bar, 1)
                             end
                         end
                     end
                 end
-            end)
-        end
-    end
-end)
-
--- Continuous Auto Rebirth Loop (Smooth Remote & UI Trigger)
-task.spawn(function()
-    while true do
-        task.wait(1.5)
-        if Toggles.AutoRebirth then
-            pcall(function()
-                -- 1. Fire verified Rebirth Remotes in ReplicatedStorage
-                fireRemotesMatching(rebirthKeywords)
-
-                -- 2. Trigger Rebirth in PlayerGui (Opens dialog / performs rebirth if requirement is met or shows requirements)
+                
+                -- B) Fire Workspace ProximityPrompts & ClickDetectors on Bars
+                for _, prompt in ipairs(Workspace:GetDescendants()) do
+                    if not Toggles.AutoTrain then break end
+                    if prompt:IsA("ProximityPrompt") then
+                        local pName = string.lower(prompt.Parent and prompt.Parent.Name or "")
+                        local act = string.lower(prompt.ActionText or "")
+                        local objT = string.lower(prompt.ObjectText or "")
+                        if pName:find("train") or pName:find("bar") or pName:find("stretch") or pName:find("arm") or act:find("train") or act:find("pull") or act:find("exercise") or act:find("stretch") or act:find("hang") or objT:find("train") or objT:find("bar") then
+                            triggerPrompt(prompt)
+                        end
+                    elseif prompt:IsA("ClickDetector") then
+                        local pName = string.lower(prompt.Parent and prompt.Parent.Name or "")
+                        if pName:find("train") or pName:find("bar") or pName:find("arm") or pName:find("stretch") then
+                            pcall(function() fireclickdetector(prompt) end)
+                        end
+                    end
+                end
+                
+                -- C) Fire All Training Remotes across ReplicatedStorage & Workspace
+                fireRemotesMatching(trainKeywords)
+                
+                -- D) Equip & Rapid-Activate Training Tools
+                local char = LocalPlayer.Character
+                if char and hum then
+                    local tool = char:FindFirstChildOfClass("Tool")
+                    if tool then
+                        pcall(function() tool:Activate() end)
+                    else
+                        local backpack = LocalPlayer:FindFirstChild("Backpack")
+                        if backpack then
+                            local bpTool = backpack:FindFirstChildOfClass("Tool")
+                            if bpTool then
+                                hum:EquipTool(bpTool)
+                                task.wait(0.01)
+                                pcall(function() bpTool:Activate() end)
+                            end
+                        end
+                    end
+                end
+                
+                -- E) Screen Tap & Input Simulation
+                pcall(function()
+                    VirtualUser:CaptureController()
+                    VirtualUser:ClickButton1(Vector2.new(500, 500))
+                end)
+                
+                -- F) PlayerGui Train Button Dispatcher
                 local pgui = LocalPlayer:FindFirstChild("PlayerGui")
                 if pgui and firesignal then
                     for _, btn in ipairs(pgui:GetDescendants()) do
                         if (btn:IsA("TextButton") or btn:IsA("ImageButton")) and btn.Visible then
                             local bName = btn.Name:lower()
                             local bText = btn:IsA("TextButton") and btn.Text:lower() or ""
-                            local fullB = bName .. " " .. bText
-                            
-                            -- Trigger Confirm / Rebirth button
-                            if (fullB:find("rebirth") or fullB:find("prestige") or fullB:find("ascend") or fullB:find("confirm") or fullB:find("yes")) and not fullB:find("shop") and not fullB:find("pass") and not fullB:find("close") and not fullB:find("cancel") and not fullB:find("no") then
+                            if (bName:find("train") or bText:find("train") or bName:find("stretch") or bText:find("stretch") or bName:find("click") or bText:find("tap") or bName:find("workout")) and not bName:find("shop") and not bText:find("shop") and not bName:find("egg") then
                                 firesignal(btn.MouseButton1Click)
                                 firesignal(btn.Activated)
+                                break
                             end
                         end
                     end
                 end
             end)
         end
+    end
+end)
+
+-- =================================================================
+-- 2. AUTO WINS (EXACT YELLOW TROPHY PAD TELEPORT & COLLECT)
+-- =================================================================
+local cachedTrophyTargets = {}
+local lastTrophyScan = 0
+
+local function findExactTrophyWinPads()
+    if #cachedTrophyTargets > 0 and (tick() - lastTrophyScan < 8) then
+        local valid = {}
+        for _, t in ipairs(cachedTrophyTargets) do
+            if t and t.Parent then table.insert(valid, t) end
+        end
+        if #valid > 0 then return valid end
+    end
+
+    local results = {}
+    pcall(function()
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            local n = obj.Name:lower()
+            if (n:find("trophy") or n:find("cup") or n:find("goldentrophy")) and not n:find("icon") and not n:find("gui") then
+                if obj:IsA("BasePart") then
+                    table.insert(results, obj)
+                elseif obj:IsA("Model") then
+                    local p = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
+                    if p then table.insert(results, p) end
+                end
+            end
+        end
+
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if obj:IsA("BillboardGui") or obj:IsA("SurfaceGui") then
+                for _, txt in ipairs(obj:GetDescendants()) do
+                    if txt:IsA("TextLabel") then
+                        local t = txt.Text:lower()
+                        if (t:find("win") or t:find("+10") or t:find("+1") or t:find("trophy")) and not t:find("admin") and not t:find("gamepass") then
+                            local parentPart = obj:FindFirstAncestorWhichIsA("BasePart")
+                            if parentPart then
+                                table.insert(results, parentPart)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if obj:IsA("BasePart") then
+                local n = obj.Name:lower()
+                local pName = obj.Parent and obj.Parent.Name:lower() or ""
+                local isIgnored = n:find("spawn") or n:find("track") or n:find("rainbow") or n:find("floor") or n:find("baseplate") or n:find("bar") or n:find("pullup") or n:find("stair") or n:find("wall") or pName:find("lobby")
+                if not isIgnored then
+                    if n == "winpad" or n == "win" or n == "trophypad" or n == "finishpad" or n == "endpad" or n:find("win_pad") or pName == "winpads" or pName == "wins" or pName == "trophies" then
+                        table.insert(results, obj)
+                    end
+                end
+            end
+        end
+    end)
+
+    cachedTrophyTargets = results
+    lastTrophyScan = tick()
+    return results
+end
+
+task.spawn(function()
+    while true do
+        task.wait(0.35)
+        if Toggles.AutoWins then
+            pcall(function()
+                local root, hum = getCharParts()
+                if not root or not hum then return end
+                
+                local pads = findExactTrophyWinPads()
+                
+                if #pads > 0 then
+                    for _, pad in ipairs(pads) do
+                        if not Toggles.AutoWins then break end
+                        if pad and pad.Parent then
+                            root.CFrame = pad.CFrame + Vector3.new(0, 3, 0)
+                            root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                            
+                            if firetouchinterest then
+                                firetouchinterest(root, pad, 0)
+                                task.wait(0.01)
+                                firetouchinterest(root, pad, 1)
+                            end
+                            
+                            if pad.Parent then
+                                for _, item in ipairs(pad.Parent:GetDescendants()) do
+                                    if item:IsA("ProximityPrompt") then
+                                        triggerPrompt(item)
+                                    elseif item:IsA("ClickDetector") then
+                                        pcall(function() fireclickdetector(item) end)
+                                    elseif item:IsA("BasePart") and (item.Name:lower():find("trophy") or item.Name:lower():find("win")) and firetouchinterest then
+                                        firetouchinterest(root, item, 0)
+                                        firetouchinterest(root, item, 1)
+                                    end
+                                end
+                            end
+                            
+                            task.wait(0.3)
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- =================================================================
+-- 3. AUTO REBIRTH ENGINE
+-- =================================================================
+local cachedRebirthRemote = nil
+local lastRebirthSearch = 0
+
+local function getRebirthRemote()
+    if cachedRebirthRemote and cachedRebirthRemote.Parent then
+        return cachedRebirthRemote
+    end
+    if tick() - lastRebirthSearch < 10 then return nil end
+    lastRebirthSearch = tick()
+    
+    pcall(function()
+        for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
+            if obj:IsA("RemoteEvent") then
+                local n = obj.Name:lower()
+                if (n:find("rebirth") or n:find("prestige") or n:find("ascend")) and not n:find("shop") and not n:find("buy") and not n:find("pass") then
+                    cachedRebirthRemote = obj
+                    return
+                end
+            end
+        end
+    end)
+    return cachedRebirthRemote
+end
+
+task.spawn(function()
+    while true do
+        task.wait(2)
+        if Toggles.AutoRebirth then
+            pcall(function()
+                local rem = getRebirthRemote()
+                if rem then
+                    rem:FireServer()
+                    rem:FireServer(1)
+                    rem:FireServer(true)
+                end
+            end)
+        end
+    end
+end)
+
+-- =================================================================
+-- 4. PLAYER ENHANCEMENTS (WalkSpeed, InfJump, Noclip, Fly)
+-- =================================================================
+
+-- WalkSpeed Enforcer
+RunService.RenderStepped:Connect(function(deltaTime)
+    pcall(function()
+        if Toggles.WalkSpeedBoost and CustomSpeedValue and CustomSpeedValue > 16 then
+            local char, hum = LocalPlayer.Character, nil
+            if char then hum = char:FindFirstChildOfClass("Humanoid") end
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if char and hum and hrp and hum.MoveDirection.Magnitude > 0 then
+                local speedBoost = (CustomSpeedValue - 16)
+                hrp.CFrame = hrp.CFrame + (hum.MoveDirection * (speedBoost * deltaTime))
+            end
+        end
+    end)
+end)
+
+-- Infinite Jump Engine
+local function performJump()
+    if not Toggles.InfiniteJump then return end
+    pcall(function()
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hum and hrp then
+            hum:ChangeState(Enum.HumanoidStateType.Jumping)
+            hrp.AssemblyLinearVelocity = Vector3.new(hrp.AssemblyLinearVelocity.X, 52, hrp.AssemblyLinearVelocity.Z)
+        end
+    end)
+end
+
+UserInputService.JumpRequest:Connect(performJump)
+
+-- Mobile Jump Button Hook
+local function hookMobileJump()
+    pcall(function()
+        local pgui = LocalPlayer:FindFirstChild("PlayerGui")
+        local touchGui = pgui and pgui:FindFirstChild("TouchGui")
+        local touchControl = touchGui and touchGui:FindFirstChild("TouchControlFrame")
+        local jumpBtn = touchControl and touchControl:FindFirstChild("JumpButton")
+        if jumpBtn then
+            jumpBtn.InputBegan:Connect(function(input)
+                if (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1) and Toggles.InfiniteJump then
+                    performJump()
+                end
+            end)
+        end
+    end)
+end
+
+task.spawn(function()
+    task.wait(1)
+    hookMobileJump()
+end)
+
+-- NoClip Engine
+RunService.Stepped:Connect(function()
+    if Toggles.Noclip then
+        pcall(function()
+            local char = LocalPlayer.Character
+            if char then
+                for _, part in ipairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") and part.CanCollide then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+-- Fly Engine (Full 3D Smooth WASD & Mobile Touch Joystick)
+local FlyBodyGyro = nil
+local FlyBodyVelocity = nil
+local FlyConnection = nil
+local Flying = false
+
+local function DisableFly()
+    Flying = false
+    if FlyConnection then
+        FlyConnection:Disconnect()
+        FlyConnection = nil
+    end
+    if FlyBodyVelocity then
+        pcall(function() FlyBodyVelocity:Destroy() end)
+        FlyBodyVelocity = nil
+    end
+    if FlyBodyGyro then
+        pcall(function() FlyBodyGyro:Destroy() end)
+        FlyBodyGyro = nil
+    end
+    pcall(function()
+        local _, hrp, hum = getCharParts()
+        if hum then hum.PlatformStand = false end
+        if hrp then
+            hrp.Velocity = Vector3.zero
+            hrp.RotVelocity = Vector3.zero
+            if hrp:FindFirstChild("LongArmFlyBV") then hrp.LongArmFlyBV:Destroy() end
+            if hrp:FindFirstChild("LongArmFlyBG") then hrp.LongArmFlyBG:Destroy() end
+        end
+    end)
+end
+
+local function EnableFly()
+    DisableFly()
+    local char, hrp, hum = getCharParts()
+    if not hrp or not hum then return end
+
+    Flying = true
+    
+    FlyBodyGyro = Instance.new("BodyGyro")
+    FlyBodyGyro.Name = "LongArmFlyBG"
+    FlyBodyGyro.P = 9e4
+    FlyBodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+    FlyBodyGyro.CFrame = hrp.CFrame
+    FlyBodyGyro.Parent = hrp
+
+    FlyBodyVelocity = Instance.new("BodyVelocity")
+    FlyBodyVelocity.Name = "LongArmFlyBV"
+    FlyBodyVelocity.Velocity = Vector3.zero
+    FlyBodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+    FlyBodyVelocity.Parent = hrp
+
+    FlyConnection = RunService.RenderStepped:Connect(function()
+        if not Toggles.FlyMode or not Flying or not hrp or not hrp.Parent or not hum or hum.Health <= 0 then
+            DisableFly()
+            return
+        end
+
+        local cam = Workspace.CurrentCamera
+        if not cam then return end
+
+        FlyBodyGyro.CFrame = cam.CFrame
+
+        local flySpeed = math.clamp(CustomFlySpeed, 20, 250)
+        local moveDirection = Vector3.zero
+
+        -- PC Keyboard WASD Controls
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+            moveDirection = moveDirection + cam.CFrame.LookVector
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+            moveDirection = moveDirection - cam.CFrame.LookVector
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+            moveDirection = moveDirection - cam.CFrame.RightVector
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+            moveDirection = moveDirection + cam.CFrame.RightVector
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+            moveDirection = moveDirection + Vector3.new(0, 1, 0)
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or UserInputService:IsKeyDown(Enum.KeyCode.E) then
+            moveDirection = moveDirection - Vector3.new(0, 1, 0)
+        end
+
+        -- Mobile Touch / Dynamic Thumbstick Support
+        if hum.MoveDirection.Magnitude > 0 then
+            local rawMove = hum.MoveDirection
+            local forwardDot = rawMove:Dot(cam.CFrame.LookVector)
+            local rightDot = rawMove:Dot(cam.CFrame.RightVector)
+            
+            local mobileDir = (cam.CFrame.LookVector * forwardDot) + (cam.CFrame.RightVector * rightDot)
+            if mobileDir.Magnitude > 0.1 then
+                moveDirection = moveDirection + mobileDir.Unit
+            else
+                moveDirection = moveDirection + (cam.CFrame.LookVector * rawMove.Magnitude)
+            end
+        end
+
+        if moveDirection.Magnitude > 0 then
+            FlyBodyVelocity.Velocity = moveDirection.Unit * flySpeed
+        else
+            FlyBodyVelocity.Velocity = Vector3.zero
+        end
+    end)
+end
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+    task.wait(0.6)
+    hookMobileJump()
+    if Toggles.FlyMode then
+        EnableFly()
     end
 end)
 
@@ -444,21 +728,25 @@ end)
 -- =================================================================
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "JunejoHub_LongArmEscape"
+ScreenGui.Name = "JunejoHubUI_LongArmEscape"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999999
+ScreenGui.Enabled = true
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.Parent = GetSafeGuiParent()
 
--- Compact Height without Auto Wins
-local MainWindowHeight = 250
+local MainWindowHeight = 265
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
+MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 MainFrame.Size = UDim2.new(0, 280, 0, MainWindowHeight)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -math.floor(MainWindowHeight / 2))
+MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
+MainFrame.Visible = true
 MainFrame.ClipsDescendants = true
 MainFrame.Parent = ScreenGui
 
@@ -500,13 +788,14 @@ CloseButton.Font = Enum.Font.GothamBold
 CloseButton.Parent = Header
 CloseButton.MouseButton1Click:Connect(function()
     Toggles.AutoTrain = false
+    Toggles.AutoWins = false
     Toggles.AutoRebirth = false
-    Toggles.Noclip = false
-    Toggles.InfiniteJump = false
     Toggles.WalkSpeedBoost = false
+    Toggles.InfiniteJump = false
+    Toggles.Noclip = false
     Toggles.FlyMode = false
+    resetArms()
     DisableFly()
-    UpdateCharacterSpeed()
     ScreenGui:Destroy()
 end)
 
@@ -518,10 +807,10 @@ HeaderLine.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
 HeaderLine.BorderSizePixel = 0
 HeaderLine.Parent = MainFrame
 
--- Content Frame
+-- Scrollable Content Frame
 local ContentFrame = Instance.new("ScrollingFrame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -24, 0, 170)
+ContentFrame.Size = UDim2.new(1, -24, 0, 185)
 ContentFrame.Position = UDim2.new(0, 12, 0, 38)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.BorderSizePixel = 0
@@ -600,12 +889,17 @@ end
 -- =================================================================
 
 -- 1. Auto Train Arms
-AddToggleRow("Auto Train Arms", "AutoTrain")
+AddToggleRow("Auto Train Arms", "AutoTrain", function(val)
+    if not val then resetArms() end
+end)
 
--- 2. Auto Rebirth
+-- 2. Auto Wins
+AddToggleRow("Auto Wins (Yellow Pad & Trophy)", "AutoWins")
+
+-- 3. Auto Rebirth
 AddToggleRow("Auto Rebirth", "AutoRebirth")
 
--- 3. WalkSpeed with Integrated - / + Pill Controller
+-- 4. WalkSpeed with Integrated - / + Pill Controller
 local SpeedRow = Instance.new("Frame")
 SpeedRow.Size = UDim2.new(1, 0, 0, 23)
 SpeedRow.BackgroundTransparency = 1
@@ -659,7 +953,6 @@ MarkCorner.Parent = SpeedCheckMark
 SpeedToggleBtn.MouseButton1Click:Connect(function()
     Toggles.WalkSpeedBoost = not Toggles.WalkSpeedBoost
     SpeedCheckMark.BackgroundTransparency = Toggles.WalkSpeedBoost and 0 or 1
-    UpdateCharacterSpeed()
 end)
 
 local SpeedControlFrame = Instance.new("Frame")
@@ -711,27 +1004,137 @@ PlusBtn.Parent = SpeedControlFrame
 MinusBtn.MouseButton1Click:Connect(function()
     CustomSpeedValue = math.max(16, CustomSpeedValue - 10)
     SpeedDisplay.Text = tostring(CustomSpeedValue)
-    UpdateCharacterSpeed()
 end)
 
 PlusBtn.MouseButton1Click:Connect(function()
     CustomSpeedValue = math.min(300, CustomSpeedValue + 10)
     SpeedDisplay.Text = tostring(CustomSpeedValue)
-    UpdateCharacterSpeed()
 end)
 
--- 4. Noclip (Walk Thru Walls)
-AddToggleRow("Noclip (Walk Thru Walls)", "Noclip")
+-- 5. Fly Mode with Integrated - / + Pill Controller
+local FlyRow = Instance.new("Frame")
+FlyRow.Size = UDim2.new(1, 0, 0, 23)
+FlyRow.BackgroundTransparency = 1
+FlyRow.Parent = ContentFrame
 
--- 5. Infinite Jump
+local FlyToggleBtn = Instance.new("TextButton")
+FlyToggleBtn.Size = UDim2.new(0.55, 0, 1, 0)
+FlyToggleBtn.BackgroundTransparency = 1
+FlyToggleBtn.Text = ""
+FlyToggleBtn.ZIndex = 5
+FlyToggleBtn.Parent = FlyRow
+
+local FlyLabel = Instance.new("TextLabel")
+FlyLabel.Size = UDim2.new(1, -26, 1, 0)
+FlyLabel.BackgroundTransparency = 1
+FlyLabel.Text = "Fly Mode"
+FlyLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
+FlyLabel.TextSize = 12
+FlyLabel.Font = Enum.Font.GothamBold
+FlyLabel.TextXAlignment = Enum.TextXAlignment.Left
+FlyLabel.Parent = FlyToggleBtn
+
+local FlyCheckBox = Instance.new("Frame")
+FlyCheckBox.Size = UDim2.new(0, 18, 0, 18)
+FlyCheckBox.Position = UDim2.new(1, -18, 0.5, -9)
+FlyCheckBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+FlyCheckBox.BorderSizePixel = 0
+FlyCheckBox.Parent = FlyToggleBtn
+
+local FlyCheckCorner = Instance.new("UICorner")
+FlyCheckCorner.CornerRadius = UDim.new(0, 4)
+FlyCheckCorner.Parent = FlyCheckBox
+
+local FlyCheckStroke = Instance.new("UIStroke")
+FlyCheckStroke.Color = Color3.fromRGB(45, 45, 55)
+FlyCheckStroke.Thickness = 1.2
+FlyCheckStroke.Parent = FlyCheckBox
+
+local FlyCheckMark = Instance.new("Frame")
+FlyCheckMark.Size = UDim2.new(0, 10, 0, 10)
+FlyCheckMark.Position = UDim2.new(0.5, -5, 0.5, -5)
+FlyCheckMark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+FlyCheckMark.BackgroundTransparency = Toggles.FlyMode and 0 or 1
+FlyCheckMark.BorderSizePixel = 0
+FlyCheckMark.Parent = FlyCheckBox
+
+local MarkCornerFly = Instance.new("UICorner")
+MarkCornerFly.CornerRadius = UDim.new(0, 2)
+MarkCornerFly.Parent = FlyCheckMark
+
+FlyToggleBtn.MouseButton1Click:Connect(function()
+    Toggles.FlyMode = not Toggles.FlyMode
+    FlyCheckMark.BackgroundTransparency = Toggles.FlyMode and 0 or 1
+    if Toggles.FlyMode then
+        EnableFly()
+    else
+        DisableFly()
+    end
+end)
+
+local FlyControlFrame = Instance.new("Frame")
+FlyControlFrame.Size = UDim2.new(0.42, 0, 1, 0)
+FlyControlFrame.Position = UDim2.new(0.58, 0, 0, 0)
+FlyControlFrame.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+FlyControlFrame.BorderSizePixel = 0
+FlyControlFrame.Parent = FlyRow
+
+local FlyCtrlCorner = Instance.new("UICorner")
+FlyCtrlCorner.CornerRadius = UDim.new(0, 4)
+FlyCtrlCorner.Parent = FlyControlFrame
+
+local FlyCtrlStroke = Instance.new("UIStroke")
+FlyCtrlStroke.Color = Color3.fromRGB(45, 45, 55)
+FlyCtrlStroke.Thickness = 1
+FlyCtrlStroke.Parent = FlyControlFrame
+
+local FlyMinusBtn = Instance.new("TextButton")
+FlyMinusBtn.Size = UDim2.new(0, 22, 1, 0)
+FlyMinusBtn.Position = UDim2.new(0, 0, 0, 0)
+FlyMinusBtn.BackgroundTransparency = 1
+FlyMinusBtn.Text = "-"
+FlyMinusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
+FlyMinusBtn.TextSize = 14
+FlyMinusBtn.Font = Enum.Font.GothamBold
+FlyMinusBtn.Parent = FlyControlFrame
+
+local FlyDisplay = Instance.new("TextLabel")
+FlyDisplay.Size = UDim2.new(1, -44, 1, 0)
+FlyDisplay.Position = UDim2.new(0, 22, 0, 0)
+FlyDisplay.BackgroundTransparency = 1
+FlyDisplay.Text = tostring(CustomFlySpeed)
+FlyDisplay.TextColor3 = Color3.fromRGB(255, 255, 255)
+FlyDisplay.TextSize = 11
+FlyDisplay.Font = Enum.Font.GothamBold
+FlyDisplay.Parent = FlyControlFrame
+
+local FlyPlusBtn = Instance.new("TextButton")
+FlyPlusBtn.Size = UDim2.new(0, 22, 1, 0)
+FlyPlusBtn.Position = UDim2.new(1, -22, 0, 0)
+FlyPlusBtn.BackgroundTransparency = 1
+FlyPlusBtn.Text = "+"
+FlyPlusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
+FlyPlusBtn.TextSize = 14
+FlyPlusBtn.Font = Enum.Font.GothamBold
+FlyPlusBtn.Parent = FlyControlFrame
+
+FlyMinusBtn.MouseButton1Click:Connect(function()
+    CustomFlySpeed = math.max(20, CustomFlySpeed - 10)
+    FlyDisplay.Text = tostring(CustomFlySpeed)
+end)
+
+FlyPlusBtn.MouseButton1Click:Connect(function()
+    CustomFlySpeed = math.min(250, CustomFlySpeed + 10)
+    FlyDisplay.Text = tostring(CustomFlySpeed)
+end)
+
+-- 6. Infinite Jump
 AddToggleRow("Infinite Jump", "InfiniteJump")
 
--- 6. Fly Mode
-AddToggleRow("Fly Mode", "FlyMode", function(enabled)
-    if enabled then EnableFly() else DisableFly() end
-end)
+-- 7. NoClip
+AddToggleRow("NoClip (Walk Thru Walls)", "Noclip")
 
--- 7. Anti-AFK Engine
+-- 8. Anti-AFK Engine
 AddToggleRow("Anti-AFK Engine", "AntiAFK")
 
 -- Pinned Footer
@@ -800,4 +1203,4 @@ end)
 -- Mount GUI
 ScreenGui.Parent = GetSafeGuiParent()
 
-print("[Junejo Script Hub]: +1 Long Arm Toy Escape Script Loaded Successfully!")
+print("[Junejo Script Hub]: +1 Long Arm Escape Script Loaded Successfully!")
