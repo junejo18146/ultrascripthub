@@ -383,85 +383,92 @@ task.spawn(function()
 end)
 
 -- =================================================================
--- 2. AUTO WINS (EXACT YELLOW TROPHY PAD TELEPORT & COLLECT)
+-- 2. ULTRA MULTI-METHOD AUTO WINS ENGINE (NO ROBUX POPUPS, REAL WINS)
 -- =================================================================
-local cachedTrophyTargets = {}
-local lastTrophyScan = 0
 
-local function findExactTrophyWinPads()
-    if #cachedTrophyTargets > 0 and (tick() - lastTrophyScan < 8) then
-        local valid = {}
-        for _, t in ipairs(cachedTrophyTargets) do
-            if t and t.Parent then table.insert(valid, t) end
+local function IsBlacklistedForWins(name)
+    local n = string.lower(name)
+    local badKeywords = {
+        "buy", "shop", "gamepass", "pass", "robux", "purchase", 
+        "product", "donate", "2x", "3x", "boost", "prompt", 
+        "price", "store", "pay", "order", "item", "devproduct", "spend",
+        "egg", "pet", "spin", "wheel", "lucky"
+    }
+    for _, bad in ipairs(badKeywords) do
+        if string.find(n, bad) then
+            return true
         end
-        if #valid > 0 then return valid end
     end
+    return false
+end
 
+local function GetSafeWinTargets()
     local results = {}
+    local seen = {}
+    
     pcall(function()
         for _, obj in ipairs(Workspace:GetDescendants()) do
-            local n = obj.Name:lower()
-            if (n:find("trophy") or n:find("cup") or n:find("goldentrophy")) and not n:find("icon") and not n:find("gui") then
-                if obj:IsA("BasePart") then
-                    table.insert(results, obj)
-                elseif obj:IsA("Model") then
-                    local p = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
-                    if p then table.insert(results, p) end
-                end
-            end
-        end
-
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            if obj:IsA("BillboardGui") or obj:IsA("SurfaceGui") then
-                for _, txt in ipairs(obj:GetDescendants()) do
-                    if txt:IsA("TextLabel") then
-                        local t = txt.Text:lower()
-                        if (t:find("win") or t:find("+10") or t:find("+1") or t:find("trophy")) and not t:find("admin") and not t:find("gamepass") then
-                            local parentPart = obj:FindFirstAncestorWhichIsA("BasePart")
-                            if parentPart then
-                                table.insert(results, parentPart)
+            if not Toggles.AutoWins then break end
+            
+            local n = string.lower(obj.Name)
+            local pName = obj.Parent and string.lower(obj.Parent.Name) or ""
+            
+            if not IsBlacklistedForWins(n) and not IsBlacklistedForWins(pName) then
+                -- A) TouchTransmitters on Win / Finish / Pad
+                if obj:IsA("TouchTransmitter") and obj.Parent and obj.Parent:IsA("BasePart") then
+                    local part = obj.Parent
+                    local pn = string.lower(part.Name)
+                    local ppn = part.Parent and string.lower(part.Parent.Name) or ""
+                    if (string.find(pn, "win") or string.find(pn, "finish") or string.find(pn, "trophy") or string.find(pn, "cup") or string.find(pn, "goal") or string.find(pn, "end") or string.find(pn, "pad") or string.find(pn, "stage") or string.find(ppn, "win") or string.find(ppn, "finish") or string.find(ppn, "stage") or string.find(ppn, "troph")) and not seen[part] then
+                        seen[part] = true
+                        table.insert(results, part)
+                    end
+                -- B) BaseParts named win / trophy / cup / finish
+                elseif obj:IsA("BasePart") and not obj:IsA("Terrain") and not obj:IsDescendantOf(LocalPlayer.Character) then
+                    local isYellow = (obj.BrickColor.Name:lower():find("yellow") or (obj.Color.R > 0.65 and obj.Color.G > 0.65 and obj.Color.B < 0.45))
+                    local isIgnored = string.find(n, "spawn") or string.find(n, "track") or string.find(n, "floor") or string.find(n, "baseplate") or string.find(n, "wall") or string.find(pName, "lobby") or string.find(pName, "gui")
+                    
+                    if not isIgnored then
+                        if string.find(n, "win") or string.find(n, "finish") or string.find(n, "trophy") or string.find(n, "goldentrophy") or string.find(n, "cup") or string.find(n, "victory") or string.find(n, "endpad") or string.find(n, "winpad") or string.find(n, "trophypad") or string.find(pName, "win") or string.find(pName, "troph") or (isYellow and string.find(n, "pad")) then
+                            if not seen[obj] then
+                                seen[obj] = true
+                                table.insert(results, obj)
                             end
+                        end
+                    end
+                -- C) Models with PrimaryPart
+                elseif obj:IsA("Model") then
+                    if string.find(n, "trophy") or string.find(n, "win") or string.find(n, "finish") or string.find(n, "goldentrophy") then
+                        local part = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
+                        if part and not seen[part] then
+                            seen[part] = true
+                            table.insert(results, part)
                         end
                     end
                 end
             end
         end
-
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            if obj:IsA("BasePart") then
-                local n = obj.Name:lower()
-                local pName = obj.Parent and obj.Parent.Name:lower() or ""
-                local isIgnored = n:find("spawn") or n:find("track") or n:find("rainbow") or n:find("floor") or n:find("baseplate") or n:find("bar") or n:find("pullup") or n:find("stair") or n:find("wall") or pName:find("lobby")
-                if not isIgnored then
-                    if n == "winpad" or n == "win" or n == "trophypad" or n == "finishpad" or n == "endpad" or n:find("win_pad") or pName == "winpads" or pName == "wins" or pName == "trophies" then
-                        table.insert(results, obj)
-                    end
-                end
-            end
-        end
     end)
-
-    cachedTrophyTargets = results
-    lastTrophyScan = tick()
     return results
 end
 
 task.spawn(function()
     while true do
-        task.wait(0.35)
+        task.wait(0.2)
         if Toggles.AutoWins then
             pcall(function()
                 local root, hum = getCharParts()
-                if not root or not hum then return end
+                if not root or not hum or hum.Health <= 0 then return end
                 
-                local pads = findExactTrophyWinPads()
+                -- 1. Scan & Collect Physical Win Pads / Trophies
+                local winParts = GetSafeWinTargets()
                 
-                if #pads > 0 then
-                    for _, pad in ipairs(pads) do
+                if #winParts > 0 then
+                    for _, pad in ipairs(winParts) do
                         if not Toggles.AutoWins then break end
                         if pad and pad.Parent then
-                            root.CFrame = pad.CFrame + Vector3.new(0, 3, 0)
-                            root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                            root.CFrame = pad.CFrame * CFrame.new(0, 1.2, 0)
+                            root.AssemblyLinearVelocity = Vector3.zero
                             
                             if firetouchinterest then
                                 firetouchinterest(root, pad, 0)
@@ -469,20 +476,69 @@ task.spawn(function()
                                 firetouchinterest(root, pad, 1)
                             end
                             
-                            if pad.Parent then
-                                for _, item in ipairs(pad.Parent:GetDescendants()) do
-                                    if item:IsA("ProximityPrompt") then
-                                        triggerPrompt(item)
-                                    elseif item:IsA("ClickDetector") then
-                                        pcall(function() fireclickdetector(item) end)
-                                    elseif item:IsA("BasePart") and (item.Name:lower():find("trophy") or item.Name:lower():find("win")) and firetouchinterest then
-                                        firetouchinterest(root, item, 0)
-                                        firetouchinterest(root, item, 1)
+                            for _, sub in ipairs(pad.Parent:GetDescendants()) do
+                                if sub:IsA("ProximityPrompt") and sub.Enabled then
+                                    triggerPrompt(sub)
+                                elseif sub:IsA("ClickDetector") then
+                                    pcall(function() fireclickdetector(sub) end)
+                                elseif sub:IsA("BasePart") and sub ~= pad and firetouchinterest then
+                                    local subName = string.lower(sub.Name)
+                                    if string.find(subName, "win") or string.find(subName, "trophy") or string.find(subName, "finish") or string.find(subName, "cup") then
+                                        firetouchinterest(root, sub, 0)
+                                        task.wait(0.01)
+                                        firetouchinterest(root, sub, 1)
                                     end
                                 end
                             end
                             
-                            task.wait(0.3)
+                            task.wait(0.18)
+                        end
+                    end
+                end
+                
+                -- 2. Pure Game Remotes in ReplicatedStorage & Workspace (Strictly no robux/shop!)
+                for _, container in ipairs({ReplicatedStorage, Workspace}) do
+                    if not Toggles.AutoWins then break end
+                    for _, obj in ipairs(container:GetDescendants()) do
+                        if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
+                            local n = string.lower(obj.Name)
+                            local pName = obj.Parent and string.lower(obj.Parent.Name) or ""
+                            
+                            if not IsBlacklistedForWins(n) and not IsBlacklistedForWins(pName) then
+                                if string.find(n, "win") or string.find(n, "finish") or string.find(n, "victory") or string.find(n, "claimwin") or string.find(n, "addwin") or string.find(n, "reachgoal") or string.find(n, "stage") or string.find(n, "trophy") then
+                                    if obj:IsA("RemoteEvent") then
+                                        pcall(function() obj:FireServer() end)
+                                        pcall(function() obj:FireServer(1) end)
+                                        pcall(function() obj:FireServer(true) end)
+                                        pcall(function() obj:FireServer("Win") end)
+                                        pcall(function() obj:FireServer("Trophy") end)
+                                        pcall(function() obj:FireServer(LocalPlayer) end)
+                                    elseif obj:IsA("RemoteFunction") then
+                                        pcall(function() obj:InvokeServer() end)
+                                        pcall(function() obj:InvokeServer(1) end)
+                                        pcall(function() obj:InvokeServer(true) end)
+                                        pcall(function() obj:InvokeServer("Win") end)
+                                        pcall(function() obj:InvokeServer("Trophy") end)
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+                
+                -- 3. In-Game Win UI Buttons in PlayerGui
+                local pgui = LocalPlayer:FindFirstChild("PlayerGui")
+                if pgui and firesignal then
+                    for _, btn in ipairs(pgui:GetDescendants()) do
+                        if (btn:IsA("TextButton") or btn:IsA("ImageButton")) and btn.Visible then
+                            local bName = string.lower(btn.Name)
+                            local bText = btn:IsA("TextButton") and string.lower(btn.Text) or ""
+                            if not IsBlacklistedForWins(bName) and not IsBlacklistedForWins(bText) then
+                                if (string.find(bName, "win") or string.find(bText, "win") or string.find(bName, "claim") or string.find(bText, "claim") or string.find(bName, "trophy") or string.find(bText, "trophy")) then
+                                    firesignal(btn.MouseButton1Click)
+                                    firesignal(btn.Activated)
+                                end
+                            end
                         end
                     end
                 end
