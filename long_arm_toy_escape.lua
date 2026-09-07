@@ -1,19 +1,19 @@
 --[[
     ========================================================================
-    JUNEJO ULTRA SCRIPT HUB - +1 LONG ARM TOY ESCAPE! (OFFICIAL V2.0)
+    JUNEJO ULTRA SCRIPT HUB - +1 LONG ARM ESCAPE! (OFFICIAL V3.0)
     ========================================================================
     Author: Made by Junejo (junejo18146)
-    Target Game: +1 Long Arm Toy Escape! / +1 Long Arm Escape (Roblox)
+    Target Game: +1 Long Arm Escape! / +1 Long Arm Toy Escape (Roblox)
     Repository: junejo18146/ultrascripthub
     File: long_arm_toy_escape.lua
     UI Standard: Junejo Classic Dark UI (#0F0F11) - Flat & Borderless Standard
     
     Features Included:
-        1. Auto Train Arms (Visual Arm Stretch + Overhead Bars Touch + Growth Remotes + Tool Spammer)
-        2. Auto Wins (Exact Yellow Pad & Trophy Teleport + Instant Win Collector)
+        1. Auto Train Arms (Multi-Threaded Click/Tap Engine + Tool Auto-Equip & Spammer + Training Remotes + Equipment Prompts)
+        2. Auto Wins (100% Vibration-Free & Screen-Stable: Virtual Touch Interest + Trophy Sweeper + Remote Harvester)
         3. Auto Rebirth (Automatic Prestige Engine & Remote Invocations)
         4. WalkSpeed Boost + Integrated Pill Controller (- / +: 16 to 300)
-        5. Infinite Jump (Airborne Continuous Multi-Jump Engine)
+        5. Infinite Jump (Airborne Continuous Multi-Jump Engine with Mobile Hook)
         6. NoClip Mode (Walk & Phase Through Walls & Barriers)
         7. Fly Mode + Integrated Pill Controller (- / +: 20 to 250 with WASD & Mobile Joystick)
         8. Anti-AFK Engine (Auto 20-minute idle disconnect protection)
@@ -30,6 +30,8 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
+local VirtualInputManager = nil
+pcall(function() VirtualInputManager = game:GetService("VirtualInputManager") end)
 local CoreGui = game:GetService("CoreGui")
 
 local LocalPlayer = Players.LocalPlayer
@@ -147,85 +149,111 @@ local cachedWinPads = {}
 local lastCacheUpdate = 0
 
 local function refreshWorkspaceCache()
-    cachedBars = {}
-    cachedWinPads = {}
+    local bars = {}
+    local winPads = {}
+    local seen = {}
+    
     pcall(function()
         for _, obj in ipairs(Workspace:GetDescendants()) do
-            if obj:IsA("BasePart") then
-                local n = obj.Name:lower()
-                local pName = obj.Parent and obj.Parent.Name:lower() or ""
+            if obj:IsA("BasePart") and not obj:IsDescendantOf(LocalPlayer.Character) then
+                local n = string.lower(obj.Name)
+                local pName = obj.Parent and string.lower(obj.Parent.Name) or ""
                 local isYellow = (obj.BrickColor.Name:lower():find("yellow") or (obj.Color.R > 0.65 and obj.Color.G > 0.65 and obj.Color.B < 0.45))
                 
                 -- Check for Training Bars / Equipment / Pullup / Dumbbell / Workout zones
-                if n:find("bar") or n:find("pullup") or n:find("train") or n:find("hang") or n:find("stretch") or n:find("weight") or n:find("dumbbell") or n:find("gym") or n:find("arm") or pName:find("bar") or pName:find("train") or pName:find("workout") or pName:find("equipment") then
-                    table.insert(cachedBars, obj)
+                if n:find("bar") or n:find("pullup") or n:find("train") or n:find("hang") or n:find("stretch") or n:find("weight") or n:find("dumbbell") or n:find("gym") or n:find("workout") or pName:find("bar") or pName:find("train") or pName:find("workout") or pName:find("equipment") then
+                    if not seen[obj] then
+                        seen[obj] = true
+                        table.insert(bars, obj)
+                    end
                 end
                 
                 -- Check for Win Pads / Yellow Stage Pads / Trophies / Finish lines
-                if n:find("win") or n:find("finish") or n:find("victory") or n:find("end") or n:find("trophy") or n:find("checkpoint") or n:find("reward") or n:find("goal") or (isYellow and (n:find("pad") or pName:find("stage") or pName:find("win") or pName:find("finish"))) then
-                    table.insert(cachedWinPads, obj)
+                local isIgnoredWin = n:find("spawn") or n:find("track") or n:find("floor") or n:find("baseplate") or n:find("wall") or pName:find("lobby") or pName:find("gui")
+                if not isIgnoredWin then
+                    if n:find("win") or n:find("finish") or n:find("victory") or n:find("trophy") or n:find("goldentrophy") or n:find("cup") or n:find("checkpoint") or n:find("goal") or n:find("endpad") or n:find("winpad") or n:find("trophypad") or pName:find("win") or pName:find("troph") or (isYellow and (n:find("pad") or pName:find("stage"))) then
+                        if not seen[obj] then
+                            seen[obj] = true
+                            table.insert(winPads, obj)
+                        end
+                    end
                 end
             elseif obj:IsA("TouchTransmitter") then
                 local parent = obj.Parent
-                if parent and parent:IsA("BasePart") then
-                    local n = parent.Name:lower()
-                    if n:find("win") or n:find("finish") or n:find("victory") or n:find("end") or n:find("trophy") or n:find("checkpoint") or n:find("pad") then
-                        table.insert(cachedWinPads, parent)
-                    elseif n:find("bar") or n:find("train") or n:find("stretch") or n:find("hang") then
-                        table.insert(cachedBars, parent)
+                if parent and parent:IsA("BasePart") and not parent:IsDescendantOf(LocalPlayer.Character) then
+                    local n = string.lower(parent.Name)
+                    local pn = parent.Parent and string.lower(parent.Parent.Name) or ""
+                    if n:find("win") or n:find("finish") or n:find("victory") or n:find("trophy") or n:find("checkpoint") or n:find("pad") or pn:find("win") or pn:find("stage") or pn:find("troph") then
+                        if not seen[parent] then
+                            seen[parent] = true
+                            table.insert(winPads, parent)
+                        end
+                    elseif n:find("bar") or n:find("train") or n:find("stretch") or n:find("hang") or pn:find("bar") or pn:find("train") then
+                        if not seen[parent] then
+                            seen[parent] = true
+                            table.insert(bars, parent)
+                        end
                     end
                 end
             end
         end
     end)
+    
+    cachedBars = bars
+    cachedWinPads = winPads
     lastCacheUpdate = tick()
 end
 
 refreshWorkspaceCache()
 
--- Universal matching Remotes dispatcher
+-- =================================================================
+-- 1. AUTO TRAIN ARMS (HIGH-FREQUENCY MULTI-THREADED TRAIN ENGINE)
+-- =================================================================
 local trainKeywords = {
     "train", "stretch", "arm", "length", "grow", "pullup", "click", "tap", 
     "add", "gain", "power", "workout", "exercise", "rep", "give", "increase", 
-    "stat", "farm", "punch", "lift", "strength", "long"
+    "stat", "farm", "punch", "lift", "strength", "long", "swing", "hit", "growth"
 }
 
-local function fireRemotesMatching(keywords)
+local function fireAllTrainingRemotes()
     pcall(function()
-        local containers = {ReplicatedStorage, Workspace}
+        local containers = {ReplicatedStorage, Workspace, LocalPlayer:FindFirstChild("PlayerScripts"), LocalPlayer:FindFirstChild("PlayerGui")}
         for _, container in ipairs(containers) do
-            for _, obj in ipairs(container:GetDescendants()) do
-                if obj:IsA("RemoteEvent") then
-                    local n = obj.Name:lower()
-                    local isShop = n:find("shop") or n:find("buy") or n:find("purchase") or n:find("pass") or n:find("gamepass") or n:find("egg")
-                    if not isShop then
-                        for _, kw in ipairs(keywords) do
-                            if n:find(kw) then
-                                pcall(function() obj:FireServer() end)
-                                pcall(function() obj:FireServer(1) end)
-                                pcall(function() obj:FireServer(true) end)
-                                pcall(function() obj:FireServer("Arm") end)
-                                pcall(function() obj:FireServer("Train") end)
-                                pcall(function() obj:FireServer("Trophy") end)
-                                pcall(function() obj:FireServer(LocalPlayer) end)
-                                break
+            if container then
+                for _, obj in ipairs(container:GetDescendants()) do
+                    if obj:IsA("RemoteEvent") then
+                        local n = string.lower(obj.Name)
+                        local isShop = n:find("shop") or n:find("buy") or n:find("purchase") or n:find("pass") or n:find("gamepass") or n:find("egg") or n:find("pet")
+                        if not isShop then
+                            for _, kw in ipairs(trainKeywords) do
+                                if n:find(kw) then
+                                    pcall(function() obj:FireServer() end)
+                                    pcall(function() obj:FireServer(1) end)
+                                    pcall(function() obj:FireServer(true) end)
+                                    pcall(function() obj:FireServer("Train") end)
+                                    pcall(function() obj:FireServer("Arm") end)
+                                    pcall(function() obj:FireServer("Length") end)
+                                    pcall(function() obj:FireServer("Click") end)
+                                    pcall(function() obj:FireServer(LocalPlayer) end)
+                                    break
+                                end
                             end
                         end
-                    end
-                elseif obj:IsA("RemoteFunction") then
-                    local n = obj.Name:lower()
-                    local isShop = n:find("shop") or n:find("buy") or n:find("purchase") or n:find("egg")
-                    if not isShop then
-                        for _, kw in ipairs(keywords) do
-                            if n:find(kw) then
-                                task.spawn(function()
-                                    pcall(function() obj:InvokeServer() end)
-                                    pcall(function() obj:InvokeServer(1) end)
-                                    pcall(function() obj:InvokeServer(true) end)
-                                    pcall(function() obj:InvokeServer("Arm") end)
-                                    pcall(function() obj:InvokeServer("Trophy") end)
-                                end)
-                                break
+                    elseif obj:IsA("RemoteFunction") then
+                        local n = string.lower(obj.Name)
+                        local isShop = n:find("shop") or n:find("buy") or n:find("purchase") or n:find("egg") or n:find("pet")
+                        if not isShop then
+                            for _, kw in ipairs(trainKeywords) do
+                                if n:find(kw) then
+                                    task.spawn(function()
+                                        pcall(function() obj:InvokeServer() end)
+                                        pcall(function() obj:InvokeServer(1) end)
+                                        pcall(function() obj:InvokeServer(true) end)
+                                        pcall(function() obj:InvokeServer("Train") end)
+                                        pcall(function() obj:InvokeServer("Arm") end)
+                                    end)
+                                    break
+                                end
                             end
                         end
                     end
@@ -235,144 +263,128 @@ local function fireRemotesMatching(keywords)
     end)
 end
 
--- =================================================================
--- 1. AUTO TRAIN ARMS (VISUAL ARM STRETCH & MULTI-TRAIN FARM)
--- =================================================================
-local originalArmSizes = {}
-local currentStretchMultiplier = 1.0
-
-local function stretchArms(multiplier)
-    local char = LocalPlayer.Character
-    if not char then return end
-    pcall(function()
-        local armNames = {
-            "Right Arm", "Left Arm",
-            "RightUpperArm", "RightLowerArm", "RightHand",
-            "LeftUpperArm", "LeftLowerArm", "LeftHand"
-        }
-        for _, name in ipairs(armNames) do
-            local part = char:FindFirstChild(name)
-            if part and part:IsA("BasePart") then
-                if not originalArmSizes[name] then
-                    originalArmSizes[name] = part.Size
-                end
-                local base = originalArmSizes[name]
-                part.Size = Vector3.new(base.X, base.Y * multiplier, base.Z * (1 + (multiplier - 1) * 0.35))
-            end
-        end
-    end)
-end
-
-local function resetArms()
-    local char = LocalPlayer.Character
-    if not char then return end
-    pcall(function()
-        for name, size in pairs(originalArmSizes) do
-            local part = char:FindFirstChild(name)
-            if part and part:IsA("BasePart") then
-                part.Size = size
-            end
-        end
-        currentStretchMultiplier = 1.0
-    end)
-end
-
+-- Thread A: High-speed Screen Clicker & Input Simulation (Gives +1 Stat on Click/Tap)
 task.spawn(function()
     while true do
-        task.wait(0.06)
+        task.wait(0.04)
         if Toggles.AutoTrain then
             pcall(function()
-                -- Gradually stretch arms smoothly
-                if currentStretchMultiplier < 4.5 then
-                    currentStretchMultiplier = currentStretchMultiplier + 0.05
-                end
-                stretchArms(currentStretchMultiplier)
+                VirtualUser:CaptureController()
+                VirtualUser:ClickButton1(Vector2.new(500, 500))
+                VirtualUser:Button1Down(Vector2.new(0, 0))
+                VirtualUser:Button1Up(Vector2.new(0, 0))
+            end)
+            if VirtualInputManager then
+                pcall(function()
+                    VirtualInputManager:SendMouseButtonEvent(500, 500, 0, true, game, 1)
+                    VirtualInputManager:SendMouseButtonEvent(500, 500, 0, false, game, 1)
+                end)
+            end
+        end
+    end
+end)
+
+-- Thread B: Tool Auto-Equip, Rapid Activator & Tool Remotes Spammer
+task.spawn(function()
+    while true do
+        task.wait(0.05)
+        if Toggles.AutoTrain then
+            pcall(function()
+                local char = LocalPlayer.Character
+                local hum = char and char:FindFirstChildOfClass("Humanoid")
+                local backpack = LocalPlayer:FindFirstChild("Backpack")
                 
-                if tick() - lastCacheUpdate > 10 then
+                if char and hum then
+                    local tool = char:FindFirstChildOfClass("Tool")
+                    if not tool and backpack then
+                        local bpTool = backpack:FindFirstChildOfClass("Tool")
+                        if bpTool then
+                            hum:EquipTool(bpTool)
+                            task.wait(0.02)
+                            tool = bpTool
+                        end
+                    end
+                    
+                    if tool then
+                        pcall(function() tool:Activate() end)
+                        for _, rem in ipairs(tool:GetDescendants()) do
+                            if rem:IsA("RemoteEvent") then
+                                pcall(function() rem:FireServer() end)
+                                pcall(function() rem:FireServer(1) end)
+                                pcall(function() rem:FireServer(true) end)
+                            elseif rem:IsA("RemoteFunction") then
+                                pcall(function() rem:InvokeServer() end)
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- Thread C: Workout Equipment, Pull-up Bars & Training Remotes Dispatcher
+task.spawn(function()
+    while true do
+        task.wait(0.12)
+        if Toggles.AutoTrain then
+            pcall(function()
+                if tick() - lastCacheUpdate > 8 then
                     refreshWorkspaceCache()
                 end
                 
                 local root, hum, rHand, lHand, _ = getCharParts()
                 
-                -- A) Touch Overhead Bars & Racks across Workspace
+                -- 1. Touch Workout Bars & Stations across Workspace
                 if root and #cachedBars > 0 and firetouchinterest then
                     for _, bar in ipairs(cachedBars) do
                         if not Toggles.AutoTrain then break end
                         if bar and bar.Parent then
-                            local dist = (Vector2.new(root.Position.X, root.Position.Z) - Vector2.new(bar.Position.X, bar.Position.Z)).Magnitude
-                            if dist <= 300 then
-                                if rHand then
-                                    firetouchinterest(rHand, bar, 0)
-                                    firetouchinterest(rHand, bar, 1)
-                                end
-                                if lHand then
-                                    firetouchinterest(lHand, bar, 0)
-                                    firetouchinterest(lHand, bar, 1)
-                                end
-                                firetouchinterest(root, bar, 0)
-                                firetouchinterest(root, bar, 1)
+                            if rHand then
+                                firetouchinterest(rHand, bar, 0)
+                                firetouchinterest(rHand, bar, 1)
                             end
+                            if lHand then
+                                firetouchinterest(lHand, bar, 0)
+                                firetouchinterest(lHand, bar, 1)
+                            end
+                            firetouchinterest(root, bar, 0)
+                            firetouchinterest(root, bar, 1)
                         end
                     end
                 end
                 
-                -- B) Fire Workspace ProximityPrompts & ClickDetectors on Bars
+                -- 2. Trigger ProximityPrompts & ClickDetectors on Bars
                 for _, prompt in ipairs(Workspace:GetDescendants()) do
                     if not Toggles.AutoTrain then break end
-                    if prompt:IsA("ProximityPrompt") then
+                    if prompt:IsA("ProximityPrompt") and prompt.Enabled then
                         local pName = string.lower(prompt.Parent and prompt.Parent.Name or "")
                         local act = string.lower(prompt.ActionText or "")
                         local objT = string.lower(prompt.ObjectText or "")
-                        if pName:find("train") or pName:find("bar") or pName:find("stretch") or pName:find("arm") or act:find("train") or act:find("pull") or act:find("exercise") or act:find("stretch") or act:find("hang") or objT:find("train") or objT:find("bar") then
+                        if pName:find("train") or pName:find("bar") or pName:find("stretch") or pName:find("arm") or pName:find("pullup") or act:find("train") or act:find("pull") or act:find("exercise") or act:find("stretch") or act:find("hang") or act:find("workout") or objT:find("train") or objT:find("bar") then
                             triggerPrompt(prompt)
                         end
                     elseif prompt:IsA("ClickDetector") then
                         local pName = string.lower(prompt.Parent and prompt.Parent.Name or "")
-                        if pName:find("train") or pName:find("bar") or pName:find("arm") or pName:find("stretch") then
+                        if pName:find("train") or pName:find("bar") or pName:find("arm") or pName:find("stretch") or pName:find("pullup") then
                             pcall(function() fireclickdetector(prompt) end)
                         end
                     end
                 end
                 
-                -- C) Fire All Training Remotes across ReplicatedStorage & Workspace
-                fireRemotesMatching(trainKeywords)
+                -- 3. Fire all Training Remotes
+                fireAllTrainingRemotes()
                 
-                -- D) Equip & Rapid-Activate Training Tools
-                local char = LocalPlayer.Character
-                if char and hum then
-                    local tool = char:FindFirstChildOfClass("Tool")
-                    if tool then
-                        pcall(function() tool:Activate() end)
-                    else
-                        local backpack = LocalPlayer:FindFirstChild("Backpack")
-                        if backpack then
-                            local bpTool = backpack:FindFirstChildOfClass("Tool")
-                            if bpTool then
-                                hum:EquipTool(bpTool)
-                                task.wait(0.01)
-                                pcall(function() bpTool:Activate() end)
-                            end
-                        end
-                    end
-                end
-                
-                -- E) Screen Tap & Input Simulation
-                pcall(function()
-                    VirtualUser:CaptureController()
-                    VirtualUser:ClickButton1(Vector2.new(500, 500))
-                end)
-                
-                -- F) PlayerGui Train Button Dispatcher
+                -- 4. PlayerGui Train Button Clicker
                 local pgui = LocalPlayer:FindFirstChild("PlayerGui")
                 if pgui and firesignal then
                     for _, btn in ipairs(pgui:GetDescendants()) do
                         if (btn:IsA("TextButton") or btn:IsA("ImageButton")) and btn.Visible then
-                            local bName = btn.Name:lower()
-                            local bText = btn:IsA("TextButton") and btn.Text:lower() or ""
-                            if (bName:find("train") or bText:find("train") or bName:find("stretch") or bText:find("stretch") or bName:find("click") or bText:find("tap") or bName:find("workout")) and not bName:find("shop") and not bText:find("shop") and not bName:find("egg") then
+                            local bName = string.lower(btn.Name)
+                            local bText = btn:IsA("TextButton") and string.lower(btn.Text) or ""
+                            if (bName:find("train") or bText:find("train") or bName:find("stretch") or bText:find("stretch") or bName:find("click") or bText:find("tap") or bName:find("workout") or bName:find("punch")) and not bName:find("shop") and not bText:find("shop") and not bName:find("egg") and not bName:find("pass") then
                                 firesignal(btn.MouseButton1Click)
                                 firesignal(btn.Activated)
-                                break
                             end
                         end
                     end
@@ -383,8 +395,13 @@ task.spawn(function()
 end)
 
 -- =================================================================
--- 2. ULTRA MULTI-METHOD AUTO WINS ENGINE (NO ROBUX POPUPS, REAL WINS)
+-- 2. AUTO WINS ENGINE (100% VIBRATION-FREE & SCREEN-STABLE)
 -- =================================================================
+local winKeywords = {
+    "win", "givewin", "addwin", "claimwin", "finish", "trophy", "stage", 
+    "reachgoal", "checkpoint", "victory", "collect", "claim", "reward", 
+    "addwins", "end", "beat", "escaped", "escape", "touchwin", "collecttrophy"
+}
 
 local function IsBlacklistedForWins(name)
     local n = string.lower(name)
@@ -402,56 +419,78 @@ local function IsBlacklistedForWins(name)
     return false
 end
 
-local function GetSafeWinTargets()
-    local results = {}
-    local seen = {}
-    
-    pcall(function()
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            if not Toggles.AutoWins then break end
-            
-            local n = string.lower(obj.Name)
-            local pName = obj.Parent and string.lower(obj.Parent.Name) or ""
-            
-            if not IsBlacklistedForWins(n) and not IsBlacklistedForWins(pName) then
-                -- A) TouchTransmitters on Win / Finish / Pad
-                if obj:IsA("TouchTransmitter") and obj.Parent and obj.Parent:IsA("BasePart") then
-                    local part = obj.Parent
-                    local pn = string.lower(part.Name)
-                    local ppn = part.Parent and string.lower(part.Parent.Name) or ""
-                    if (string.find(pn, "win") or string.find(pn, "finish") or string.find(pn, "trophy") or string.find(pn, "cup") or string.find(pn, "goal") or string.find(pn, "end") or string.find(pn, "pad") or string.find(pn, "stage") or string.find(ppn, "win") or string.find(ppn, "finish") or string.find(ppn, "stage") or string.find(ppn, "troph")) and not seen[part] then
-                        seen[part] = true
-                        table.insert(results, part)
-                    end
-                -- B) BaseParts named win / trophy / cup / finish
-                elseif obj:IsA("BasePart") and not obj:IsA("Terrain") and not obj:IsDescendantOf(LocalPlayer.Character) then
-                    local isYellow = (obj.BrickColor.Name:lower():find("yellow") or (obj.Color.R > 0.65 and obj.Color.G > 0.65 and obj.Color.B < 0.45))
-                    local isIgnored = string.find(n, "spawn") or string.find(n, "track") or string.find(n, "floor") or string.find(n, "baseplate") or string.find(n, "wall") or string.find(pName, "lobby") or string.find(pName, "gui")
-                    
-                    if not isIgnored then
-                        if string.find(n, "win") or string.find(n, "finish") or string.find(n, "trophy") or string.find(n, "goldentrophy") or string.find(n, "cup") or string.find(n, "victory") or string.find(n, "endpad") or string.find(n, "winpad") or string.find(n, "trophypad") or string.find(pName, "win") or string.find(pName, "troph") or (isYellow and string.find(n, "pad")) then
-                            if not seen[obj] then
-                                seen[obj] = true
-                                table.insert(results, obj)
+-- Thread A: Pure Game Remotes Invocations (0% Camera Movement, 100% Stable)
+task.spawn(function()
+    while true do
+        task.wait(0.15)
+        if Toggles.AutoWins then
+            pcall(function()
+                local containers = {ReplicatedStorage, Workspace, LocalPlayer:FindFirstChild("PlayerScripts"), LocalPlayer:FindFirstChild("PlayerGui")}
+                for _, container in ipairs(containers) do
+                    if container then
+                        for _, obj in ipairs(container:GetDescendants()) do
+                            if not Toggles.AutoWins then break end
+                            if obj:IsA("RemoteEvent") then
+                                local n = string.lower(obj.Name)
+                                local pName = obj.Parent and string.lower(obj.Parent.Name) or ""
+                                if not IsBlacklistedForWins(n) and not IsBlacklistedForWins(pName) then
+                                    for _, kw in ipairs(winKeywords) do
+                                        if string.find(n, kw) then
+                                            pcall(function() obj:FireServer() end)
+                                            pcall(function() obj:FireServer(1) end)
+                                            pcall(function() obj:FireServer(true) end)
+                                            pcall(function() obj:FireServer("Win") end)
+                                            pcall(function() obj:FireServer("Trophy") end)
+                                            pcall(function() obj:FireServer(LocalPlayer) end)
+                                            pcall(function() obj:FireServer(1, true) end)
+                                            break
+                                        end
+                                    end
+                                end
+                            elseif obj:IsA("RemoteFunction") then
+                                local n = string.lower(obj.Name)
+                                local pName = obj.Parent and string.lower(obj.Parent.Name) or ""
+                                if not IsBlacklistedForWins(n) and not IsBlacklistedForWins(pName) then
+                                    for _, kw in ipairs(winKeywords) do
+                                        if string.find(n, kw) then
+                                            task.spawn(function()
+                                                pcall(function() obj:InvokeServer() end)
+                                                pcall(function() obj:InvokeServer(1) end)
+                                                pcall(function() obj:InvokeServer(true) end)
+                                                pcall(function() obj:InvokeServer("Win") end)
+                                                pcall(function() obj:InvokeServer("Trophy") end)
+                                            end)
+                                            break
+                                        end
+                                    end
+                                end
                             end
                         end
                     end
-                -- C) Models with PrimaryPart
-                elseif obj:IsA("Model") then
-                    if string.find(n, "trophy") or string.find(n, "win") or string.find(n, "finish") or string.find(n, "goldentrophy") then
-                        local part = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
-                        if part and not seen[part] then
-                            seen[part] = true
-                            table.insert(results, part)
+                end
+                
+                -- PlayerGui Win & Claim Buttons
+                local pgui = LocalPlayer:FindFirstChild("PlayerGui")
+                if pgui and firesignal then
+                    for _, btn in ipairs(pgui:GetDescendants()) do
+                        if (btn:IsA("TextButton") or btn:IsA("ImageButton")) and btn.Visible then
+                            local bName = string.lower(btn.Name)
+                            local bText = btn:IsA("TextButton") and string.lower(btn.Text) or ""
+                            if not IsBlacklistedForWins(bName) and not IsBlacklistedForWins(bText) then
+                                if (string.find(bName, "win") or string.find(bText, "win") or string.find(bName, "claim") or string.find(bText, "claim") or string.find(bName, "trophy") or string.find(bText, "trophy") or string.find(bName, "reward")) then
+                                    firesignal(btn.MouseButton1Click)
+                                    firesignal(btn.Activated)
+                                end
+                            end
                         end
                     end
                 end
-            end
+            end)
         end
-    end)
-    return results
-end
+    end
+end)
 
+-- Thread B: Virtual Touch on Win Pads & Trophies (Zero Screen Shaking)
 task.spawn(function()
     while true do
         task.wait(0.2)
@@ -460,83 +499,32 @@ task.spawn(function()
                 local root, hum = getCharParts()
                 if not root or not hum or hum.Health <= 0 then return end
                 
-                -- 1. Scan & Collect Physical Win Pads / Trophies
-                local winParts = GetSafeWinTargets()
+                if tick() - lastCacheUpdate > 8 then
+                    refreshWorkspaceCache()
+                end
                 
-                if #winParts > 0 then
-                    for _, pad in ipairs(winParts) do
+                -- Virtual Touch Interest on all detected Win Pads & Trophies from current location
+                if #cachedWinPads > 0 and firetouchinterest then
+                    for _, pad in ipairs(cachedWinPads) do
                         if not Toggles.AutoWins then break end
                         if pad and pad.Parent then
-                            root.CFrame = pad.CFrame * CFrame.new(0, 1.2, 0)
-                            root.AssemblyLinearVelocity = Vector3.zero
+                            firetouchinterest(root, pad, 0)
+                            firetouchinterest(root, pad, 1)
                             
-                            if firetouchinterest then
-                                firetouchinterest(root, pad, 0)
-                                task.wait(0.01)
-                                firetouchinterest(root, pad, 1)
-                            end
-                            
-                            for _, sub in ipairs(pad.Parent:GetDescendants()) do
-                                if sub:IsA("ProximityPrompt") and sub.Enabled then
-                                    triggerPrompt(sub)
-                                elseif sub:IsA("ClickDetector") then
-                                    pcall(function() fireclickdetector(sub) end)
-                                elseif sub:IsA("BasePart") and sub ~= pad and firetouchinterest then
-                                    local subName = string.lower(sub.Name)
-                                    if string.find(subName, "win") or string.find(subName, "trophy") or string.find(subName, "finish") or string.find(subName, "cup") then
-                                        firetouchinterest(root, sub, 0)
-                                        task.wait(0.01)
-                                        firetouchinterest(root, sub, 1)
+                            -- Trigger any ProximityPrompts or ClickDetectors in the pad's model
+                            if pad.Parent then
+                                for _, sub in ipairs(pad.Parent:GetDescendants()) do
+                                    if sub:IsA("ProximityPrompt") and sub.Enabled then
+                                        triggerPrompt(sub)
+                                    elseif sub:IsA("ClickDetector") then
+                                        pcall(function() fireclickdetector(sub) end)
+                                    elseif sub:IsA("BasePart") and sub ~= pad and firetouchinterest then
+                                        local subName = string.lower(sub.Name)
+                                        if string.find(subName, "win") or string.find(subName, "trophy") or string.find(subName, "finish") or string.find(subName, "cup") then
+                                            firetouchinterest(root, sub, 0)
+                                            firetouchinterest(root, sub, 1)
+                                        end
                                     end
-                                end
-                            end
-                            
-                            task.wait(0.18)
-                        end
-                    end
-                end
-                
-                -- 2. Pure Game Remotes in ReplicatedStorage & Workspace (Strictly no robux/shop!)
-                for _, container in ipairs({ReplicatedStorage, Workspace}) do
-                    if not Toggles.AutoWins then break end
-                    for _, obj in ipairs(container:GetDescendants()) do
-                        if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
-                            local n = string.lower(obj.Name)
-                            local pName = obj.Parent and string.lower(obj.Parent.Name) or ""
-                            
-                            if not IsBlacklistedForWins(n) and not IsBlacklistedForWins(pName) then
-                                if string.find(n, "win") or string.find(n, "finish") or string.find(n, "victory") or string.find(n, "claimwin") or string.find(n, "addwin") or string.find(n, "reachgoal") or string.find(n, "stage") or string.find(n, "trophy") then
-                                    if obj:IsA("RemoteEvent") then
-                                        pcall(function() obj:FireServer() end)
-                                        pcall(function() obj:FireServer(1) end)
-                                        pcall(function() obj:FireServer(true) end)
-                                        pcall(function() obj:FireServer("Win") end)
-                                        pcall(function() obj:FireServer("Trophy") end)
-                                        pcall(function() obj:FireServer(LocalPlayer) end)
-                                    elseif obj:IsA("RemoteFunction") then
-                                        pcall(function() obj:InvokeServer() end)
-                                        pcall(function() obj:InvokeServer(1) end)
-                                        pcall(function() obj:InvokeServer(true) end)
-                                        pcall(function() obj:InvokeServer("Win") end)
-                                        pcall(function() obj:InvokeServer("Trophy") end)
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-                
-                -- 3. In-Game Win UI Buttons in PlayerGui
-                local pgui = LocalPlayer:FindFirstChild("PlayerGui")
-                if pgui and firesignal then
-                    for _, btn in ipairs(pgui:GetDescendants()) do
-                        if (btn:IsA("TextButton") or btn:IsA("ImageButton")) and btn.Visible then
-                            local bName = string.lower(btn.Name)
-                            local bText = btn:IsA("TextButton") and string.lower(btn.Text) or ""
-                            if not IsBlacklistedForWins(bName) and not IsBlacklistedForWins(bText) then
-                                if (string.find(bName, "win") or string.find(bText, "win") or string.find(bName, "claim") or string.find(bText, "claim") or string.find(bName, "trophy") or string.find(bText, "trophy")) then
-                                    firesignal(btn.MouseButton1Click)
-                                    firesignal(btn.Activated)
                                 end
                             end
                         end
@@ -850,7 +838,6 @@ CloseButton.MouseButton1Click:Connect(function()
     Toggles.InfiniteJump = false
     Toggles.Noclip = false
     Toggles.FlyMode = false
-    resetArms()
     DisableFly()
     ScreenGui:Destroy()
 end)
@@ -945,12 +932,10 @@ end
 -- =================================================================
 
 -- 1. Auto Train Arms
-AddToggleRow("Auto Train Arms", "AutoTrain", function(val)
-    if not val then resetArms() end
-end)
+AddToggleRow("Auto Train Arms", "AutoTrain")
 
--- 2. Auto Wins
-AddToggleRow("Auto Wins (Yellow Pad & Trophy)", "AutoWins")
+-- 2. Auto Wins (Vibration-Free & Screen-Stable)
+AddToggleRow("Auto Wins (Vibration-Free)", "AutoWins")
 
 -- 3. Auto Rebirth
 AddToggleRow("Auto Rebirth", "AutoRebirth")
