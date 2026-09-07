@@ -45,13 +45,23 @@ end
 -- SAFE GUI PARENT RESOLVER & DUPLICATE CLEANER
 -- =================================================================
 local function GetSafeGuiParent()
+    local targetParent = nil
     if gethui then
         local s, r = pcall(gethui)
-        if s and r then return r end
+        if s and r then targetParent = r end
     end
-    local s, _ = pcall(function() local _ = CoreGui.Name end)
-    if s then return CoreGui end
-    return LocalPlayer:WaitForChild("PlayerGui")
+    if not targetParent then
+        local s, _ = pcall(function()
+            local test = Instance.new("Folder")
+            test.Parent = CoreGui
+            test:Destroy()
+        end)
+        if s then targetParent = CoreGui end
+    end
+    if not targetParent then
+        targetParent = LocalPlayer:WaitForChild("PlayerGui", 5) or LocalPlayer:FindFirstChildOfClass("PlayerGui")
+    end
+    return targetParent or CoreGui or LocalPlayer:FindFirstChild("PlayerGui")
 end
 
 local function CleanupOldGui()
@@ -705,17 +715,22 @@ ScreenGui.Name = "JunejoHub_ThrowACoin"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999999
+ScreenGui.Enabled = true
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.Parent = GetSafeGuiParent()
 
 -- Dynamic Compact Window Height
-local MainWindowHeight = 300
+local MainWindowHeight = 310
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
+MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 MainFrame.Size = UDim2.new(0, 280, 0, MainWindowHeight)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -math.floor(MainWindowHeight / 2))
+MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
+MainFrame.Visible = true
 MainFrame.ClipsDescendants = true
 MainFrame.Parent = ScreenGui
 
