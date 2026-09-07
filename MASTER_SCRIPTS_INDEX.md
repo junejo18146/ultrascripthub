@@ -923,7 +923,8 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/throw_a_coin.lua"))()
   ```
 - **Key System Status**: Disabled (Direct Standalone Executable)
-- **Features Included (9 Features)**:
+- **Features Included (10 Features)**:
+  - Auto Throw Coin (Direct 0.5s Fast Auto Throw - No waiting for coin full)
   - Auto Sell Items (Continuous Sell Hitbox Touch, PlayerGui & Remotes Sweep)
   - Auto Upgrade Luck (Continuous Upgrade Pads, PlayerGui & Remotes Sweep)
   - Teleport to Fountain (Instant 1-Click Action to Wishing Fountain / Well)
@@ -933,11 +934,12 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   - Infinite Jump (Continuous Airborne Jump Loop)
   - Fly Mode (Smooth 3D Flight)
   - Anti-AFK Engine (Auto 20-minute idle disconnect protection)
-  - Official Classic Junejo Dark UI (Flat Borderless Standard, 280x285px)
+  - Official Classic Junejo Dark UI (Flat Borderless Standard, 280x300px)
 
 ====================================================
 Updated: September 7, 2026
 ====================================================
+
 
 
 
