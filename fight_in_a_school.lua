@@ -1,6 +1,6 @@
 --[[
     ========================================================================
-    JUNEJO ULTRA SCRIPT HUB - FIGHT IN A SCHOOL (V4.0 ULTIMATE)
+    JUNEJO ULTRA SCRIPT HUB - FIGHT IN A SCHOOL (ULTRA-FAST LITE EDITION)
     ========================================================================
     Author: Made by Junejo (junejo18146)
     Target Game: Fight in a School (Roblox)
@@ -8,27 +8,20 @@
     File: fight_in_a_school.lua
     UI Standard: Junejo Classic Dark UI (#0F0F11) - Flat & Borderless Standard
     
-    Verified Features Included (11 Features):
+    Optimized Essential Features:
         1. Hitbox Expander (15x15x15 Reach Multiplier)
-        2. Fast Attack / Kill Aura (Auto Strike Nearby Enemies)
-        3. Auto Throw Aimbot (Throwable Objects Direct Aim)
-        4. Anti-Ragdoll & Anti-Knockback (Fall & Stun Shield)
-        5. Auto Gym Trainer (Workout Farm)
-        6. Player ESP & Live Health Wallhack
-        7. Weapon & Item ESP (Bats, Boomboxes & Tools)
-        8. WalkSpeed Boost (+ / - Pill Controller: 16 to 300)
-        9. Fly Mode (Smooth 3D Flight)
-        10. Noclip Mode (Phase Through Walls & Doors)
-        11. Infinite Jump (Multi-Jump Bypass)
+        2. Player ESP & Live Health (Real-Time Wallhack & HP Display)
+        3. WalkSpeed Boost (+ / - Pill Controller: 16 to 300)
+        4. Fly Mode (Smooth 3D Flight)
+        5. Noclip Mode (Phase Through Walls & Doors)
+        6. Infinite Jump (Multi-Jump Bypass)
     ========================================================================
 --]]
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 
 local LocalPlayer = Players.LocalPlayer
@@ -40,12 +33,7 @@ end
 -- State & Settings
 local Toggles = {
     HitboxExpander = false,
-    KillAura = false,
-    ThrowAimbot = false,
-    AntiRagdoll = false,
-    AutoGym = false,
     PlayerESP = false,
-    WeaponESP = false,
     WalkSpeedBoost = false,
     FlyMode = false,
     Noclip = false,
@@ -54,7 +42,7 @@ local Toggles = {
 
 local CustomSpeedValue = 45
 local HitboxSize = Vector3.new(15, 15, 15)
-local ESPObjects = {}
+local ESPCache = {}
 local OriginalHitboxes = {}
 
 -- Safe UI Container Resolver
@@ -101,10 +89,10 @@ pcall(function()
 end)
 
 ------------------------------------------------------------------------
--- SMOOTH ZERO-VIBRATION COMBAT & UTILITY ENGINES
+-- ULTRA-FAST LIGHTWEIGHT ENGINES
 ------------------------------------------------------------------------
 
--- 1. Hitbox Expander Engine (Smooth Resize & Clean Restore)
+-- 1. Hitbox Expander (Smooth & Instant)
 local function UpdateHitboxes()
     pcall(function()
         for _, player in ipairs(Players:GetPlayers()) do
@@ -118,8 +106,8 @@ local function UpdateHitboxes()
                                 Size = hrp.Size,
                                 Transparency = hrp.Transparency,
                                 CanCollide = hrp.CanCollide,
-                                Material = hrp.Material,
-                                Color = hrp.Color
+                                Color = hrp.Color,
+                                Material = hrp.Material
                             }
                         end
                         hrp.Size = HitboxSize
@@ -132,8 +120,8 @@ local function UpdateHitboxes()
                             hrp.Size = OriginalHitboxes[player].Size or Vector3.new(2, 2, 1)
                             hrp.Transparency = OriginalHitboxes[player].Transparency or 1
                             hrp.CanCollide = OriginalHitboxes[player].CanCollide or false
-                            hrp.Material = OriginalHitboxes[player].Material or Enum.Material.Plastic
                             hrp.Color = OriginalHitboxes[player].Color or Color3.fromRGB(163, 162, 165)
+                            hrp.Material = OriginalHitboxes[player].Material or Enum.Material.Plastic
                         end
                     end
                 end
@@ -142,206 +130,25 @@ local function UpdateHitboxes()
     end)
 end
 
--- Hitbox Background Sweeper Loop
 task.spawn(function()
     while true do
         if Toggles.HitboxExpander then
             UpdateHitboxes()
-            task.wait(1)
+            task.wait(1.2)
         else
             task.wait(0.5)
         end
     end
 end)
 
--- 2. Fast Attack / Kill Aura Engine (Smooth, Non-Jittering Hits)
-local isAttacking = false
-task.spawn(function()
-    while true do
-        if Toggles.KillAura and not isAttacking then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                local hum = char and char:FindFirstChildWhichIsA("Humanoid")
-                if hrp and hum and hum.Health > 0 then
-                    -- Find nearest enemy within 18 studs
-                    local target = nil
-                    local shortestDist = 18
-
-                    for _, player in ipairs(Players:GetPlayers()) do
-                        if player ~= LocalPlayer and player.Character then
-                            local pHrp = player.Character:FindFirstChild("HumanoidRootPart")
-                            local pHum = player.Character:FindFirstChildWhichIsA("Humanoid")
-                            if pHrp and pHum and pHum.Health > 0 then
-                                local dist = (pHrp.Position - hrp.Position).Magnitude
-                                if dist < shortestDist then
-                                    shortestDist = dist
-                                    target = player.Character
-                                end
-                            end
-                        end
-                    end
-
-                    if target then
-                        isAttacking = true
-                        
-                        -- Equip tool if in backpack
-                        local tool = char:FindFirstChildWhichIsA("Tool") or LocalPlayer.Backpack:FindFirstChildWhichIsA("Tool")
-                        if tool and tool.Parent == LocalPlayer.Backpack then
-                            hum:EquipTool(tool)
-                        end
-
-                        if tool and tool:IsA("Tool") then
-                            tool:Activate()
-                        end
-
-                        -- Fire combat/punch remotes if available
-                        for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                            if remote:IsA("RemoteEvent") then
-                                local rName = string.lower(remote.Name)
-                                if string.find(rName, "punch") or string.find(rName, "attack") or string.find(rName, "hit") or string.find(rName, "strike") then
-                                    remote:FireServer(target)
-                                end
-                            end
-                        end
-
-                        task.wait(0.12)
-                        isAttacking = false
-                    end
-                end
-            end)
-            task.wait(0.1)
-        else
-            task.wait(0.4)
-        end
-    end
-end)
-
--- 3. Auto Throw Aimbot (`ThrowableUnreliRemote`)
-task.spawn(function()
-    while true do
-        if Toggles.ThrowAimbot then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                if hrp then
-                    local targetHead = nil
-                    local shortestDist = 60
-
-                    for _, player in ipairs(Players:GetPlayers()) do
-                        if player ~= LocalPlayer and player.Character then
-                            local head = player.Character:FindFirstChild("Head")
-                            local hum = player.Character:FindFirstChildWhichIsA("Humanoid")
-                            if head and hum and hum.Health > 0 then
-                                local dist = (head.Position - hrp.Position).Magnitude
-                                if dist < shortestDist then
-                                    shortestDist = dist
-                                    targetHead = head
-                                end
-                            end
-                        end
-                    end
-
-                    if targetHead then
-                        -- Check for ThrowableUnreliRemote in ReplicatedStorage or Workspace
-                        for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                            if remote:IsA("UnreliableRemoteEvent") or remote:IsA("RemoteEvent") then
-                                if string.find(string.lower(remote.Name), "throw") then
-                                    local throwVelocity = (targetHead.Position - hrp.Position).Unit * 85
-                                    remote:FireServer(targetHead.Position, throwVelocity)
-                                end
-                            end
-                        end
-                    end
-                end
-            end)
-            task.wait(0.5)
-        else
-            task.wait(0.8)
-        end
-    end
-end)
-
--- 4. Anti-Ragdoll & Anti-Knockback Engine
-RunService.Heartbeat:Connect(function()
-    if Toggles.AntiRagdoll then
+-- 2. Player ESP & Live Health Wallhack Engine
+local function CleanPlayerESP()
+    for _, item in ipairs(ESPCache) do
         pcall(function()
-            local char = LocalPlayer.Character
-            local hum = char and char:FindFirstChildWhichIsA("Humanoid")
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            if hum and hrp then
-                local state = hum:GetState()
-                if state == Enum.HumanoidStateType.Ragdoll or state == Enum.HumanoidStateType.PlatformStanding or state == Enum.HumanoidStateType.FallingDown then
-                    hum:ChangeState(Enum.HumanoidStateType.GettingUp)
-                    hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
-                    hum:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding, false)
-                    hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
-                end
-                if hrp:IsA("BasePart") and hrp.AssemblyAngularVelocity.Magnitude > 15 then
-                    hrp.AssemblyAngularVelocity = Vector3.zero
-                end
-            end
+            if item and item.Destroy then item:Destroy() end
         end)
     end
-end)
-
--- 5. Auto Gym Trainer Loop
-task.spawn(function()
-    while true do
-        if Toggles.AutoGym then
-            pcall(function()
-                local gymTarget = nil
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if obj:IsA("BasePart") or obj:IsA("Model") then
-                        local name = string.lower(obj.Name)
-                        if string.find(name, "gym") or string.find(name, "box") or string.find(name, "bench") or string.find(name, "weight") or string.find(name, "train") then
-                            gymTarget = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
-                            if gymTarget then break end
-                        end
-                    end
-                end
-
-                if gymTarget then
-                    local char = LocalPlayer.Character
-                    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                    if hrp and (hrp.Position - gymTarget.Position).Magnitude > 6 then
-                        hrp.AssemblyLinearVelocity = Vector3.zero
-                        hrp.AssemblyAngularVelocity = Vector3.zero
-                        hrp.CFrame = gymTarget.CFrame + Vector3.new(0, 2, 0)
-                        hrp.AssemblyLinearVelocity = Vector3.zero
-                    end
-                end
-
-                -- Fire gym/workout remotes
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if remote:IsA("RemoteEvent") then
-                        local rName = string.lower(remote.Name)
-                        if string.find(rName, "train") or string.find(rName, "gym") or string.find(rName, "workout") or string.find(rName, "lift") then
-                            remote:FireServer()
-                        end
-                    end
-                end
-            end)
-            task.wait(0.5)
-        else
-            task.wait(0.5)
-        end
-    end
-end)
-
-------------------------------------------------------------------------
--- VISUALS & ESP WALLHACK ENGINES
-------------------------------------------------------------------------
-
-local function CleanESPGroup(groupKey)
-    if ESPObjects[groupKey] then
-        for _, item in ipairs(ESPObjects[groupKey]) do
-            pcall(function()
-                if item and item.Destroy then item:Destroy() end
-            end)
-        end
-    end
-    ESPObjects[groupKey] = {}
+    ESPCache = {}
 end
 
 local function CreatePlayerESP(player)
@@ -353,7 +160,7 @@ local function CreatePlayerESP(player)
         if not hrp or not hum then return end
 
         local highlight = Instance.new("Highlight")
-        highlight.Name = "JunejoPlayerESP"
+        highlight.Name = "JunejoESP"
         highlight.Adornee = char
         highlight.FillColor = Color3.fromRGB(255, 45, 45)
         highlight.FillTransparency = 0.5
@@ -363,7 +170,7 @@ local function CreatePlayerESP(player)
         highlight.Parent = hrp
 
         local billboard = Instance.new("BillboardGui")
-        billboard.Name = "JunejoPlayerTag"
+        billboard.Name = "JunejoESPText"
         billboard.Adornee = hrp
         billboard.Size = UDim2.new(0, 120, 0, 30)
         billboard.StudsOffset = Vector3.new(0, 3, 0)
@@ -386,54 +193,15 @@ local function CreatePlayerESP(player)
         label.Font = Enum.Font.GothamBold
         label.Parent = billboard
 
-        table.insert(ESPObjects["Player"], highlight)
-        table.insert(ESPObjects["Player"], billboard)
+        table.insert(ESPCache, highlight)
+        table.insert(ESPCache, billboard)
     end)
 end
 
-local function CreateWeaponESP(toolPart, name)
-    if not toolPart or not toolPart.Parent then return end
-    pcall(function()
-        local highlight = Instance.new("Highlight")
-        highlight.Name = "JunejoWeaponESP"
-        highlight.Adornee = toolPart.Parent:IsA("Model") and toolPart.Parent or toolPart
-        highlight.FillColor = Color3.fromRGB(0, 220, 255)
-        highlight.FillTransparency = 0.45
-        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-        highlight.OutlineTransparency = 0.1
-        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-        highlight.Parent = toolPart
-
-        local billboard = Instance.new("BillboardGui")
-        billboard.Name = "JunejoWeaponTag"
-        billboard.Adornee = toolPart
-        billboard.Size = UDim2.new(0, 90, 0, 20)
-        billboard.StudsOffset = Vector3.new(0, 1.8, 0)
-        billboard.AlwaysOnTop = true
-        billboard.Parent = toolPart
-
-        local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(1, 0, 1, 0)
-        label.BackgroundTransparency = 1
-        label.Text = "🗡️ " .. name
-        label.TextColor3 = Color3.fromRGB(0, 240, 255)
-        label.TextStrokeTransparency = 0.2
-        label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-        label.TextSize = 11
-        label.Font = Enum.Font.GothamBold
-        label.Parent = billboard
-
-        table.insert(ESPObjects["Weapon"], highlight)
-        table.insert(ESPObjects["Weapon"], billboard)
-    end)
-end
-
--- Master ESP Worker Loop
 task.spawn(function()
     while true do
-        -- 6. Player ESP
         if Toggles.PlayerESP then
-            CleanESPGroup("Player")
+            CleanPlayerESP()
             pcall(function()
                 for _, player in ipairs(Players:GetPlayers()) do
                     if player ~= LocalPlayer and player.Character then
@@ -441,36 +209,15 @@ task.spawn(function()
                     end
                 end
             end)
+            task.wait(1.5)
         else
-            CleanESPGroup("Player")
+            CleanPlayerESP()
+            task.wait(0.8)
         end
-
-        -- 7. Weapon & Item ESP
-        if Toggles.WeaponESP then
-            CleanESPGroup("Weapon")
-            pcall(function()
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if obj:IsA("Tool") and obj.Parent == Workspace then
-                        local handle = obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart")
-                        if handle then
-                            CreateWeaponESP(handle, obj.Name)
-                        end
-                    end
-                end
-            end)
-        else
-            CleanESPGroup("Weapon")
-        end
-
-        task.wait(1.5)
     end
 end)
 
-------------------------------------------------------------------------
--- MOVEMENT & QUALITY OF LIFE ENGINES
-------------------------------------------------------------------------
-
--- 8. WalkSpeed Engine
+-- 3. WalkSpeed Engine
 local function UpdateSpeed()
     pcall(function()
         local char = LocalPlayer.Character
@@ -491,7 +238,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- 9. Smooth 3D Fly Engine (Zero Camera Shake)
+-- 4. Smooth 3D Fly Engine (Zero Camera Shake)
 local FlyBV = nil
 local FlyBG = nil
 
@@ -545,7 +292,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- 10. Noclip Engine
+-- 5. Noclip Engine
 RunService.Stepped:Connect(function()
     if Toggles.Noclip then
         pcall(function()
@@ -561,7 +308,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- 11. Infinite Jump Engine
+-- 6. Infinite Jump Engine
 UserInputService.JumpRequest:Connect(function()
     if Toggles.InfiniteJump then
         pcall(function()
@@ -575,7 +322,7 @@ UserInputService.JumpRequest:Connect(function()
 end)
 
 ------------------------------------------------------------------------
--- OFFICIAL JUNEJO CLASSIC DARK UI GENERATOR (#0F0F11 - 280x285px)
+-- OFFICIAL JUNEJO CLASSIC DARK UI GENERATOR (#0F0F11 - 280x235px)
 ------------------------------------------------------------------------
 
 local ScreenGui = Instance.new("ScreenGui")
@@ -585,11 +332,11 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999999
 ScreenGui.IgnoreGuiInset = true
 
--- Main Frame
+-- Main Frame (Compact Standard Height)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 285)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -142)
+MainFrame.Size = UDim2.new(0, 280, 0, 235)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -117)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -666,16 +413,12 @@ HeaderLine.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
 HeaderLine.BorderSizePixel = 0
 HeaderLine.Parent = MainFrame
 
--- Scrolling Content Frame
-local ContentFrame = Instance.new("ScrollingFrame")
+-- Content Frame
+local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -24, 0, 210)
+ContentFrame.Size = UDim2.new(1, -24, 0, 160)
 ContentFrame.Position = UDim2.new(0, 12, 0, 38)
 ContentFrame.BackgroundTransparency = 1
-ContentFrame.BorderSizePixel = 0
-ContentFrame.ScrollBarThickness = 2
-ContentFrame.ScrollBarImageColor3 = Color3.fromRGB(60, 60, 75)
-ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 310)
 ContentFrame.Parent = MainFrame
 
 local UIList = Instance.new("UIListLayout")
@@ -743,7 +486,7 @@ local function AddToggleRow(text, configKey, callback)
 end
 
 ------------------------------------------------------------------------
--- REGISTERING ALL 11 SELECTED FEATURES
+-- REGISTERING THE SELECTED ESSENTIAL FEATURES
 ------------------------------------------------------------------------
 
 -- 1. Hitbox Expander
@@ -751,25 +494,10 @@ AddToggleRow("Hitbox Expander", "HitboxExpander", function(enabled)
     UpdateHitboxes()
 end)
 
--- 2. Fast Attack / Kill Aura
-AddToggleRow("Fast Attack / Aura", "KillAura")
-
--- 3. Auto Throw Aimbot
-AddToggleRow("Auto Throw Aimbot", "ThrowAimbot")
-
--- 4. Anti-Ragdoll & Knockback
-AddToggleRow("Anti-Ragdoll / Knockback", "AntiRagdoll")
-
--- 5. Auto Gym Trainer
-AddToggleRow("Auto Gym Trainer", "AutoGym")
-
--- 6. Player ESP & Health
+-- 2. Player ESP & Health
 AddToggleRow("Player ESP & Health", "PlayerESP")
 
--- 7. Weapon & Item ESP
-AddToggleRow("Weapon & Item ESP", "WeaponESP")
-
--- 8. WalkSpeed Boost + Integrated Pill Controller (- / +)
+-- 3. WalkSpeed Boost + Integrated Pill Controller (- / +)
 local SpeedRow = Instance.new("Frame")
 SpeedRow.Size = UDim2.new(1, 0, 0, 23)
 SpeedRow.BackgroundTransparency = 1
@@ -884,15 +612,15 @@ PlusBtn.MouseButton1Click:Connect(function()
     UpdateSpeed()
 end)
 
--- 9. Fly Mode
+-- 4. Fly Mode
 AddToggleRow("Fly Mode", "FlyMode", function(enabled)
     if enabled then EnableFly() else DisableFly() end
 end)
 
--- 10. Noclip Mode
+-- 5. Noclip Mode
 AddToggleRow("Noclip Mode", "Noclip")
 
--- 11. Infinite Jump
+-- 6. Infinite Jump
 AddToggleRow("Infinite Jump", "InfiniteJump")
 
 -- Pinned Footer
