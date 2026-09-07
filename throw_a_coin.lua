@@ -1,6 +1,6 @@
 --[[
     ========================================================================
-    JUNEJO ULTRA SCRIPT HUB - THROW A COIN (V4.0 ZERO-VIBRATION EDITION)
+    JUNEJO ULTRA SCRIPT HUB - THROW A COIN (V5.0 CHARGE & RELEASE ENGINE)
     ========================================================================
     Author: Made by Junejo (junejo18146)
     Target Game: Throw a Coin (Roblox)
@@ -8,8 +8,8 @@
     File: throw_a_coin.lua
     UI Standard: Junejo Classic Dark UI (#0F0F11) - Flat & Borderless Standard
     
-    Features Included (Zero Screen Vibration / Pure Clean Auto-Throw):
-        1. Auto Throw Coin (Direct 0.5s Clean Throw into Fountain - Zero Screen Shake)
+    Features Included (Zero Screen Vibration / Complete Charge-Release Throw Engine):
+        1. Auto Throw Coin (Full Charge & Instant Release into Fountain Every 0.5s)
         2. Auto Sell Items (Continuous Sell Hitbox Touch, PlayerGui & Remotes Sweep)
         3. Auto Upgrade Luck (Continuous Upgrade Pads, PlayerGui & Remotes Sweep)
         4. Teleport to Fountain (Instant 1-Click Action to Wishing Fountain / Well)
@@ -116,6 +116,21 @@ local function getPlayerChar()
     return char, root, hum
 end
 
+local function getFountainTarget()
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("BasePart") or obj:IsA("Model") then
+            local n = obj.Name:lower()
+            if n:find("fountain") or n:find("well") or n:find("wishing") or n:find("pit") or n:find("pool") or n:find("target") or n:find("pot") then
+                local p = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
+                if p and p:IsA("BasePart") and not p:IsA("Terrain") then
+                    return p
+                end
+            end
+        end
+    end
+    return nil
+end
+
 -- Anti-AFK Engine
 LocalPlayer.Idled:Connect(function()
     if Toggles.AntiAFK then
@@ -127,66 +142,142 @@ LocalPlayer.Idled:Connect(function()
     end
 end)
 
--- Universal Click Trigger for GUI Buttons
-local function triggerGuiButton(btn)
-    if not btn then return end
+-- =================================================================
+-- UNIVERSAL MULTI-SIGNAL EVENT & GUI CLICK ENGINE
+-- =================================================================
+local VirtualInputManager = nil
+pcall(function()
+    VirtualInputManager = game:GetService("VirtualInputManager")
+end)
+
+local function fireSignalDirect(sig, ...)
+    if not sig then return end
     pcall(function()
         if firesignal then
-            if btn.MouseButton1Click then firesignal(btn.MouseButton1Click) end
-            if btn.Activated then firesignal(btn.Activated) end
-            if btn.MouseButton1Down then firesignal(btn.MouseButton1Down) end
-            if btn.MouseButton1Up then firesignal(btn.MouseButton1Up) end
+            firesignal(sig, ...)
+        end
+    end)
+    pcall(function()
+        if getconnections then
+            for _, conn in ipairs(getconnections(sig)) do
+                if conn.Function then
+                    task.spawn(pcall, conn.Function, ...)
+                elseif conn.Fire then
+                    task.spawn(pcall, function() conn:Fire(...) end)
+                end
+            end
         end
     end)
 end
 
+-- Universal Trigger for any GUI Object (Button, Frame, Meter, Bar)
+local function triggerGuiObject(obj)
+    if not obj then return end
+    pcall(function()
+        -- 1. firesignal & getconnections
+        if obj:IsA("GuiButton") then
+            fireSignalDirect(obj.MouseButton1Down)
+            fireSignalDirect(obj.MouseButton1Click)
+            fireSignalDirect(obj.Activated)
+        end
+        fireSignalDirect(obj.InputBegan, {
+            UserInputType = Enum.UserInputType.MouseButton1,
+            UserInputState = Enum.UserInputState.Begin,
+            Position = Vector3.new(0, 0, 0)
+        })
+
+        -- 2. VirtualInputManager Screen Coordinate Tap
+        local cx, cy = 0, 0
+        if obj.AbsolutePosition and obj.AbsoluteSize then
+            local ax = obj.AbsolutePosition.X
+            local ay = obj.AbsolutePosition.Y
+            local sx = obj.AbsoluteSize.X
+            local sy = obj.AbsoluteSize.Y
+            if sx > 0 and sy > 0 then
+                cx = ax + (sx / 2)
+                cy = ay + (sy / 2)
+            end
+        end
+
+        if VirtualInputManager and cx > 0 and cy > 0 then
+            VirtualInputManager:SendMouseButtonEvent(cx, cy, 0, true, game, 0)
+            pcall(function() VirtualInputManager:SendTouchEvent(0, 0, cx, cy) end)
+        end
+
+        task.delay(0.06, function()
+            pcall(function()
+                if obj:IsA("GuiButton") then
+                    fireSignalDirect(obj.MouseButton1Up)
+                end
+                fireSignalDirect(obj.InputEnded, {
+                    UserInputType = Enum.UserInputType.MouseButton1,
+                    UserInputState = Enum.UserInputState.End,
+                    Position = Vector3.new(0, 0, 0)
+                })
+                if VirtualInputManager and cx > 0 and cy > 0 then
+                    VirtualInputManager:SendMouseButtonEvent(cx, cy, 0, false, game, 0)
+                    pcall(function() VirtualInputManager:SendTouchEvent(0, 2, cx, cy) end)
+                end
+            end)
+        end)
+    end)
+end
+
+local function triggerGuiButton(btn)
+    triggerGuiObject(btn)
+end
+
 -- =================================================================
--- 1. CLEAN AUTO THROW COIN ENGINE (0.5s Fast Throw - ZERO Camera Vibration)
+-- 1. COMPLETE AUTO THROW COIN ENGINE (0.5s Fast Launch Engine)
 -- =================================================================
+local isThrowing = false
+
 local function executeThrowCoin()
+    if isThrowing then return end
+    isThrowing = true
+
     pcall(function()
         local char, root, hum = getPlayerChar()
+        local fountainPart = getFountainTarget()
+        local targetPos = fountainPart and fountainPart.Position or Vector3.new(0, 0, 0)
 
-        -- 1. Auto Equip & Fast Activate Coin Tool
+        -- Step A: Auto Equip Coin Tool
+        local tool = nil
         if char then
-            local tool = char:FindFirstChildOfClass("Tool")
-            if tool then
-                tool:Activate()
-            else
+            tool = char:FindFirstChildOfClass("Tool")
+            if not tool and LocalPlayer:FindFirstChild("Backpack") then
                 local bpTool = LocalPlayer.Backpack:FindFirstChildOfClass("Tool")
                 if bpTool and hum then
                     hum:EquipTool(bpTool)
-                    task.wait(0.01)
-                    bpTool:Activate()
+                    task.wait(0.02)
+                    tool = bpTool
                 end
             end
         end
 
-        -- 2. Clean PlayerGui Throw Bar / Button Trigger (100% Silent Signal - No 3D Screen Taps)
+        -- Step B: Tool Activation & Signal Dispatch
+        if tool then
+            pcall(function() tool:Activate() end)
+            fireSignalDirect(tool.Activated)
+        end
+
+        -- Step C: Scan & Trigger All PlayerGui Throw Bars / Buttons / Meters
         local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
+        local foundGuiElement = false
+
         if playerGui then
             for _, gui in ipairs(playerGui:GetChildren()) do
                 if gui:IsA("ScreenGui") and gui.Name ~= "JunejoHub_ThrowACoin" then
                     for _, obj in ipairs(gui:GetDescendants()) do
-                        if obj.Visible then
+                        if obj:IsA("GuiObject") and obj.Visible then
                             local n = obj.Name:lower()
                             local pName = obj.Parent and obj.Parent.Name:lower() or ""
                             local full = n .. " " .. pName
                             
-                            -- Target the in-game throw button, side bar, power bar or meter
-                            if full:find("throw") or full:find("bar") or full:find("power") or full:find("charge") or full:find("meter") or full:find("coin") or full:find("click") or full:find("tap") or full:find("target") or full:find("fountain") then
-                                if not full:find("shop") and not full:find("sell") and not full:find("upgrade") and not full:find("rebirth") and not full:find("setting") and not full:find("close") then
-                                    if obj:IsA("TextButton") or obj:IsA("ImageButton") then
-                                        triggerGuiButton(obj)
-                                    elseif (obj:IsA("Frame") or obj:IsA("ImageLabel")) and firesignal then
-                                        pcall(function()
-                                            firesignal(obj.InputBegan, {
-                                                UserInputType = Enum.UserInputType.MouseButton1,
-                                                UserInputState = Enum.UserInputState.Begin,
-                                                Position = Vector3.new(0, 0, 0)
-                                            })
-                                        end)
-                                    end
+                            if full:find("throw") or full:find("bar") or full:find("power") or full:find("charge") or full:find("meter") or full:find("coin") or full:find("click") or full:find("tap") or full:find("target") or full:find("fountain") or full:find("side") or full:find("zone") or full:find("timing") or full:find("shoot") or full:find("launch") then
+                                if not full:find("shop") and not full:find("sell") and not full:find("upgrade") and not full:find("rebirth") and not full:find("setting") and not full:find("close") and not full:find("leaderboard") then
+                                    foundGuiElement = true
+                                    triggerGuiObject(obj)
                                 end
                             end
                         end
@@ -195,61 +286,110 @@ local function executeThrowCoin()
             end
         end
 
-        -- 3. Fire Backend Throw / Toss / Coin Remotes in ReplicatedStorage
-        for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
-            if rem:IsA("RemoteEvent") then
-                local rName = string.lower(rem.Name)
-                if string.find(rName, "throw") or string.find(rName, "toss") or string.find(rName, "flip") or string.find(rName, "coin") or string.find(rName, "fountain") or string.find(rName, "drop") or string.find(rName, "power") then
-                    if not string.find(rName, "sell") and not string.find(rName, "upgrade") and not string.find(rName, "shop") and not string.find(rName, "buy") then
-                        pcall(function() rem:FireServer() end)
-                        pcall(function() rem:FireServer(100) end)
-                        pcall(function() rem:FireServer(1) end)
-                        pcall(function() rem:FireServer(true) end)
-                        pcall(function() rem:FireServer("Throw", 100) end)
-                        pcall(function() rem:FireServer("Throw") end)
+        -- Step D: Screen Center Tap (VirtualInputManager tap for universal screen touch throwing)
+        if VirtualInputManager then
+            local cam = Workspace.CurrentCamera
+            if cam and cam.ViewportSize.X > 100 then
+                local tapX = cam.ViewportSize.X * 0.5
+                local tapY = cam.ViewportSize.Y * 0.55
+                VirtualInputManager:SendMouseButtonEvent(tapX, tapY, 0, true, game, 0)
+                pcall(function() VirtualInputManager:SendTouchEvent(0, 0, tapX, tapY) end)
+                task.delay(0.05, function()
+                    pcall(function()
+                        VirtualInputManager:SendMouseButtonEvent(tapX, tapY, 0, false, game, 0)
+                        VirtualInputManager:SendTouchEvent(0, 2, tapX, tapY)
+                    end)
+                end)
+            end
+        end
+
+        -- Step E: Tool Deactivation / Release Cycle
+        task.wait(0.08)
+        if tool then
+            pcall(function() tool:Deactivate() end)
+            fireSignalDirect(tool.Deactivated)
+        end
+
+        -- Step F: Comprehensive Remote Events & Remote Functions Execution
+        local scanRoots = {ReplicatedStorage, Workspace, LocalPlayer}
+        for _, srv in ipairs(scanRoots) do
+            for _, rem in ipairs(srv:GetDescendants()) do
+                if rem:IsA("RemoteEvent") then
+                    local rName = string.lower(rem.Name)
+                    local pName = rem.Parent and string.lower(rem.Parent.Name) or ""
+                    local full = rName .. " " .. pName
+
+                    if full:find("throw") or full:find("toss") or full:find("flip") or full:find("coin") or full:find("fountain") or full:find("drop") or full:find("power") or full:find("release") or full:find("shoot") or full:find("launch") or full:find("height") or full:find("roll") or full:find("request") or full:find("bar") or full:find("timing") then
+                        if not full:find("sell") and not full:find("upgrade") and not full:find("shop") and not full:find("buy") and not full:find("chat") and not full:find("admin") and not full:find("report") then
+                            pcall(function() rem:FireServer(100) end)
+                            pcall(function() rem:FireServer(100, targetPos) end)
+                            pcall(function() rem:FireServer(targetPos) end)
+                            pcall(function() rem:FireServer(fountainPart) end)
+                            pcall(function() rem:FireServer("Throw", 100) end)
+                            pcall(function() rem:FireServer("Throw", targetPos) end)
+                            pcall(function() rem:FireServer("Release", 100) end)
+                            pcall(function() rem:FireServer("ThrowCoin", 100) end)
+                            pcall(function() rem:FireServer("RequestHeightRoll") end)
+                            pcall(function() rem:FireServer(1) end)
+                            pcall(function() rem:FireServer(true) end)
+                            pcall(function() rem:FireServer() end)
+                        end
                     end
-                end
-            elseif rem:IsA("RemoteFunction") then
-                local rName = string.lower(rem.Name)
-                if string.find(rName, "throw") or string.find(rName, "toss") or string.find(rName, "flip") or string.find(rName, "coin") or string.find(rName, "fountain") then
-                    if not string.find(rName, "sell") and not string.find(rName, "upgrade") and not string.find(rName, "shop") and not string.find(rName, "buy") then
-                        task.spawn(function()
-                            pcall(function() rem:InvokeServer() end)
-                            pcall(function() rem:InvokeServer(100) end)
-                            pcall(function() rem:InvokeServer(1) end)
-                            pcall(function() rem:InvokeServer(true) end)
-                        end)
+                elseif rem:IsA("RemoteFunction") then
+                    local rName = string.lower(rem.Name)
+                    local pName = rem.Parent and string.lower(rem.Parent.Name) or ""
+                    local full = rName .. " " .. pName
+
+                    if full:find("throw") or full:find("toss") or full:find("flip") or full:find("coin") or full:find("fountain") or full:find("release") or full:find("height") or full:find("roll") or full:find("bar") then
+                        if not full:find("sell") and not full:find("upgrade") and not full:find("shop") and not full:find("buy") then
+                            task.spawn(function()
+                                pcall(function() rem:InvokeServer(100) end)
+                                pcall(function() rem:InvokeServer(targetPos) end)
+                                pcall(function() rem:InvokeServer("Throw", 100) end)
+                                pcall(function() rem:InvokeServer("RequestHeightRoll") end)
+                                pcall(function() rem:InvokeServer() end)
+                            end)
+                        end
                     end
                 end
             end
         end
 
-        -- 4. Trigger Fountain ProximityPrompts & ClickDetectors in Workspace
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            if obj:IsA("ProximityPrompt") then
-                local pName = string.lower(obj.Parent.Name)
-                if string.find(pName, "fountain") or string.find(pName, "well") or string.find(pName, "coin") or string.find(pName, "wishing") or string.find(pName, "pit") or string.find(pName, "target") then
+        -- Step G: ProximityPrompts & ClickDetectors on Fountain
+        if fountainPart then
+            for _, prompt in ipairs(fountainPart:GetDescendants()) do
+                if prompt:IsA("ProximityPrompt") and prompt.Enabled then
                     pcall(function()
-                        obj.HoldDuration = 0
-                        obj.MaxActivationDistance = 99999
+                        prompt.HoldDuration = 0
+                        prompt.MaxActivationDistance = 99999
                     end)
-                    if fireproximityprompt then fireproximityprompt(obj) end
-                end
-            elseif obj:IsA("ClickDetector") then
-                local pName = string.lower(obj.Parent.Name)
-                if string.find(pName, "fountain") or string.find(pName, "well") or string.find(pName, "coin") or string.find(pName, "wishing") then
-                    if fireclickdetector then fireclickdetector(obj) end
+                    if fireproximityprompt then fireproximityprompt(prompt) end
                 end
             end
+            if fountainPart.Parent then
+                for _, prompt in ipairs(fountainPart.Parent:GetDescendants()) do
+                    if prompt:IsA("ProximityPrompt") and prompt.Enabled then
+                        pcall(function()
+                            prompt.HoldDuration = 0
+                            prompt.MaxActivationDistance = 99999
+                        end)
+                        if fireproximityprompt then fireproximityprompt(prompt) end
+                    end
+                end
+            end
+            local cd = fountainPart:FindFirstChildWhichIsA("ClickDetector", true)
+            if cd and fireclickdetector then fireclickdetector(cd) end
         end
     end)
+
+    isThrowing = false
 end
 
--- Continuous Auto Throw Loop (Every 0.5s Fast Throw)
+-- Continuous Auto Throw Loop (Exact 0.5s Fast Throw Sequence)
 task.spawn(function()
     while true do
         task.wait(0.5)
-        if Toggles.AutoThrow then
+        if Toggles.AutoThrow and not isThrowing then
             executeThrowCoin()
         end
     end
@@ -742,7 +882,7 @@ end
 -- BUILD FEATURE ROWS
 -- =================================================================
 
--- 1. Auto Throw Coin (Pure Silent Signals - Zero Screen Shake)
+-- 1. Auto Throw Coin (Charge & Release Launch Engine)
 AddToggleRow("Auto Throw Coin", "AutoThrow")
 
 -- 2. Auto Sell Items
@@ -1064,4 +1204,4 @@ end)
 -- Mount GUI
 ScreenGui.Parent = GetSafeGuiParent()
 
-print("[Junejo Script Hub]: Throw a Coin Script (V4.0 Zero-Vibration) Loaded Successfully!")
+print("[Junejo Script Hub]: Throw a Coin Script (V5.0 Charge & Release) Loaded Successfully!")
