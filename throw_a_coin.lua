@@ -228,7 +228,7 @@ local function triggerGuiButton(btn)
 end
 
 -- =================================================================
--- 1. COMPLETE AUTO THROW COIN ENGINE (0.5s Fast Launch Engine)
+-- 1. COMPLETE AUTO THROW COIN ENGINE (Stage-Based Bar Click & Release Engine)
 -- =================================================================
 local isThrowing = false
 
@@ -241,7 +241,15 @@ local function executeThrowCoin()
         local fountainPart = getFountainTarget()
         local targetPos = fountainPart and fountainPart.Position or Vector3.new(0, 0, 0)
 
-        -- Step A: Auto Equip Coin Tool
+        -- Step A: Face Fountain
+        if root and fountainPart then
+            pcall(function()
+                local lookPos = Vector3.new(fountainPart.Position.X, root.Position.Y, fountainPart.Position.Z)
+                root.CFrame = CFrame.lookAt(root.Position, lookPos)
+            end)
+        end
+
+        -- Step B: Auto Equip Coin Tool
         local tool = nil
         if char then
             tool = char:FindFirstChildOfClass("Tool")
@@ -249,34 +257,46 @@ local function executeThrowCoin()
                 local bpTool = LocalPlayer.Backpack:FindFirstChildOfClass("Tool")
                 if bpTool and hum then
                     hum:EquipTool(bpTool)
-                    task.wait(0.02)
+                    task.wait(0.04)
                     tool = bpTool
                 end
             end
         end
 
-        -- Step B: Tool Activation & Signal Dispatch
+        -- Step C: Stage 1 - Trigger Throw Start & Activate Tool
         if tool then
             pcall(function() tool:Activate() end)
             fireSignalDirect(tool.Activated)
         end
 
-        -- Step C: Scan & Trigger All PlayerGui Throw Bars / Buttons / Meters
-        local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
-        local foundGuiElement = false
+        -- Initial screen tap to start charging / open bar
+        if VirtualInputManager then
+            local cam = Workspace.CurrentCamera
+            local tapX = cam and (cam.ViewportSize.X * 0.5) or 400
+            local tapY = cam and (cam.ViewportSize.Y * 0.5) or 300
+            VirtualInputManager:SendMouseButtonEvent(tapX, tapY, 0, true, game, 0)
+            pcall(function() VirtualInputManager:SendTouchEvent(0, 0, tapX, tapY) end)
+            task.wait(0.04)
+            VirtualInputManager:SendMouseButtonEvent(tapX, tapY, 0, false, game, 0)
+            pcall(function() VirtualInputManager:SendTouchEvent(0, 2, tapX, tapY) end)
+        end
 
+        -- Step D: Stage 2 - Wait for Side Bar / Meter to spawn (0.14s)
+        task.wait(0.14)
+
+        -- Step E: Stage 3 - Scan & Click ALL active Side Bars / Power Meters / Buttons in PlayerGui
+        local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
         if playerGui then
             for _, gui in ipairs(playerGui:GetChildren()) do
-                if gui:IsA("ScreenGui") and gui.Name ~= "JunejoHub_ThrowACoin" then
+                if gui:IsA("ScreenGui") and gui.Name ~= "JunejoHub_ThrowACoin" and gui.Enabled then
                     for _, obj in ipairs(gui:GetDescendants()) do
                         if obj:IsA("GuiObject") and obj.Visible then
-                            local n = obj.Name:lower()
-                            local pName = obj.Parent and obj.Parent.Name:lower() or ""
+                            local n = string.lower(obj.Name)
+                            local pName = obj.Parent and string.lower(obj.Parent.Name) or ""
                             local full = n .. " " .. pName
-                            
-                            if full:find("throw") or full:find("bar") or full:find("power") or full:find("charge") or full:find("meter") or full:find("coin") or full:find("click") or full:find("tap") or full:find("target") or full:find("fountain") or full:find("side") or full:find("zone") or full:find("timing") or full:find("shoot") or full:find("launch") then
-                                if not full:find("shop") and not full:find("sell") and not full:find("upgrade") and not full:find("rebirth") and not full:find("setting") and not full:find("close") and not full:find("leaderboard") then
-                                    foundGuiElement = true
+
+                            if full:find("bar") or full:find("throw") or full:find("power") or full:find("charge") or full:find("meter") or full:find("coin") or full:find("click") or full:find("tap") or full:find("target") or full:find("side") or full:find("slider") or full:find("indicator") or full:find("green") or full:find("timing") or full:find("action") or full:find("shoot") or full:find("hit") or full:find("zone") then
+                                if not full:find("shop") and not full:find("sell") and not full:find("upgrade") and not full:find("rebirth") and not full:find("setting") and not full:find("close") and not full:find("leaderboard") and not full:find("chat") then
                                     triggerGuiObject(obj)
                                 end
                             end
@@ -286,31 +306,31 @@ local function executeThrowCoin()
             end
         end
 
-        -- Step D: Screen Center Tap (VirtualInputManager tap for universal screen touch throwing)
+        -- Confirmation Tap on Screen Center & Right Side (where the side bar sits)
         if VirtualInputManager then
             local cam = Workspace.CurrentCamera
             if cam and cam.ViewportSize.X > 100 then
-                local tapX = cam.ViewportSize.X * 0.5
-                local tapY = cam.ViewportSize.Y * 0.55
-                VirtualInputManager:SendMouseButtonEvent(tapX, tapY, 0, true, game, 0)
-                pcall(function() VirtualInputManager:SendTouchEvent(0, 0, tapX, tapY) end)
-                task.delay(0.05, function()
-                    pcall(function()
-                        VirtualInputManager:SendMouseButtonEvent(tapX, tapY, 0, false, game, 0)
-                        VirtualInputManager:SendTouchEvent(0, 2, tapX, tapY)
-                    end)
-                end)
+                -- Center tap
+                local cx = cam.ViewportSize.X * 0.5
+                local cy = cam.ViewportSize.Y * 0.5
+                VirtualInputManager:SendMouseButtonEvent(cx, cy, 0, true, game, 0)
+                pcall(function() VirtualInputManager:SendTouchEvent(0, 0, cx, cy) end)
+                task.wait(0.03)
+                VirtualInputManager:SendMouseButtonEvent(cx, cy, 0, false, game, 0)
+                pcall(function() VirtualInputManager:SendTouchEvent(0, 2, cx, cy) end)
+
+                -- Side bar tap (right side of screen)
+                local rx = cam.ViewportSize.X * 0.75
+                local ry = cam.ViewportSize.Y * 0.5
+                VirtualInputManager:SendMouseButtonEvent(rx, ry, 0, true, game, 0)
+                pcall(function() VirtualInputManager:SendTouchEvent(0, 0, rx, ry) end)
+                task.wait(0.03)
+                VirtualInputManager:SendMouseButtonEvent(rx, ry, 0, false, game, 0)
+                pcall(function() VirtualInputManager:SendTouchEvent(0, 2, rx, ry) end)
             end
         end
 
-        -- Step E: Tool Deactivation / Release Cycle
-        task.wait(0.08)
-        if tool then
-            pcall(function() tool:Deactivate() end)
-            fireSignalDirect(tool.Deactivated)
-        end
-
-        -- Step F: Comprehensive Remote Events & Remote Functions Execution
+        -- Step F: Stage 4 - Direct Backend Remote Invocations
         local scanRoots = {ReplicatedStorage, Workspace, LocalPlayer}
         for _, srv in ipairs(scanRoots) do
             for _, rem in ipairs(srv:GetDescendants()) do
@@ -319,7 +339,7 @@ local function executeThrowCoin()
                     local pName = rem.Parent and string.lower(rem.Parent.Name) or ""
                     local full = rName .. " " .. pName
 
-                    if full:find("throw") or full:find("toss") or full:find("flip") or full:find("coin") or full:find("fountain") or full:find("drop") or full:find("power") or full:find("release") or full:find("shoot") or full:find("launch") or full:find("height") or full:find("roll") or full:find("request") or full:find("bar") or full:find("timing") then
+                    if full:find("throw") or full:find("toss") or full:find("flip") or full:find("coin") or full:find("fountain") or full:find("drop") or full:find("power") or full:find("release") or full:find("shoot") or full:find("launch") or full:find("height") or full:find("roll") or full:find("request") or full:find("bar") or full:find("timing") or full:find("cast") then
                         if not full:find("sell") and not full:find("upgrade") and not full:find("shop") and not full:find("buy") and not full:find("chat") and not full:find("admin") and not full:find("report") then
                             pcall(function() rem:FireServer(100) end)
                             pcall(function() rem:FireServer(100, targetPos) end)
@@ -355,7 +375,7 @@ local function executeThrowCoin()
             end
         end
 
-        -- Step G: ProximityPrompts & ClickDetectors on Fountain
+        -- Step G: Stage 5 - ProximityPrompts & ClickDetectors on Fountain
         if fountainPart then
             for _, prompt in ipairs(fountainPart:GetDescendants()) do
                 if prompt:IsA("ProximityPrompt") and prompt.Enabled then
@@ -379,6 +399,12 @@ local function executeThrowCoin()
             end
             local cd = fountainPart:FindFirstChildWhichIsA("ClickDetector", true)
             if cd and fireclickdetector then fireclickdetector(cd) end
+        end
+
+        -- Step H: Deactivate tool to complete cycle
+        if tool then
+            pcall(function() tool:Deactivate() end)
+            fireSignalDirect(tool.Deactivated)
         end
     end)
 
