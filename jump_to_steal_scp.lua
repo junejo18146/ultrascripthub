@@ -1,51 +1,46 @@
---[[
-    ========================================================================
-    JUNEJO ULTRA SCRIPT HUB - JUMP TO STEAL SCP MONSTERS
-    ========================================================================
-    Author: Made by Junejo (junejo18146)
-    Target Game: Jump To Steal SCP Monsters (Roblox)
-    Repository: junejo18146/ultrascripthub
-    File: jump_to_steal_scp.lua
-    UI Standard: Junejo Classic Dark UI (#0F0F11) - Flat & Borderless Standard
-    
-    Features Included (All Original Core Mechanics 100% Preserved):
-        1. Instant Steal (1-Click Action)
-        2. Auto Steal Loop (Lag-Free 2-Teleport Sequence)
-        3. Zone Selector (Auto Highest & All Floor Zones)
-        4. Auto Collect Cash (CollectPads & Remote Sweep)
-        5. Auto Upgrade Jump (Speed & Jump Upgrades)
-        6. Auto Upgrade Capacity (Carry Limit Multiplier)
-        7. Auto Rebirth (Automatic Prestige Engine)
-        8. Auto Open Lucky Blocks (Stands Sweep)
-        9. Anti-Guard Godmode (Disable Guardian Touch)
-        10. Monster ESP (Rarity Neon Highlights & Billboard Tags)
-        11. Guard ESP (Red Threat Highlights & Name Tags)
-        12. Player ESP & Health (Live HP & Distance Wallhack)
-        13. WalkSpeed Boost + Integrated Pill Controller (- / +: 16 to 300)
-        14. Infinite Jump (Continuous Multi-Jump)
-        15. Fly Mode (Smooth 3D Flight)
-        16. Noclip Mode (Phase Through Barriers & Doors)
-        17. Anti-AFK Engine (20-min Disconnect Shield)
-    ========================================================================
---]]
+-- ====================================================
+-- JUNEJO ULTRA SCRIPT HUB - JUMP TO STEAL SCP MONSTERS 👹
+-- Author: Made by Junejo (junejo18146)
+-- GitHub: https://github.com/junejo18146/ultrascripthub
+-- Universal Compatibility (Mobile Delta / Fluxus / Codex & PC)
+-- ====================================================
 
-local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
-local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local VirtualUser = game:GetService("VirtualUser")
 
 local LocalPlayer = Players.LocalPlayer
-while not LocalPlayer do
-    task.wait(0.1)
-    LocalPlayer = Players.LocalPlayer
+if not LocalPlayer then
+    while not LocalPlayer do
+        LocalPlayer = Players.LocalPlayer
+        task.wait(0.05)
+    end
 end
 
--- =================================================================
+-- Clean old UI instances safely across CoreGui, gethui and PlayerGui
+pcall(function()
+    for _, name in ipairs({"JunejoHubUI_JumpToStealSCP", "Badshah_SCP_Master_UI", "JunejoSCPHub"}) do
+        pcall(function()
+            if CoreGui and CoreGui:FindFirstChild(name) then CoreGui[name]:Destroy() end
+        end)
+        pcall(function()
+            if gethui and gethui():FindFirstChild(name) then gethui()[name]:Destroy() end
+        end)
+        pcall(function()
+            local pg = LocalPlayer and (LocalPlayer:FindFirstChild("PlayerGui") or LocalPlayer:FindFirstChildOfClass("PlayerGui"))
+            if pg and pg:FindFirstChild(name) then pg[name]:Destroy() end
+        end)
+    end
+end)
+
+-- ====================================================
 -- FAILSAFE REMOTE RESOLVER
--- =================================================================
+-- ====================================================
 local RemotesCache = {}
 local function GetRemote(name)
     if RemotesCache[name] and RemotesCache[name].Parent then
@@ -69,7 +64,7 @@ local function GetRemote(name)
     return nil
 end
 
--- Global States & Toggles
+-- Global Configuration & State
 local Toggles = {
     AutoStealLoop = false,
     AutoCollectCash = false,
@@ -77,21 +72,20 @@ local Toggles = {
     AutoUpgradeCapacity = false,
     AutoRebirth = false,
     AutoOpenBlocks = false,
-    AntiGuard = true,
+    AntiGuardGodmode = true,
     MonsterESP = false,
     GuardESP = false,
     PlayerESP = false,
-    WalkSpeedBoost = false,
     InfiniteJump = false,
-    FlyMode = false,
-    Noclip = false,
+    WalkSpeedBoost = false,
     AntiAFK = true
 }
 
-local CustomSpeedValue = 24
+local CustomSpeedValue = 50
 local SelectedZone = "Auto (Highest)"
+local IsStealingBusy = false
 
--- Rarity Priority & Color Configs
+-- Rarity Configs
 local RarityPriority = {
     ["LIMITED"] = 15, ["Japan"] = 14, ["Icons"] = 13, ["Spain"] = 12,
     ["Champions"] = 11, ["OG"] = 10, ["Exclusive"] = 9, ["Divine"] = 8,
@@ -117,58 +111,36 @@ local RarityColors = {
     ["LIMITED"] = Color3.fromRGB(255, 50, 80)
 }
 
-local TowerZones = {
-    "Auto (Highest)",
-    "OG (Floor 8)",
-    "Slime God (Floor 7)",
-    "Secret (Floor 6)",
-    "Mythic (Floor 5)",
-    "Legendary (Floor 4)",
-    "Epic (Floor 3)",
-    "Rare (Floor 2)",
-    "Common (Floor 1)"
-}
-
--- Safe Parent GUI Resolver
-local function GetSafeGuiParent()
-    if gethui then
-        local s, r = pcall(gethui)
-        if s and r then return r end
-    end
-    local s, _ = pcall(function() local _ = CoreGui.Name end)
-    if s then return CoreGui end
-    return LocalPlayer:WaitForChild("PlayerGui")
+-- Safe Character Check
+local function isAlive()
+    local char = LocalPlayer.Character
+    if not char then return false end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    return hum and hum.Health > 0 and hrp ~= nil
 end
 
--- Cleanup previous UI instances
-pcall(function()
-    local names = {"JunejoHubUI_SCP", "Badshah_SCP_Master_UI", "JunejoHubUI"}
-    for _, name in ipairs(names) do
-        local old = GetSafeGuiParent():FindFirstChild(name)
-        if old then old:Destroy() end
-    end
-end)
-
--- =================================================================
--- BUTTER-SMOOTH WALKSPEED SYSTEM (Zero Stutter / Zero Rubberband)
--- =================================================================
+-- Butter-Smooth WalkSpeed Enforcer
 local function ApplySmoothSpeed()
     pcall(function()
-        local char = LocalPlayer.Character
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        if hum then
-            if Toggles.WalkSpeedBoost then
-                if hum.WalkSpeed ~= CustomSpeedValue then
-                    hum.WalkSpeed = CustomSpeedValue
+        if isAlive() then
+            local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if hum then
+                if Toggles.WalkSpeedBoost then
+                    if hum.WalkSpeed ~= CustomSpeedValue then
+                        hum.WalkSpeed = CustomSpeedValue
+                    end
+                    LocalPlayer:SetAttribute("CarrySpeedMulti", CustomSpeedValue / 24)
+                else
+                    hum.WalkSpeed = 24
+                    LocalPlayer:SetAttribute("CarrySpeedMulti", 1)
                 end
-                LocalPlayer:SetAttribute("CarrySpeedMulti", CustomSpeedValue / 24)
-            else
-                hum.WalkSpeed = 16
-                LocalPlayer:SetAttribute("CarrySpeedMulti", 1)
             end
         end
     end)
 end
+
+RunService.Heartbeat:Connect(ApplySmoothSpeed)
 
 LocalPlayer.CharacterAdded:Connect(function(char)
     char:WaitForChild("Humanoid", 5)
@@ -176,15 +148,72 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     ApplySmoothSpeed()
 end)
 
-RunService.Heartbeat:Connect(function()
-    if Toggles.WalkSpeedBoost then
-        ApplySmoothSpeed()
-    end
-end)
+-- Screen Notification Toast Helper
+local function ShowNotification(title, message)
+    pcall(function()
+        local sg = CoreGui:FindFirstChild("JunejoHubUI_JumpToStealSCP") or (LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild("JunejoHubUI_JumpToStealSCP"))
+        if not sg then return end
 
--- =================================================================
--- ROBUST PLAYER BASE (PLOT) DETECTOR
--- =================================================================
+        local oldNotify = sg:FindFirstChild("JunejoToast")
+        if oldNotify then oldNotify:Destroy() end
+
+        local Toast = Instance.new("Frame")
+        Toast.Name = "JunejoToast"
+        Toast.Size = UDim2.new(0, 260, 0, 42)
+        Toast.Position = UDim2.new(0.5, -130, 0.12, 0)
+        Toast.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+        Toast.BorderSizePixel = 0
+        Toast.ZIndex = 999
+        Toast.Parent = sg
+
+        local ToastCorner = Instance.new("UICorner")
+        ToastCorner.CornerRadius = UDim.new(0, 8)
+        ToastCorner.Parent = Toast
+
+        local ToastStroke = Instance.new("UIStroke")
+        ToastStroke.Color = Color3.fromRGB(60, 60, 80)
+        ToastStroke.Thickness = 1.2
+        ToastStroke.Parent = Toast
+
+        local TitleLbl = Instance.new("TextLabel")
+        TitleLbl.Size = UDim2.new(1, -12, 0, 16)
+        TitleLbl.Position = UDim2.new(0, 8, 0, 4)
+        TitleLbl.BackgroundTransparency = 1
+        TitleLbl.Text = title
+        TitleLbl.TextColor3 = Color3.fromRGB(255, 215, 0)
+        TitleLbl.TextSize = 11
+        TitleLbl.Font = Enum.Font.GothamBold
+        TitleLbl.TextXAlignment = Enum.TextXAlignment.Left
+        TitleLbl.ZIndex = 1000
+        TitleLbl.Parent = Toast
+
+        local MsgLbl = Instance.new("TextLabel")
+        MsgLbl.Size = UDim2.new(1, -12, 0, 16)
+        MsgLbl.Position = UDim2.new(0, 8, 0, 20)
+        MsgLbl.BackgroundTransparency = 1
+        MsgLbl.Text = message
+        MsgLbl.TextColor3 = Color3.fromRGB(230, 230, 240)
+        MsgLbl.TextSize = 10
+        MsgLbl.Font = Enum.Font.GothamMedium
+        MsgLbl.TextXAlignment = Enum.TextXAlignment.Left
+        MsgLbl.ZIndex = 1000
+        MsgLbl.Parent = Toast
+
+        task.delay(3, function()
+            if Toast and Toast.Parent then
+                local tween = TweenService:Create(Toast, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1})
+                tween:Play()
+                TitleLbl.TextTransparency = 1
+                MsgLbl.TextTransparency = 1
+                ToastStroke.Transparency = 1
+                task.wait(0.35)
+                if Toast then Toast:Destroy() end
+            end
+        end)
+    end)
+end
+
+-- Plot & Base Detector
 local CachedPlot = nil
 local function GetMyPlot()
     if CachedPlot and CachedPlot.Parent == Workspace:FindFirstChild("Plots") then
@@ -254,9 +283,7 @@ local function GetBaseCFrame()
     return CFrame.new(318, 5, 338)
 end
 
--- =================================================================
--- UNIVERSAL PROXIMITY PROMPT TRIGGER
--- =================================================================
+-- Universal Proximity Prompt Trigger
 local function UniversalTriggerPrompt(prompt)
     if not prompt or not prompt.Parent then return end
     pcall(function()
@@ -275,9 +302,7 @@ local function UniversalTriggerPrompt(prompt)
     end)
 end
 
--- =================================================================
--- FIND BEST MONSTER IN ZONE
--- =================================================================
+-- Best Monster Finder
 local function GetBestMonsterInZone(zoneName)
     local liveFolder = Workspace:FindFirstChild("Live")
     local slimesFolder = liveFolder and liveFolder:FindFirstChild("Slimes")
@@ -345,11 +370,7 @@ local function GetBestMonsterInZone(zoneName)
     return candidates[1]
 end
 
--- =================================================================
--- LAG-FREE AUTO STEAL (2 Teleports: Monster -> Base Stand)
--- =================================================================
-local IsStealingBusy = false
-
+-- Lag-Free Steal Action
 local function StealFromZone(zoneName)
     if IsStealingBusy then return end
     IsStealingBusy = true
@@ -364,28 +385,27 @@ local function StealFromZone(zoneName)
             target = GetBestMonsterInZone("Auto (Highest)")
         end
 
-        if not target or not target.Root or not target.Prompt then return end
+        if not target or not target.Root or not target.Prompt then
+            ShowNotification("Auto Steal", "No target found in " .. zoneName)
+            return
+        end
 
-        -- 1. Teleport to monster directly (0-Velocity Smooth Teleport)
-        hrp.AssemblyLinearVelocity = Vector3.zero
-        hrp.AssemblyAngularVelocity = Vector3.zero
+        -- Teleport to monster
         hrp.CFrame = target.Root.CFrame + Vector3.new(0, 1.2, 0)
         hrp.AssemblyLinearVelocity = Vector3.zero
         task.wait(0.2)
 
-        -- 2. Trigger Grab Prompt
+        -- Trigger Prompt
         UniversalTriggerPrompt(target.Prompt)
         task.wait(0.45)
 
-        -- 3. Teleport back to Base directly
+        -- Teleport back to Base
         local baseCF = GetBaseCFrame()
-        hrp.AssemblyLinearVelocity = Vector3.zero
-        hrp.AssemblyAngularVelocity = Vector3.zero
         hrp.CFrame = baseCF
         hrp.AssemblyLinearVelocity = Vector3.zero
         task.wait(0.25)
 
-        -- 4. Deposit on Stand
+        -- Deposit
         local placeRemote = GetRemote("Place Slime")
         if placeRemote then
             for i = 1, 10 do
@@ -405,36 +425,34 @@ local function StealFromZone(zoneName)
             end
         else
             local dropRemote = GetRemote("Drop Slime")
-            if dropRemote then
-                dropRemote:FireServer()
-            end
+            if dropRemote then dropRemote:FireServer() end
         end
 
-        task.wait(0.2)
+        ShowNotification("Steal Success", "Secured " .. target.Rarity .. " " .. target.Name .. " at Base!")
     end)
 
     IsStealingBusy = false
 end
 
--- =================================================================
--- CONTINUOUS FEATURE LOOPS
--- =================================================================
+-- ====================================================
+-- CONTINUOUS BACKGROUND LOOPS
+-- ====================================================
 
--- 1. Continuous Auto Steal Loop
+-- 1. Auto Steal Loop
 task.spawn(function()
     while true do
         task.wait(0.4)
-        if Toggles.AutoStealLoop and not IsStealingBusy then
+        if Toggles.AutoStealLoop and not IsStealingBusy and isAlive() then
             StealFromZone(SelectedZone)
         end
     end
 end)
 
--- 2. Auto Collect Cash
+-- 2. Auto Collect Cash Loop
 task.spawn(function()
     while true do
         task.wait(1.0)
-        if Toggles.AutoCollectCash then
+        if Toggles.AutoCollectCash and isAlive() then
             pcall(function()
                 local plot = GetMyPlot()
                 local collectRemote = GetRemote("Collect Earnings")
@@ -444,9 +462,7 @@ task.spawn(function()
                 if plot and plot:FindFirstChild("CollectPads") then
                     for _, pad in ipairs(plot.CollectPads:GetChildren()) do
                         if not Toggles.AutoCollectCash then break end
-                        if collectRemote then
-                            collectRemote:FireServer(pad.Name)
-                        end
+                        if collectRemote then collectRemote:FireServer(pad.Name) end
                         local topPart = pad:FindFirstChild("Top")
                         if topPart and hrp and firetouchinterest then
                             firetouchinterest(hrp, topPart, 0)
@@ -467,7 +483,7 @@ task.spawn(function()
     end
 end)
 
--- 3. Auto Upgrade Jump
+-- 3. Auto Upgrade Jump Loop
 task.spawn(function()
     while true do
         task.wait(1.0)
@@ -483,37 +499,33 @@ task.spawn(function()
     end
 end)
 
--- 4. Auto Upgrade Capacity
+-- 4. Auto Upgrade Capacity Loop
 task.spawn(function()
     while true do
         task.wait(1.0)
         if Toggles.AutoUpgradeCapacity then
             pcall(function()
                 local carryRemote = GetRemote("Upgrade Carry Limit")
-                if carryRemote then
-                    carryRemote:FireServer()
-                end
+                if carryRemote then carryRemote:FireServer() end
             end)
         end
     end
 end)
 
--- 5. Auto Rebirth
+-- 5. Auto Rebirth Loop
 task.spawn(function()
     while true do
         task.wait(1.5)
         if Toggles.AutoRebirth then
             pcall(function()
                 local rebirthRemote = GetRemote("Rebirth")
-                if rebirthRemote then
-                    rebirthRemote:FireServer()
-                end
+                if rebirthRemote then rebirthRemote:FireServer() end
             end)
         end
     end
 end)
 
--- 6. Auto Open Blocks
+-- 6. Auto Open Lucky Blocks Loop
 task.spawn(function()
     while true do
         task.wait(1.2)
@@ -532,26 +544,11 @@ task.spawn(function()
     end
 end)
 
--- 7. Infinite Jump
-UserInputService.JumpRequest:Connect(function()
-    if Toggles.InfiniteJump then
-        pcall(function()
-            local char = LocalPlayer.Character
-            local hum = char and char:FindFirstChildOfClass("Humanoid")
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            if hum and hrp then
-                hum:ChangeState(Enum.HumanoidStateType.Jumping)
-                hrp.AssemblyLinearVelocity = Vector3.new(hrp.AssemblyLinearVelocity.X, 54, hrp.AssemblyLinearVelocity.Z)
-            end
-        end)
-    end
-end)
-
--- 8. Anti-Guard (CanTouch = false)
+-- 7. Anti-Guard Godmode Loop
 task.spawn(function()
     while true do
         task.wait(1.2)
-        if Toggles.AntiGuard then
+        if Toggles.AntiGuardGodmode then
             pcall(function()
                 local guardians = Workspace:FindFirstChild("Live") and Workspace.Live:FindFirstChild("Guardians")
                 if guardians then
@@ -568,9 +565,30 @@ task.spawn(function()
     end
 end)
 
--- =================================================================
+-- 8. Infinite Jump Hook
+UIS.JumpRequest:Connect(function()
+    if Toggles.InfiniteJump and isAlive() then
+        local char = LocalPlayer.Character
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if hum and hrp then
+            hum:ChangeState(Enum.HumanoidStateType.Jumping)
+            hrp.AssemblyLinearVelocity = Vector3.new(hrp.AssemblyLinearVelocity.X, 54, hrp.AssemblyLinearVelocity.Z)
+        end
+    end
+end)
+
+-- 9. Anti-AFK Engine
+LocalPlayer.Idled:Connect(function()
+    if Toggles.AntiAFK then
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new())
+    end
+end)
+
+-- ====================================================
 -- VISUALS: MONSTER ESP, GUARD ESP, PLAYER ESP
--- =================================================================
+-- ====================================================
 local MonsterESPTable = {}
 local GuardESPTable = {}
 local PlayerESPTable = {}
@@ -764,106 +782,42 @@ task.spawn(function()
     end
 end)
 
--- =================================================================
--- SMOOTH 3D FLY ENGINE & NOCLIP
--- =================================================================
-local FlyBV = nil
-local FlyBG = nil
-
-local function EnableFly()
-    pcall(function()
-        local char = LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
-
-        if FlyBV then FlyBV:Destroy() end
-        if FlyBG then FlyBG:Destroy() end
-
-        FlyBV = Instance.new("BodyVelocity")
-        FlyBV.Velocity = Vector3.zero
-        FlyBV.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-        FlyBV.Parent = hrp
-
-        FlyBG = Instance.new("BodyGyro")
-        FlyBG.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
-        FlyBG.CFrame = hrp.CFrame
-        FlyBG.Parent = hrp
-    end)
-end
-
-local function DisableFly()
-    pcall(function()
-        if FlyBV then FlyBV:Destroy() FlyBV = nil end
-        if FlyBG then FlyBG:Destroy() FlyBG = nil end
-    end)
-end
-
-RunService.RenderStepped:Connect(function()
-    if Toggles.FlyMode and FlyBV and FlyBG then
-        pcall(function()
-            local cam = Workspace.CurrentCamera
-            local char = LocalPlayer.Character
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            if not hrp then return end
-
-            local moveDir = Vector3.zero
-            if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.CFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - cam.CFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - cam.CFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + cam.CFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir = moveDir - Vector3.new(0, 1, 0) end
-
-            FlyBG.CFrame = cam.CFrame
-            FlyBV.Velocity = moveDir.Magnitude > 0 and (moveDir.Unit * CustomSpeedValue) or Vector3.zero
-        end)
-    end
-end)
-
-RunService.Stepped:Connect(function()
-    if Toggles.Noclip then
-        pcall(function()
-            local char = LocalPlayer.Character
-            if char then
-                for _, part in ipairs(char:GetDescendants()) do
-                    if part:IsA("BasePart") and part.CanCollide then
-                        part.CanCollide = false
-                    end
-                end
-            end
-        end)
-    end
-end)
-
--- Anti-AFK Engine (20-min Disconnect Shield)
-LocalPlayer.Idled:Connect(function()
-    if Toggles.AntiAFK then
-        pcall(function()
-            local vu = game:GetService("VirtualUser")
-            if vu then
-                vu:CaptureController()
-                vu:ClickButton2(Vector2.zero)
-            end
-        end)
-    end
-end)
-
-------------------------------------------------------------------------
--- OFFICIAL JUNEJO CLASSIC DARK UI GENERATOR (#0F0F11 - 280x285px)
-------------------------------------------------------------------------
-
+-- ====================================================
+-- OFFICIAL JUNEJO COMPACT UI (280px Standard)
+-- ====================================================
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "JunejoHubUI_SCP"
+ScreenGui.Name = "JunejoHubUI_JumpToStealSCP"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999999
-ScreenGui.IgnoreGuiInset = true
 
--- Main Frame (Width: 280, Height: 285)
+local isParented = false
+pcall(function()
+    if gethui then
+        ScreenGui.Parent = gethui()
+        if ScreenGui.Parent then isParented = true end
+    end
+end)
+if not isParented then
+    pcall(function()
+        ScreenGui.Parent = CoreGui
+        if ScreenGui.Parent then isParented = true end
+    end)
+end
+if not isParented then
+    pcall(function()
+        local pg = LocalPlayer:FindFirstChildOfClass("PlayerGui") or LocalPlayer:WaitForChild("PlayerGui", 5)
+        if pg then
+            ScreenGui.Parent = pg
+            isParented = true
+        end
+    end)
+end
+
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 285)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -142)
+MainFrame.Size = UDim2.new(0, 280, 0, 310)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -155)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -879,40 +833,47 @@ MainStroke.Color = Color3.fromRGB(35, 35, 42)
 MainStroke.Thickness = 1
 MainStroke.Parent = MainFrame
 
--- Dragging Engine
-local isDragging, dragStart, startPos = false, nil, nil
-MainFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        isDragging = true
-        dragStart = input.Position
-        startPos = MainFrame.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                isDragging = false
-            end
-        end)
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local delta = input.Position - dragStart
-        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-end)
-
--- Header Frame (Height: 32px)
+-- Header
 local Header = Instance.new("Frame")
 Header.Name = "Header"
 Header.Size = UDim2.new(1, 0, 0, 32)
 Header.BackgroundTransparency = 1
 Header.Parent = MainFrame
 
+-- Draggable Header Logic
+local function enableHeaderDrag(dragHandle, targetFrame)
+    local dragging, dragInput, dragStart, startPos
+    dragHandle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = targetFrame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    dragHandle.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    UIS.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            targetFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+enableHeaderDrag(Header, MainFrame)
+
 local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(1, -40, 1, 0)
 TitleLabel.Position = UDim2.new(0, 12, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "JUMP TO STEAL SCP"
+TitleLabel.Text = "JUMP TO STEAL SCP 👹"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleLabel.TextSize = 12
 TitleLabel.Font = Enum.Font.GothamBold
@@ -929,10 +890,13 @@ CloseButton.TextSize = 13
 CloseButton.Font = Enum.Font.GothamBold
 CloseButton.Parent = Header
 CloseButton.MouseButton1Click:Connect(function()
+    ClearMonsterESP()
+    ClearGuardESP()
+    ClearPlayerESP()
     ScreenGui:Destroy()
 end)
 
--- Header Separation Line (1px)
+-- Header Separation Line
 local HeaderLine = Instance.new("Frame")
 HeaderLine.Size = UDim2.new(1, -24, 0, 1)
 HeaderLine.Position = UDim2.new(0, 12, 0, 32)
@@ -940,16 +904,17 @@ HeaderLine.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
 HeaderLine.BorderSizePixel = 0
 HeaderLine.Parent = MainFrame
 
--- Scrolling Content Frame
+-- Scrollable Content Frame
 local ContentFrame = Instance.new("ScrollingFrame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -24, 0, 210)
-ContentFrame.Position = UDim2.new(0, 12, 0, 38)
+ContentFrame.Size = UDim2.new(1, -16, 0, 230)
+ContentFrame.Position = UDim2.new(0, 10, 0, 38)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.BorderSizePixel = 0
-ContentFrame.ScrollBarThickness = 2
-ContentFrame.ScrollBarImageColor3 = Color3.fromRGB(60, 60, 75)
-ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 440)
+ContentFrame.ScrollBarThickness = 3
+ContentFrame.ScrollBarImageColor3 = Color3.fromRGB(65, 65, 80)
+ContentFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 ContentFrame.Parent = MainFrame
 
 local UIList = Instance.new("UIListLayout")
@@ -957,10 +922,10 @@ UIList.SortOrder = Enum.SortOrder.LayoutOrder
 UIList.Padding = UDim.new(0, 4)
 UIList.Parent = ContentFrame
 
--- Helper: Add Flat Borderless Toggle Row
+-- Helper Function: Add Flat Toggle Row
 local function AddToggleRow(text, configKey, callback)
     local Row = Instance.new("Frame")
-    Row.Size = UDim2.new(1, 0, 0, 23)
+    Row.Size = UDim2.new(1, -6, 0, 23)
     Row.BackgroundTransparency = 1
     Row.Parent = ContentFrame
     
@@ -1009,157 +974,120 @@ local function AddToggleRow(text, configKey, callback)
     MarkCorner.CornerRadius = UDim.new(0, 2)
     MarkCorner.Parent = CheckMark
     
+    local lastClick = 0
     RowBtn.MouseButton1Click:Connect(function()
+        local now = os.clock()
+        if now - lastClick < 0.12 then return end
+        lastClick = now
         Toggles[configKey] = not Toggles[configKey]
         CheckMark.BackgroundTransparency = Toggles[configKey] and 0 or 1
         if callback then callback(Toggles[configKey]) end
     end)
 end
 
--- Helper: Add 1-Click Action Button Row
-local function AddActionRow(text, buttonText, callback)
+-- Helper Function: Add Action Button
+local function AddActionButton(text, callback)
     local Row = Instance.new("Frame")
-    Row.Size = UDim2.new(1, 0, 0, 23)
+    Row.Size = UDim2.new(1, -6, 0, 24)
     Row.BackgroundTransparency = 1
     Row.Parent = ContentFrame
     
-    local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(1, -65, 1, 0)
-    Label.BackgroundTransparency = 1
-    Label.Text = text
-    Label.TextColor3 = Color3.fromRGB(240, 240, 240)
-    Label.TextSize = 12
-    Label.Font = Enum.Font.GothamBold
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.Parent = Row
-    
-    local ActionBtn = Instance.new("TextButton")
-    ActionBtn.Size = UDim2.new(0, 58, 0, 20)
-    ActionBtn.Position = UDim2.new(1, -58, 0.5, -10)
-    ActionBtn.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-    ActionBtn.BorderSizePixel = 0
-    ActionBtn.Text = buttonText
-    ActionBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    ActionBtn.TextSize = 10
-    ActionBtn.Font = Enum.Font.GothamBold
-    ActionBtn.Parent = Row
+    local Btn = Instance.new("TextButton")
+    Btn.Size = UDim2.new(1, 0, 1, 0)
+    Btn.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+    Btn.BorderSizePixel = 0
+    Btn.Text = text
+    Btn.TextColor3 = Color3.fromRGB(240, 240, 240)
+    Btn.Font = Enum.Font.GothamBold
+    Btn.TextSize = 11
+    Btn.Parent = Row
     
     local BtnCorner = Instance.new("UICorner")
     BtnCorner.CornerRadius = UDim.new(0, 4)
-    BtnCorner.Parent = ActionBtn
+    BtnCorner.Parent = Btn
     
     local BtnStroke = Instance.new("UIStroke")
     BtnStroke.Color = Color3.fromRGB(45, 45, 55)
-    BtnStroke.Thickness = 1.2
-    BtnStroke.Parent = ActionBtn
+    BtnStroke.Thickness = 1
+    BtnStroke.Parent = Btn
     
-    ActionBtn.MouseButton1Click:Connect(function()
-        ActionBtn.BackgroundColor3 = Color3.fromRGB(55, 55, 70)
-        task.delay(0.15, function()
-            ActionBtn.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-        end)
-        if callback then callback() end
+    local lastClick = 0
+    Btn.MouseButton1Click:Connect(function()
+        local now = os.clock()
+        if now - lastClick < 0.25 then return end
+        lastClick = now
+        if callback then callback(Btn) end
     end)
 end
 
--- Helper: Interactive Zone Selector Row
-local currentZoneIdx = 1
-local function AddZoneSelectorRow()
-    local Row = Instance.new("Frame")
-    Row.Size = UDim2.new(1, 0, 0, 23)
-    Row.BackgroundTransparency = 1
-    Row.Parent = ContentFrame
+-- ====================================================
+-- ROWS REGISTRATION
+-- ====================================================
 
-    local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(0.4, 0, 1, 0)
-    Label.BackgroundTransparency = 1
-    Label.Text = "Target Zone"
-    Label.TextColor3 = Color3.fromRGB(240, 240, 240)
-    Label.TextSize = 12
-    Label.Font = Enum.Font.GothamBold
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.Parent = Row
-
-    local ZonePill = Instance.new("TextButton")
-    ZonePill.Size = UDim2.new(0.6, 0, 0, 20)
-    ZonePill.Position = UDim2.new(0.4, 0, 0.5, -10)
-    ZonePill.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-    ZonePill.BorderSizePixel = 0
-    ZonePill.Text = SelectedZone
-    ZonePill.TextColor3 = Color3.fromRGB(200, 200, 220)
-    ZonePill.TextSize = 10
-    ZonePill.Font = Enum.Font.GothamBold
-    ZonePill.Parent = Row
-
-    local PillCorner = Instance.new("UICorner")
-    PillCorner.CornerRadius = UDim.new(0, 4)
-    PillCorner.Parent = ZonePill
-
-    local PillStroke = Instance.new("UIStroke")
-    PillStroke.Color = Color3.fromRGB(45, 45, 55)
-    PillStroke.Thickness = 1
-    PillStroke.Parent = ZonePill
-
-    ZonePill.MouseButton1Click:Connect(function()
-        currentZoneIdx = (currentZoneIdx % #TowerZones) + 1
-        SelectedZone = TowerZones[currentZoneIdx]
-        ZonePill.Text = SelectedZone
-    end)
-end
-
-------------------------------------------------------------------------
--- REGISTERING ALL FEATURES
-------------------------------------------------------------------------
-
--- 1. Instant Steal (1-Click)
-AddActionRow("Instant Steal", "STEAL", function()
+-- 1. Action: Instant Steal Highest Monster
+AddActionButton("⚡ Instant Steal (Highest SCP)", function(btn)
+    btn.Text = "⏳ Stealing Highest..."
     task.spawn(function()
-        StealFromZone(SelectedZone)
+        StealFromZone("Auto (Highest)")
+        task.delay(1.2, function()
+            btn.Text = "⚡ Instant Steal (Highest SCP)"
+        end)
     end)
 end)
 
--- 2. Target Zone Selector (Click to cycle)
-AddZoneSelectorRow()
-
--- 3. Auto Steal Loop
-AddToggleRow("Auto Steal Loop", "AutoStealLoop", function(state)
-    if state then
-        task.spawn(function()
-            StealFromZone(SelectedZone)
+-- 2. Action: Instant Steal OG Monster
+AddActionButton("👑 Instant Steal (OG Floor 8)", function(btn)
+    btn.Text = "⏳ Stealing OG Floor 8..."
+    task.spawn(function()
+        StealFromZone("OG (Floor 8)")
+        task.delay(1.2, function()
+            btn.Text = "👑 Instant Steal (OG Floor 8)"
         end)
-    end
+    end)
 end)
 
--- 4. Auto Collect Cash
-AddToggleRow("Auto Collect Cash", "AutoCollectCash")
+-- 3. Auto Steal Loop Toggle
+AddToggleRow("Auto Steal Loop", "AutoStealLoop", function(state) end)
 
--- 5. Auto Upgrade Jump
-AddToggleRow("Auto Upgrade Jump", "AutoUpgradeJump")
+-- 4. Auto Collect Cash Toggle
+AddToggleRow("Auto Collect Cash", "AutoCollectCash", function(state) end)
 
--- 6. Auto Upgrade Capacity
-AddToggleRow("Auto Upgrade Capacity", "AutoUpgradeCapacity")
+-- 5. Auto Upgrade Jump Toggle
+AddToggleRow("Auto Upgrade Jump", "AutoUpgradeJump", function(state) end)
 
--- 7. Auto Rebirth
-AddToggleRow("Auto Rebirth", "AutoRebirth")
+-- 6. Auto Upgrade Capacity Toggle
+AddToggleRow("Auto Upgrade Capacity", "AutoUpgradeCapacity", function(state) end)
 
--- 8. Auto Open Lucky Blocks
-AddToggleRow("Auto Open Blocks", "AutoOpenBlocks")
+-- 7. Auto Rebirth Toggle
+AddToggleRow("Auto Rebirth", "AutoRebirth", function(state) end)
 
--- 9. Anti-Guard (Godmode)
-AddToggleRow("Anti-Guard (Godmode)", "AntiGuard")
+-- 8. Auto Open Lucky Blocks Toggle
+AddToggleRow("Auto Open Lucky Blocks", "AutoOpenBlocks", function(state) end)
 
--- 10. Monster ESP
-AddToggleRow("Monster ESP", "MonsterESP")
+-- 9. Anti-Guard (Godmode) Toggle
+AddToggleRow("Anti-Guard (Godmode)", "AntiGuardGodmode", function(state) end)
 
--- 11. Guard ESP
-AddToggleRow("Guard ESP", "GuardESP")
+-- 10. Monster ESP Toggle
+AddToggleRow("Monster ESP (Rarity Glow)", "MonsterESP", function(state)
+    if not state then ClearMonsterESP() end
+end)
 
--- 12. Player ESP
-AddToggleRow("Player ESP", "PlayerESP")
+-- 11. Guard ESP Toggle
+AddToggleRow("Guard ESP (Red Radar)", "GuardESP", function(state)
+    if not state then ClearGuardESP() end
+end)
 
--- 13. WalkSpeed Boost + Integrated Pill Controller (- / +)
+-- 12. Player ESP Toggle
+AddToggleRow("Player ESP", "PlayerESP", function(state)
+    if not state then ClearPlayerESP() end
+end)
+
+-- 13. Infinite Jump Toggle
+AddToggleRow("Infinite Jump", "InfiniteJump", function(state) end)
+
+-- 14. Integrated WalkSpeed Row with - / + Pill Controller
 local SpeedRow = Instance.new("Frame")
-SpeedRow.Size = UDim2.new(1, 0, 0, 23)
+SpeedRow.Size = UDim2.new(1, -6, 0, 23)
 SpeedRow.BackgroundTransparency = 1
 SpeedRow.Parent = ContentFrame
 
@@ -1204,9 +1132,9 @@ SpeedCheckMark.BackgroundTransparency = Toggles.WalkSpeedBoost and 0 or 1
 SpeedCheckMark.BorderSizePixel = 0
 SpeedCheckMark.Parent = SpeedCheckBox
 
-local MarkCorner2 = Instance.new("UICorner")
-MarkCorner2.CornerRadius = UDim.new(0, 2)
-MarkCorner2.Parent = SpeedCheckMark
+local SpeedMarkCorner = Instance.new("UICorner")
+SpeedMarkCorner.CornerRadius = UDim.new(0, 2)
+SpeedMarkCorner.Parent = SpeedCheckMark
 
 SpeedToggleBtn.MouseButton1Click:Connect(function()
     Toggles.WalkSpeedBoost = not Toggles.WalkSpeedBoost
@@ -1261,32 +1189,34 @@ PlusBtn.Font = Enum.Font.GothamBold
 PlusBtn.Parent = SpeedControlFrame
 
 MinusBtn.MouseButton1Click:Connect(function()
-    CustomSpeedValue = math.max(16, CustomSpeedValue - 15)
+    CustomSpeedValue = math.max(16, CustomSpeedValue - 10)
     SpeedDisplay.Text = tostring(CustomSpeedValue)
     ApplySmoothSpeed()
 end)
 
 PlusBtn.MouseButton1Click:Connect(function()
-    CustomSpeedValue = math.min(300, CustomSpeedValue + 15)
+    CustomSpeedValue = math.min(250, CustomSpeedValue + 10)
     SpeedDisplay.Text = tostring(CustomSpeedValue)
     ApplySmoothSpeed()
 end)
 
--- 14. Infinite Jump
-AddToggleRow("Infinite Jump", "InfiniteJump")
-
--- 15. Fly Mode
-AddToggleRow("Fly Mode", "FlyMode", function(enabled)
-    if enabled then EnableFly() else DisableFly() end
+-- 15. Action: Teleport to Base
+AddActionButton("📍 Teleport to Base (Plot)", function(btn)
+    if isAlive() then
+        local hrp = LocalPlayer.Character.HumanoidRootPart
+        local baseCF = GetBaseCFrame()
+        hrp.AssemblyLinearVelocity = Vector3.zero
+        hrp.CFrame = baseCF
+        btn.Text = "✓ Teleported to Base!"
+        task.delay(1.2, function()
+            btn.Text = "📍 Teleport to Base (Plot)"
+        end)
+    end
 end)
 
--- 16. Noclip Mode
-AddToggleRow("Noclip Mode", "Noclip")
-
--- 17. Anti-AFK Engine
-AddToggleRow("Anti-AFK Engine", "AntiAFK")
-
--- Pinned Footer
+-- ====================================================
+-- FOOTER
+-- ====================================================
 local Footer = Instance.new("Frame")
 Footer.Size = UDim2.new(1, 0, 0, 36)
 Footer.Position = UDim2.new(0, 0, 1, -38)
@@ -1312,6 +1242,3 @@ FooterSub.TextColor3 = Color3.fromRGB(136, 136, 153)
 FooterSub.TextSize = 9
 FooterSub.Font = Enum.Font.GothamMedium
 FooterSub.Parent = Footer
-
--- Mount UI
-ScreenGui.Parent = GetSafeGuiParent()
