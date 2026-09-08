@@ -52,6 +52,8 @@ local Toggles = {
 }
 
 local CustomSpeedValue = 100
+local CustomFlySpeed = 70
+local CustomJumpPower = 60
 local SavedBaseCFrame = nil
 local CurrentEggESPInstances = {}
 local CurrentRareEggESPInstances = {}
@@ -748,6 +750,109 @@ local function AddActionButton(text, callback)
     end)
 end
 
+-- Helper Function: Add Interactive Slider Control Line (Universal Mobile & PC Touch)
+local function AddSliderLine(min, max, defaultVal, onValueChanged)
+    local SliderRow = Instance.new("Frame")
+    SliderRow.Size = UDim2.new(1, -6, 0, 18)
+    SliderRow.BackgroundTransparency = 1
+    SliderRow.Parent = ContentFrame
+
+    local ValLabel = Instance.new("TextLabel")
+    ValLabel.Size = UDim2.new(0.26, 0, 1, 0)
+    ValLabel.Position = UDim2.new(0.74, 0, 0, 0)
+    ValLabel.BackgroundTransparency = 1
+    ValLabel.Text = tostring(defaultVal)
+    ValLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ValLabel.TextSize = 11
+    ValLabel.Font = Enum.Font.GothamBold
+    ValLabel.TextXAlignment = Enum.TextXAlignment.Right
+    ValLabel.Parent = SliderRow
+
+    local TrackContainer = Instance.new("Frame")
+    TrackContainer.Size = UDim2.new(0.72, 0, 1, 0)
+    TrackContainer.BackgroundTransparency = 1
+    TrackContainer.Parent = SliderRow
+
+    local Track = Instance.new("Frame")
+    Track.Size = UDim2.new(1, 0, 0, 4)
+    Track.Position = UDim2.new(0, 0, 0.5, -2)
+    Track.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+    Track.BorderSizePixel = 0
+    Track.Parent = TrackContainer
+
+    local TrackCorner = Instance.new("UICorner")
+    TrackCorner.CornerRadius = UDim.new(1, 0)
+    TrackCorner.Parent = Track
+
+    local TrackStroke = Instance.new("UIStroke")
+    TrackStroke.Color = Color3.fromRGB(45, 45, 55)
+    TrackStroke.Thickness = 1
+    TrackStroke.Parent = Track
+
+    local initialRatio = math.clamp((defaultVal - min) / (max - min), 0, 1)
+
+    local Fill = Instance.new("Frame")
+    Fill.Size = UDim2.new(initialRatio, 0, 1, 0)
+    Fill.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Fill.BorderSizePixel = 0
+    Fill.Parent = Track
+
+    local FillCorner = Instance.new("UICorner")
+    FillCorner.CornerRadius = UDim.new(1, 0)
+    FillCorner.Parent = Fill
+
+    local Handle = Instance.new("Frame")
+    Handle.Size = UDim2.new(0, 10, 0, 10)
+    Handle.Position = UDim2.new(initialRatio, -5, 0.5, -5)
+    Handle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Handle.BorderSizePixel = 0
+    Handle.Parent = Track
+
+    local HandleCorner = Instance.new("UICorner")
+    HandleCorner.CornerRadius = UDim.new(1, 0)
+    HandleCorner.Parent = Handle
+
+    local DragButton = Instance.new("TextButton")
+    DragButton.Size = UDim2.new(1, 0, 1, 0)
+    DragButton.BackgroundTransparency = 1
+    DragButton.Text = ""
+    DragButton.ZIndex = 6
+    DragButton.Parent = TrackContainer
+
+    local sliding = false
+
+    local function updateSlider(inputX)
+        local trackPos = Track.AbsolutePosition.X
+        local trackWidth = Track.AbsoluteSize.X
+        if trackWidth <= 0 then return end
+        local ratio = math.clamp((inputX - trackPos) / trackWidth, 0, 1)
+        local value = math.floor(min + ((max - min) * ratio))
+        ValLabel.Text = tostring(value)
+        Fill.Size = UDim2.new(ratio, 0, 1, 0)
+        Handle.Position = UDim2.new(ratio, -5, 0.5, -5)
+        if onValueChanged then onValueChanged(value) end
+    end
+
+    DragButton.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            sliding = true
+            updateSlider(input.Position.X)
+        end
+    end)
+
+    UIS.InputChanged:Connect(function(input)
+        if sliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            updateSlider(input.Position.X)
+        end
+    end)
+
+    UIS.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            sliding = false
+        end
+    end)
+end
+
 -- ====================================================
 -- REGISTER ALL REQUESTED TOGGLES & ACTIONS
 -- ====================================================
@@ -870,129 +975,25 @@ end)
 
 -- 13. Fly Mode (Smooth 3D Flight)
 AddToggleRow("Fly Mode (3D Flight)", "FlyMode", function(state) end)
+AddSliderLine(10, 300, CustomFlySpeed, function(val)
+    CustomFlySpeed = val
+end)
 
 -- 14. Noclip Mode
 AddToggleRow("Noclip (Phase Walls)", "Noclip", function(state) end)
 
 -- 15. Infinite Jump
 AddToggleRow("Infinite Jump", "InfiniteJump", function(state) end)
-
--- 16. Integrated WalkSpeed Row with - / + Pill Adjuster
-local SpeedRow = Instance.new("Frame")
-SpeedRow.Size = UDim2.new(1, -6, 0, 24)
-SpeedRow.BackgroundTransparency = 1
-SpeedRow.Parent = ContentFrame
-
-local SpeedToggleBtn = Instance.new("TextButton")
-SpeedToggleBtn.Size = UDim2.new(0.55, 0, 1, 0)
-SpeedToggleBtn.BackgroundTransparency = 1
-SpeedToggleBtn.Text = ""
-SpeedToggleBtn.ZIndex = 5
-SpeedToggleBtn.Parent = SpeedRow
-
-local SpeedLabel = Instance.new("TextLabel")
-SpeedLabel.Size = UDim2.new(1, -26, 1, 0)
-SpeedLabel.BackgroundTransparency = 1
-SpeedLabel.Text = "WalkSpeed"
-SpeedLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
-SpeedLabel.TextSize = 12
-SpeedLabel.Font = Enum.Font.GothamBold
-SpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
-SpeedLabel.Parent = SpeedToggleBtn
-
-local SpeedCheckBox = Instance.new("Frame")
-SpeedCheckBox.Size = UDim2.new(0, 18, 0, 18)
-SpeedCheckBox.Position = UDim2.new(1, -18, 0.5, -9)
-SpeedCheckBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-SpeedCheckBox.BorderSizePixel = 0
-SpeedCheckBox.Parent = SpeedToggleBtn
-
-local SpeedCheckCorner = Instance.new("UICorner")
-SpeedCheckCorner.CornerRadius = UDim.new(0, 4)
-SpeedCheckCorner.Parent = SpeedCheckBox
-
-local SpeedCheckStroke = Instance.new("UIStroke")
-SpeedCheckStroke.Color = Color3.fromRGB(45, 45, 55)
-SpeedCheckStroke.Thickness = 1.2
-SpeedCheckStroke.Parent = SpeedCheckBox
-
-local SpeedCheckMark = Instance.new("Frame")
-SpeedCheckMark.Size = UDim2.new(0, 10, 0, 10)
-SpeedCheckMark.Position = UDim2.new(0.5, -5, 0.5, -5)
-SpeedCheckMark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-SpeedCheckMark.BackgroundTransparency = Toggles.WalkSpeedBoost and 0 or 1
-SpeedCheckMark.BorderSizePixel = 0
-SpeedCheckMark.Parent = SpeedCheckBox
-
-local SpeedMarkCorner = Instance.new("UICorner")
-SpeedMarkCorner.CornerRadius = UDim.new(0, 2)
-SpeedMarkCorner.Parent = SpeedCheckMark
-
-local lastSpeedClick = 0
-SpeedToggleBtn.MouseButton1Click:Connect(function()
-    local now = os.clock()
-    if now - lastSpeedClick < 0.15 then return end
-    lastSpeedClick = now
-    Toggles.WalkSpeedBoost = not Toggles.WalkSpeedBoost
-    SpeedCheckMark.BackgroundTransparency = Toggles.WalkSpeedBoost and 0 or 1
-    UpdateCharacterSpeed()
+AddSliderLine(20, 250, CustomJumpPower, function(val)
+    CustomJumpPower = val
 end)
 
-local SpeedControlFrame = Instance.new("Frame")
-SpeedControlFrame.Size = UDim2.new(0.42, 0, 1, 0)
-SpeedControlFrame.Position = UDim2.new(0.58, 0, 0, 0)
-SpeedControlFrame.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-SpeedControlFrame.BorderSizePixel = 0
-SpeedControlFrame.Parent = SpeedRow
-
-local CtrlCorner = Instance.new("UICorner")
-CtrlCorner.CornerRadius = UDim.new(0, 4)
-CtrlCorner.Parent = SpeedControlFrame
-
-local CtrlStroke = Instance.new("UIStroke")
-CtrlStroke.Color = Color3.fromRGB(45, 45, 55)
-CtrlStroke.Thickness = 1
-CtrlStroke.Parent = SpeedControlFrame
-
-local MinusBtn = Instance.new("TextButton")
-MinusBtn.Size = UDim2.new(0, 22, 1, 0)
-MinusBtn.Position = UDim2.new(0, 0, 0, 0)
-MinusBtn.BackgroundTransparency = 1
-MinusBtn.Text = "-"
-MinusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
-MinusBtn.TextSize = 14
-MinusBtn.Font = Enum.Font.GothamBold
-MinusBtn.Parent = SpeedControlFrame
-
-local SpeedDisplay = Instance.new("TextLabel")
-SpeedDisplay.Size = UDim2.new(1, -44, 1, 0)
-SpeedDisplay.Position = UDim2.new(0, 22, 0, 0)
-SpeedDisplay.BackgroundTransparency = 1
-SpeedDisplay.Text = tostring(CustomSpeedValue)
-SpeedDisplay.TextColor3 = Color3.fromRGB(255, 255, 255)
-SpeedDisplay.TextSize = 11
-SpeedDisplay.Font = Enum.Font.GothamBold
-SpeedDisplay.Parent = SpeedControlFrame
-
-local PlusBtn = Instance.new("TextButton")
-PlusBtn.Size = UDim2.new(0, 22, 1, 0)
-PlusBtn.Position = UDim2.new(1, -22, 0, 0)
-PlusBtn.BackgroundTransparency = 1
-PlusBtn.Text = "+"
-PlusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
-PlusBtn.TextSize = 14
-PlusBtn.Font = Enum.Font.GothamBold
-PlusBtn.Parent = SpeedControlFrame
-
-MinusBtn.MouseButton1Click:Connect(function()
-    CustomSpeedValue = math.max(16, CustomSpeedValue - 15)
-    SpeedDisplay.Text = tostring(CustomSpeedValue)
+-- 16. WalkSpeed Boost
+AddToggleRow("WalkSpeed Boost", "WalkSpeedBoost", function(state)
     UpdateCharacterSpeed()
 end)
-
-PlusBtn.MouseButton1Click:Connect(function()
-    CustomSpeedValue = math.min(300, CustomSpeedValue + 15)
-    SpeedDisplay.Text = tostring(CustomSpeedValue)
+AddSliderLine(16, 300, CustomSpeedValue, function(val)
+    CustomSpeedValue = val
     UpdateCharacterSpeed()
 end)
 
@@ -1469,7 +1470,7 @@ RunService.RenderStepped:Connect(function()
         if FlyBodyGyro then FlyBodyGyro.CFrame = cam.CFrame end
         if FlyBodyVelocity then
             if moveDir.Magnitude > 0 then
-                FlyBodyVelocity.Velocity = moveDir.Unit * (Toggles.WalkSpeedBoost and CustomSpeedValue or FlySpeed)
+                FlyBodyVelocity.Velocity = moveDir.Unit * CustomFlySpeed
             else
                 FlyBodyVelocity.Velocity = Vector3.zero
             end
@@ -1505,15 +1506,27 @@ end)
 -- ====================================================
 UIS.JumpRequest:Connect(function()
     if Toggles.InfiniteJump and isAlive() then
-        local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            pcall(function()
+                hrp.AssemblyLinearVelocity = Vector3.new(hrp.AssemblyLinearVelocity.X, CustomJumpPower, hrp.AssemblyLinearVelocity.Z)
+            end)
+        end
         if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
     end
 end)
 
 RunService.RenderStepped:Connect(function()
     if Toggles.InfiniteJump and isAlive() then
-        local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if hum and hum.Jump then
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hum and hum.Jump and hrp then
+            pcall(function()
+                hrp.AssemblyLinearVelocity = Vector3.new(hrp.AssemblyLinearVelocity.X, CustomJumpPower, hrp.AssemblyLinearVelocity.Z)
+            end)
             hum:ChangeState(Enum.HumanoidStateType.Jumping)
         end
     end
