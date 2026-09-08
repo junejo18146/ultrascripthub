@@ -183,10 +183,6 @@ local function UpdateCharacterSpeed()
 end
 
 -- ====================================================
--- RARITY EVALUATION & INTELLIGENT SCANNER
--- ====================================================
-local RarityWeights = {
--- ====================================================
 -- RAREST BRAINROT EGG SCANNER & DISTANCE ENGINE
 -- (RULE: RAREST EGG = MAXIMUM DISTANCE FROM BASE/SPAWN)
 -- ====================================================
