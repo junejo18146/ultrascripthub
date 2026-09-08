@@ -13,17 +13,26 @@ local VirtualUser = game:GetService("VirtualUser")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
-local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
+local LocalPlayer = Players.LocalPlayer
+if not LocalPlayer then
+    while not LocalPlayer do
+        LocalPlayer = Players.LocalPlayer
+        task.wait(0.05)
+    end
+end
 
 -- Clean all previous UI instances safely
-for _, name in ipairs({"JunejoHubUI_StealBrainrotEgg", "JunejoStealBrainrotEggUI", "JunejoBrainrotHub"}) do
-    pcall(function()
-        if CoreGui:FindFirstChild(name) then CoreGui[name]:Destroy() end
-        if LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild(name) then
-            LocalPlayer.PlayerGui[name]:Destroy()
-        end
-    end)
-end
+pcall(function()
+    for _, name in ipairs({"JunejoHubUI_StealBrainrotEgg", "JunejoStealBrainrotEggUI", "JunejoBrainrotHub"}) do
+        pcall(function()
+            if CoreGui and CoreGui:FindFirstChild(name) then CoreGui[name]:Destroy() end
+        end)
+        pcall(function()
+            local pg = LocalPlayer and (LocalPlayer:FindFirstChild("PlayerGui") or LocalPlayer:FindFirstChildOfClass("PlayerGui"))
+            if pg and pg:FindFirstChild(name) then pg[name]:Destroy() end
+        end)
+    end
+end)
 
 -- Global Configuration & State
 local Toggles = {
@@ -516,6 +525,7 @@ ScreenGui.Name = "JunejoHubUI_StealBrainrotEgg"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999999
+ScreenGui.Enabled = true
 
 local guiParent = nil
 if gethui then
@@ -530,14 +540,16 @@ if not guiParent then
     end)
 end
 if not guiParent then
-    guiParent = LocalPlayer:WaitForChild("PlayerGui")
+    guiParent = LocalPlayer:FindFirstChildOfClass("PlayerGui") or LocalPlayer:WaitForChild("PlayerGui", 5)
 end
 
 pcall(function()
     ScreenGui.Parent = guiParent
 end)
 if not ScreenGui.Parent then
-    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+    pcall(function()
+        ScreenGui.Parent = LocalPlayer:FindFirstChildOfClass("PlayerGui") or LocalPlayer:WaitForChild("PlayerGui", 5)
+    end)
 end
 
 local MainFrame = Instance.new("Frame")
