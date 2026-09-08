@@ -21,11 +21,14 @@ if not LocalPlayer then
     end
 end
 
--- Clean all previous UI instances safely
+-- Clean all previous UI instances safely across CoreGui, gethui and PlayerGui
 pcall(function()
     for _, name in ipairs({"JunejoHubUI_StealBrainrotEgg", "JunejoStealBrainrotEggUI", "JunejoBrainrotHub"}) do
         pcall(function()
             if CoreGui and CoreGui:FindFirstChild(name) then CoreGui[name]:Destroy() end
+        end)
+        pcall(function()
+            if gethui and gethui():FindFirstChild(name) then gethui()[name]:Destroy() end
         end)
         pcall(function()
             local pg = LocalPlayer and (LocalPlayer:FindFirstChild("PlayerGui") or LocalPlayer:FindFirstChildOfClass("PlayerGui"))
@@ -525,28 +528,26 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999999
 ScreenGui.Enabled = true
 
-local guiParent = nil
-if gethui then
-    pcall(function() guiParent = gethui() end)
-end
-if not guiParent then
+local isParented = false
+pcall(function()
+    if gethui then
+        ScreenGui.Parent = gethui()
+        if ScreenGui.Parent then isParented = true end
+    end
+end)
+if not isParented then
     pcall(function()
-        local test = Instance.new("Folder")
-        test.Parent = CoreGui
-        test:Destroy()
-        guiParent = CoreGui
+        ScreenGui.Parent = CoreGui
+        if ScreenGui.Parent then isParented = true end
     end)
 end
-if not guiParent then
-    guiParent = LocalPlayer:FindFirstChildOfClass("PlayerGui") or LocalPlayer:WaitForChild("PlayerGui", 5)
-end
-
-pcall(function()
-    ScreenGui.Parent = guiParent
-end)
-if not ScreenGui.Parent then
+if not isParented then
     pcall(function()
-        ScreenGui.Parent = LocalPlayer:FindFirstChildOfClass("PlayerGui") or LocalPlayer:WaitForChild("PlayerGui", 5)
+        local pg = LocalPlayer:FindFirstChildOfClass("PlayerGui") or LocalPlayer:WaitForChild("PlayerGui", 5)
+        if pg then
+            ScreenGui.Parent = pg
+            isParented = true
+        end
     end)
 end
 
