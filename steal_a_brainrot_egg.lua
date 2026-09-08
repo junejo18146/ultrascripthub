@@ -13,17 +13,48 @@ local VirtualUser = game:GetService("VirtualUser")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
-local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
+local LocalPlayer = Players.LocalPlayer
+if not LocalPlayer then
+    repeat
+        LocalPlayer = Players.LocalPlayer
+        task.wait(0.05)
+    until LocalPlayer
+end
+
+-- Safe GUI Parent Resolver (Instant 0s Rendering on Mobile & PC)
+local function getSafeGui()
+    if gethui then
+        local success, res = pcall(gethui)
+        if success and res then return res end
+    end
+    local core = nil
+    pcall(function() core = game:GetService("CoreGui") end)
+    if core then
+        local ok = pcall(function()
+            local test = Instance.new("Folder")
+            test.Parent = core
+            test:Destroy()
+        end)
+        if ok then return core end
+    end
+    return LocalPlayer:WaitForChild("PlayerGui", 10) or LocalPlayer:FindFirstChildOfClass("PlayerGui")
+end
+
+local guiParent = getSafeGui()
 
 -- Clean all previous UI instances safely
-for _, name in ipairs({"JunejoHubUI_StealBrainrotEgg", "JunejoStealBrainrotEggUI", "JunejoBrainrotHub"}) do
-    pcall(function()
-        if CoreGui:FindFirstChild(name) then CoreGui[name]:Destroy() end
-        if LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild(name) then
-            LocalPlayer.PlayerGui[name]:Destroy()
-        end
-    end)
-end
+pcall(function()
+    for _, name in ipairs({"JunejoHubUI_StealBrainrotEgg", "JunejoStealBrainrotEggUI", "JunejoBrainrotHub"}) do
+        if guiParent and guiParent:FindFirstChild(name) then pcall(function() guiParent[name]:Destroy() end) end
+        pcall(function()
+            if CoreGui and CoreGui:FindFirstChild(name) then CoreGui[name]:Destroy() end
+        end)
+        pcall(function()
+            local pg = LocalPlayer:FindFirstChild("PlayerGui") or LocalPlayer:FindFirstChildOfClass("PlayerGui")
+            if pg and pg:FindFirstChild(name) then pg[name]:Destroy() end
+        end)
+    end
+end)
 
 -- Global Configuration & State
 local Toggles = {
@@ -517,9 +548,16 @@ ScreenGui.Name = "JunejoHubUI_StealBrainrotEgg"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999999
+ScreenGui.Enabled = true
 
-local guiParent = (gethui and gethui()) or CoreGui or LocalPlayer:WaitForChild("PlayerGui")
-ScreenGui.Parent = guiParent
+local parentOk = pcall(function()
+    ScreenGui.Parent = guiParent or getSafeGui()
+end)
+if not parentOk or not ScreenGui.Parent then
+    pcall(function()
+        ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui", 5) or LocalPlayer:FindFirstChildOfClass("PlayerGui")
+    end)
+end
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
@@ -614,7 +652,9 @@ ContentFrame.BackgroundTransparency = 1
 ContentFrame.BorderSizePixel = 0
 ContentFrame.ScrollBarThickness = 3
 ContentFrame.ScrollBarImageColor3 = Color3.fromRGB(65, 65, 80)
-ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 440)
+ContentFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ContentFrame.ScrollingDirection = Enum.ScrollingDirection.Y
 ContentFrame.Parent = MainFrame
 
 local UIList = Instance.new("UIListLayout")
