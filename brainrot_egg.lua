@@ -13,48 +13,17 @@ local VirtualUser = game:GetService("VirtualUser")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
-local LocalPlayer = Players.LocalPlayer
-if not LocalPlayer then
-    repeat
-        LocalPlayer = Players.LocalPlayer
-        task.wait(0.05)
-    until LocalPlayer
-end
-
--- Safe GUI Parent Resolver (Instant 0s Rendering on Mobile & PC)
-local function getSafeGui()
-    if gethui then
-        local success, res = pcall(gethui)
-        if success and res then return res end
-    end
-    local core = nil
-    pcall(function() core = game:GetService("CoreGui") end)
-    if core then
-        local ok = pcall(function()
-            local test = Instance.new("Folder")
-            test.Parent = core
-            test:Destroy()
-        end)
-        if ok then return core end
-    end
-    return LocalPlayer:WaitForChild("PlayerGui", 10) or LocalPlayer:FindFirstChildOfClass("PlayerGui")
-end
-
-local guiParent = getSafeGui()
+local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
 -- Clean all previous UI instances safely
-pcall(function()
-    for _, name in ipairs({"JunejoHubUI_StealBrainrotEgg", "JunejoStealBrainrotEggUI", "JunejoBrainrotHub"}) do
-        if guiParent and guiParent:FindFirstChild(name) then pcall(function() guiParent[name]:Destroy() end) end
-        pcall(function()
-            if CoreGui and CoreGui:FindFirstChild(name) then CoreGui[name]:Destroy() end
-        end)
-        pcall(function()
-            local pg = LocalPlayer:FindFirstChild("PlayerGui") or LocalPlayer:FindFirstChildOfClass("PlayerGui")
-            if pg and pg:FindFirstChild(name) then pg[name]:Destroy() end
-        end)
-    end
-end)
+for _, name in ipairs({"JunejoHubUI_StealBrainrotEgg", "JunejoStealBrainrotEggUI", "JunejoBrainrotHub"}) do
+    pcall(function()
+        if CoreGui:FindFirstChild(name) then CoreGui[name]:Destroy() end
+        if LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild(name) then
+            LocalPlayer.PlayerGui[name]:Destroy()
+        end
+    end)
+end
 
 -- Global Configuration & State
 local Toggles = {
@@ -74,7 +43,6 @@ local Toggles = {
 }
 
 local CustomSpeedValue = 100
-local CustomFlySpeed = 70
 local SavedBaseCFrame = nil
 local CurrentEggESPInstances = {}
 local CurrentRareEggESPInstances = {}
@@ -548,15 +516,28 @@ ScreenGui.Name = "JunejoHubUI_StealBrainrotEgg"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999999
-ScreenGui.Enabled = true
 
-local parentOk = pcall(function()
-    ScreenGui.Parent = guiParent or getSafeGui()
-end)
-if not parentOk or not ScreenGui.Parent then
+local guiParent = nil
+if gethui then
+    pcall(function() guiParent = gethui() end)
+end
+if not guiParent then
     pcall(function()
-        ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui", 5) or LocalPlayer:FindFirstChildOfClass("PlayerGui")
+        local test = Instance.new("Folder")
+        test.Parent = CoreGui
+        test:Destroy()
+        guiParent = CoreGui
     end)
+end
+if not guiParent then
+    guiParent = LocalPlayer:WaitForChild("PlayerGui")
+end
+
+pcall(function()
+    ScreenGui.Parent = guiParent
+end)
+if not ScreenGui.Parent then
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 end
 
 local MainFrame = Instance.new("Frame")
@@ -654,7 +635,6 @@ ContentFrame.ScrollBarThickness = 3
 ContentFrame.ScrollBarImageColor3 = Color3.fromRGB(65, 65, 80)
 ContentFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
 ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-ContentFrame.ScrollingDirection = Enum.ScrollingDirection.Y
 ContentFrame.Parent = MainFrame
 
 local UIList = Instance.new("UIListLayout")
@@ -880,124 +860,8 @@ AddToggleRow("Player ESP & Radar", "PlayerESP", function(state)
     end
 end)
 
--- 13. Fly Mode with Integrated - / + Fly Speed Pill Adjuster
-local FlyRow = Instance.new("Frame")
-FlyRow.Size = UDim2.new(1, -6, 0, 24)
-FlyRow.BackgroundTransparency = 1
-FlyRow.Parent = ContentFrame
-
-local FlyToggleBtn = Instance.new("TextButton")
-FlyToggleBtn.Size = UDim2.new(0.55, 0, 1, 0)
-FlyToggleBtn.BackgroundTransparency = 1
-FlyToggleBtn.Text = ""
-FlyToggleBtn.ZIndex = 5
-FlyToggleBtn.Parent = FlyRow
-
-local FlyLabel = Instance.new("TextLabel")
-FlyLabel.Size = UDim2.new(1, -26, 1, 0)
-FlyLabel.BackgroundTransparency = 1
-FlyLabel.Text = "Fly Mode (3D Flight)"
-FlyLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
-FlyLabel.TextSize = 12
-FlyLabel.Font = Enum.Font.GothamBold
-FlyLabel.TextXAlignment = Enum.TextXAlignment.Left
-FlyLabel.Parent = FlyToggleBtn
-
-local FlyCheckBox = Instance.new("Frame")
-FlyCheckBox.Size = UDim2.new(0, 18, 0, 18)
-FlyCheckBox.Position = UDim2.new(1, -18, 0.5, -9)
-FlyCheckBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-FlyCheckBox.BorderSizePixel = 0
-FlyCheckBox.Parent = FlyToggleBtn
-
-local FlyCheckCorner = Instance.new("UICorner")
-FlyCheckCorner.CornerRadius = UDim.new(0, 4)
-FlyCheckCorner.Parent = FlyCheckBox
-
-local FlyCheckStroke = Instance.new("UIStroke")
-FlyCheckStroke.Color = Color3.fromRGB(45, 45, 55)
-FlyCheckStroke.Thickness = 1.2
-FlyCheckStroke.Parent = FlyCheckBox
-
-local FlyCheckMark = Instance.new("Frame")
-FlyCheckMark.Size = UDim2.new(0, 10, 0, 10)
-FlyCheckMark.Position = UDim2.new(0.5, -5, 0.5, -5)
-FlyCheckMark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-FlyCheckMark.BackgroundTransparency = Toggles.FlyMode and 0 or 1
-FlyCheckMark.BorderSizePixel = 0
-FlyCheckMark.Parent = FlyCheckBox
-
-local FlyMarkCorner = Instance.new("UICorner")
-FlyMarkCorner.CornerRadius = UDim.new(0, 2)
-FlyMarkCorner.Parent = FlyCheckMark
-
-local lastFlyClick = 0
-FlyToggleBtn.MouseButton1Click:Connect(function()
-    local now = os.clock()
-    if now - lastFlyClick < 0.15 then return end
-    lastFlyClick = now
-    Toggles.FlyMode = not Toggles.FlyMode
-    FlyCheckMark.BackgroundTransparency = Toggles.FlyMode and 0 or 1
-    if not Toggles.FlyMode then
-        DisableFly()
-    end
-end)
-
-local FlyControlFrame = Instance.new("Frame")
-FlyControlFrame.Size = UDim2.new(0.42, 0, 1, 0)
-FlyControlFrame.Position = UDim2.new(0.58, 0, 0, 0)
-FlyControlFrame.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-FlyControlFrame.BorderSizePixel = 0
-FlyControlFrame.Parent = FlyRow
-
-local FlyCtrlCorner = Instance.new("UICorner")
-FlyCtrlCorner.CornerRadius = UDim.new(0, 4)
-FlyCtrlCorner.Parent = FlyControlFrame
-
-local FlyCtrlStroke = Instance.new("UIStroke")
-FlyCtrlStroke.Color = Color3.fromRGB(45, 45, 55)
-FlyCtrlStroke.Thickness = 1
-FlyCtrlStroke.Parent = FlyControlFrame
-
-local FlyMinusBtn = Instance.new("TextButton")
-FlyMinusBtn.Size = UDim2.new(0, 22, 1, 0)
-FlyMinusBtn.Position = UDim2.new(0, 0, 0, 0)
-FlyMinusBtn.BackgroundTransparency = 1
-FlyMinusBtn.Text = "-"
-FlyMinusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
-FlyMinusBtn.TextSize = 14
-FlyMinusBtn.Font = Enum.Font.GothamBold
-FlyMinusBtn.Parent = FlyControlFrame
-
-local FlySpeedDisplay = Instance.new("TextLabel")
-FlySpeedDisplay.Size = UDim2.new(1, -44, 1, 0)
-FlySpeedDisplay.Position = UDim2.new(0, 22, 0, 0)
-FlySpeedDisplay.BackgroundTransparency = 1
-FlySpeedDisplay.Text = tostring(CustomFlySpeed)
-FlySpeedDisplay.TextColor3 = Color3.fromRGB(255, 255, 255)
-FlySpeedDisplay.TextSize = 11
-FlySpeedDisplay.Font = Enum.Font.GothamBold
-FlySpeedDisplay.Parent = FlyControlFrame
-
-local FlyPlusBtn = Instance.new("TextButton")
-FlyPlusBtn.Size = UDim2.new(0, 22, 1, 0)
-FlyPlusBtn.Position = UDim2.new(1, -22, 0, 0)
-FlyPlusBtn.BackgroundTransparency = 1
-FlyPlusBtn.Text = "+"
-FlyPlusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
-FlyPlusBtn.TextSize = 14
-FlyPlusBtn.Font = Enum.Font.GothamBold
-FlyPlusBtn.Parent = FlyControlFrame
-
-FlyMinusBtn.MouseButton1Click:Connect(function()
-    CustomFlySpeed = math.max(15, CustomFlySpeed - 15)
-    FlySpeedDisplay.Text = tostring(CustomFlySpeed)
-end)
-
-FlyPlusBtn.MouseButton1Click:Connect(function()
-    CustomFlySpeed = math.min(300, CustomFlySpeed + 15)
-    FlySpeedDisplay.Text = tostring(CustomFlySpeed)
-end)
+-- 13. Fly Mode (Smooth 3D Flight)
+AddToggleRow("Fly Mode (3D Flight)", "FlyMode", function(state) end)
 
 -- 14. Noclip Mode
 AddToggleRow("Noclip (Phase Walls)", "Noclip", function(state) end)
@@ -1597,7 +1461,7 @@ RunService.RenderStepped:Connect(function()
         if FlyBodyGyro then FlyBodyGyro.CFrame = cam.CFrame end
         if FlyBodyVelocity then
             if moveDir.Magnitude > 0 then
-                FlyBodyVelocity.Velocity = moveDir.Unit * CustomFlySpeed
+                FlyBodyVelocity.Velocity = moveDir.Unit * (Toggles.WalkSpeedBoost and CustomSpeedValue or FlySpeed)
             else
                 FlyBodyVelocity.Velocity = Vector3.zero
             end
@@ -1634,25 +1498,15 @@ end)
 UIS.JumpRequest:Connect(function()
     if Toggles.InfiniteJump and isAlive() then
         local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if hum then
-            hum:ChangeState(Enum.HumanoidStateType.Jumping)
-            if hrp then
-                hrp.Velocity = Vector3.new(hrp.Velocity.X, 50, hrp.Velocity.Z)
-            end
-        end
+        if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
     end
 end)
 
 RunService.RenderStepped:Connect(function()
     if Toggles.InfiniteJump and isAlive() then
         local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         if hum and hum.Jump then
             hum:ChangeState(Enum.HumanoidStateType.Jumping)
-            if hrp then
-                hrp.Velocity = Vector3.new(hrp.Velocity.X, 50, hrp.Velocity.Z)
-            end
         end
     end
 end)
