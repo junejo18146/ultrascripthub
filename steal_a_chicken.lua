@@ -6,37 +6,95 @@
 -- Universal Mobile (Delta / Codex / Fluxus) & PC Compatible
 -- ====================================================
 
-local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
 
-local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
-local Camera = Workspace.CurrentCamera or Workspace:WaitForChild("Camera")
-
--- Safe GUI Parent Resolver (Instant 0s Mobile & PC Execution)
-local function getSafeGui()
-    if gethui then
-        local success, res = pcall(gethui)
-        if success and res then return res end
-    end
-    local core = nil
-    pcall(function() core = game:GetService("CoreGui") end)
-    if core then
-        local ok = pcall(function()
-            local test = Instance.new("Folder")
-            test.Parent = core
-            test:Destroy()
-        end)
-        if ok then return core end
-    end
-    return LocalPlayer:WaitForChild("PlayerGui", 10) or LocalPlayer:FindFirstChildOfClass("PlayerGui")
+local LocalPlayer = Players.LocalPlayer
+while not LocalPlayer do
+    task.wait()
+    LocalPlayer = Players.LocalPlayer
 end
 
-local guiParent = getSafeGui()
+local Camera = Workspace.CurrentCamera or Workspace:FindFirstChildWhichIsA("Camera")
+
+-- =================================================================
+-- GLOBAL CONFIGURATION & STATES
+-- =================================================================
+local AvailableZones = {
+    "All Zones",
+    "Crystal",
+    "Cosmic",
+    "Abyss",
+    "Beach",
+    "Volcano",
+    "Snow",
+    "Desert",
+    "Jungle",
+    "Lake",
+    "Forest"
+}
+local CurrentZoneIndex = 1
+
+local ZoneTierScores = {
+    ["Crystal"] = 1000,
+    ["Cosmic"] = 900,
+    ["Abyss"] = 800,
+    ["Beach"] = 700,
+    ["Volcano"] = 600,
+    ["Snow"] = 500,
+    ["Desert"] = 400,
+    ["Jungle"] = 300,
+    ["Lake"] = 200,
+    ["Forest"] = 100
+}
+
+local Toggles = {
+    AutoSteal = false,
+    AutoCollectEggs = false,
+    AutoSellEggs = false,
+    AutoTrainSpeed = false,
+    RemoveGuards = false,
+    FlyMode = false,
+    NoClip = false,
+    InfiniteJump = false,
+    WalkSpeedBoost = false
+}
+
+local CustomSpeedValue = 50
+local CustomFlySpeed = 60
+local SavedBaseCFrame = nil
+
+-- Forward function declarations for UI buttons
+local updateStealVisual
+local updateTrainVisual
+local teleportToTargetZone
+local executeSellEngine
+local teleportToMyBase
+local startFlying
+local stopFlying
+local UpdateCharacterSpeed
+
+-- =================================================================
+-- BULLETPROOF GUI PARENT RESOLVER (100% Mobile Delta & PC Rendering)
+-- =================================================================
+local function getGuiParent()
+    if gethui then
+        local ok, h = pcall(gethui)
+        if ok and h then return h end
+    end
+    local pg = LocalPlayer:FindFirstChild("PlayerGui") or LocalPlayer:FindFirstChildOfClass("PlayerGui")
+    if pg then return pg end
+    local okCore, core = pcall(function() return game:GetService("CoreGui") end)
+    if okCore and core then return core end
+    return LocalPlayer:WaitForChild("PlayerGui", 5)
+end
+
+local guiParent = getGuiParent()
 
 -- Clean all previous UI instances safely
 pcall(function()
@@ -52,6 +110,503 @@ pcall(function()
     end
 end)
 
+-- =================================================================
+-- OFFICIAL JUNEJO STANDARD UI (MATTE BLACK 280PX - INSTANT LOAD)
+-- =================================================================
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "JunejoHubUI_StealChicken"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.DisplayOrder = 999999
+ScreenGui.Parent = guiParent
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 280, 0, 335)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -167)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 10)
+MainCorner.Parent = MainFrame
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Color = Color3.fromRGB(35, 35, 42)
+MainStroke.Thickness = 1
+MainStroke.Parent = MainFrame
+
+-- Header
+local Header = Instance.new("Frame")
+Header.Name = "Header"
+Header.Size = UDim2.new(1, 0, 0, 32)
+Header.BackgroundTransparency = 1
+Header.Parent = MainFrame
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, -40, 1, 0)
+TitleLabel.Position = UDim2.new(0, 12, 0, 0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "STEAL A CHICKEN"
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.TextSize = 12
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Parent = Header
+
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0, 24, 0, 24)
+CloseButton.Position = UDim2.new(1, -28, 0, 4)
+CloseButton.BackgroundTransparency = 1
+CloseButton.Text = "X"
+CloseButton.TextColor3 = Color3.fromRGB(160, 160, 160)
+CloseButton.TextSize = 13
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.Parent = Header
+CloseButton.MouseButton1Click:Connect(function()
+    if stopFlying then stopFlying() end
+    ScreenGui:Destroy()
+end)
+
+-- Header Separation Line
+local HeaderLine = Instance.new("Frame")
+HeaderLine.Size = UDim2.new(1, -24, 0, 1)
+HeaderLine.Position = UDim2.new(0, 12, 0, 32)
+HeaderLine.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+HeaderLine.BorderSizePixel = 0
+HeaderLine.Parent = MainFrame
+
+-- Content Scrolling Frame
+local ContentFrame = Instance.new("ScrollingFrame")
+ContentFrame.Name = "ContentFrame"
+ContentFrame.Size = UDim2.new(1, -24, 1, -74)
+ContentFrame.Position = UDim2.new(0, 12, 0, 36)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.BorderSizePixel = 0
+ContentFrame.ScrollBarThickness = 2
+ContentFrame.ScrollBarImageColor3 = Color3.fromRGB(45, 45, 55)
+ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ContentFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+ContentFrame.Parent = MainFrame
+
+local UIList = Instance.new("UIListLayout")
+UIList.SortOrder = Enum.SortOrder.LayoutOrder
+UIList.Padding = UDim.new(0, 4)
+UIList.Parent = ContentFrame
+
+-- Helper function for Toggle Rows
+local function AddToggleRow(text, configKey, callback)
+    local Row = Instance.new("Frame")
+    Row.Size = UDim2.new(1, 0, 0, 23)
+    Row.BackgroundTransparency = 1
+    Row.Parent = ContentFrame
+    
+    local RowBtn = Instance.new("TextButton")
+    RowBtn.Size = UDim2.new(1, 0, 1, 0)
+    RowBtn.BackgroundTransparency = 1
+    RowBtn.Text = ""
+    RowBtn.ZIndex = 5
+    RowBtn.Parent = Row
+    
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(1, -28, 1, 0)
+    Label.BackgroundTransparency = 1
+    Label.Text = text
+    Label.TextColor3 = Color3.fromRGB(240, 240, 240)
+    Label.TextSize = 12
+    Label.Font = Enum.Font.GothamBold
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = Row
+    
+    local CheckBox = Instance.new("Frame")
+    CheckBox.Size = UDim2.new(0, 18, 0, 18)
+    CheckBox.Position = UDim2.new(1, -18, 0.5, -9)
+    CheckBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+    CheckBox.BorderSizePixel = 0
+    CheckBox.Parent = Row
+    
+    local CheckCorner = Instance.new("UICorner")
+    CheckCorner.CornerRadius = UDim.new(0, 4)
+    CheckCorner.Parent = CheckBox
+    
+    local CheckStroke = Instance.new("UIStroke")
+    CheckStroke.Color = Color3.fromRGB(45, 45, 55)
+    CheckStroke.Thickness = 1.2
+    CheckStroke.Parent = CheckBox
+    
+    local CheckMark = Instance.new("Frame")
+    CheckMark.Size = UDim2.new(0, 10, 0, 10)
+    CheckMark.Position = UDim2.new(0.5, -5, 0.5, -5)
+    CheckMark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    CheckMark.BackgroundTransparency = Toggles[configKey] and 0 or 1
+    CheckMark.BorderSizePixel = 0
+    CheckMark.Parent = CheckBox
+    
+    local MarkCorner = Instance.new("UICorner")
+    MarkCorner.CornerRadius = UDim.new(0, 2)
+    MarkCorner.Parent = CheckMark
+    
+    RowBtn.MouseButton1Click:Connect(function()
+        Toggles[configKey] = not Toggles[configKey]
+        CheckMark.BackgroundTransparency = Toggles[configKey] and 0 or 1
+        if callback then callback(Toggles[configKey]) end
+    end)
+
+    return function(val)
+        Toggles[configKey] = val
+        CheckMark.BackgroundTransparency = val and 0 or 1
+    end
+end
+
+-- Helper function for Action Buttons
+local function AddActionRow(text, callback)
+    local Row = Instance.new("Frame")
+    Row.Size = UDim2.new(1, 0, 0, 23)
+    Row.BackgroundTransparency = 1
+    Row.Parent = ContentFrame
+    
+    local Btn = Instance.new("TextButton")
+    Btn.Size = UDim2.new(1, 0, 1, 0)
+    Btn.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+    Btn.BorderSizePixel = 0
+    Btn.Text = text
+    Btn.TextColor3 = Color3.fromRGB(240, 240, 240)
+    Btn.TextSize = 11
+    Btn.Font = Enum.Font.GothamBold
+    Btn.Parent = Row
+    
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 4)
+    Corner.Parent = Btn
+    
+    local Stroke = Instance.new("UIStroke")
+    Stroke.Color = Color3.fromRGB(45, 45, 55)
+    Stroke.Thickness = 1
+    Stroke.Parent = Btn
+    
+    Btn.MouseButton1Click:Connect(function()
+        if callback then callback() end
+    end)
+end
+
+-- =================================================================
+-- POPULATE UI FEATURES
+-- =================================================================
+
+-- 1. Auto Steal Chickens (Best)
+updateStealVisual = AddToggleRow("Auto Steal Chickens (Best)", "AutoSteal", function(enabled)
+    if enabled and Toggles.AutoTrainSpeed then
+        if updateTrainVisual then updateTrainVisual(false) end
+    end
+end)
+
+-- 2. Target Zone Selector Row (Interactive Pill)
+local ZoneRow = Instance.new("Frame")
+ZoneRow.Size = UDim2.new(1, 0, 0, 23)
+ZoneRow.BackgroundTransparency = 1
+ZoneRow.Parent = ContentFrame
+
+local ZoneLabel = Instance.new("TextLabel")
+ZoneLabel.Size = UDim2.new(0.42, 0, 1, 0)
+ZoneLabel.BackgroundTransparency = 1
+ZoneLabel.Text = "Target Zone"
+ZoneLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
+ZoneLabel.TextSize = 12
+ZoneLabel.Font = Enum.Font.GothamBold
+ZoneLabel.TextXAlignment = Enum.TextXAlignment.Left
+ZoneLabel.Parent = ZoneRow
+
+local ZonePill = Instance.new("Frame")
+ZonePill.Size = UDim2.new(0.56, 0, 1, 0)
+ZonePill.Position = UDim2.new(0.44, 0, 0, 0)
+ZonePill.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+ZonePill.BorderSizePixel = 0
+ZonePill.Parent = ZoneRow
+
+local ZoneCorner = Instance.new("UICorner")
+ZoneCorner.CornerRadius = UDim.new(0, 4)
+ZoneCorner.Parent = ZonePill
+
+local ZoneStroke = Instance.new("UIStroke")
+ZoneStroke.Color = Color3.fromRGB(45, 45, 55)
+ZoneStroke.Thickness = 1
+ZoneStroke.Parent = ZonePill
+
+local ZonePrevBtn = Instance.new("TextButton")
+ZonePrevBtn.Size = UDim2.new(0, 22, 1, 0)
+ZonePrevBtn.Position = UDim2.new(0, 0, 0, 0)
+ZonePrevBtn.BackgroundTransparency = 1
+ZonePrevBtn.Text = "<"
+ZonePrevBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
+ZonePrevBtn.TextSize = 13
+ZonePrevBtn.Font = Enum.Font.GothamBold
+ZonePrevBtn.Parent = ZonePill
+
+local ZoneDisplayBtn = Instance.new("TextButton")
+ZoneDisplayBtn.Size = UDim2.new(1, -44, 1, 0)
+ZoneDisplayBtn.Position = UDim2.new(0, 22, 0, 0)
+ZoneDisplayBtn.BackgroundTransparency = 1
+ZoneDisplayBtn.Text = AvailableZones[CurrentZoneIndex]
+ZoneDisplayBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ZoneDisplayBtn.TextSize = 11
+ZoneDisplayBtn.Font = Enum.Font.GothamBold
+ZoneDisplayBtn.Parent = ZonePill
+
+local ZoneNextBtn = Instance.new("TextButton")
+ZoneNextBtn.Size = UDim2.new(0, 22, 1, 0)
+ZoneNextBtn.Position = UDim2.new(1, -22, 0, 0)
+ZoneNextBtn.BackgroundTransparency = 1
+ZoneNextBtn.Text = ">"
+ZoneNextBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
+ZoneNextBtn.TextSize = 13
+ZoneNextBtn.Font = Enum.Font.GothamBold
+ZoneNextBtn.Parent = ZonePill
+
+local function updateZoneDisplay()
+    ZoneDisplayBtn.Text = AvailableZones[CurrentZoneIndex]
+end
+
+ZonePrevBtn.MouseButton1Click:Connect(function()
+    CurrentZoneIndex = CurrentZoneIndex - 1
+    if CurrentZoneIndex < 1 then CurrentZoneIndex = #AvailableZones end
+    updateZoneDisplay()
+end)
+
+ZoneNextBtn.MouseButton1Click:Connect(function()
+    CurrentZoneIndex = CurrentZoneIndex + 1
+    if CurrentZoneIndex > #AvailableZones then CurrentZoneIndex = 1 end
+    updateZoneDisplay()
+end)
+
+ZoneDisplayBtn.MouseButton1Click:Connect(function()
+    CurrentZoneIndex = CurrentZoneIndex + 1
+    if CurrentZoneIndex > #AvailableZones then CurrentZoneIndex = 1 end
+    updateZoneDisplay()
+end)
+
+-- 3. Action Button: Teleport to Target Zone
+AddActionRow("⚡ Teleport to Target Zone", function()
+    if teleportToTargetZone then teleportToTargetZone() end
+end)
+
+-- 4. Auto Collect Eggs
+AddToggleRow("Auto Collect Eggs", "AutoCollectEggs")
+
+-- 5. Auto Sell Eggs (5-Layer Auto Sell Engine)
+AddToggleRow("Auto Sell Eggs", "AutoSellEggs")
+
+-- 6. Action Button: Sell Eggs Now
+AddActionRow("⚡ Sell Eggs Now", function()
+    if executeSellEngine then executeSellEngine() end
+end)
+
+-- 7. Auto Train Speed
+updateTrainVisual = AddToggleRow("Auto Train Speed", "AutoTrainSpeed", function(enabled)
+    if enabled and Toggles.AutoSteal then
+        if updateStealVisual then updateStealVisual(false) end
+    end
+end)
+
+-- 8. Remove Guards
+AddToggleRow("Remove Guards", "RemoveGuards")
+
+-- 9. Fly Mode
+AddToggleRow("Fly Mode", "FlyMode", function(enabled)
+    if enabled then
+        if startFlying then startFlying() end
+    else
+        if stopFlying then stopFlying() end
+    end
+end)
+
+-- 10. Integrated WalkSpeed Row with Pill Adjuster
+local SpeedRow = Instance.new("Frame")
+SpeedRow.Size = UDim2.new(1, 0, 0, 23)
+SpeedRow.BackgroundTransparency = 1
+SpeedRow.Parent = ContentFrame
+
+local SpeedToggleBtn = Instance.new("TextButton")
+SpeedToggleBtn.Size = UDim2.new(0.55, 0, 1, 0)
+SpeedToggleBtn.BackgroundTransparency = 1
+SpeedToggleBtn.Text = ""
+SpeedToggleBtn.ZIndex = 5
+SpeedToggleBtn.Parent = SpeedRow
+
+local SpeedLabel = Instance.new("TextLabel")
+SpeedLabel.Size = UDim2.new(1, -26, 1, 0)
+SpeedLabel.BackgroundTransparency = 1
+SpeedLabel.Text = "WalkSpeed"
+SpeedLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
+SpeedLabel.TextSize = 12
+SpeedLabel.Font = Enum.Font.GothamBold
+SpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
+SpeedLabel.Parent = SpeedToggleBtn
+
+local SpeedCheckBox = Instance.new("Frame")
+SpeedCheckBox.Size = UDim2.new(0, 18, 0, 18)
+SpeedCheckBox.Position = UDim2.new(1, -18, 0.5, -9)
+SpeedCheckBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+SpeedCheckBox.BorderSizePixel = 0
+SpeedCheckBox.Parent = SpeedToggleBtn
+
+local SpeedCheckCorner = Instance.new("UICorner")
+SpeedCheckCorner.CornerRadius = UDim.new(0, 4)
+SpeedCheckCorner.Parent = SpeedCheckBox
+
+local SpeedCheckStroke = Instance.new("UIStroke")
+SpeedCheckStroke.Color = Color3.fromRGB(45, 45, 55)
+SpeedCheckStroke.Thickness = 1.2
+SpeedCheckStroke.Parent = SpeedCheckBox
+
+local SpeedCheckMark = Instance.new("Frame")
+SpeedCheckMark.Size = UDim2.new(0, 10, 0, 10)
+SpeedCheckMark.Position = UDim2.new(0.5, -5, 0.5, -5)
+SpeedCheckMark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+SpeedCheckMark.BackgroundTransparency = Toggles.WalkSpeedBoost and 0 or 1
+SpeedCheckMark.BorderSizePixel = 0
+SpeedCheckMark.Parent = SpeedCheckBox
+
+local MarkCorner = Instance.new("UICorner")
+MarkCorner.CornerRadius = UDim.new(0, 2)
+MarkCorner.Parent = SpeedCheckMark
+
+SpeedToggleBtn.MouseButton1Click:Connect(function()
+    Toggles.WalkSpeedBoost = not Toggles.WalkSpeedBoost
+    SpeedCheckMark.BackgroundTransparency = Toggles.WalkSpeedBoost and 0 or 1
+    if UpdateCharacterSpeed then UpdateCharacterSpeed() end
+end)
+
+local SpeedControlFrame = Instance.new("Frame")
+SpeedControlFrame.Size = UDim2.new(0.42, 0, 1, 0)
+SpeedControlFrame.Position = UDim2.new(0.58, 0, 0, 0)
+SpeedControlFrame.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+SpeedControlFrame.BorderSizePixel = 0
+SpeedControlFrame.Parent = SpeedRow
+
+local CtrlCorner = Instance.new("UICorner")
+CtrlCorner.CornerRadius = UDim.new(0, 4)
+CtrlCorner.Parent = SpeedControlFrame
+
+local CtrlStroke = Instance.new("UIStroke")
+CtrlStroke.Color = Color3.fromRGB(45, 45, 55)
+CtrlStroke.Thickness = 1
+CtrlStroke.Parent = SpeedControlFrame
+
+local MinusBtn = Instance.new("TextButton")
+MinusBtn.Size = UDim2.new(0, 22, 1, 0)
+MinusBtn.Position = UDim2.new(0, 0, 0, 0)
+MinusBtn.BackgroundTransparency = 1
+MinusBtn.Text = "-"
+MinusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
+MinusBtn.TextSize = 14
+MinusBtn.Font = Enum.Font.GothamBold
+MinusBtn.Parent = SpeedControlFrame
+
+local SpeedDisplay = Instance.new("TextLabel")
+SpeedDisplay.Size = UDim2.new(1, -44, 1, 0)
+SpeedDisplay.Position = UDim2.new(0, 22, 0, 0)
+SpeedDisplay.BackgroundTransparency = 1
+SpeedDisplay.Text = tostring(CustomSpeedValue)
+SpeedDisplay.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedDisplay.TextSize = 11
+SpeedDisplay.Font = Enum.Font.GothamBold
+SpeedDisplay.Parent = SpeedControlFrame
+
+local PlusBtn = Instance.new("TextButton")
+PlusBtn.Size = UDim2.new(0, 22, 1, 0)
+PlusBtn.Position = UDim2.new(1, -22, 0, 0)
+PlusBtn.BackgroundTransparency = 1
+PlusBtn.Text = "+"
+PlusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
+PlusBtn.TextSize = 14
+PlusBtn.Font = Enum.Font.GothamBold
+PlusBtn.Parent = SpeedControlFrame
+
+MinusBtn.MouseButton1Click:Connect(function()
+    CustomSpeedValue = math.max(16, CustomSpeedValue - 10)
+    SpeedDisplay.Text = tostring(CustomSpeedValue)
+    if UpdateCharacterSpeed then UpdateCharacterSpeed() end
+end)
+
+PlusBtn.MouseButton1Click:Connect(function()
+    CustomSpeedValue = math.min(300, CustomSpeedValue + 10)
+    SpeedDisplay.Text = tostring(CustomSpeedValue)
+    if UpdateCharacterSpeed then UpdateCharacterSpeed() end
+end)
+
+-- 11. No Clip
+AddToggleRow("No Clip", "NoClip")
+
+-- 12. Infinite Jump
+AddToggleRow("Infinite Jump", "InfiniteJump")
+
+-- 13. Teleport to My Base Action Button
+AddActionRow("⚡ Teleport to My Base", function()
+    if teleportToMyBase then teleportToMyBase() end
+end)
+
+-- Footer
+local Footer = Instance.new("Frame")
+Footer.Size = UDim2.new(1, 0, 0, 36)
+Footer.Position = UDim2.new(0, 0, 1, -36)
+Footer.BackgroundTransparency = 1
+Footer.Parent = MainFrame
+
+local FooterTitle = Instance.new("TextLabel")
+FooterTitle.Size = UDim2.new(1, 0, 0, 14)
+FooterTitle.Position = UDim2.new(0, 0, 0, 4)
+FooterTitle.BackgroundTransparency = 1
+FooterTitle.Text = "ULTRA SCRIPT HUB"
+FooterTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+FooterTitle.TextSize = 11
+FooterTitle.Font = Enum.Font.GothamBold
+FooterTitle.Parent = Footer
+
+local FooterSub = Instance.new("TextLabel")
+FooterSub.Size = UDim2.new(1, 0, 0, 12)
+FooterSub.Position = UDim2.new(0, 0, 0, 18)
+FooterSub.BackgroundTransparency = 1
+FooterSub.Text = "Made by Junejo"
+FooterSub.TextColor3 = Color3.fromRGB(136, 136, 153)
+FooterSub.TextSize = 9
+FooterSub.Font = Enum.Font.GothamMedium
+FooterSub.Parent = Footer
+
+-- Dragging Functionality
+local dragging, dragInput, dragStart, startPos
+Header.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+Header.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- =================================================================
+-- GAME HELPER FUNCTIONS & ENGINE
+-- =================================================================
+
 -- Anti-AFK Engine
 local VirtualUser = nil
 pcall(function() VirtualUser = game:GetService("VirtualUser") end)
@@ -66,7 +621,7 @@ end)
 
 -- Character Helper Functions
 local function getChar()
-    return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    return LocalPlayer.Character
 end
 
 local function getRoot()
@@ -81,15 +636,18 @@ local function getHum()
     return char:FindFirstChildOfClass("Humanoid")
 end
 
-local function isAlive()
+UpdateCharacterSpeed = function()
     local hum = getHum()
-    local root = getRoot()
-    return hum and hum.Health > 0 and root ~= nil and root.Parent ~= nil
+    if hum then
+        if Toggles.WalkSpeedBoost then
+            hum.WalkSpeed = CustomSpeedValue
+        else
+            hum.WalkSpeed = 16
+        end
+    end
 end
 
--- =================================================================
--- REMOTE RESOLVER (Dynamic Auto-Discovery)
--- =================================================================
+-- Remote Discovery
 local Remotes = {}
 
 local function safeCallRemote(rem, ...)
@@ -106,35 +664,37 @@ local function safeCallRemote(rem, ...)
 end
 
 local function scanRemotes()
-    for _, desc in ipairs(ReplicatedStorage:GetDescendants()) do
-        if desc:IsA("RemoteEvent") or desc:IsA("RemoteFunction") or desc:IsA("UnreliableRemoteEvent") then
-            local n = desc.Name:lower()
-            if n:find("claimall") or n == "claimalleggs" then
-                Remotes.ClaimAllEggs = desc
-            elseif n:find("claimegg") or n == "claimegg" then
-                Remotes.ClaimEgg = desc
-            elseif n:find("sellall") or n == "sellallitems" or n:find("sellegg") or n:find("sell_all") then
-                Remotes.SellAllItems = desc
-            elseif n:find("sellitem") or n == "sell" or n:find("sell_item") then
-                Remotes.SellItem = desc
-            elseif n:find("dropchicken") or n:find("depositchicken") or n:find("placechicken") then
-                Remotes.DropChicken = desc
-            elseif n:find("teleporttobase") or n:find("tptobase") then
-                Remotes.TeleportToBase = desc
-            elseif n:find("stealegg") or n:find("stealchicken") then
-                Remotes.StealEgg = desc
+    pcall(function()
+        for _, desc in ipairs(ReplicatedStorage:GetDescendants()) do
+            if desc:IsA("RemoteEvent") or desc:IsA("RemoteFunction") or desc:IsA("UnreliableRemoteEvent") then
+                local n = desc.Name:lower()
+                if n:find("claimall") or n == "claimalleggs" then
+                    Remotes.ClaimAllEggs = desc
+                elseif n:find("claimegg") or n == "claimegg" then
+                    Remotes.ClaimEgg = desc
+                elseif n:find("sellall") or n == "sellallitems" or n:find("sellegg") or n:find("sell_all") then
+                    Remotes.SellAllItems = desc
+                elseif n:find("sellitem") or n == "sell" or n:find("sell_item") then
+                    Remotes.SellItem = desc
+                elseif n:find("dropchicken") or n:find("depositchicken") or n:find("placechicken") then
+                    Remotes.DropChicken = desc
+                elseif n:find("teleporttobase") or n:find("tptobase") then
+                    Remotes.TeleportToBase = desc
+                elseif n:find("stealegg") or n:find("stealchicken") then
+                    Remotes.StealEgg = desc
+                end
             end
         end
-    end
+    end)
 end
-scanRemotes()
-ReplicatedStorage.DescendantAdded:Connect(scanRemotes)
 
--- =================================================================
--- BASE DETECTOR & TELEPORT HELPERS
--- =================================================================
+task.spawn(scanRemotes)
+ReplicatedStorage.DescendantAdded:Connect(function()
+    task.spawn(scanRemotes)
+end)
+
+-- Base Detector & Base Pen
 local cachedMyBase = nil
-local SavedBaseCFrame = nil
 
 local function getBasesFolder()
     local direct = Workspace:FindFirstChild("Game") and Workspace.Game:FindFirstChild("Map") and Workspace.Game.Map:FindFirstChild("Lobby") and Workspace.Game.Map.Lobby:FindFirstChild("Bases")
@@ -209,7 +769,6 @@ local function getBasePenCFrame(base)
     if not base then return nil end
 
     local stuff = base:FindFirstChild("stuff") or base:FindFirstChild("Stuff")
-
     local treadmill = (stuff and (stuff:FindFirstChild("Treadmill") or stuff:FindFirstChild("treadmill"))) or base:FindFirstChild("Treadmill", true)
     local treadmillPos = nil
     if treadmill then
@@ -275,19 +834,6 @@ local function getBasePenCFrame(base)
         end
     end
 
-    for _, desc in ipairs(base:GetDescendants()) do
-        if desc:IsA("BasePart") then
-            local n = desc.Name:lower()
-            if n ~= "open" and not n:find("treadmill") and not n:find("train") and not n:find("speed") and not n:find("spawn") and not n:find("billb") then
-                if n:find("pen") or n:find("coop") or n:find("yard") or n:find("barn") or n:find("chicken") or n:find("drop") then
-                    if not isNearTreadmill(desc.Position) then
-                        return desc.CFrame + Vector3.new(0, 2.5, 0)
-                    end
-                end
-            end
-        end
-    end
-
     local sp = base:FindFirstChild("Spawn") or base:FindFirstChildWhichIsA("SpawnLocation")
     if sp and sp:IsA("BasePart") then
         if treadmillPos then
@@ -302,24 +848,15 @@ local function getBasePenCFrame(base)
         end
 
         local cand1 = sp.CFrame * CFrame.new(-12, 2.5, 4)
-        if not isNearTreadmill(cand1.Position) then
-            return cand1
-        end
+        if not isNearTreadmill(cand1.Position) then return cand1 end
         local cand2 = sp.CFrame * CFrame.new(12, 2.5, 4)
-        if not isNearTreadmill(cand2.Position) then
-            return cand2
-        end
+        if not isNearTreadmill(cand2.Position) then return cand2 end
     end
 
-    local piv = base:GetPivot() + Vector3.new(0, 2.5, 0)
-    if not isNearTreadmill(piv.Position) then
-        return piv
-    end
-
-    return nil
+    return base:GetPivot() + Vector3.new(0, 2.5, 0)
 end
 
-local function teleportToMyBase()
+teleportToMyBase = function()
     local root = getRoot()
     if not root then return end
 
@@ -342,91 +879,21 @@ local function teleportToMyBase()
 
     if SavedBaseCFrame then
         root.CFrame = SavedBaseCFrame + Vector3.new(0, 2, 0)
-        return
     end
 end
 
 task.spawn(function()
-    task.wait(0.6)
+    task.wait(0.5)
+    local root = getRoot()
+    if root then SavedBaseCFrame = root.CFrame end
     local base = getMyBase()
     if base then
         local penCF = getBasePenCFrame(base)
-        if penCF then
-            SavedBaseCFrame = penCF
-            return
-        end
-        local sp = base:FindFirstChild("Spawn") or base:FindFirstChildWhichIsA("SpawnLocation")
-        if sp and sp:IsA("BasePart") then
-            SavedBaseCFrame = sp.CFrame + Vector3.new(0, 2.5, 0)
-            return
-        end
-    end
-    local root = getRoot()
-    if root and not SavedBaseCFrame then
-        SavedBaseCFrame = root.CFrame
+        if penCF then SavedBaseCFrame = penCF end
     end
 end)
 
--- =================================================================
--- FEATURE STATES & SETTINGS
--- =================================================================
-local AvailableZones = {
-    "All Zones",
-    "Crystal",
-    "Cosmic",
-    "Abyss",
-    "Beach",
-    "Volcano",
-    "Snow",
-    "Desert",
-    "Jungle",
-    "Lake",
-    "Forest"
-}
-local CurrentZoneIndex = 1
-
-local ZoneTierScores = {
-    ["Crystal"] = 1000,
-    ["Cosmic"] = 900,
-    ["Abyss"] = 800,
-    ["Beach"] = 700,
-    ["Volcano"] = 600,
-    ["Snow"] = 500,
-    ["Desert"] = 400,
-    ["Jungle"] = 300,
-    ["Lake"] = 200,
-    ["Forest"] = 100
-}
-
-local Toggles = {
-    AutoSteal = false,
-    AutoCollectEggs = false,
-    AutoSellEggs = false,
-    AutoTrainSpeed = false,
-    RemoveGuards = false,
-    FlyMode = false,
-    NoClip = false,
-    InfiniteJump = false,
-    WalkSpeedBoost = false
-}
-
-local CustomSpeedValue = 50
-local CustomFlySpeed = 60
-
-local function UpdateCharacterSpeed()
-    local hum = getHum()
-    if hum then
-        if Toggles.WalkSpeedBoost then
-            hum.WalkSpeed = CustomSpeedValue
-        else
-            hum.WalkSpeed = 16
-        end
-    end
-end
-
--- =================================================================
--- PROMPT TRIGGER & CHICKEN HELPERS
--- =================================================================
+-- Prompt Helper
 local function triggerPrompt(prompt)
     if not prompt or not prompt:IsA("ProximityPrompt") then return end
     pcall(function()
@@ -561,30 +1028,9 @@ local function dropChickenIntoBase()
             end
         end
     end
-
-    pcall(function()
-        local pgui = LocalPlayer:FindFirstChild("PlayerGui")
-        if pgui then
-            for _, btn in ipairs(pgui:GetDescendants()) do
-                if (btn:IsA("TextButton") or btn:IsA("ImageButton")) and btn.Visible then
-                    local n = btn.Name:lower()
-                    local txt = btn:IsA("TextButton") and btn.Text:lower() or ""
-                    if n:find("drop") or txt:find("drop") then
-                        if firesignal then firesignal(btn.MouseButton1Click) end
-                        if getconnections then
-                            for _, c in ipairs(getconnections(btn.MouseButton1Click)) do c:Fire() end
-                            for _, c in ipairs(getconnections(btn.Activated)) do c:Fire() end
-                        end
-                    end
-                end
-            end
-        end
-    end)
 end
 
--- =================================================================
--- 1. AUTO STEAL BEST CHICKENS & TARGET ZONE RESOLVER
--- =================================================================
+-- Target Zone Resolver & Auto Steal
 local isStealing = false
 local NestCooldowns = {}
 
@@ -722,7 +1168,7 @@ local function getZoneCFrame(zoneName)
     return nil
 end
 
-local function teleportToTargetZone()
+teleportToTargetZone = function()
     local root = getRoot()
     if not root then return end
 
@@ -735,6 +1181,7 @@ local function teleportToTargetZone()
     end
 end
 
+-- Auto Steal Loop
 task.spawn(function()
     while true do
         task.wait(0.12)
@@ -837,9 +1284,7 @@ task.spawn(function()
     end
 end)
 
--- =================================================================
--- 2. AUTO COLLECT EGGS
--- =================================================================
+-- Auto Collect Eggs Loop
 local function collectEggs()
     if Remotes.ClaimAllEggs then
         pcall(function() Remotes.ClaimAllEggs:FireServer() end)
@@ -902,11 +1347,9 @@ task.spawn(function()
     end
 end)
 
--- =================================================================
--- 3. MULTI-LAYER AUTO SELL ENGINE (Remotes, Prompts, Pads, GUI Buttons)
--- =================================================================
-local function executeSellEngine()
-    -- Layer 1: Fire all registered Remotes
+-- 5-Layer Auto Sell Engine
+executeSellEngine = function()
+    -- 1. Remotes
     if Remotes.SellAllItems then
         safeCallRemote(Remotes.SellAllItems, "egg")
         safeCallRemote(Remotes.SellAllItems, "eggs")
@@ -921,7 +1364,6 @@ local function executeSellEngine()
         safeCallRemote(Remotes.SellItem)
     end
 
-    -- Layer 2: Dynamic ReplicatedStorage Remote Sweeper
     pcall(function()
         for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
             if rem:IsA("RemoteEvent") or rem:IsA("RemoteFunction") or rem:IsA("UnreliableRemoteEvent") then
@@ -937,7 +1379,7 @@ local function executeSellEngine()
         end
     end)
 
-    -- Layer 3: Proximity Prompts on Merchants, Shops & Sell Stands
+    -- 2. Proximity Prompts
     pcall(function()
         for _, prompt in ipairs(Workspace:GetDescendants()) do
             if prompt:IsA("ProximityPrompt") then
@@ -949,7 +1391,7 @@ local function executeSellEngine()
         end
     end)
 
-    -- Layer 4: Physical Sell Pads & TouchInterest
+    -- 3. Touch Sell Pads
     local root = getRoot()
     if root then
         pcall(function()
@@ -971,7 +1413,7 @@ local function executeSellEngine()
         end)
     end
 
-    -- Layer 5: PlayerGui Dialogue & Confirmation Buttons
+    -- 4. PlayerGui Buttons
     pcall(function()
         local pgui = LocalPlayer:FindFirstChild("PlayerGui")
         if pgui then
@@ -1010,9 +1452,7 @@ task.spawn(function()
     end
 end)
 
--- =================================================================
--- 4. AUTO TRAIN SPEED (TREADMILL)
--- =================================================================
+-- Auto Train Speed Loop
 task.spawn(function()
     while true do
         if Toggles.AutoTrainSpeed and not Toggles.AutoSteal then
@@ -1034,9 +1474,7 @@ task.spawn(function()
     end
 end)
 
--- =================================================================
--- 5. REMOVE GUARDS
--- =================================================================
+-- Remove Guards
 local function isGuardModel(m)
     if not m or not m:IsA("Model") or m == LocalPlayer.Character then return false end
     if m.Parent == Workspace and m.Name == "model" and m:FindFirstChildOfClass("Humanoid") then
@@ -1080,13 +1518,11 @@ Workspace.ChildAdded:Connect(function(child)
     end
 end)
 
--- =================================================================
--- 6. FLY SYSTEM
--- =================================================================
+-- Fly System
 local flyBodyVel = nil
 local flyBodyGyro = nil
 
-local function startFlying()
+startFlying = function()
     local root = getRoot()
     if not root then return end
 
@@ -1108,7 +1544,7 @@ local function startFlying()
             if not currentRoot or not hum then break end
 
             local moveDir = hum.MoveDirection
-            local camCF = Camera.CFrame
+            local camCF = Camera and Camera.CFrame or Workspace.CurrentCamera.CFrame
             flyBodyGyro.CFrame = camCF
 
             if moveDir.Magnitude > 0 then
@@ -1132,14 +1568,12 @@ local function startFlying()
     end)
 end
 
-local function stopFlying()
+stopFlying = function()
     if flyBodyVel then flyBodyVel:Destroy() flyBodyVel = nil end
     if flyBodyGyro then flyBodyGyro:Destroy() flyBodyGyro = nil end
 end
 
--- =================================================================
--- 7. MOVEMENT HACKS (NOCLIP, INFINITE JUMP, WALKSPEED)
--- =================================================================
+-- Movement Stepped Connections
 RunService.Stepped:Connect(function()
     if Toggles.NoClip then
         local char = LocalPlayer.Character
@@ -1168,501 +1602,5 @@ RunService.Heartbeat:Connect(function()
         if hum and hum.WalkSpeed ~= CustomSpeedValue then
             hum.WalkSpeed = CustomSpeedValue
         end
-    end
-end)
-
--- =================================================================
--- OFFICIAL JUNEJO STANDARD UI (MATTE BLACK 280PX)
--- =================================================================
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "JunejoHubUI_StealChicken"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.DisplayOrder = 999999
-ScreenGui.Parent = guiParent
-
-local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 330)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -165)
-MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
-MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.ClipsDescendants = true
-MainFrame.Parent = ScreenGui
-
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 10)
-MainCorner.Parent = MainFrame
-
-local MainStroke = Instance.new("UIStroke")
-MainStroke.Color = Color3.fromRGB(35, 35, 42)
-MainStroke.Thickness = 1
-MainStroke.Parent = MainFrame
-
--- Header
-local Header = Instance.new("Frame")
-Header.Name = "Header"
-Header.Size = UDim2.new(1, 0, 0, 32)
-Header.BackgroundTransparency = 1
-Header.Parent = MainFrame
-
-local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Size = UDim2.new(1, -40, 1, 0)
-TitleLabel.Position = UDim2.new(0, 12, 0, 0)
-TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "STEAL A CHICKEN"
-TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleLabel.TextSize = 12
-TitleLabel.Font = Enum.Font.GothamBold
-TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-TitleLabel.Parent = Header
-
-local CloseButton = Instance.new("TextButton")
-CloseButton.Size = UDim2.new(0, 24, 0, 24)
-CloseButton.Position = UDim2.new(1, -28, 0, 4)
-CloseButton.BackgroundTransparency = 1
-CloseButton.Text = "X"
-CloseButton.TextColor3 = Color3.fromRGB(160, 160, 160)
-CloseButton.TextSize = 13
-CloseButton.Font = Enum.Font.GothamBold
-CloseButton.Parent = Header
-CloseButton.MouseButton1Click:Connect(function()
-    stopFlying()
-    ScreenGui:Destroy()
-end)
-
--- Header Separation Line
-local HeaderLine = Instance.new("Frame")
-HeaderLine.Size = UDim2.new(1, -24, 0, 1)
-HeaderLine.Position = UDim2.new(0, 12, 0, 32)
-HeaderLine.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
-HeaderLine.BorderSizePixel = 0
-HeaderLine.Parent = MainFrame
-
--- Content Scrolling Frame
-local ContentFrame = Instance.new("ScrollingFrame")
-ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -24, 1, -74)
-ContentFrame.Position = UDim2.new(0, 12, 0, 36)
-ContentFrame.BackgroundTransparency = 1
-ContentFrame.BorderSizePixel = 0
-ContentFrame.ScrollBarThickness = 2
-ContentFrame.ScrollBarImageColor3 = Color3.fromRGB(45, 45, 55)
-ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-ContentFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-ContentFrame.Parent = MainFrame
-
-local UIList = Instance.new("UIListLayout")
-UIList.SortOrder = Enum.SortOrder.LayoutOrder
-UIList.Padding = UDim.new(0, 4)
-UIList.Parent = ContentFrame
-
--- Helper function for Toggle Rows
-local function AddToggleRow(text, configKey, callback)
-    local Row = Instance.new("Frame")
-    Row.Size = UDim2.new(1, 0, 0, 23)
-    Row.BackgroundTransparency = 1
-    Row.Parent = ContentFrame
-    
-    local RowBtn = Instance.new("TextButton")
-    RowBtn.Size = UDim2.new(1, 0, 1, 0)
-    RowBtn.BackgroundTransparency = 1
-    RowBtn.Text = ""
-    RowBtn.ZIndex = 5
-    RowBtn.Parent = Row
-    
-    local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(1, -28, 1, 0)
-    Label.BackgroundTransparency = 1
-    Label.Text = text
-    Label.TextColor3 = Color3.fromRGB(240, 240, 240)
-    Label.TextSize = 12
-    Label.Font = Enum.Font.GothamBold
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.Parent = Row
-    
-    local CheckBox = Instance.new("Frame")
-    CheckBox.Size = UDim2.new(0, 18, 0, 18)
-    CheckBox.Position = UDim2.new(1, -18, 0.5, -9)
-    CheckBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-    CheckBox.BorderSizePixel = 0
-    CheckBox.Parent = Row
-    
-    local CheckCorner = Instance.new("UICorner")
-    CheckCorner.CornerRadius = UDim.new(0, 4)
-    CheckCorner.Parent = CheckBox
-    
-    local CheckStroke = Instance.new("UIStroke")
-    CheckStroke.Color = Color3.fromRGB(45, 45, 55)
-    CheckStroke.Thickness = 1.2
-    CheckStroke.Parent = CheckBox
-    
-    local CheckMark = Instance.new("Frame")
-    CheckMark.Size = UDim2.new(0, 10, 0, 10)
-    CheckMark.Position = UDim2.new(0.5, -5, 0.5, -5)
-    CheckMark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    CheckMark.BackgroundTransparency = Toggles[configKey] and 0 or 1
-    CheckMark.BorderSizePixel = 0
-    CheckMark.Parent = CheckBox
-    
-    local MarkCorner = Instance.new("UICorner")
-    MarkCorner.CornerRadius = UDim.new(0, 2)
-    MarkCorner.Parent = CheckMark
-    
-    RowBtn.MouseButton1Click:Connect(function()
-        Toggles[configKey] = not Toggles[configKey]
-        CheckMark.BackgroundTransparency = Toggles[configKey] and 0 or 1
-        if callback then callback(Toggles[configKey]) end
-    end)
-
-    return function(val)
-        Toggles[configKey] = val
-        CheckMark.BackgroundTransparency = val and 0 or 1
-    end
-end
-
--- Helper function for Action Buttons
-local function AddActionRow(text, callback)
-    local Row = Instance.new("Frame")
-    Row.Size = UDim2.new(1, 0, 0, 23)
-    Row.BackgroundTransparency = 1
-    Row.Parent = ContentFrame
-    
-    local Btn = Instance.new("TextButton")
-    Btn.Size = UDim2.new(1, 0, 1, 0)
-    Btn.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-    Btn.BorderSizePixel = 0
-    Btn.Text = text
-    Btn.TextColor3 = Color3.fromRGB(240, 240, 240)
-    Btn.TextSize = 11
-    Btn.Font = Enum.Font.GothamBold
-    Btn.Parent = Row
-    
-    local Corner = Instance.new("UICorner")
-    Corner.CornerRadius = UDim.new(0, 4)
-    Corner.Parent = Btn
-    
-    local Stroke = Instance.new("UIStroke")
-    Stroke.Color = Color3.fromRGB(45, 45, 55)
-    Stroke.Thickness = 1
-    Stroke.Parent = Btn
-    
-    Btn.MouseButton1Click:Connect(function()
-        if callback then callback() end
-    end)
-end
-
--- =================================================================
--- POPULATE FEATURES
--- =================================================================
-
--- 1. Auto Steal Chickens (Best)
-local updateStealVisual
-local updateTrainVisual
-
-updateStealVisual = AddToggleRow("Auto Steal Chickens (Best)", "AutoSteal", function(enabled)
-    if enabled and Toggles.AutoTrainSpeed then
-        if updateTrainVisual then updateTrainVisual(false) end
-    end
-end)
-
--- 2. Target Zone Selector Row (Interactive Pill)
-local ZoneRow = Instance.new("Frame")
-ZoneRow.Size = UDim2.new(1, 0, 0, 23)
-ZoneRow.BackgroundTransparency = 1
-ZoneRow.Parent = ContentFrame
-
-local ZoneLabel = Instance.new("TextLabel")
-ZoneLabel.Size = UDim2.new(0.42, 0, 1, 0)
-ZoneLabel.BackgroundTransparency = 1
-ZoneLabel.Text = "Target Zone"
-ZoneLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
-ZoneLabel.TextSize = 12
-ZoneLabel.Font = Enum.Font.GothamBold
-ZoneLabel.TextXAlignment = Enum.TextXAlignment.Left
-ZoneLabel.Parent = ZoneRow
-
-local ZonePill = Instance.new("Frame")
-ZonePill.Size = UDim2.new(0.56, 0, 1, 0)
-ZonePill.Position = UDim2.new(0.44, 0, 0, 0)
-ZonePill.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-ZonePill.BorderSizePixel = 0
-ZonePill.Parent = ZoneRow
-
-local ZoneCorner = Instance.new("UICorner")
-ZoneCorner.CornerRadius = UDim.new(0, 4)
-ZoneCorner.Parent = ZonePill
-
-local ZoneStroke = Instance.new("UIStroke")
-ZoneStroke.Color = Color3.fromRGB(45, 45, 55)
-ZoneStroke.Thickness = 1
-ZoneStroke.Parent = ZonePill
-
-local ZonePrevBtn = Instance.new("TextButton")
-ZonePrevBtn.Size = UDim2.new(0, 22, 1, 0)
-ZonePrevBtn.Position = UDim2.new(0, 0, 0, 0)
-ZonePrevBtn.BackgroundTransparency = 1
-ZonePrevBtn.Text = "<"
-ZonePrevBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
-ZonePrevBtn.TextSize = 13
-ZonePrevBtn.Font = Enum.Font.GothamBold
-ZonePrevBtn.Parent = ZonePill
-
-local ZoneDisplayBtn = Instance.new("TextButton")
-ZoneDisplayBtn.Size = UDim2.new(1, -44, 1, 0)
-ZoneDisplayBtn.Position = UDim2.new(0, 22, 0, 0)
-ZoneDisplayBtn.BackgroundTransparency = 1
-ZoneDisplayBtn.Text = AvailableZones[CurrentZoneIndex]
-ZoneDisplayBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ZoneDisplayBtn.TextSize = 11
-ZoneDisplayBtn.Font = Enum.Font.GothamBold
-ZoneDisplayBtn.Parent = ZonePill
-
-local ZoneNextBtn = Instance.new("TextButton")
-ZoneNextBtn.Size = UDim2.new(0, 22, 1, 0)
-ZoneNextBtn.Position = UDim2.new(1, -22, 0, 0)
-ZoneNextBtn.BackgroundTransparency = 1
-ZoneNextBtn.Text = ">"
-ZoneNextBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
-ZoneNextBtn.TextSize = 13
-ZoneNextBtn.Font = Enum.Font.GothamBold
-ZoneNextBtn.Parent = ZonePill
-
-local function updateZoneDisplay()
-    ZoneDisplayBtn.Text = AvailableZones[CurrentZoneIndex]
-end
-
-ZonePrevBtn.MouseButton1Click:Connect(function()
-    CurrentZoneIndex = CurrentZoneIndex - 1
-    if CurrentZoneIndex < 1 then CurrentZoneIndex = #AvailableZones end
-    updateZoneDisplay()
-end)
-
-ZoneNextBtn.MouseButton1Click:Connect(function()
-    CurrentZoneIndex = CurrentZoneIndex + 1
-    if CurrentZoneIndex > #AvailableZones then CurrentZoneIndex = 1 end
-    updateZoneDisplay()
-end)
-
-ZoneDisplayBtn.MouseButton1Click:Connect(function()
-    CurrentZoneIndex = CurrentZoneIndex + 1
-    if CurrentZoneIndex > #AvailableZones then CurrentZoneIndex = 1 end
-    updateZoneDisplay()
-end)
-
--- 3. Action Button: Teleport to Target Zone
-AddActionRow("⚡ Teleport to Target Zone", function()
-    teleportToTargetZone()
-end)
-
--- 4. Auto Collect Eggs
-AddToggleRow("Auto Collect Eggs", "AutoCollectEggs")
-
--- 5. Auto Sell Eggs (5-Layer Auto Sell Engine)
-AddToggleRow("Auto Sell Eggs", "AutoSellEggs")
-
--- 6. Action Button: Sell Eggs Now
-AddActionRow("⚡ Sell Eggs Now", function()
-    executeSellEngine()
-end)
-
--- 7. Auto Train Speed
-updateTrainVisual = AddToggleRow("Auto Train Speed", "AutoTrainSpeed", function(enabled)
-    if enabled and Toggles.AutoSteal then
-        if updateStealVisual then updateStealVisual(false) end
-    end
-end)
-
--- 8. Remove Guards
-AddToggleRow("Remove Guards", "RemoveGuards")
-
--- 9. Fly Mode
-AddToggleRow("Fly Mode", "FlyMode", function(enabled)
-    if enabled then
-        startFlying()
-    else
-        stopFlying()
-    end
-end)
-
--- 10. Integrated WalkSpeed Row with Pill Adjuster
-local SpeedRow = Instance.new("Frame")
-SpeedRow.Size = UDim2.new(1, 0, 0, 23)
-SpeedRow.BackgroundTransparency = 1
-SpeedRow.Parent = ContentFrame
-
-local SpeedToggleBtn = Instance.new("TextButton")
-SpeedToggleBtn.Size = UDim2.new(0.55, 0, 1, 0)
-SpeedToggleBtn.BackgroundTransparency = 1
-SpeedToggleBtn.Text = ""
-SpeedToggleBtn.ZIndex = 5
-SpeedToggleBtn.Parent = SpeedRow
-
-local SpeedLabel = Instance.new("TextLabel")
-SpeedLabel.Size = UDim2.new(1, -26, 1, 0)
-SpeedLabel.BackgroundTransparency = 1
-SpeedLabel.Text = "WalkSpeed"
-SpeedLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
-SpeedLabel.TextSize = 12
-SpeedLabel.Font = Enum.Font.GothamBold
-SpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
-SpeedLabel.Parent = SpeedToggleBtn
-
-local SpeedCheckBox = Instance.new("Frame")
-SpeedCheckBox.Size = UDim2.new(0, 18, 0, 18)
-SpeedCheckBox.Position = UDim2.new(1, -18, 0.5, -9)
-SpeedCheckBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-SpeedCheckBox.BorderSizePixel = 0
-SpeedCheckBox.Parent = SpeedToggleBtn
-
-local SpeedCheckCorner = Instance.new("UICorner")
-SpeedCheckCorner.CornerRadius = UDim.new(0, 4)
-SpeedCheckCorner.Parent = SpeedCheckBox
-
-local SpeedCheckStroke = Instance.new("UIStroke")
-SpeedCheckStroke.Color = Color3.fromRGB(45, 45, 55)
-SpeedCheckStroke.Thickness = 1.2
-SpeedCheckStroke.Parent = SpeedCheckBox
-
-local SpeedCheckMark = Instance.new("Frame")
-SpeedCheckMark.Size = UDim2.new(0, 10, 0, 10)
-SpeedCheckMark.Position = UDim2.new(0.5, -5, 0.5, -5)
-SpeedCheckMark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-SpeedCheckMark.BackgroundTransparency = Toggles.WalkSpeedBoost and 0 or 1
-SpeedCheckMark.BorderSizePixel = 0
-SpeedCheckMark.Parent = SpeedCheckBox
-
-local MarkCorner = Instance.new("UICorner")
-MarkCorner.CornerRadius = UDim.new(0, 2)
-MarkCorner.Parent = SpeedCheckMark
-
-SpeedToggleBtn.MouseButton1Click:Connect(function()
-    Toggles.WalkSpeedBoost = not Toggles.WalkSpeedBoost
-    SpeedCheckMark.BackgroundTransparency = Toggles.WalkSpeedBoost and 0 or 1
-    UpdateCharacterSpeed()
-end)
-
-local SpeedControlFrame = Instance.new("Frame")
-SpeedControlFrame.Size = UDim2.new(0.42, 0, 1, 0)
-SpeedControlFrame.Position = UDim2.new(0.58, 0, 0, 0)
-SpeedControlFrame.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-SpeedControlFrame.BorderSizePixel = 0
-SpeedControlFrame.Parent = SpeedRow
-
-local CtrlCorner = Instance.new("UICorner")
-CtrlCorner.CornerRadius = UDim.new(0, 4)
-CtrlCorner.Parent = SpeedControlFrame
-
-local CtrlStroke = Instance.new("UIStroke")
-CtrlStroke.Color = Color3.fromRGB(45, 45, 55)
-CtrlStroke.Thickness = 1
-CtrlStroke.Parent = SpeedControlFrame
-
-local MinusBtn = Instance.new("TextButton")
-MinusBtn.Size = UDim2.new(0, 22, 1, 0)
-MinusBtn.Position = UDim2.new(0, 0, 0, 0)
-MinusBtn.BackgroundTransparency = 1
-MinusBtn.Text = "-"
-MinusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
-MinusBtn.TextSize = 14
-MinusBtn.Font = Enum.Font.GothamBold
-MinusBtn.Parent = SpeedControlFrame
-
-local SpeedDisplay = Instance.new("TextLabel")
-SpeedDisplay.Size = UDim2.new(1, -44, 1, 0)
-SpeedDisplay.Position = UDim2.new(0, 22, 0, 0)
-SpeedDisplay.BackgroundTransparency = 1
-SpeedDisplay.Text = tostring(CustomSpeedValue)
-SpeedDisplay.TextColor3 = Color3.fromRGB(255, 255, 255)
-SpeedDisplay.TextSize = 11
-SpeedDisplay.Font = Enum.Font.GothamBold
-SpeedDisplay.Parent = SpeedControlFrame
-
-local PlusBtn = Instance.new("TextButton")
-PlusBtn.Size = UDim2.new(0, 22, 1, 0)
-PlusBtn.Position = UDim2.new(1, -22, 0, 0)
-PlusBtn.BackgroundTransparency = 1
-PlusBtn.Text = "+"
-PlusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
-PlusBtn.TextSize = 14
-PlusBtn.Font = Enum.Font.GothamBold
-PlusBtn.Parent = SpeedControlFrame
-
-MinusBtn.MouseButton1Click:Connect(function()
-    CustomSpeedValue = math.max(16, CustomSpeedValue - 10)
-    SpeedDisplay.Text = tostring(CustomSpeedValue)
-    UpdateCharacterSpeed()
-end)
-
-PlusBtn.MouseButton1Click:Connect(function()
-    CustomSpeedValue = math.min(300, CustomSpeedValue + 10)
-    SpeedDisplay.Text = tostring(CustomSpeedValue)
-    UpdateCharacterSpeed()
-end)
-
--- 11. No Clip
-AddToggleRow("No Clip", "NoClip")
-
--- 12. Infinite Jump
-AddToggleRow("Infinite Jump", "InfiniteJump")
-
--- 13. Teleport to My Base Action Button
-AddActionRow("⚡ Teleport to My Base", function()
-    teleportToMyBase()
-end)
-
--- Footer
-local Footer = Instance.new("Frame")
-Footer.Size = UDim2.new(1, 0, 0, 36)
-Footer.Position = UDim2.new(0, 0, 1, -36)
-Footer.BackgroundTransparency = 1
-Footer.Parent = MainFrame
-
-local FooterTitle = Instance.new("TextLabel")
-FooterTitle.Size = UDim2.new(1, 0, 0, 14)
-FooterTitle.Position = UDim2.new(0, 0, 0, 4)
-FooterTitle.BackgroundTransparency = 1
-FooterTitle.Text = "ULTRA SCRIPT HUB"
-FooterTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-FooterTitle.TextSize = 11
-FooterTitle.Font = Enum.Font.GothamBold
-FooterTitle.Parent = Footer
-
-local FooterSub = Instance.new("TextLabel")
-FooterSub.Size = UDim2.new(1, 0, 0, 12)
-FooterSub.Position = UDim2.new(0, 0, 0, 18)
-FooterSub.BackgroundTransparency = 1
-FooterSub.Text = "Made by Junejo"
-FooterSub.TextColor3 = Color3.fromRGB(136, 136, 153)
-FooterSub.TextSize = 9
-FooterSub.Font = Enum.Font.GothamMedium
-FooterSub.Parent = Footer
-
--- Dragging Functionality
-local dragging, dragInput, dragStart, startPos
-Header.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = MainFrame.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
-    end
-end)
-
-Header.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        dragInput = input
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        local delta = input.Position - dragStart
-        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
 end)
