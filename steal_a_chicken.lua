@@ -12,16 +12,45 @@ local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local StarterGui = game:GetService("StarterGui")
 local TweenService = game:GetService("TweenService")
 
-local LocalPlayer = Players.LocalPlayer
-while not LocalPlayer do
-    task.wait(0.1)
-    LocalPlayer = Players.LocalPlayer
+local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
+local Camera = Workspace.CurrentCamera or Workspace:WaitForChild("Camera")
+
+-- Safe GUI Parent Resolver (Instant 0s Mobile & PC Execution)
+local function getSafeGui()
+    if gethui then
+        local success, res = pcall(gethui)
+        if success and res then return res end
+    end
+    local core = nil
+    pcall(function() core = game:GetService("CoreGui") end)
+    if core then
+        local ok = pcall(function()
+            local test = Instance.new("Folder")
+            test.Parent = core
+            test:Destroy()
+        end)
+        if ok then return core end
+    end
+    return LocalPlayer:WaitForChild("PlayerGui", 10) or LocalPlayer:FindFirstChildOfClass("PlayerGui")
 end
 
-local Camera = Workspace.CurrentCamera
+local guiParent = getSafeGui()
+
+-- Clean all previous UI instances safely
+pcall(function()
+    for _, name in ipairs({"JunejoHubUI_StealChicken", "JunejoStealChickenUI", "StealAChickenMobileUI"}) do
+        if guiParent and guiParent:FindFirstChild(name) then pcall(function() guiParent[name]:Destroy() end) end
+        pcall(function()
+            if CoreGui and CoreGui:FindFirstChild(name) then CoreGui[name]:Destroy() end
+        end)
+        pcall(function()
+            local pg = LocalPlayer:FindFirstChild("PlayerGui") or LocalPlayer:FindFirstChildOfClass("PlayerGui")
+            if pg and pg:FindFirstChild(name) then pg[name]:Destroy() end
+        end)
+    end
+end)
 
 -- Anti-AFK Engine
 local VirtualUser = nil
@@ -52,8 +81,14 @@ local function getHum()
     return char:FindFirstChildOfClass("Humanoid")
 end
 
+local function isAlive()
+    local hum = getHum()
+    local root = getRoot()
+    return hum and hum.Health > 0 and root ~= nil and root.Parent ~= nil
+end
+
 -- =================================================================
--- REMOTE RESOLVER
+-- REMOTE RESOLVER (Dynamic Auto-Discovery)
 -- =================================================================
 local Remotes = {}
 
@@ -73,20 +108,20 @@ end
 local function scanRemotes()
     for _, desc in ipairs(ReplicatedStorage:GetDescendants()) do
         if desc:IsA("RemoteEvent") or desc:IsA("RemoteFunction") or desc:IsA("UnreliableRemoteEvent") then
-            local n = desc.Name
-            if n == "claimAllEggs" then
+            local n = desc.Name:lower()
+            if n:find("claimall") or n == "claimalleggs" then
                 Remotes.ClaimAllEggs = desc
-            elseif n == "claimEgg" then
+            elseif n:find("claimegg") or n == "claimegg" then
                 Remotes.ClaimEgg = desc
-            elseif n == "sellAllItems" then
+            elseif n:find("sellall") or n == "sellallitems" or n:find("sellegg") or n:find("sell_all") then
                 Remotes.SellAllItems = desc
-            elseif n == "sellItem" then
+            elseif n:find("sellitem") or n == "sell" or n:find("sell_item") then
                 Remotes.SellItem = desc
-            elseif n == "dropChicken" then
+            elseif n:find("dropchicken") or n:find("depositchicken") or n:find("placechicken") then
                 Remotes.DropChicken = desc
-            elseif n == "teleportToBase" then
+            elseif n:find("teleporttobase") or n:find("tptobase") then
                 Remotes.TeleportToBase = desc
-            elseif n == "stealEgg" then
+            elseif n:find("stealegg") or n:find("stealchicken") then
                 Remotes.StealEgg = desc
             end
         end
@@ -124,7 +159,6 @@ local function getMyBase()
     local myName = LocalPlayer.Name:lower()
     local myDisplay = LocalPlayer.DisplayName:lower()
 
-    -- 1. Check Billboard Title
     for _, base in ipairs(basesFolder:GetChildren()) do
         local billb = base:FindFirstChild("BaseBillb") or base:FindFirstChildWhichIsA("BillboardGui", true)
         if billb then
@@ -149,7 +183,6 @@ local function getMyBase()
         end
     end
 
-    -- 2. Detect closest base if in Lobby
     local root = getRoot()
     if root then
         local closestBase = nil
@@ -550,7 +583,7 @@ local function dropChickenIntoBase()
 end
 
 -- =================================================================
--- 1. AUTO STEAL BEST CHICKENS
+-- 1. AUTO STEAL BEST CHICKENS & TARGET ZONE RESOLVER
 -- =================================================================
 local isStealing = false
 local NestCooldowns = {}
@@ -589,6 +622,12 @@ local function getBestAvailableNests()
         local targetFolder = playZones:FindFirstChild(selectedZone)
         if targetFolder then
             table.insert(zonesToScan, targetFolder)
+        else
+            for _, z in ipairs(playZones:GetChildren()) do
+                if z.Name:lower():find(selectedZone:lower(), 1, true) then
+                    table.insert(zonesToScan, z)
+                end
+            end
         end
     end
 
@@ -637,6 +676,63 @@ local function getBestAvailableNests()
     end)
 
     return nests
+end
+
+local function getZoneCFrame(zoneName)
+    if not zoneName or zoneName == "All Zones" then
+        zoneName = "Crystal"
+    end
+
+    local playZones = (Workspace:FindFirstChild("Game") and Workspace.Game:FindFirstChild("Map") and Workspace.Game.Map:FindFirstChild("PlayZones")) or Workspace:FindFirstChild("PlayZones", true)
+    
+    if playZones then
+        local z = playZones:FindFirstChild(zoneName)
+        if not z then
+            for _, child in ipairs(playZones:GetChildren()) do
+                if child.Name:lower():find(zoneName:lower(), 1, true) then
+                    z = child
+                    break
+                end
+            end
+        end
+
+        if z then
+            local nests = z:FindFirstChild("Nests")
+            if nests then
+                local firstNest = nests:FindFirstChildWhichIsA("Model") or nests:FindFirstChildWhichIsA("BasePart")
+                if firstNest then
+                    local root = firstNest:FindFirstChild("Root") or (firstNest:IsA("BasePart") and firstNest) or firstNest:FindFirstChildWhichIsA("BasePart")
+                    if root then return root.CFrame + Vector3.new(0, 3, 0) end
+                end
+            end
+            local sp = z:FindFirstChild("Spawn") or z:FindFirstChild("Root") or z:FindFirstChildWhichIsA("BasePart")
+            if sp and sp:IsA("BasePart") then
+                return sp.CFrame + Vector3.new(0, 3, 0)
+            end
+            return z:GetPivot() + Vector3.new(0, 3, 0)
+        end
+    end
+
+    for _, child in ipairs(Workspace:GetDescendants()) do
+        if (child:IsA("Folder") or child:IsA("Model")) and child.Name:lower():find(zoneName:lower(), 1, true) then
+            return child:GetPivot() + Vector3.new(0, 3, 0)
+        end
+    end
+
+    return nil
+end
+
+local function teleportToTargetZone()
+    local root = getRoot()
+    if not root then return end
+
+    local selectedZone = AvailableZones[CurrentZoneIndex]
+    local targetCF = getZoneCFrame(selectedZone)
+    if targetCF then
+        root.AssemblyLinearVelocity = Vector3.zero
+        root.AssemblyAngularVelocity = Vector3.zero
+        root.CFrame = targetCF
+    end
 end
 
 task.spawn(function()
@@ -807,29 +903,96 @@ task.spawn(function()
 end)
 
 -- =================================================================
--- 3. AUTO SELL EGGS
+-- 3. MULTI-LAYER AUTO SELL ENGINE (Remotes, Prompts, Pads, GUI Buttons)
 -- =================================================================
-local function sellAllEggsDirectly()
+local function executeSellEngine()
+    -- Layer 1: Fire all registered Remotes
     if Remotes.SellAllItems then
-        pcall(function() Remotes.SellAllItems:FireServer("egg") end)
-        pcall(function() Remotes.SellAllItems:FireServer() end)
+        safeCallRemote(Remotes.SellAllItems, "egg")
+        safeCallRemote(Remotes.SellAllItems, "eggs")
+        safeCallRemote(Remotes.SellAllItems, "all")
+        safeCallRemote(Remotes.SellAllItems, true)
+        safeCallRemote(Remotes.SellAllItems)
+    end
+    if Remotes.SellItem then
+        safeCallRemote(Remotes.SellItem, "egg")
+        safeCallRemote(Remotes.SellItem, "eggs")
+        safeCallRemote(Remotes.SellItem, "all")
+        safeCallRemote(Remotes.SellItem)
     end
 
+    -- Layer 2: Dynamic ReplicatedStorage Remote Sweeper
     pcall(function()
-        local dg = LocalPlayer.PlayerGui:FindFirstChild("DialogueGui")
-        if dg then
-            local confirmDia = dg:FindFirstChild("SellConfirmDialogue")
-            if confirmDia and confirmDia.Visible then
-                local confBtn = confirmDia:FindFirstChild("Confirm")
-                if confBtn and firesignal then
-                    firesignal(confBtn.MouseButton1Click)
+        for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
+            if rem:IsA("RemoteEvent") or rem:IsA("RemoteFunction") or rem:IsA("UnreliableRemoteEvent") then
+                local n = rem.Name:lower()
+                if n:find("sell") or n:find("trade") or n:find("exchange") or n:find("cashout") or n:find("depositegg") then
+                    safeCallRemote(rem, "egg")
+                    safeCallRemote(rem, "eggs")
+                    safeCallRemote(rem, "all")
+                    safeCallRemote(rem, true)
+                    safeCallRemote(rem)
                 end
             end
-            local sellDia = dg:FindFirstChild("SellDialogue")
-            if sellDia and sellDia.Visible then
-                local sellInv = sellDia:FindFirstChild("SellInventory")
-                if sellInv and firesignal then
-                    firesignal(sellInv.MouseButton1Click)
+        end
+    end)
+
+    -- Layer 3: Proximity Prompts on Merchants, Shops & Sell Stands
+    pcall(function()
+        for _, prompt in ipairs(Workspace:GetDescendants()) do
+            if prompt:IsA("ProximityPrompt") then
+                local act = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Parent.Name):lower()
+                if act:find("sell") or act:find("merchant") or act:find("vendor") or act:find("exchange") or act:find("shop") or act:find("cash") then
+                    triggerPrompt(prompt)
+                end
+            end
+        end
+    end)
+
+    -- Layer 4: Physical Sell Pads & TouchInterest
+    local root = getRoot()
+    if root then
+        pcall(function()
+            for _, obj in ipairs(Workspace:GetDescendants()) do
+                if obj:IsA("BasePart") then
+                    local n = obj.Name:lower()
+                    local pName = obj.Parent and obj.Parent.Name:lower() or ""
+                    if n == "sell" or n:find("sellpad") or n:find("sellzone") or n:find("sellpart") or n:find("sellring") or n:find("sellegg") or pName:find("sell") or pName:find("merchant") then
+                        if firetouchinterest then
+                            pcall(function()
+                                firetouchinterest(root, obj, 0)
+                                task.wait()
+                                firetouchinterest(root, obj, 1)
+                            end)
+                        end
+                    end
+                end
+            end
+        end)
+    end
+
+    -- Layer 5: PlayerGui Dialogue & Confirmation Buttons
+    pcall(function()
+        local pgui = LocalPlayer:FindFirstChild("PlayerGui")
+        if pgui then
+            for _, desc in ipairs(pgui:GetDescendants()) do
+                if (desc:IsA("TextButton") or desc:IsA("ImageButton")) and desc.Visible then
+                    local n = desc.Name:lower()
+                    local txt = desc:IsA("TextButton") and desc.Text:lower() or ""
+                    local parentName = desc.Parent and desc.Parent.Name:lower() or ""
+
+                    if n:find("sell") or txt:find("sell") or (parentName:find("sell") and (n:find("confirm") or txt:find("confirm") or n:find("yes") or txt:find("yes") or n:find("all") or txt:find("all"))) then
+                        if firesignal then
+                            pcall(function() firesignal(desc.MouseButton1Click) end)
+                            pcall(function() firesignal(desc.Activated) end)
+                        end
+                        if getconnections then
+                            pcall(function()
+                                for _, c in ipairs(getconnections(desc.MouseButton1Click)) do c:Fire() end
+                                for _, c in ipairs(getconnections(desc.Activated)) do c:Fire() end
+                            end)
+                        end
+                    end
                 end
             end
         end
@@ -839,8 +1002,8 @@ end
 task.spawn(function()
     while true do
         if Toggles.AutoSellEggs then
-            sellAllEggsDirectly()
-            task.wait(1.5)
+            executeSellEngine()
+            task.wait(1.0)
         else
             task.wait(0.5)
         end
@@ -1016,31 +1179,12 @@ ScreenGui.Name = "JunejoHubUI_StealChicken"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999999
-
-pcall(function()
-    if gethui then
-        ScreenGui.Parent = gethui()
-    elseif syn and syn.protect_gui then
-        syn.protect_gui(ScreenGui)
-        ScreenGui.Parent = CoreGui
-    else
-        ScreenGui.Parent = CoreGui
-    end
-end)
-if not ScreenGui.Parent then
-    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-end
-
--- Clean old instances
-pcall(function()
-    local old = (gethui and gethui():FindFirstChild("JunejoHubUI_StealChicken")) or CoreGui:FindFirstChild("JunejoHubUI_StealChicken") or LocalPlayer.PlayerGui:FindFirstChild("JunejoHubUI_StealChicken")
-    if old and old ~= ScreenGui then old:Destroy() end
-end)
+ScreenGui.Parent = guiParent
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 310)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -155)
+MainFrame.Size = UDim2.new(0, 280, 0, 330)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -165)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -1099,8 +1243,8 @@ HeaderLine.Parent = MainFrame
 -- Content Scrolling Frame
 local ContentFrame = Instance.new("ScrollingFrame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -24, 0, 230)
-ContentFrame.Position = UDim2.new(0, 12, 0, 38)
+ContentFrame.Size = UDim2.new(1, -24, 1, -74)
+ContentFrame.Position = UDim2.new(0, 12, 0, 36)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.BorderSizePixel = 0
 ContentFrame.ScrollBarThickness = 2
@@ -1223,14 +1367,14 @@ updateStealVisual = AddToggleRow("Auto Steal Chickens (Best)", "AutoSteal", func
     end
 end)
 
--- 2. Zone Selector Row (Cycle Zones)
+-- 2. Target Zone Selector Row (Interactive Pill)
 local ZoneRow = Instance.new("Frame")
 ZoneRow.Size = UDim2.new(1, 0, 0, 23)
 ZoneRow.BackgroundTransparency = 1
 ZoneRow.Parent = ContentFrame
 
 local ZoneLabel = Instance.new("TextLabel")
-ZoneLabel.Size = UDim2.new(0.45, 0, 1, 0)
+ZoneLabel.Size = UDim2.new(0.42, 0, 1, 0)
 ZoneLabel.BackgroundTransparency = 1
 ZoneLabel.Text = "Target Zone"
 ZoneLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
@@ -1240,8 +1384,8 @@ ZoneLabel.TextXAlignment = Enum.TextXAlignment.Left
 ZoneLabel.Parent = ZoneRow
 
 local ZonePill = Instance.new("Frame")
-ZonePill.Size = UDim2.new(0.53, 0, 1, 0)
-ZonePill.Position = UDim2.new(0.47, 0, 0, 0)
+ZonePill.Size = UDim2.new(0.56, 0, 1, 0)
+ZonePill.Position = UDim2.new(0.44, 0, 0, 0)
 ZonePill.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
 ZonePill.BorderSizePixel = 0
 ZonePill.Parent = ZoneRow
@@ -1256,64 +1400,84 @@ ZoneStroke.Thickness = 1
 ZoneStroke.Parent = ZonePill
 
 local ZonePrevBtn = Instance.new("TextButton")
-ZonePrevBtn.Size = UDim2.new(0, 20, 1, 0)
+ZonePrevBtn.Size = UDim2.new(0, 22, 1, 0)
 ZonePrevBtn.Position = UDim2.new(0, 0, 0, 0)
 ZonePrevBtn.BackgroundTransparency = 1
 ZonePrevBtn.Text = "<"
 ZonePrevBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
-ZonePrevBtn.TextSize = 12
+ZonePrevBtn.TextSize = 13
 ZonePrevBtn.Font = Enum.Font.GothamBold
 ZonePrevBtn.Parent = ZonePill
 
-local ZoneDisplay = Instance.new("TextLabel")
-ZoneDisplay.Size = UDim2.new(1, -40, 1, 0)
-ZoneDisplay.Position = UDim2.new(0, 20, 0, 0)
-ZoneDisplay.BackgroundTransparency = 1
-ZoneDisplay.Text = AvailableZones[CurrentZoneIndex]
-ZoneDisplay.TextColor3 = Color3.fromRGB(255, 255, 255)
-ZoneDisplay.TextSize = 10
-ZoneDisplay.Font = Enum.Font.GothamBold
-ZoneDisplay.Parent = ZonePill
+local ZoneDisplayBtn = Instance.new("TextButton")
+ZoneDisplayBtn.Size = UDim2.new(1, -44, 1, 0)
+ZoneDisplayBtn.Position = UDim2.new(0, 22, 0, 0)
+ZoneDisplayBtn.BackgroundTransparency = 1
+ZoneDisplayBtn.Text = AvailableZones[CurrentZoneIndex]
+ZoneDisplayBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ZoneDisplayBtn.TextSize = 11
+ZoneDisplayBtn.Font = Enum.Font.GothamBold
+ZoneDisplayBtn.Parent = ZonePill
 
 local ZoneNextBtn = Instance.new("TextButton")
-ZoneNextBtn.Size = UDim2.new(0, 20, 1, 0)
-ZoneNextBtn.Position = UDim2.new(1, -20, 0, 0)
+ZoneNextBtn.Size = UDim2.new(0, 22, 1, 0)
+ZoneNextBtn.Position = UDim2.new(1, -22, 0, 0)
 ZoneNextBtn.BackgroundTransparency = 1
 ZoneNextBtn.Text = ">"
 ZoneNextBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
-ZoneNextBtn.TextSize = 12
+ZoneNextBtn.TextSize = 13
 ZoneNextBtn.Font = Enum.Font.GothamBold
 ZoneNextBtn.Parent = ZonePill
+
+local function updateZoneDisplay()
+    ZoneDisplayBtn.Text = AvailableZones[CurrentZoneIndex]
+end
 
 ZonePrevBtn.MouseButton1Click:Connect(function()
     CurrentZoneIndex = CurrentZoneIndex - 1
     if CurrentZoneIndex < 1 then CurrentZoneIndex = #AvailableZones end
-    ZoneDisplay.Text = AvailableZones[CurrentZoneIndex]
+    updateZoneDisplay()
 end)
 
 ZoneNextBtn.MouseButton1Click:Connect(function()
     CurrentZoneIndex = CurrentZoneIndex + 1
     if CurrentZoneIndex > #AvailableZones then CurrentZoneIndex = 1 end
-    ZoneDisplay.Text = AvailableZones[CurrentZoneIndex]
+    updateZoneDisplay()
 end)
 
--- 3. Auto Collect Eggs
+ZoneDisplayBtn.MouseButton1Click:Connect(function()
+    CurrentZoneIndex = CurrentZoneIndex + 1
+    if CurrentZoneIndex > #AvailableZones then CurrentZoneIndex = 1 end
+    updateZoneDisplay()
+end)
+
+-- 3. Action Button: Teleport to Target Zone
+AddActionRow("⚡ Teleport to Target Zone", function()
+    teleportToTargetZone()
+end)
+
+-- 4. Auto Collect Eggs
 AddToggleRow("Auto Collect Eggs", "AutoCollectEggs")
 
--- 4. Auto Sell Eggs
+-- 5. Auto Sell Eggs (5-Layer Auto Sell Engine)
 AddToggleRow("Auto Sell Eggs", "AutoSellEggs")
 
--- 5. Auto Train Speed
+-- 6. Action Button: Sell Eggs Now
+AddActionRow("⚡ Sell Eggs Now", function()
+    executeSellEngine()
+end)
+
+-- 7. Auto Train Speed
 updateTrainVisual = AddToggleRow("Auto Train Speed", "AutoTrainSpeed", function(enabled)
     if enabled and Toggles.AutoSteal then
         if updateStealVisual then updateStealVisual(false) end
     end
 end)
 
--- 6. Remove Guards
+-- 8. Remove Guards
 AddToggleRow("Remove Guards", "RemoveGuards")
 
--- 7. Fly Mode
+-- 9. Fly Mode
 AddToggleRow("Fly Mode", "FlyMode", function(enabled)
     if enabled then
         startFlying()
@@ -1322,7 +1486,7 @@ AddToggleRow("Fly Mode", "FlyMode", function(enabled)
     end
 end)
 
--- 8. Integrated WalkSpeed Row with Pill Adjuster
+-- 10. Integrated WalkSpeed Row with Pill Adjuster
 local SpeedRow = Instance.new("Frame")
 SpeedRow.Size = UDim2.new(1, 0, 0, 23)
 SpeedRow.BackgroundTransparency = 1
@@ -1437,13 +1601,13 @@ PlusBtn.MouseButton1Click:Connect(function()
     UpdateCharacterSpeed()
 end)
 
--- 9. No Clip
+-- 11. No Clip
 AddToggleRow("No Clip", "NoClip")
 
--- 10. Infinite Jump
+-- 12. Infinite Jump
 AddToggleRow("Infinite Jump", "InfiniteJump")
 
--- 11. Teleport to My Base Action Button
+-- 13. Teleport to My Base Action Button
 AddActionRow("⚡ Teleport to My Base", function()
     teleportToMyBase()
 end)
@@ -1451,7 +1615,7 @@ end)
 -- Footer
 local Footer = Instance.new("Frame")
 Footer.Size = UDim2.new(1, 0, 0, 36)
-Footer.Position = UDim2.new(0, 0, 1, -38)
+Footer.Position = UDim2.new(0, 0, 1, -36)
 Footer.BackgroundTransparency = 1
 Footer.Parent = MainFrame
 
