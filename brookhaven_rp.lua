@@ -34,8 +34,8 @@ local Toggles = {
 }
 
 local CustomFlySpeed = 50
-local CustomSpeedValue = 16
-local CustomJumpPowerValue = 50
+local CustomSpeedValue = 50
+local CustomJumpPowerValue = 80
 
 -- Forward Declarations
 local startFlying
@@ -620,7 +620,9 @@ AddToggleRow("Anti-Sit Mode", "AntiSit", function(state)
 end)
 
 -- 7. Anti-Ragdoll / Stabilizer Toggle
-AddToggleRow("Anti-Ragdoll / Stabilizer", "AntiRagdoll")
+AddToggleRow("Anti-Ragdoll / Stabilizer", "AntiRagdoll", function(state)
+    if applyPlayerPhysics then applyPlayerPhysics() end
+end)
 
 -- 8. Ghost / Invisible Mode Toggle
 AddToggleRow("Ghost / Invisible Mode", "Invisible", function(state)
@@ -638,7 +640,11 @@ end)
 AddActionRow("💀 Reset Character", function()
     local char = LocalPlayer.Character
     local hum = char and char:FindFirstChildOfClass("Humanoid")
-    if hum then hum.Health = 0 end
+    if hum then
+        hum.Health = 0
+    elseif char then
+        char:BreakJoints()
+    end
 end)
 
 -- Footer
@@ -697,7 +703,7 @@ UserInputService.InputChanged:Connect(function(input)
 end)
 
 -- =================================================================
--- GAME HELPER ENGINES & PHYSICS
+-- GAME HELPER ENGINES & PHYSICS (ROBUST & CONTINUOUS)
 -- =================================================================
 
 -- Anti-AFK Engine
@@ -715,7 +721,7 @@ end)
 local function getChar()
     local char = LocalPlayer.Character
     if char then
-        local hrp = char:FindFirstChild("HumanoidRootPart")
+        local hrp = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
         local hum = char:FindFirstChildOfClass("Humanoid")
         return hrp, hum, char
     end
@@ -723,24 +729,44 @@ local function getChar()
 end
 
 applyPlayerPhysics = function()
-    local _, hum, _ = getChar()
+    local hrp, hum, char = getChar()
     if hum then
         if Toggles.WalkSpeedBoost then
             hum.WalkSpeed = CustomSpeedValue
         else
             hum.WalkSpeed = 16
         end
+
         if Toggles.JumpPowerBoost then
             hum.UseJumpPower = true
             hum.JumpPower = CustomJumpPowerValue
+            pcall(function() hum.JumpHeight = CustomJumpPowerValue / 7.2 end)
         else
             hum.JumpPower = 50
+            pcall(function() hum.JumpHeight = 7.2 end)
         end
+
         if Toggles.AntiSit then
             hum.Sit = false
             hum:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
         else
             hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+        end
+
+        if Toggles.AntiRagdoll then
+            hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+            hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+            hum:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding, false)
+        else
+            hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true)
+            hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
+        end
+    end
+    if char and Toggles.Invisible then
+        for _, p in ipairs(char:GetDescendants()) do
+            if p:IsA("BasePart") or p:IsA("Decal") then
+                p.Transparency = 0.8
+            end
         end
     end
 end
@@ -762,33 +788,32 @@ UpdateCharacterJump = function()
         if Toggles.JumpPowerBoost then
             hum.UseJumpPower = true
             hum.JumpPower = CustomJumpPowerValue
+            pcall(function() hum.JumpHeight = CustomJumpPowerValue / 7.2 end)
         else
             hum.JumpPower = 50
+            pcall(function() hum.JumpHeight = 7.2 end)
         end
     end
 end
 
-LocalPlayer.CharacterAdded:Connect(function()
-    task.wait(0.6)
+-- Hook CharacterAdded and Character Spawn
+LocalPlayer.CharacterAdded:Connect(function(char)
+    task.wait(0.4)
     applyPlayerPhysics()
-    if Toggles.Invisible then
-        local _, _, char = getChar()
-        if char then
-            for _, p in ipairs(char:GetDescendants()) do
-                if p:IsA("BasePart") or p:IsA("Decal") then
-                    p.Transparency = 0.8
-                end
-            end
-        end
-    end
 end)
 
--- Stepped Loop for Movement / Noclip / Anti-Sit / Anti-Ragdoll
+-- Initial Startup Physics Apply
+task.spawn(function()
+    task.wait(0.5)
+    applyPlayerPhysics()
+end)
+
+-- Continuous Enforcement on Stepped & Heartbeat
 RunService.Stepped:Connect(function()
     local hrp, hum, char = getChar()
     if not char then return end
 
-    -- Noclip logic
+    -- Noclip (Pass through walls and doors)
     if Toggles.NoClip then
         for _, part in ipairs(char:GetDescendants()) do
             if part:IsA("BasePart") and part.CanCollide then
@@ -800,39 +825,51 @@ RunService.Stepped:Connect(function()
     -- Anti-Sit
     if Toggles.AntiSit and hum and hum.Sit then
         hum.Sit = false
+        hum:ChangeState(Enum.HumanoidStateType.GettingUp)
     end
 
-    -- Anti-Ragdoll & Fling Stabilizer
+    -- Anti-Ragdoll / Anti-Fling Stabilizer
     if Toggles.AntiRagdoll and hrp then
-        if hrp.AssemblyLinearVelocity.Magnitude > 350 then
+        if hrp.AssemblyLinearVelocity.Magnitude > 150 then
             hrp.AssemblyLinearVelocity = Vector3.zero
             hrp.AssemblyAngularVelocity = Vector3.zero
         end
     end
 
-    -- Continuous Speed & Jump Enforcement
+    -- Persistent Speed & Jump Enforcer (Overcomes Brookhaven vehicle / animation overrides)
     if hum then
         if Toggles.WalkSpeedBoost and hum.WalkSpeed ~= CustomSpeedValue then
             hum.WalkSpeed = CustomSpeedValue
         end
-        if Toggles.JumpPowerBoost and hum.JumpPower ~= CustomJumpPowerValue then
-            hum.UseJumpPower = true
-            hum.JumpPower = CustomJumpPowerValue
+        if Toggles.JumpPowerBoost then
+            if hum.JumpPower ~= CustomJumpPowerValue then
+                hum.UseJumpPower = true
+                hum.JumpPower = CustomJumpPowerValue
+            end
         end
     end
 end)
 
--- Infinite Jump
+RunService.Heartbeat:Connect(function()
+    local hrp, hum, char = getChar()
+    if hum and Toggles.WalkSpeedBoost and hum.WalkSpeed ~= CustomSpeedValue then
+        hum.WalkSpeed = CustomSpeedValue
+    end
+end)
+
+-- Infinite Jump (Supports both Keyboard Space & Mobile Jump Button)
 UserInputService.JumpRequest:Connect(function()
     if Toggles.InfiniteJump then
-        local _, hum, _ = getChar()
-        if hum then
+        local hrp, hum, _ = getChar()
+        if hum and hrp then
             hum:ChangeState(Enum.HumanoidStateType.Jumping)
+            local jumpVelocity = (Toggles.JumpPowerBoost and CustomJumpPowerValue or 50)
+            hrp.AssemblyLinearVelocity = Vector3.new(hrp.AssemblyLinearVelocity.X, jumpVelocity, hrp.AssemblyLinearVelocity.Z)
         end
     end
 end)
 
--- Fly System
+-- Universal Mobile & PC Fly System
 local flyBodyVelocity = nil
 local flyBodyGyro = nil
 local flyConnection = nil
@@ -841,6 +878,10 @@ startFlying = function()
     local hrp, hum, _ = getChar()
     if not hrp or not hum then return end
     hum.PlatformStand = true
+
+    if flyBodyVelocity then flyBodyVelocity:Destroy() end
+    if flyBodyGyro then flyBodyGyro:Destroy() end
+    if flyConnection then flyConnection:Disconnect() end
 
     flyBodyVelocity = Instance.new("BodyVelocity")
     flyBodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
@@ -853,28 +894,52 @@ startFlying = function()
     flyBodyGyro.CFrame = hrp.CFrame
     flyBodyGyro.Parent = hrp
 
-    if flyConnection then flyConnection:Disconnect() end
-
     flyConnection = RunService.RenderStepped:Connect(function()
-        if not Toggles.FlyMode or not hrp or not hum then
+        if not Toggles.FlyMode or not hrp or not hum or not hrp.Parent then
             if stopFlying then stopFlying() end
             return
         end
 
         local speed = CustomFlySpeed
-        local moveDir = hum.MoveDirection
         local camCFrame = Camera and Camera.CFrame or Workspace.CurrentCamera.CFrame
 
         flyBodyGyro.CFrame = camCFrame
 
         local velocity = Vector3.new(0, 0, 0)
-        if moveDir.Magnitude > 0 then
-            velocity = (camCFrame.LookVector * (moveDir.Z * -1) + camCFrame.RightVector * moveDir.X).Unit * speed
+        local moved = false
+
+        -- 1. PC Keyboard Input
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+            velocity = velocity + camCFrame.LookVector
+            moved = true
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+            velocity = velocity - camCFrame.LookVector
+            moved = true
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+            velocity = velocity - camCFrame.RightVector
+            moved = true
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+            velocity = velocity + camCFrame.RightVector
+            moved = true
         end
 
-        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+        -- 2. Mobile Thumbstick / MoveDirection Input
+        if not moved and hum.MoveDirection.Magnitude > 0 then
+            velocity = hum.MoveDirection
+            moved = true
+        end
+
+        if moved then
+            velocity = velocity.Unit * speed
+        end
+
+        -- Vertical Control (Space / Shift or E / Q)
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) or UserInputService:IsKeyDown(Enum.KeyCode.E) then
             velocity = velocity + Vector3.new(0, speed, 0)
-        elseif UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+        elseif UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.Q) then
             velocity = velocity - Vector3.new(0, speed, 0)
         end
 
