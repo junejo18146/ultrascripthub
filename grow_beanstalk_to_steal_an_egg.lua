@@ -28,6 +28,7 @@ local Toggles = {
     FastClimbBeanstalk = false,
     InfiniteBeanstalk = false,
     AutoUnlockTreadmill = false,
+    AutoTrainTreadmill = false,
     AutoUpgradeBase = false,
     AutoHatchEgg = false,
     AutoRebirth = false,
@@ -55,8 +56,10 @@ if getconnections then
     end
 else
     LocalPlayer.Idled:Connect(function()
-        VirtualUser:CaptureController()
-        VirtualUser:ClickButton2(Vector2.new(0, 0))
+        pcall(function()
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new(0, 0))
+        end)
     end)
 end
 
@@ -88,29 +91,42 @@ local function GetHumanoid()
     return char and char:FindFirstChildOfClass("Humanoid")
 end
 
--- Auto-Locate Player's Base/Plot
+-- Auto-Locate Player's Base/Plot (Ultra Multi-Layer Finder)
 local function FindMyPlot()
-    local potentialPlots = Workspace:FindFirstChild("Plots") or Workspace:FindFirstChild("Bases") or Workspace:FindFirstChild("Tycoons") or Workspace:FindFirstChild("Islands")
-    if potentialPlots then
-        for _, plot in ipairs(potentialPlots:GetChildren()) do
-            local ownerVal = plot:FindFirstChild("Owner") or plot:FindFirstChild("Player") or plot:FindFirstChild("UserId")
-            if ownerVal and (ownerVal.Value == LocalPlayer or ownerVal.Value == LocalPlayer.Name or ownerVal.Value == LocalPlayer.UserId) then
-                return plot
-            end
-            if string.find(string.lower(plot.Name), string.lower(LocalPlayer.Name)) then
-                return plot
-            end
-        end
-    end
-    -- Fallback: check all models in workspace
-    for _, obj in ipairs(Workspace:GetChildren()) do
-        if obj:IsA("Model") or obj:IsA("Folder") then
-            local ownerVal = obj:FindFirstChild("Owner") or obj:FindFirstChild("Player")
-            if ownerVal and (ownerVal.Value == LocalPlayer or ownerVal.Value == LocalPlayer.Name or ownerVal.Value == LocalPlayer.UserId) then
-                return obj
-            end
-            if string.find(string.lower(obj.Name), string.lower(LocalPlayer.Name)) then
-                return obj
+    local possibleContainers = {
+        Workspace:FindFirstChild("Plots"),
+        Workspace:FindFirstChild("Bases"),
+        Workspace:FindFirstChild("Tycoons"),
+        Workspace:FindFirstChild("Islands"),
+        Workspace:FindFirstChild("Players"),
+        Workspace:FindFirstChild("Map"),
+        Workspace
+    }
+    
+    for _, container in ipairs(possibleContainers) do
+        if container then
+            for _, plot in ipairs(container:GetChildren()) do
+                if plot:IsA("Model") or plot:IsA("Folder") then
+                    -- Check Owner/Player attributes or values
+                    local ownerVal = plot:FindFirstChild("Owner") or plot:FindFirstChild("Player") or plot:FindFirstChild("UserId") or plot:FindFirstChild("OwnerName")
+                    if ownerVal and (ownerVal.Value == LocalPlayer or ownerVal.Value == LocalPlayer.Name or ownerVal.Value == LocalPlayer.UserId or tostring(ownerVal.Value) == tostring(LocalPlayer.UserId)) then
+                        return plot
+                    end
+                    -- Check plot name
+                    local lowName = string.lower(plot.Name)
+                    if string.find(lowName, string.lower(LocalPlayer.Name)) or string.find(lowName, tostring(LocalPlayer.UserId)) then
+                        return plot
+                    end
+                    -- Check for Player sign/billboard
+                    local sign = plot:FindFirstChild("Sign", true) or plot:FindFirstChild("OwnerSign", true)
+                    if sign then
+                        for _, txt in ipairs(sign:GetDescendants()) do
+                            if txt:IsA("TextLabel") and (string.find(string.lower(txt.Text), string.lower(LocalPlayer.Name)) or string.find(string.lower(txt.Text), string.lower(LocalPlayer.DisplayName))) then
+                                return plot
+                            end
+                        end
+                    end
+                end
             end
         end
     end
@@ -135,7 +151,7 @@ local function GetBasePosition()
     return Vector3.new(0, 5, 0)
 end
 
--- Fire Prompt / Remote Utility
+-- Universal Interaction Handlers
 local function TriggerPrompt(prompt)
     if not prompt or not prompt:IsA("ProximityPrompt") then return end
     pcall(function()
@@ -144,8 +160,17 @@ local function TriggerPrompt(prompt)
         else
             prompt.HoldDuration = 0
             prompt:InputHoldBegin()
-            task.wait(0.05)
+            task.wait(0.04)
             prompt:InputHoldEnd()
+        end
+    end)
+end
+
+local function TriggerClickDetector(cd)
+    if not cd or not cd:IsA("ClickDetector") then return end
+    pcall(function()
+        if fireclickdetector then
+            fireclickdetector(cd)
         end
     end)
 end
@@ -156,18 +181,12 @@ local function SafeTouch(targetPart)
     pcall(function()
         if firetouchinterest then
             firetouchinterest(root, targetPart, 0)
-            task.wait(0.03)
+            task.wait(0.02)
             firetouchinterest(root, targetPart, 1)
-        else
-            local oldPos = root.CFrame
-            root.CFrame = targetPart.CFrame + Vector3.new(0, 1.5, 0)
-            task.wait(0.1)
-            root.CFrame = oldPos
         end
     end)
 end
 
--- Click GUI elements safely
 local function ClickGuiButton(btn)
     if not btn then return end
     pcall(function()
@@ -176,6 +195,38 @@ local function ClickGuiButton(btn)
         end
         for _, conn in pairs(getconnections(btn.Activated)) do
             conn:Fire()
+        end
+    end)
+end
+
+-- Universal Remote Fire Helper
+local function FireRemotesByKeywords(keywords, argsList)
+    pcall(function()
+        for _, descendant in ipairs(ReplicatedStorage:GetDescendants()) do
+            if descendant:IsA("RemoteEvent") or descendant:IsA("RemoteFunction") then
+                local lname = string.lower(descendant.Name)
+                for _, kw in ipairs(keywords) do
+                    if string.find(lname, kw) then
+                        if descendant:IsA("RemoteEvent") then
+                            descendant:FireServer()
+                            if argsList then
+                                for _, arg in ipairs(argsList) do
+                                    descendant:FireServer(arg)
+                                    descendant:FireServer(unpack(type(arg) == "table" and arg or {arg}))
+                                end
+                            end
+                        elseif descendant:IsA("RemoteFunction") then
+                            descendant:InvokeServer()
+                            if argsList then
+                                for _, arg in ipairs(argsList) do
+                                    descendant:InvokeServer(arg)
+                                end
+                            end
+                        end
+                        break
+                    end
+                end
+            end
         end
     end)
 end
@@ -249,21 +300,7 @@ local function ExecuteSteal(eggData, returnToBase)
     end
     SafeTouch(targetPart)
 
-    -- Steal Remotes
-    pcall(function()
-        for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
-            if rem:IsA("RemoteEvent") or rem:IsA("RemoteFunction") then
-                local remName = string.lower(rem.Name)
-                if string.find(remName, "steal") or string.find(remName, "grabegg") or string.find(remName, "takeegg") then
-                    if rem:IsA("RemoteEvent") then
-                        rem:FireServer(eggData.Instance)
-                    else
-                        rem:InvokeServer(eggData.Instance)
-                    end
-                end
-            end
-        end
-    end)
+    FireRemotesByKeywords({"steal", "grabegg", "takeegg"}, {eggData.Instance, eggData.Instance.Name})
 
     task.wait(0.15)
     
@@ -355,90 +392,84 @@ end)
 -- 4. Fast Climb on Beanstalk (UPGRADED: Instant Glide & Summit Reach)
 task.spawn(function()
     while true do
-        task.wait(0.05)
+        task.wait(0.04)
         if Toggles.FastClimbBeanstalk then
             local root = GetRootPart()
             local hum = GetHumanoid()
             if root and hum then
-                -- Locate nearest beanstalk or beanstalk parts
-                local targetClimbPos = nil
-                local myPlot = FindMyPlot()
-                local searchArea = myPlot or Workspace
-                
-                for _, obj in ipairs(searchArea:GetDescendants()) do
-                    if obj:IsA("BasePart") then
-                        local name = string.lower(obj.Name)
-                        if string.find(name, "beanstalk") or string.find(name, "stalk") or string.find(name, "vine") or string.find(name, "ladder") or string.find(name, "climb") then
-                            if (root.Position - obj.Position).Magnitude < 75 then
-                                targetClimbPos = obj.Position
-                                break
-                            end
-                        end
-                    end
-                end
-                
-                -- Fast upward glide
-                root.AssemblyLinearVelocity = Vector3.new(0, 140, 0)
-                root.CFrame = root.CFrame + Vector3.new(0, 4, 0)
+                root.AssemblyLinearVelocity = Vector3.new(0, 160, 0)
+                root.CFrame = root.CFrame + Vector3.new(0, 5, 0)
                 hum:ChangeState(Enum.HumanoidStateType.Freefall)
             end
         end
     end
 end)
 
--- 5. NEW FEATURE: Infinite / Longest Beanstalk (Super Growth Spammer & Visual Tower)
+-- 5. Auto Collect Plot Cash Engine (Supports Beanstalk & Treadmill Purchases)
 task.spawn(function()
     while true do
-        task.wait(0.2)
-        if Toggles.InfiniteBeanstalk then
+        task.wait(0.3)
+        if Toggles.InfiniteBeanstalk or Toggles.AutoUnlockTreadmill or Toggles.AutoUpgradeBase then
             local myPlot = FindMyPlot()
-            
-            -- Server Growth Remotes Spammer
-            pcall(function()
-                for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if rem:IsA("RemoteEvent") or rem:IsA("RemoteFunction") then
-                        local remName = string.lower(rem.Name)
-                        if string.find(remName, "grow") or string.find(remName, "beanstalk") or string.find(remName, "water") or string.find(remName, "fertilize") or string.find(remName, "feed") or string.find(remName, "upgradebeanstalk") or string.find(remName, "growth") then
-                            if rem:IsA("RemoteEvent") then
-                                rem:FireServer()
-                                rem:FireServer(100)
-                                rem:FireServer(true)
-                            else
-                                rem:InvokeServer()
-                            end
-                        end
-                    end
-                end
-            end)
-            
-            -- Plot Growth Prompts & Touch Pads
             if myPlot then
                 for _, obj in ipairs(myPlot:GetDescendants()) do
                     local name = string.lower(obj.Name)
-                    if string.find(name, "grow") or string.find(name, "water") or string.find(name, "feed") or string.find(name, "beanstalk") or string.find(name, "upgrade") then
+                    if string.find(name, "collector") or string.find(name, "cash") or string.find(name, "money") or string.find(name, "bank") or string.find(name, "drop") or string.find(name, "earnings") or string.find(name, "atm") then
                         if obj:IsA("ProximityPrompt") then
                             TriggerPrompt(obj)
+                        elseif obj:IsA("ClickDetector") then
+                            TriggerClickDetector(obj)
+                        elseif obj:IsA("BasePart") then
+                            SafeTouch(obj)
+                        end
+                    end
+                end
+            end
+            FireRemotesByKeywords({"collect", "claimcash", "withdraw", "collectcash", "getmoney", "bank"})
+        end
+    end
+end)
+
+-- 6. SUPER BEANSTALK GROW ENGINE (Server Spammer + Tycoon Unlocker + Skyward Stacker)
+task.spawn(function()
+    while true do
+        task.wait(0.15)
+        if Toggles.InfiniteBeanstalk then
+            local myPlot = FindMyPlot()
+            
+            -- Method 1: Remote Spammer
+            FireRemotesByKeywords(
+                {"grow", "beanstalk", "water", "fertilize", "feed", "upgradebeanstalk", "growth", "plantgrow", "buygrowth"},
+                {1, 10, 100, 1000, true, "Beanstalk", "Grow", "Max"}
+            )
+            
+            -- Method 2: Physical Pad & Prompt sweep on Plot
+            if myPlot then
+                for _, obj in ipairs(myPlot:GetDescendants()) do
+                    local name = string.lower(obj.Name)
+                    local parentName = obj.Parent and string.lower(obj.Parent.Name) or ""
+                    local isGrowTarget = string.find(name, "grow") or string.find(name, "beanstalk") or string.find(name, "water") or string.find(name, "feed") or string.find(name, "stalk") or string.find(name, "plant") or string.find(parentName, "grow") or string.find(parentName, "beanstalk")
+                    
+                    if isGrowTarget then
+                        if obj:IsA("ProximityPrompt") then
+                            TriggerPrompt(obj)
+                        elseif obj:IsA("ClickDetector") then
+                            TriggerClickDetector(obj)
                         elseif obj:IsA("BasePart") then
                             SafeTouch(obj)
                         end
                     end
                 end
                 
-                -- Mega Beanstalk Height Extender (Clones and stacks beanstalk segments skyward)
+                -- Method 3: Visual & Physical Mega Height Scaler (Longest Beanstalk)
                 for _, obj in ipairs(myPlot:GetDescendants()) do
                     if obj:IsA("BasePart") then
                         local name = string.lower(obj.Name)
-                        if string.find(name, "beanstalk") or string.find(name, "stem") or string.find(name, "stalk") or string.find(name, "vine") then
-                            if not obj:FindFirstChild("MegaScaled") then
-                                local tag = Instance.new("BoolValue")
-                                tag.Name = "MegaScaled"
-                                tag.Parent = obj
-                                
-                                pcall(function()
-                                    obj.Size = Vector3.new(obj.Size.X * 1.5, math.max(obj.Size.Y, 1500), obj.Size.Z * 1.5)
-                                    obj.CanCollide = true
-                                end)
-                            end
+                        if string.find(name, "beanstalk") or string.find(name, "stem") or string.find(name, "stalk") or string.find(name, "vine") or string.find(name, "trunk") then
+                            pcall(function()
+                                obj.Size = Vector3.new(math.max(obj.Size.X, 12), math.max(obj.Size.Y, 2000), math.max(obj.Size.Z, 12))
+                                obj.CanCollide = true
+                            end)
                         end
                     end
                 end
@@ -447,35 +478,48 @@ task.spawn(function()
     end
 end)
 
--- 6. Auto Unlock Treadmill
+-- 7. SUPER TREADMILL UNLOCK & TRAIN ENGINE (5-Layer Auto Unlock & Trainer)
 task.spawn(function()
     while true do
-        task.wait(0.4)
+        task.wait(0.25)
         if Toggles.AutoUnlockTreadmill then
             local myPlot = FindMyPlot()
-            if myPlot then
-                for _, obj in ipairs(myPlot:GetDescendants()) do
-                    local name = string.lower(obj.Name)
-                    if string.find(name, "treadmill") or string.find(name, "speed") or string.find(name, "unlock") or string.find(name, "tier") then
-                        if obj:IsA("ProximityPrompt") then
-                            TriggerPrompt(obj)
-                        elseif obj:IsA("BasePart") then
-                            SafeTouch(obj)
+            
+            -- Method 1: Remote Unlock Sweeper
+            FireRemotesByKeywords(
+                {"treadmill", "unlocktreadmill", "buytreadmill", "upgradespeed", "speedupgrade", "unlockspeed", "buyspeed", "treadmilltier", "train"},
+                {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, true, "Max", "Treadmill"}
+            )
+            
+            -- Method 2: Plot Pad & Button Sweeper (Touch + Click + Prompt)
+            local searchAreas = {myPlot, Workspace:FindFirstChild("Tycoons"), Workspace:FindFirstChild("Plots")}
+            for _, area in ipairs(searchAreas) do
+                if area then
+                    for _, obj in ipairs(area:GetDescendants()) do
+                        local name = string.lower(obj.Name)
+                        local parentName = obj.Parent and string.lower(obj.Parent.Name) or ""
+                        local isTreadmillTarget = string.find(name, "treadmill") or string.find(name, "speed") or string.find(name, "runner") or string.find(name, "track") or string.find(name, "unlock") or string.find(parentName, "treadmill") or string.find(parentName, "speed")
+                        
+                        if isTreadmillTarget then
+                            if obj:IsA("ProximityPrompt") then
+                                TriggerPrompt(obj)
+                            elseif obj:IsA("ClickDetector") then
+                                TriggerClickDetector(obj)
+                            elseif obj:IsA("BasePart") then
+                                SafeTouch(obj)
+                            end
                         end
                     end
                 end
             end
             
+            -- Method 3: PlayerGui Unlock / Upgrade Button Clicks
             pcall(function()
-                for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if rem:IsA("RemoteEvent") or rem:IsA("RemoteFunction") then
-                        local remName = string.lower(rem.Name)
-                        if string.find(remName, "treadmill") or string.find(remName, "unlockspeed") or string.find(remName, "buytreadmill") then
-                            if rem:IsA("RemoteEvent") then
-                                rem:FireServer()
-                            else
-                                rem:InvokeServer()
-                            end
+                for _, btn in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
+                    if btn:IsA("TextButton") or btn:IsA("ImageButton") then
+                        local text = string.lower(btn.Name .. " " .. (btn:IsA("TextButton") and btn.Text or ""))
+                        if string.find(text, "treadmill") or string.find(text, "unlock speed") or string.find(text, "buy speed") or string.find(text, "upgrade speed") then
+                            ClickGuiButton(btn)
                         end
                     end
                 end
@@ -484,18 +528,21 @@ task.spawn(function()
     end
 end)
 
--- 7. Auto Upgrade Base
+-- 8. Auto Upgrade Base (Auto Tycoon Builder)
 task.spawn(function()
     while true do
-        task.wait(0.4)
+        task.wait(0.3)
         if Toggles.AutoUpgradeBase then
             local myPlot = FindMyPlot()
             if myPlot then
                 for _, obj in ipairs(myPlot:GetDescendants()) do
                     local name = string.lower(obj.Name)
-                    if string.find(name, "upgrade") or string.find(name, "buy") or string.find(name, "grow") or string.find(name, "expand") or string.find(name, "capacity") or string.find(name, "button") then
+                    local parentName = obj.Parent and string.lower(obj.Parent.Name) or ""
+                    if string.find(name, "upgrade") or string.find(name, "buy") or string.find(name, "button") or string.find(name, "pad") or string.find(parentName, "buttons") or string.find(parentName, "upgrades") then
                         if obj:IsA("ProximityPrompt") then
                             TriggerPrompt(obj)
+                        elseif obj:IsA("ClickDetector") then
+                            TriggerClickDetector(obj)
                         elseif obj:IsA("BasePart") then
                             SafeTouch(obj)
                         end
@@ -503,32 +550,19 @@ task.spawn(function()
                 end
             end
             
-            pcall(function()
-                for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if rem:IsA("RemoteEvent") or rem:IsA("RemoteFunction") then
-                        local remName = string.lower(rem.Name)
-                        if string.find(remName, "upgrade") or string.find(remName, "growbeanstalk") or string.find(remName, "buybase") or string.find(remName, "purchase") then
-                            if rem:IsA("RemoteEvent") then
-                                rem:FireServer()
-                            else
-                                rem:InvokeServer()
-                            end
-                        end
-                    end
-                end
-            end)
+            FireRemotesByKeywords({"upgrade", "buybase", "purchase", "tycoonbuy", "buybutton", "plotupgrade"}, {true, 1, "Max"})
         end
     end
 end)
 
--- 8. Auto Hatch Egg (UPGRADED: 4-Layer Comprehensive Hatching Engine)
+-- 9. Auto Hatch Egg (4-Layer Comprehensive Hatching Engine)
 task.spawn(function()
     while true do
-        task.wait(0.3)
+        task.wait(0.25)
         if Toggles.AutoHatchEgg then
             local myPlot = FindMyPlot()
             
-            -- Layer 1: Plot & Workspace Proximity Prompts
+            -- Layer 1: Proximity Prompts on Plot & Map
             local searchAreas = {myPlot, Workspace}
             for _, area in ipairs(searchAreas) do
                 if area then
@@ -544,26 +578,10 @@ task.spawn(function()
             end
             
             -- Layer 2: Universal Hatch Remotes Sweeper
-            pcall(function()
-                for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if rem:IsA("RemoteEvent") or rem:IsA("RemoteFunction") then
-                        local remName = string.lower(rem.Name)
-                        if string.find(remName, "hatch") or string.find(remName, "openegg") or string.find(remName, "crackegg") or string.find(remName, "claimpet") or string.find(remName, "placeegg") then
-                            if rem:IsA("RemoteEvent") then
-                                rem:FireServer()
-                                rem:FireServer(1)
-                                rem:FireServer("1")
-                                rem:FireServer(true)
-                                rem:FireServer("Common")
-                                rem:FireServer("Egg")
-                            else
-                                rem:InvokeServer()
-                                rem:InvokeServer(1)
-                            end
-                        end
-                    end
-                end
-            end)
+            FireRemotesByKeywords(
+                {"hatch", "openegg", "crackegg", "claimpet", "placeegg", "egghatch", "open"},
+                {1, "1", true, "Common", "Egg", "Basic", "Golden"}
+            )
             
             -- Layer 3: Plot Incubator Touch Pads
             if myPlot then
@@ -592,29 +610,16 @@ task.spawn(function()
     end
 end)
 
--- 9. Auto Rebirth (UPGRADED: 4-Layer Universal Rebirth Engine)
+-- 10. Auto Rebirth (4-Layer Universal Rebirth Engine)
 task.spawn(function()
     while true do
-        task.wait(0.4)
+        task.wait(0.35)
         if Toggles.AutoRebirth then
             -- Layer 1: Remotes Sweeper
-            pcall(function()
-                for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if rem:IsA("RemoteEvent") or rem:IsA("RemoteFunction") then
-                        local remName = string.lower(rem.Name)
-                        if string.find(remName, "rebirth") or string.find(remName, "prestige") or string.find(remName, "ascend") or string.find(remName, "dorebirth") or string.find(remName, "requestrebirth") then
-                            if rem:IsA("RemoteEvent") then
-                                rem:FireServer()
-                                rem:FireServer(1)
-                                rem:FireServer(true)
-                            else
-                                rem:InvokeServer()
-                                rem:InvokeServer(1)
-                            end
-                        end
-                    end
-                end
-            end)
+            FireRemotesByKeywords(
+                {"rebirth", "prestige", "ascend", "dorebirth", "requestrebirth", "rebirthsystem"},
+                {1, true, "1"}
+            )
             
             -- Layer 2: Proximity Prompts & Pads
             local myPlot = FindMyPlot()
@@ -626,6 +631,8 @@ task.spawn(function()
                         if string.find(name, "rebirth") or string.find(name, "prestige") then
                             if obj:IsA("ProximityPrompt") then
                                 TriggerPrompt(obj)
+                            elseif obj:IsA("ClickDetector") then
+                                TriggerClickDetector(obj)
                             elseif obj:IsA("BasePart") then
                                 SafeTouch(obj)
                             end
@@ -649,34 +656,23 @@ task.spawn(function()
     end
 end)
 
--- 10. Auto Claim All Rewards
+-- 11. Auto Claim All Rewards
 task.spawn(function()
     while true do
         task.wait(1)
         if Toggles.AutoClaimRewards then
-            pcall(function()
-                for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if rem:IsA("RemoteEvent") or rem:IsA("RemoteFunction") then
-                        local remName = string.lower(rem.Name)
-                        if string.find(remName, "claim") or string.find(remName, "reward") or string.find(remName, "gift") or string.find(remName, "daily") or string.find(remName, "spin") or string.find(remName, "chest") then
-                            if rem:IsA("RemoteEvent") then
-                                rem:FireServer()
-                                rem:FireServer(1)
-                                rem:FireServer("Daily")
-                                rem:FireServer("Playtime")
-                            else
-                                rem:InvokeServer()
-                            end
-                        end
-                    end
-                end
-            end)
+            FireRemotesByKeywords(
+                {"claim", "reward", "gift", "daily", "spin", "chest", "playtime"},
+                {1, "Daily", "Playtime", "Gift1", "Gift2", "Gift3", "Free", true}
+            )
             
             for _, obj in ipairs(Workspace:GetDescendants()) do
                 local name = string.lower(obj.Name)
                 if string.find(name, "reward") or string.find(name, "chest") or string.find(name, "gift") then
                     if obj:IsA("ProximityPrompt") then
                         TriggerPrompt(obj)
+                    elseif obj:IsA("ClickDetector") then
+                        TriggerClickDetector(obj)
                     elseif obj:IsA("BasePart") then
                         SafeTouch(obj)
                     end
@@ -686,7 +682,7 @@ task.spawn(function()
     end
 end)
 
--- 11. WalkSpeed Boost Engine
+-- 12. WalkSpeed Boost Engine
 local function UpdateWalkSpeed()
     local hum = GetHumanoid()
     if hum then
@@ -707,7 +703,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- 12. Infinite Jump Engine with Jump Height
+-- 13. Infinite Jump Engine with Jump Height
 UserInputService.JumpRequest:Connect(function()
     if Toggles.InfiniteJump then
         local hum = GetHumanoid()
@@ -719,7 +715,7 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
--- 13. 3D Fly Mode Engine
+-- 14. 3D Fly Mode Engine
 local function StartFlying()
     local char = GetCharacter()
     local root = GetRootPart()
@@ -1126,7 +1122,7 @@ AddToggleRow("Auto Steal Nearest Egg", "AutoStealNearestEgg")
 -- 4. Fast Climb on Beanstalk
 AddToggleRow("Fast Climb Beanstalk", "FastClimbBeanstalk")
 
--- 5. NEW: Infinite / Longest Beanstalk
+-- 5. Infinite Long Beanstalk (Mega Height & Auto Grow)
 AddToggleRow("Infinite Long Beanstalk", "InfiniteBeanstalk")
 
 -- 6. Auto Unlock Treadmill
@@ -1190,4 +1186,4 @@ FooterSub.TextSize = 9
 FooterSub.Font = Enum.Font.GothamMedium
 FooterSub.Parent = Footer
 
-print("Junejo Ultra Script Hub V2 updated successfully for Grow Beanstalk to Steal An Egg!")
+print("Junejo Ultra Script Hub V3 loaded successfully for Grow Beanstalk to Steal An Egg!")
