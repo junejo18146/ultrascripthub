@@ -1,5 +1,5 @@
 -- =================================================================
--- JUNEJO SCRIPT HUB: STEAL FISH EGGS (ULTRA MASTER V4)
+-- JUNEJO ULTRA SCRIPT HUB: STEAL FISH EGGS (7 MAIN HYBRID FEATURES)
 -- Game: Steal Fish Eggs (PlaceId: 99183404085821)
 -- Creator: Made by Junejo (junejo18146)
 -- Repository: ultrascripthub
@@ -117,38 +117,20 @@ local RarityScores = {
     ["Basic"] = 1000
 }
 
-local RarityColors = {
-    ["Astral"] = Color3.fromRGB(255, 105, 180),
-    ["Abyssal"] = Color3.fromRGB(0, 255, 255),
-    ["Mythic"] = Color3.fromRGB(255, 60, 60),
-    ["Legendary"] = Color3.fromRGB(255, 215, 0),
-    ["Epic"] = Color3.fromRGB(168, 85, 247),
-    ["Rare"] = Color3.fromRGB(60, 140, 255),
-    ["Basic"] = Color3.fromRGB(180, 180, 180)
-}
-
 -- =================================================================
--- GLOBAL TOGGLES & STATES
+-- GLOBAL TOGGLES & STATES (THE 7 MAIN HYBRID FEATURES)
 -- =================================================================
 local Toggles = {
-    AutoSteal = false,
+    AutoStealBest = false,
+    AutoStealAstral = false,
     RemoveGuards = false,
-    AutoHatch = false,
-    AutoPlace = false,
+    Godmode = false,
     AutoTrainSwimSpeed = false,
-    AutoCollectMoney = false,
-    AutoUpgradeBase = false,
-    FlyMode = false,
-    Noclip = false,
-    RareEggOnlyESP = false,
-    PlayerESP = false,
+    AutoHatchAndPlace = false,
     AntiAFK = true
 }
 
-local FlySpeedValue = 50
 local SavedBaseCFrame = nil
-local CurrentRareEggESPInstances = {}
-local CurrentPlayerESPInstances = {}
 local CooldownEggs = {}
 local ToggleVisualUpdaters = {}
 
@@ -447,18 +429,6 @@ local function IsCarryingEgg()
     return false
 end
 
--- Get equipped egg tool
-local function GetEquippedEggTool()
-    local char = LocalPlayer.Character
-    if not char then return nil end
-    for _, item in ipairs(char:GetChildren()) do
-        if item:IsA("Tool") and (item:GetAttribute("EggType") ~= nil or item.Name:lower():find("egg")) then
-            return item
-        end
-    end
-    return nil
-end
-
 -- Ensure egg tool is equipped
 local function EquipCarriedEggTool()
     local char = LocalPlayer.Character
@@ -473,11 +443,18 @@ local function EquipCarriedEggTool()
             end
         end
     end
-    return GetEquippedEggTool()
+    if char then
+        for _, item in ipairs(char:GetChildren()) do
+            if item:IsA("Tool") and (item:GetAttribute("EggType") ~= nil or item.Name:lower():find("egg")) then
+                return item
+            end
+        end
+    end
+    return nil
 end
 
 -- =================================================================
--- GAME FEATURE 1: AUTO STEAL EGGS (ZONE FILTER + LINE ESCAPE + TANK)
+-- FEATURE 1 & 2: EGG STEALING ENGINE (BEST EGG & ASTRAL ONLY)
 -- =================================================================
 local function GetZoneBiomeFolder(internalName)
     local biomesFolder = Workspace:FindFirstChild("Biomes") or Workspace:FindFirstChild("Zones") or Workspace:FindFirstChild("Oceans")
@@ -487,12 +464,14 @@ local function GetZoneBiomeFolder(internalName)
     return nil
 end
 
-local function GetBestEggInZone(chosenBiomeInternal)
+local function GetTargetEgg(astralOnly)
     local candidates = {}
+    local chosenBiomeName = AvailableZones[CurrentZoneIndex]
+    local chosenBiomeInternal = ZoneInternalMap[chosenBiomeName] or "ALL"
 
     local biomeFolder = GetZoneBiomeFolder(chosenBiomeInternal)
     local biomeCenterPos = nil
-    if biomeFolder then
+    if biomeFolder and not astralOnly then
         local bp = biomeFolder:FindFirstChild("BiomePart", true) or biomeFolder:FindFirstChildWhichIsA("BasePart", true)
         if bp then
             biomeCenterPos = bp.Position
@@ -510,31 +489,39 @@ local function GetBestEggInZone(chosenBiomeInternal)
         if folder then
             for _, egg in ipairs(folder:GetChildren()) do
                 if egg:IsA("Model") and not CooldownEggs[egg] then
-                    local eggBiome = tostring(egg:GetAttribute("Biome") or "")
-                    local isMatch = false
+                    local rarity = tostring(egg:GetAttribute("Rarity") or "Basic")
+                    local score = RarityScores[rarity] or 1000
 
-                    if chosenBiomeInternal == "ALL" then
-                        isMatch = true
-                    elseif eggBiome == chosenBiomeInternal or eggBiome:lower() == chosenBiomeInternal:lower() then
-                        isMatch = true
-                    elseif biomeCenterPos then
-                        local pivot = egg:GetPivot()
-                        if (pivot.Position - biomeCenterPos).Magnitude < 350 then
-                            isMatch = true
+                    if astralOnly then
+                        if rarity == "Astral" or rarity == "Abyssal" or score >= 6000 then
+                            table.insert(candidates, { Model = egg, Score = score, Pivot = egg:GetPivot() })
                         end
-                    end
+                    else
+                        local eggBiome = tostring(egg:GetAttribute("Biome") or "")
+                        local isMatch = false
 
-                    if isMatch then
-                        local rarity = tostring(egg:GetAttribute("Rarity") or "Basic")
-                        local score = RarityScores[rarity] or 1000
-                        table.insert(candidates, { Model = egg, Score = score, Pivot = egg:GetPivot() })
+                        if chosenBiomeInternal == "ALL" then
+                            isMatch = true
+                        elseif eggBiome == chosenBiomeInternal or eggBiome:lower() == chosenBiomeInternal:lower() then
+                            isMatch = true
+                        elseif biomeCenterPos then
+                            local pivot = egg:GetPivot()
+                            if (pivot.Position - biomeCenterPos).Magnitude < 350 then
+                                isMatch = true
+                            end
+                        end
+
+                        if isMatch then
+                            table.insert(candidates, { Model = egg, Score = score, Pivot = egg:GetPivot() })
+                        end
                     end
                 end
             end
         end
     end
 
-    if #candidates == 0 and biomeFolder then
+    -- Fallback: Check Biome Descendants
+    if #candidates == 0 and biomeFolder and not astralOnly then
         for _, child in ipairs(biomeFolder:GetDescendants()) do
             if child:IsA("Model") and not CooldownEggs[child] and (child.Name:lower():find("egg") or child:GetAttribute("Rarity") ~= nil or child:FindFirstChildWhichIsA("ProximityPrompt", true)) then
                 local rarity = tostring(child:GetAttribute("Rarity") or "Basic")
@@ -544,12 +531,19 @@ local function GetBestEggInZone(chosenBiomeInternal)
         end
     end
 
+    -- Global Fallback
     if #candidates == 0 then
         for _, item in ipairs(Workspace:GetChildren()) do
             if item:IsA("Model") and not CooldownEggs[item] and (item:GetAttribute("Rarity") ~= nil or (item.Name:lower():find("egg") and not item.Name:lower():find("placed") and not item.Name:lower():find("carried"))) then
                 local rarity = tostring(item:GetAttribute("Rarity") or "Basic")
                 local score = RarityScores[rarity] or 1000
-                table.insert(candidates, { Model = item, Score = score, Pivot = item:GetPivot() })
+                if astralOnly then
+                    if rarity == "Astral" or rarity == "Abyssal" or score >= 6000 then
+                        table.insert(candidates, { Model = item, Score = score, Pivot = item:GetPivot() })
+                    end
+                else
+                    table.insert(candidates, { Model = item, Score = score, Pivot = item:GetPivot() })
+                end
             end
         end
     end
@@ -563,104 +557,108 @@ local function GetBestEggInZone(chosenBiomeInternal)
     return candidates[1].Model
 end
 
-task.spawn(function()
-    while true do
-        if Toggles.AutoSteal then
-            pcall(function()
-                if isAlive() then
-                    local hrp = getRoot()
-                    local hum = getHum()
+local function RunEggStealLoop(astralOnly)
+    pcall(function()
+        if isAlive() then
+            local hrp = getRoot()
+            local hum = getHum()
 
-                    if IsCarryingEgg() then
-                        -- STEP 1: CROSS "THE LINE" TO REGISTER ESCAPE
-                        local linePart = GetTheLinePart()
-                        if linePart then
-                            hrp.CFrame = linePart.CFrame + Vector3.new(0, 3, 0)
-                            hrp.AssemblyLinearVelocity = Vector3.zero
-                            TouchWithCharacter(linePart)
-                            task.wait(0.2)
-                        end
+            if IsCarryingEgg() then
+                -- 1. CROSS "THE LINE" TO REGISTER ESCAPE
+                local linePart = GetTheLinePart()
+                if linePart then
+                    hrp.CFrame = linePart.CFrame + Vector3.new(0, 3, 0)
+                    hrp.AssemblyLinearVelocity = Vector3.zero
+                    TouchWithCharacter(linePart)
+                    task.wait(0.2)
+                end
 
-                        -- STEP 2: DELIVER EGG TO BASE TANK
-                        local placeZone = GetPlayerPlacementZone()
-                        local placePos = GetPlayerPlacementWorldPosition()
-                        local baseCF = placeZone and (placeZone.CFrame + Vector3.new(0, 3, 0)) or GetPlayerBaseCFrame()
+                -- 2. DELIVER EGG TO BASE TANK
+                local placeZone = GetPlayerPlacementZone()
+                local placePos = GetPlayerPlacementWorldPosition()
+                local baseCF = placeZone and (placeZone.CFrame + Vector3.new(0, 3, 0)) or GetPlayerBaseCFrame()
 
-                        if baseCF then
-                            hrp.CFrame = baseCF
-                            hrp.AssemblyLinearVelocity = Vector3.zero
-                            task.wait(0.15)
+                if baseCF then
+                    hrp.CFrame = baseCF
+                    hrp.AssemblyLinearVelocity = Vector3.zero
+                    task.wait(0.15)
 
-                            EquipCarriedEggTool()
+                    EquipCarriedEggTool()
 
-                            local eggSys = ReplicatedStorage:FindFirstChild("EggSystem") or ReplicatedStorage
-                            local placeEggRemote = eggSys:FindFirstChild("PlaceEgg", true) or eggSys:FindFirstChild("Place", true) or ReplicatedStorage:FindFirstChild("PlaceEgg", true)
-                            if placeEggRemote and placeEggRemote:IsA("RemoteEvent") then
-                                if placePos then
-                                    placeEggRemote:FireServer(placePos)
-                                else
-                                    placeEggRemote:FireServer(baseCF.Position)
-                                end
-                                placeEggRemote:FireServer()
-                            end
-
-                            if placeZone then
-                                TouchWithCharacter(placeZone)
-                            end
-
-                            task.wait(0.3)
-                        end
-                    else
-                        -- FIND AND STEAL BEST EGG IN CHOSEN ZONE
-                        local chosenBiomeName = AvailableZones[CurrentZoneIndex]
-                        local chosenBiomeInternal = ZoneInternalMap[chosenBiomeName] or "ALL"
-                        local targetEgg = GetBestEggInZone(chosenBiomeInternal)
-
-                        if targetEgg and targetEgg.Parent then
-                            local pivot = targetEgg:GetPivot()
-                            hrp.CFrame = pivot * CFrame.new(0, 0.5, 0)
-                            hrp.AssemblyLinearVelocity = Vector3.zero
-
-                            local prompt = targetEgg:FindFirstChildWhichIsA("ProximityPrompt", true)
-                            if prompt then
-                                InstantTriggerPrompt(prompt)
-                            end
-
-                            for _, p in ipairs(targetEgg:GetDescendants()) do
-                                if p:IsA("BasePart") then
-                                    TouchWithCharacter(p)
-                                    InstantTouch(hrp, p)
-                                end
-                            end
-
-                            for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
-                                if rem:IsA("RemoteEvent") and (rem.Name:lower():find("take") or rem.Name:lower():find("steal") or rem.Name:lower():find("pickupegg")) then
-                                    pcall(function() rem:FireServer(targetEgg) end)
-                                end
-                            end
-
-                            local waitTicks = 0
-                            while waitTicks < 12 and not IsCarryingEgg() do
-                                task.wait(0.05)
-                                waitTicks = waitTicks + 1
-                                if targetEgg and targetEgg.Parent then
-                                    hrp.CFrame = targetEgg:GetPivot()
-                                    hrp.AssemblyLinearVelocity = Vector3.zero
-                                    local p = targetEgg:FindFirstChildWhichIsA("ProximityPrompt", true)
-                                    if p then InstantTriggerPrompt(p) end
-                                end
-                            end
-
-                            CooldownEggs[targetEgg] = true
-                            task.delay(4, function()
-                                CooldownEggs[targetEgg] = nil
-                            end)
+                    local eggSys = ReplicatedStorage:FindFirstChild("EggSystem") or ReplicatedStorage
+                    local placeEggRemote = eggSys:FindFirstChild("PlaceEgg", true) or eggSys:FindFirstChild("Place", true) or ReplicatedStorage:FindFirstChild("PlaceEgg", true)
+                    if placeEggRemote and placeEggRemote:IsA("RemoteEvent") then
+                        if placePos then
+                            placeEggRemote:FireServer(placePos)
                         else
-                            task.wait(0.35)
+                            placeEggRemote:FireServer(baseCF.Position)
+                        end
+                        placeEggRemote:FireServer()
+                    end
+
+                    if placeZone then
+                        TouchWithCharacter(placeZone)
+                    end
+
+                    task.wait(0.3)
+                end
+            else
+                local targetEgg = GetTargetEgg(astralOnly)
+
+                if targetEgg and targetEgg.Parent then
+                    local pivot = targetEgg:GetPivot()
+                    hrp.CFrame = pivot * CFrame.new(0, 0.5, 0)
+                    hrp.AssemblyLinearVelocity = Vector3.zero
+
+                    local prompt = targetEgg:FindFirstChildWhichIsA("ProximityPrompt", true)
+                    if prompt then
+                        InstantTriggerPrompt(prompt)
+                    end
+
+                    for _, p in ipairs(targetEgg:GetDescendants()) do
+                        if p:IsA("BasePart") then
+                            TouchWithCharacter(p)
+                            InstantTouch(hrp, p)
                         end
                     end
+
+                    for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
+                        if rem:IsA("RemoteEvent") and (rem.Name:lower():find("take") or rem.Name:lower():find("steal") or rem.Name:lower():find("pickupegg")) then
+                            pcall(function() rem:FireServer(targetEgg) end)
+                        end
+                    end
+
+                    local waitTicks = 0
+                    while waitTicks < 12 and not IsCarryingEgg() do
+                        task.wait(0.05)
+                        waitTicks = waitTicks + 1
+                        if targetEgg and targetEgg.Parent then
+                            hrp.CFrame = targetEgg:GetPivot()
+                            hrp.AssemblyLinearVelocity = Vector3.zero
+                            local p = targetEgg:FindFirstChildWhichIsA("ProximityPrompt", true)
+                            if p then InstantTriggerPrompt(p) end
+                        end
+                    end
+
+                    CooldownEggs[targetEgg] = true
+                    task.delay(4, function()
+                        CooldownEggs[targetEgg] = nil
+                    end)
+                else
+                    task.wait(0.35)
                 end
-            end)
+            end
+        end
+    end)
+end
+
+task.spawn(function()
+    while true do
+        if Toggles.AutoStealBest then
+            RunEggStealLoop(false)
+            task.wait(0.08)
+        elseif Toggles.AutoStealAstral then
+            RunEggStealLoop(true)
             task.wait(0.08)
         else
             task.wait(0.4)
@@ -669,8 +667,7 @@ task.spawn(function()
 end)
 
 -- =================================================================
--- GAME FEATURE 2: REMOVE GUARDS (UNIVERSAL FISH & HAZARD KILLER)
--- Neutralizes Models, MeshParts, Parts & TouchTransmitters
+-- FEATURE 3: REMOVE GUARDS (CHASER FISHES & HAZARDS KILLER)
 -- =================================================================
 local function NeutralizeTarget(target)
     if not target or target == LocalPlayer.Character or target.Parent == LocalPlayer.Character then return end
@@ -765,7 +762,6 @@ local function SweepAndRemoveAllGuards()
     end)
 end
 
--- Continuous Guard Removal Loop
 task.spawn(function()
     while true do
         if Toggles.RemoveGuards then
@@ -777,7 +773,6 @@ task.spawn(function()
     end
 end)
 
--- Instant Neutralization on Spawn
 Workspace.ChildAdded:Connect(function(child)
     if Toggles.RemoveGuards then
         task.wait(0.02)
@@ -796,7 +791,6 @@ Workspace.DescendantAdded:Connect(function(desc)
     end
 end)
 
--- Proximity Kill Shield
 RunService.Heartbeat:Connect(function()
     if Toggles.RemoveGuards and isAlive() then
         local myPos = LocalPlayer.Character.HumanoidRootPart.Position
@@ -814,12 +808,111 @@ RunService.Heartbeat:Connect(function()
 end)
 
 -- =================================================================
--- GAME FEATURE 3: AUTO HATCH (DIRECT REMOTES + PROMPTS + UI)
+-- FEATURE 4: GODMODE / ANTI-DAMAGE & ANTI-FLING SHIELD
+-- =================================================================
+RunService.Stepped:Connect(function()
+    if Toggles.Godmode and isAlive() then
+        local hum = getHum()
+        local hrp = getRoot()
+        if hum then
+            hum.Health = hum.MaxHealth
+            hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+            hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+        end
+        if hrp then
+            hrp.AssemblyAngularVelocity = Vector3.zero
+        end
+    end
+end)
+
+-- =================================================================
+-- FEATURE 5: AUTO TRAIN SWIM SPEED (TREADPOOL AUTOMATION)
 -- =================================================================
 task.spawn(function()
     while true do
-        if Toggles.AutoHatch then
+        if Toggles.AutoTrainSwimSpeed then
             pcall(function()
+                if isAlive() then
+                    local hrp = getRoot()
+                    local hum = getHum()
+
+                    local wsPools = Workspace:FindFirstChild("LocalTreadPools") or Workspace:FindFirstChild("TreadPools") or Workspace:FindFirstChild("Pools")
+                    local ownPool = wsPools and wsPools:FindFirstChild("OwnTreadPool")
+                    local targetPool = ownPool or (wsPools and wsPools:FindFirstChild("AdminTreadPool")) or (Workspace:FindFirstChild("TreadPools") and Workspace.TreadPools:FindFirstChild("AdminTreadPool"))
+
+                    if not targetPool then
+                        local base = GetPlayerBase()
+                        if base then
+                            targetPool = base:FindFirstChild("TreadPool", true) or base:FindFirstChild("Pool", true)
+                        end
+                    end
+
+                    if targetPool and hrp then
+                        local actPart = targetPool:FindFirstChild("ActivationPart", true) or targetPool:FindFirstChildWhichIsA("BasePart", true)
+                        if actPart then
+                            hrp.CFrame = actPart.CFrame + Vector3.new(0, 1.5, 0)
+                            hrp.AssemblyLinearVelocity = Vector3.zero
+                        end
+                    end
+
+                    if hum then
+                        hum:ChangeState(Enum.HumanoidStateType.Swimming)
+                    end
+
+                    local tpFolder = ReplicatedStorage:FindFirstChild("TreadPools") or ReplicatedStorage
+                    local tpRemote = tpFolder:FindFirstChild("TreadPoolRemote", true) or tpFolder:FindFirstChild("TrainRemote", true)
+                    if tpRemote and tpRemote:IsA("RemoteEvent") then
+                        tpRemote:FireServer("Start")
+                    end
+
+                    local adminRemote = tpFolder:FindFirstChild("AdminTreadPoolRemote", true)
+                    if adminRemote and adminRemote:IsA("RemoteEvent") then
+                        adminRemote:FireServer("Start")
+                    end
+
+                    if tonumber(LocalPlayer:GetAttribute("TreadPoolLevel") or 0) == 0 then
+                        local poolLevels = ReplicatedStorage:FindFirstChild("TreadPoolLevels") or ReplicatedStorage
+                        local upPool = poolLevels:FindFirstChild("UpgradeTreadPool", true)
+                        if upPool and upPool:IsA("RemoteEvent") then upPool:FireServer("PurchaseFirst") end
+                    end
+                end
+            end)
+            task.wait(0.2)
+        else
+            task.wait(0.8)
+        end
+    end
+end)
+
+-- =================================================================
+-- FEATURE 6: AUTO HATCH & PLACE EGGS (ALL-IN-ONE)
+-- =================================================================
+task.spawn(function()
+    while true do
+        if Toggles.AutoHatchAndPlace then
+            pcall(function()
+                -- Auto Place
+                if IsCarryingEgg() and isAlive() then
+                    EquipCarriedEggTool()
+
+                    local placeZone = GetPlayerPlacementZone()
+                    local placePos = GetPlayerPlacementWorldPosition()
+                    local eggSys = ReplicatedStorage:FindFirstChild("EggSystem") or ReplicatedStorage
+                    local placeRemote = eggSys:FindFirstChild("PlaceEgg", true) or eggSys:FindFirstChild("Place", true) or ReplicatedStorage:FindFirstChild("PlaceEgg", true)
+
+                    if placeRemote and placeRemote:IsA("RemoteEvent") then
+                        if placePos then
+                            placeRemote:FireServer(placePos)
+                        end
+                        placeRemote:FireServer()
+                    end
+
+                    if placeZone then
+                        TouchWithCharacter(placeZone)
+                    end
+                end
+
+                -- Auto Hatch
                 local eggSys = ReplicatedStorage:FindFirstChild("EggSystem") or ReplicatedStorage
                 local hatchRemote = eggSys:FindFirstChild("HatchEgg", true) or eggSys:FindFirstChild("Hatch", true) or ReplicatedStorage:FindFirstChild("HatchEgg", true)
 
@@ -881,438 +974,61 @@ task.spawn(function()
 end)
 
 -- =================================================================
--- GAME FEATURE 4: AUTO PLACE (AUTO EQUIP & TANK DEPOSIT)
+-- FEATURE 7: INSTANT TELEPORT TO ALL BIOMES (8 ZONES + BASE + ESCAPE)
 -- =================================================================
-task.spawn(function()
-    while true do
-        if Toggles.AutoPlace then
-            pcall(function()
-                if IsCarryingEgg() and isAlive() then
-                    EquipCarriedEggTool()
-
-                    local placeZone = GetPlayerPlacementZone()
-                    local placePos = GetPlayerPlacementWorldPosition()
-                    local eggSys = ReplicatedStorage:FindFirstChild("EggSystem") or ReplicatedStorage
-                    local placeRemote = eggSys:FindFirstChild("PlaceEgg", true) or eggSys:FindFirstChild("Place", true) or ReplicatedStorage:FindFirstChild("PlaceEgg", true)
-
-                    if placeRemote and placeRemote:IsA("RemoteEvent") then
-                        if placePos then
-                            placeRemote:FireServer(placePos)
-                        end
-                        placeRemote:FireServer()
-                    end
-
-                    if placeZone then
-                        TouchWithCharacter(placeZone)
-                    end
-                end
-            end)
-            task.wait(0.25)
-        else
-            task.wait(0.8)
-        end
-    end
-end)
-
--- =================================================================
--- GAME FEATURE 5: AUTO TRAIN SWIM SPEED (TREADPOOL AUTOMATION)
--- =================================================================
-task.spawn(function()
-    while true do
-        if Toggles.AutoTrainSwimSpeed then
-            pcall(function()
-                if isAlive() then
-                    local hrp = getRoot()
-                    local hum = getHum()
-
-                    local wsPools = Workspace:FindFirstChild("LocalTreadPools") or Workspace:FindFirstChild("TreadPools") or Workspace:FindFirstChild("Pools")
-                    local ownPool = wsPools and wsPools:FindFirstChild("OwnTreadPool")
-                    local targetPool = ownPool or (wsPools and wsPools:FindFirstChild("AdminTreadPool")) or (Workspace:FindFirstChild("TreadPools") and Workspace.TreadPools:FindFirstChild("AdminTreadPool"))
-
-                    if not targetPool then
-                        local base = GetPlayerBase()
-                        if base then
-                            targetPool = base:FindFirstChild("TreadPool", true) or base:FindFirstChild("Pool", true)
-                        end
-                    end
-
-                    if targetPool and hrp then
-                        local actPart = targetPool:FindFirstChild("ActivationPart", true) or targetPool:FindFirstChildWhichIsA("BasePart", true)
-                        if actPart then
-                            hrp.CFrame = actPart.CFrame + Vector3.new(0, 1.5, 0)
-                            hrp.AssemblyLinearVelocity = Vector3.zero
-                        end
-                    end
-
-                    if hum then
-                        hum:ChangeState(Enum.HumanoidStateType.Swimming)
-                    end
-
-                    local tpFolder = ReplicatedStorage:FindFirstChild("TreadPools") or ReplicatedStorage
-                    local tpRemote = tpFolder:FindFirstChild("TreadPoolRemote", true) or tpFolder:FindFirstChild("TrainRemote", true)
-                    if tpRemote and tpRemote:IsA("RemoteEvent") then
-                        tpRemote:FireServer("Start")
-                    end
-
-                    local adminRemote = tpFolder:FindFirstChild("AdminTreadPoolRemote", true)
-                    if adminRemote and adminRemote:IsA("RemoteEvent") then
-                        adminRemote:FireServer("Start")
-                    end
-
-                    if tonumber(LocalPlayer:GetAttribute("TreadPoolLevel") or 0) == 0 then
-                        local poolLevels = ReplicatedStorage:FindFirstChild("TreadPoolLevels") or ReplicatedStorage
-                        local upPool = poolLevels:FindFirstChild("UpgradeTreadPool", true)
-                        if upPool and upPool:IsA("RemoteEvent") then upPool:FireServer("PurchaseFirst") end
-                    end
-                end
-            end)
-            task.wait(0.2)
-        else
-            task.wait(0.8)
-        end
-    end
-end)
-
--- =================================================================
--- GAME FEATURE 6: AUTO COLLECT MONEY
--- =================================================================
-task.spawn(function()
-    while true do
-        if Toggles.AutoCollectMoney then
-            pcall(function()
-                local base = GetPlayerBase()
-                if base and isAlive() then
-                    for _, part in ipairs(base:GetDescendants()) do
-                        if part:IsA("BasePart") then
-                            local pName = part.Name:lower()
-                            if pName:find("cash") or pName:find("money") or pName:find("collect") or pName:find("pad") or pName:find("waitforcash") then
-                                TouchWithCharacter(part)
-                            end
-                        end
-                    end
-
-                    local offCashSys = ReplicatedStorage:FindFirstChild("OfflineCashSystem") or ReplicatedStorage
-                    local claimRemote = offCashSys:FindFirstChild("ClaimOfflineCash", true) or offCashSys:FindFirstChild("ClaimCash", true)
-                    if claimRemote and claimRemote:IsA("RemoteEvent") then
-                        claimRemote:FireServer()
-                    end
-
-                    for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
-                        if rem:IsA("RemoteEvent") and (rem.Name:lower():find("cash") or rem.Name:lower():find("money") or rem.Name:lower():find("collect")) then
-                            pcall(function() rem:FireServer() end)
-                        end
-                    end
-                end
-            end)
-            task.wait(0.6)
-        else
-            task.wait(1.5)
-        end
-    end
-end)
-
--- =================================================================
--- GAME FEATURE 7: AUTO UPGRADE BASE (TANK & TREADMILL)
--- =================================================================
-task.spawn(function()
-    while true do
-        if Toggles.AutoUpgradeBase then
-            pcall(function()
-                local tankLevels = ReplicatedStorage:FindFirstChild("TankLevels") or ReplicatedStorage
-                local upTank = tankLevels:FindFirstChild("UpgradeTank", true) or ReplicatedStorage:FindFirstChild("UpgradeTank", true)
-                if upTank and upTank:IsA("RemoteEvent") then
-                    upTank:FireServer()
-                end
-
-                local poolLevels = ReplicatedStorage:FindFirstChild("TreadPoolLevels") or ReplicatedStorage
-                local upPool = poolLevels:FindFirstChild("UpgradeTreadPool", true) or ReplicatedStorage:FindFirstChild("UpgradeTreadPool", true)
-                if upPool and upPool:IsA("RemoteEvent") then
-                    local curLvl = tonumber(LocalPlayer:GetAttribute("TreadPoolLevel")) or 0
-                    if curLvl == 0 then
-                        upPool:FireServer("PurchaseFirst")
-                    else
-                        upPool:FireServer("Upgrade")
-                    end
-                end
-
-                local base = GetPlayerBase()
-                if base and isAlive() then
-                    for _, btn in ipairs(base:GetDescendants()) do
-                        if btn:IsA("BasePart") and btn.Name:lower():find("upgrade") then
-                            TouchWithCharacter(btn)
-                        end
-                    end
-                end
-            end)
-            task.wait(0.6)
-        else
-            task.wait(1.5)
-        end
-    end
-end)
-
--- =================================================================
--- GAME FEATURE 8: INSTANT TP TO BASE
--- =================================================================
-local function TeleportToBase()
+local function TeleportToLocation(targetName)
     pcall(function()
-        if isAlive() then
+        if not isAlive() then return end
+        local hrp = getRoot()
+
+        if targetName == "Base" then
             local placeZone = GetPlayerPlacementZone()
             local baseCF = placeZone and (placeZone.CFrame + Vector3.new(0, 3, 0)) or GetPlayerBaseCFrame()
             if baseCF then
-                LocalPlayer.Character.HumanoidRootPart.CFrame = baseCF
-                LocalPlayer.Character.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
-                ShowNotification("Base Teleport", "Teleported to your Base!")
-            else
-                ShowNotification("Base Teleport", "Base location not found!")
+                hrp.CFrame = baseCF
+                hrp.AssemblyLinearVelocity = Vector3.zero
+                ShowNotification("Teleport", "Teleported to your Base Tank!")
+            end
+            return
+        elseif targetName == "EscapeLine" then
+            local linePart = GetTheLinePart()
+            if linePart then
+                hrp.CFrame = linePart.CFrame + Vector3.new(0, 3, 0)
+                hrp.AssemblyLinearVelocity = Vector3.zero
+                ShowNotification("Teleport", "Teleported to Escape Line!")
+            end
+            return
+        end
+
+        local internalName = ZoneInternalMap[targetName] or targetName
+        local biomeFolder = GetZoneBiomeFolder(internalName)
+
+        if biomeFolder then
+            local bp = biomeFolder:FindFirstChild("BiomePart", true) or biomeFolder:FindFirstChildWhichIsA("BasePart", true) or biomeFolder:FindFirstChild("Spawn", true)
+            if bp then
+                hrp.CFrame = bp.CFrame + Vector3.new(0, 5, 0)
+                hrp.AssemblyLinearVelocity = Vector3.zero
+                ShowNotification("Teleport", "Teleported to " .. targetName .. "!")
+                return
             end
         end
+
+        -- Search for eggs in that biome to TP near
+        local spawnedEggs = Workspace:FindFirstChild("SpawnedEggs") or Workspace:FindFirstChild("Eggs")
+        if spawnedEggs then
+            for _, egg in ipairs(spawnedEggs:GetChildren()) do
+                if tostring(egg:GetAttribute("Biome") or ""):lower() == internalName:lower() then
+                    hrp.CFrame = egg:GetPivot() + Vector3.new(0, 3, 0)
+                    hrp.AssemblyLinearVelocity = Vector3.zero
+                    ShowNotification("Teleport", "Teleported to " .. targetName .. "!")
+                    return
+                end
+            end
+        end
+
+        ShowNotification("Teleport", targetName .. " location found!")
     end)
 end
-
--- =================================================================
--- GAME FEATURE 9: FLY MODE (PC KEYBOARD & MOBILE JOYSTICK 3D)
--- =================================================================
-local flyBodyVel = nil
-local flyBodyGyro = nil
-
-local function startFlying()
-    local root = getRoot()
-    local hum = getHum()
-    if not root or not hum then return end
-
-    if flyBodyVel then flyBodyVel:Destroy() flyBodyVel = nil end
-    if flyBodyGyro then flyBodyGyro:Destroy() flyBodyGyro = nil end
-
-    flyBodyVel = Instance.new("BodyVelocity")
-    flyBodyVel.Name = "JunejoFlyVel"
-    flyBodyVel.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-    flyBodyVel.Velocity = Vector3.zero
-    flyBodyVel.Parent = root
-
-    flyBodyGyro = Instance.new("BodyGyro")
-    flyBodyGyro.Name = "JunejoFlyGyro"
-    flyBodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
-    flyBodyGyro.P = 10000
-    flyBodyGyro.CFrame = root.CFrame
-    flyBodyGyro.Parent = root
-
-    task.spawn(function()
-        while Toggles.FlyMode and flyBodyVel and flyBodyGyro do
-            local currentRoot = getRoot()
-            local currentHum = getHum()
-            if not currentRoot or not currentHum then break end
-
-            local moveDir = currentHum.MoveDirection
-            local camCF = Camera.CFrame
-            flyBodyGyro.CFrame = camCF
-
-            if moveDir.Magnitude > 0.05 then
-                local camLook = camCF.LookVector
-                local camRight = camCF.RightVector
-                local forwardAmount = moveDir:Dot(camLook)
-                local rightAmount = moveDir:Dot(camRight)
-
-                local targetVelocity = (camLook * forwardAmount + camRight * rightAmount) * FlySpeedValue
-                flyBodyVel.Velocity = targetVelocity
-            else
-                flyBodyVel.Velocity = Vector3.zero
-            end
-
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-                flyBodyVel.Velocity = flyBodyVel.Velocity + Vector3.new(0, FlySpeedValue, 0)
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
-                flyBodyVel.Velocity = flyBodyVel.Velocity - Vector3.new(0, FlySpeedValue, 0)
-            end
-
-            task.wait()
-        end
-
-        if flyBodyVel then flyBodyVel:Destroy() flyBodyVel = nil end
-        if flyBodyGyro then flyBodyGyro:Destroy() flyBodyGyro = nil end
-    end)
-end
-
-local function stopFlying()
-    if flyBodyVel then flyBodyVel:Destroy() flyBodyVel = nil end
-    if flyBodyGyro then flyBodyGyro:Destroy() flyBodyGyro = nil end
-end
-
--- =================================================================
--- GAME FEATURE 10: NOCLIP
--- =================================================================
-RunService.Stepped:Connect(function()
-    if Toggles.Noclip and isAlive() then
-        for _, p in ipairs(LocalPlayer.Character:GetDescendants()) do
-            if p:IsA("BasePart") and p.CanCollide then
-                p.CanCollide = false
-            end
-        end
-    end
-end)
-
--- =================================================================
--- GAME FEATURE 11: RARE EGG ONLY ESP
--- =================================================================
-local function ClearRareEggESP()
-    for _, item in pairs(CurrentRareEggESPInstances) do
-        pcall(function()
-            if item.Highlight then item.Highlight:Destroy() end
-            if item.Billboard then item.Billboard:Destroy() end
-        end)
-    end
-    table.clear(CurrentRareEggESPInstances)
-end
-
-task.spawn(function()
-    while true do
-        if Toggles.RareEggOnlyESP then
-            pcall(function()
-                if isAlive() then
-                    local hrp = getRoot()
-                    local spawnedFolders = {
-                        Workspace:FindFirstChild("SpawnedEggs"),
-                        Workspace:FindFirstChild("Eggs"),
-                        Workspace:FindFirstChild("WorldEggs")
-                    }
-
-                    for _, folder in ipairs(spawnedFolders) do
-                        if folder then
-                            for _, egg in ipairs(folder:GetChildren()) do
-                                if egg:IsA("Model") then
-                                    local rarity = tostring(egg:GetAttribute("Rarity") or "Basic")
-
-                                    if rarity ~= "Basic" then
-                                        local pivot = egg:GetPivot()
-                                        local dist = math.floor((pivot.Position - hrp.Position).Magnitude)
-
-                                        if not CurrentRareEggESPInstances[egg] then
-                                            local hl = Instance.new("Highlight")
-                                            hl.Name = "RareEgg_HL"
-                                            hl.Adornee = egg
-                                            hl.FillColor = RarityColors[rarity] or Color3.fromRGB(168, 85, 247)
-                                            hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-                                            hl.FillTransparency = 0.5
-                                            hl.OutlineTransparency = 0
-                                            hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                                            hl.Parent = egg
-
-                                            local bb = Instance.new("BillboardGui")
-                                            bb.Name = "RareEgg_BB"
-                                            bb.Adornee = egg.PrimaryPart or egg:FindFirstChildWhichIsA("BasePart") or egg
-                                            bb.Size = UDim2.new(0, 110, 0, 32)
-                                            bb.StudsOffset = Vector3.new(0, 2.5, 0)
-                                            bb.AlwaysOnTop = true
-                                            bb.Parent = egg
-
-                                            local lbl = Instance.new("TextLabel")
-                                            lbl.Size = UDim2.new(1, 0, 1, 0)
-                                            lbl.BackgroundTransparency = 1
-                                            lbl.Font = Enum.Font.GothamBold
-                                            lbl.TextSize = 10
-                                            lbl.TextColor3 = RarityColors[rarity] or Color3.fromRGB(255, 255, 255)
-                                            lbl.TextStrokeTransparency = 0.3
-                                            lbl.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-                                            lbl.Text = string.format("[%s]\n%s [%dm]", rarity, egg.Name, dist)
-                                            lbl.Parent = bb
-
-                                            CurrentRareEggESPInstances[egg] = { Highlight = hl, Billboard = bb, Label = lbl }
-                                        else
-                                            local item = CurrentRareEggESPInstances[egg]
-                                            if item and item.Label then
-                                                item.Label.Text = string.format("[%s]\n%s [%dm]", rarity, egg.Name, dist)
-                                            end
-                                        end
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-            end)
-            task.wait(0.5)
-        else
-            ClearRareEggESP()
-            task.wait(1)
-        end
-    end
-end)
-
--- =================================================================
--- GAME FEATURE 12: PLAYER ESP
--- =================================================================
-local function ClearPlayerESP()
-    for _, item in pairs(CurrentPlayerESPInstances) do
-        pcall(function()
-            if item.Highlight then item.Highlight:Destroy() end
-            if item.Billboard then item.Billboard:Destroy() end
-        end)
-    end
-    table.clear(CurrentPlayerESPInstances)
-end
-
-task.spawn(function()
-    while true do
-        if Toggles.PlayerESP then
-            pcall(function()
-                if isAlive() then
-                    local myHrp = getRoot()
-
-                    for _, p in ipairs(Players:GetPlayers()) do
-                        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                            local char = p.Character
-                            local pHrp = char.HumanoidRootPart
-                            local dist = math.floor((pHrp.Position - myHrp.Position).Magnitude)
-
-                            if not CurrentPlayerESPInstances[p] then
-                                local hl = Instance.new("Highlight")
-                                hl.Name = "Player_HL"
-                                hl.Adornee = char
-                                hl.FillColor = Color3.fromRGB(239, 68, 68)
-                                hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-                                hl.FillTransparency = 0.6
-                                hl.OutlineTransparency = 0.1
-                                hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                                hl.Parent = char
-
-                                local bb = Instance.new("BillboardGui")
-                                bb.Name = "Player_BB"
-                                bb.Adornee = pHrp
-                                bb.Size = UDim2.new(0, 100, 0, 30)
-                                bb.StudsOffset = Vector3.new(0, 3, 0)
-                                bb.AlwaysOnTop = true
-                                bb.Parent = char
-
-                                local lbl = Instance.new("TextLabel")
-                                lbl.Size = UDim2.new(1, 0, 1, 0)
-                                lbl.BackgroundTransparency = 1
-                                lbl.Font = Enum.Font.GothamBold
-                                lbl.TextSize = 10
-                                lbl.TextColor3 = Color3.fromRGB(255, 100, 100)
-                                lbl.TextStrokeTransparency = 0.3
-                                lbl.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-                                lbl.Text = string.format("%s\n[%dm]", p.DisplayName or p.Name, dist)
-                                lbl.Parent = bb
-
-                                CurrentPlayerESPInstances[p] = { Highlight = hl, Billboard = bb, Label = lbl }
-                            else
-                                local item = CurrentPlayerESPInstances[p]
-                                if item and item.Label then
-                                    item.Label.Text = string.format("%s\n[%dm]", p.DisplayName or p.Name, dist)
-                                end
-                            end
-                        end
-                    end
-                end
-            end)
-            task.wait(0.5)
-        else
-            ClearPlayerESP()
-            task.wait(1)
-        end
-    end
-end)
 
 -- =================================================================
 -- UTILITY: ANTI-AFK (DEFAULT ON)
@@ -1337,8 +1053,8 @@ ScreenGui.Parent = UIContainer
 
 local MainWindow = Instance.new("Frame")
 MainWindow.Name = "MainFrame"
-MainWindow.Size = UDim2.new(0, 285, 0, 340)
-MainWindow.Position = UDim2.new(0.5, -142, 0.5, -170)
+MainWindow.Size = UDim2.new(0, 285, 0, 335)
+MainWindow.Position = UDim2.new(0.5, -142, 0.5, -167)
 MainWindow.BackgroundColor3 = Color3.fromRGB(15, 15, 17) -- Matte Black
 MainWindow.BorderSizePixel = 0
 MainWindow.Active = true
@@ -1385,13 +1101,10 @@ CloseBtn.TextSize = 13
 CloseBtn.Parent = Header
 
 CloseBtn.MouseButton1Click:Connect(function()
-    stopFlying()
     pcall(function()
         local tpRemote = ReplicatedStorage:FindFirstChild("TreadPools") and ReplicatedStorage.TreadPools:FindFirstChild("TreadPoolRemote")
         if tpRemote then tpRemote:FireServer("Stop") end
     end)
-    ClearRareEggESP()
-    ClearPlayerESP()
     ScreenGui:Destroy()
 end)
 
@@ -1524,219 +1237,21 @@ local function AddToggleRow(text, configKey, callback)
     return Row
 end
 
--- 2. Helper: Add 1-Click Action Row
-local function AddActionRow(text, callback)
-    local Row = Instance.new("Frame")
-    Row.Size = UDim2.new(1, 0, 0, 23)
-    Row.BackgroundTransparency = 1
-    Row.LayoutOrder = getNextOrder()
-    Row.Parent = FeaturesContainer
-    
-    local RowBtn = Instance.new("TextButton")
-    RowBtn.Size = UDim2.new(1, 0, 1, 0)
-    RowBtn.BackgroundTransparency = 1
-    RowBtn.Text = ""
-    RowBtn.ZIndex = 5
-    RowBtn.Parent = Row
-    
-    local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(1, -28, 1, 0)
-    Label.BackgroundTransparency = 1
-    Label.Text = text
-    Label.TextColor3 = Color3.fromRGB(240, 240, 240)
-    Label.TextSize = 12
-    Label.Font = Enum.Font.GothamBold
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.Parent = Row
-    
-    local ActionBox = Instance.new("Frame")
-    ActionBox.Size = UDim2.new(0, 18, 0, 18)
-    ActionBox.Position = UDim2.new(1, -18, 0.5, -9)
-    ActionBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-    ActionBox.BorderSizePixel = 0
-    ActionBox.Parent = Row
-    
-    local ActionCorner = Instance.new("UICorner")
-    ActionCorner.CornerRadius = UDim.new(0, 4)
-    ActionCorner.Parent = ActionBox
-    
-    local ActionStroke = Instance.new("UIStroke")
-    ActionStroke.Color = Color3.fromRGB(45, 45, 55)
-    ActionStroke.Thickness = 1.2
-    ActionStroke.Parent = ActionBox
-    
-    local ActionIcon = Instance.new("TextLabel")
-    ActionIcon.Size = UDim2.new(1, 0, 1, 0)
-    ActionIcon.BackgroundTransparency = 1
-    ActionIcon.Text = "⚡"
-    ActionIcon.TextColor3 = Color3.fromRGB(255, 255, 255)
-    ActionIcon.TextSize = 9
-    ActionIcon.Font = Enum.Font.GothamBold
-    ActionIcon.Parent = ActionBox
-    
-    RowBtn.MouseButton1Click:Connect(function()
-        ActionBox.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-        task.delay(0.15, function() ActionBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32) end)
-        if callback then callback() end
-    end)
-    return Row
-end
-
--- 3. Helper: Add Interactive Line Bar Slider Row
-local function AddSliderRow(title, configKey, minVal, maxVal, defaultVal, onChangeCallback, onToggleCallback)
-    local Container = Instance.new("Frame")
-    Container.Size = UDim2.new(1, 0, 0, 38)
-    Container.BackgroundTransparency = 1
-    Container.LayoutOrder = getNextOrder()
-    Container.Parent = FeaturesContainer
-    
-    local TopRow = Instance.new("Frame")
-    TopRow.Size = UDim2.new(1, 0, 0, 20)
-    TopRow.BackgroundTransparency = 1
-    TopRow.Parent = Container
-    
-    local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(0.6, 0, 1, 0)
-    Label.BackgroundTransparency = 1
-    Label.Text = title
-    Label.TextColor3 = Color3.fromRGB(240, 240, 240)
-    Label.TextSize = 12
-    Label.Font = Enum.Font.GothamBold
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.Parent = TopRow
-    
-    local ValLabel = Instance.new("TextLabel")
-    ValLabel.Size = UDim2.new(0.2, 0, 1, 0)
-    ValLabel.Position = UDim2.new(0.6, 0, 0, 0)
-    ValLabel.BackgroundTransparency = 1
-    ValLabel.Text = tostring(defaultVal)
-    ValLabel.TextColor3 = Color3.fromRGB(180, 180, 195)
-    ValLabel.TextSize = 11
-    ValLabel.Font = Enum.Font.GothamBold
-    ValLabel.TextXAlignment = Enum.TextXAlignment.Right
-    ValLabel.Parent = TopRow
-    
-    local CheckBox = Instance.new("Frame")
-    CheckBox.Size = UDim2.new(0, 18, 0, 18)
-    CheckBox.Position = UDim2.new(1, -18, 0.5, -9)
-    CheckBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-    CheckBox.BorderSizePixel = 0
-    CheckBox.Parent = TopRow
-    
-    local CheckCorner = Instance.new("UICorner")
-    CheckCorner.CornerRadius = UDim.new(0, 4)
-    CheckCorner.Parent = CheckBox
-    
-    local CheckStroke = Instance.new("UIStroke")
-    CheckStroke.Color = Color3.fromRGB(45, 45, 55)
-    CheckStroke.Thickness = 1.2
-    CheckStroke.Parent = CheckBox
-    
-    local CheckMark = Instance.new("Frame")
-    CheckMark.Size = UDim2.new(0, 10, 0, 10)
-    CheckMark.Position = UDim2.new(0.5, -5, 0.5, -5)
-    CheckMark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    CheckMark.BackgroundTransparency = Toggles[configKey] and 0 or 1
-    CheckMark.BorderSizePixel = 0
-    CheckMark.Parent = CheckBox
-    
-    local MarkCorner = Instance.new("UICorner")
-    MarkCorner.CornerRadius = UDim.new(0, 2)
-    MarkCorner.Parent = CheckMark
-    
-    local ToggleBtn = Instance.new("TextButton")
-    ToggleBtn.Size = UDim2.new(1, 0, 1, 0)
-    ToggleBtn.BackgroundTransparency = 1
-    ToggleBtn.Text = ""
-    ToggleBtn.ZIndex = 5
-    ToggleBtn.Parent = TopRow
-    
-    ToggleBtn.MouseButton1Click:Connect(function()
-        Toggles[configKey] = not Toggles[configKey]
-        CheckMark.BackgroundTransparency = Toggles[configKey] and 0 or 1
-        if onToggleCallback then onToggleCallback(Toggles[configKey]) end
-    end)
-    
-    local SliderTrack = Instance.new("Frame")
-    SliderTrack.Size = UDim2.new(1, 0, 0, 6)
-    SliderTrack.Position = UDim2.new(0, 0, 0, 24)
-    SliderTrack.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-    SliderTrack.BorderSizePixel = 0
-    SliderTrack.Parent = Container
-    
-    local TrackCorner = Instance.new("UICorner")
-    TrackCorner.CornerRadius = UDim.new(1, 0)
-    TrackCorner.Parent = SliderTrack
-    
-    local TrackStroke = Instance.new("UIStroke")
-    TrackStroke.Color = Color3.fromRGB(40, 40, 50)
-    TrackStroke.Thickness = 1
-    TrackStroke.Parent = SliderTrack
-    
-    local initialPercent = math.clamp((defaultVal - minVal) / (maxVal - minVal), 0, 1)
-    local SliderFill = Instance.new("Frame")
-    SliderFill.Size = UDim2.new(initialPercent, 0, 1, 0)
-    SliderFill.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    SliderFill.BorderSizePixel = 0
-    SliderFill.Parent = SliderTrack
-    
-    local FillCorner = Instance.new("UICorner")
-    FillCorner.CornerRadius = UDim.new(1, 0)
-    FillCorner.Parent = SliderFill
-    
-    local SliderBtn = Instance.new("TextButton")
-    SliderBtn.Size = UDim2.new(1, 0, 1, 8)
-    SliderBtn.Position = UDim2.new(0, 0, 0, -4)
-    SliderBtn.BackgroundTransparency = 1
-    SliderBtn.Text = ""
-    SliderBtn.ZIndex = 6
-    SliderBtn.Parent = SliderTrack
-    
-    local isSliding = false
-    local function UpdateSlider(input)
-        local posX = input.Position.X - SliderTrack.AbsolutePosition.X
-        local percent = math.clamp(posX / SliderTrack.AbsoluteSize.X, 0, 1)
-        local val = math.floor(minVal + (maxVal - minVal) * percent)
-        FlySpeedValue = val
-        ValLabel.Text = tostring(val)
-        SliderFill.Size = UDim2.new(percent, 0, 1, 0)
-        if onChangeCallback then onChangeCallback(val) end
-    end
-    
-    SliderBtn.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            isSliding = true
-            UpdateSlider(input)
-        end
-    end)
-    
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            isSliding = false
-        end
-    end)
-    
-    UserInputService.InputChanged:Connect(function(input)
-        if isSliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            UpdateSlider(input)
-        end
-    end)
-    return Container
-end
-
 -- =================================================================
--- POPULATE FEATURES (ORDERED CLEANLY)
+-- BUILD THE 7 MAIN HYBRID FEATURES IN ORDER
 -- =================================================================
 
--- 1. Auto Steal Eggs
-AddToggleRow("Auto Steal Eggs", "AutoSteal", function(enabled)
+-- 1. Auto Steal Best Egg
+AddToggleRow("1. Auto Steal Best Egg", "AutoStealBest", function(enabled)
     if enabled then
+        Toggles.AutoStealAstral = false
+        if ToggleVisualUpdaters["AutoStealAstral"] then ToggleVisualUpdaters["AutoStealAstral"]() end
         table.clear(CooldownEggs)
         ShowNotification("Auto Steal", "Stealing best eggs from " .. AvailableZones[CurrentZoneIndex])
     end
 end)
 
--- 2. ZONE SELECTOR (DEDICATED BUTTON & EXPANDABLE OPTIONS LIST)
+-- Area Selector for Auto Steal Best Egg
 local ZoneMainRow = Instance.new("Frame")
 ZoneMainRow.Name = "ZoneMainRow"
 ZoneMainRow.Size = UDim2.new(1, 0, 0, 24)
@@ -1801,7 +1316,6 @@ NextZoneBtn.TextSize = 12
 NextZoneBtn.Font = Enum.Font.GothamBold
 NextZoneBtn.Parent = ZonePillFrame
 
--- Expandable Options Container
 local ZoneOptionsContainer = Instance.new("Frame")
 ZoneOptionsContainer.Name = "ZoneOptionsContainer"
 ZoneOptionsContainer.Size = UDim2.new(1, 0, 0, 0)
@@ -1938,30 +1452,33 @@ NextZoneBtn.MouseButton1Click:Connect(function()
     updateZoneSelection(newIdx, true)
 end)
 
--- 3. Remove Guards (Fishes)
-AddToggleRow("Remove Guards (Fishes)", "RemoveGuards", function(enabled)
+-- 2. Auto Steal Astral Eggs Only
+AddToggleRow("2. Auto Steal Astral Eggs Only", "AutoStealAstral", function(enabled)
+    if enabled then
+        Toggles.AutoStealBest = false
+        if ToggleVisualUpdaters["AutoStealBest"] then ToggleVisualUpdaters["AutoStealBest"]() end
+        table.clear(CooldownEggs)
+        ShowNotification("VIP Steal", "Targeting God-Tier Astral & Abyssal Eggs Only!")
+    end
+end)
+
+-- 3. Remove All Guards (Chaser Fishes)
+AddToggleRow("3. Remove All Guards (Fishes)", "RemoveGuards", function(enabled)
     if enabled then
         SweepAndRemoveAllGuards()
-        ShowNotification("Remove Guards", "All Guard Fishes & Chasers Neutralized!")
+        ShowNotification("Remove Guards", "All Guard Fishes & Sharks Neutralized!")
     end
 end)
 
--- 4. Auto Hatch
-AddToggleRow("Auto Hatch", "AutoHatch", function(enabled)
+-- 4. Godmode / Anti-Damage Shield
+AddToggleRow("4. Godmode (Anti-Damage Shield)", "Godmode", function(enabled)
     if enabled then
-        ShowNotification("Auto Hatch", "Auto Hatching Ready Eggs!")
+        ShowNotification("Godmode", "Invulnerability & Anti-Fling Activated!")
     end
 end)
 
--- 5. Auto Place
-AddToggleRow("Auto Place", "AutoPlace", function(enabled)
-    if enabled then
-        ShowNotification("Auto Place", "Auto Placing Carried Eggs in Tank!")
-    end
-end)
-
--- 6. Auto Train Swim Speed
-AddToggleRow("Auto Train Swim Speed", "AutoTrainSwimSpeed", function(enabled)
+-- 5. Auto Train Swim Speed (TreadPool)
+AddToggleRow("5. Auto Train Swim Speed", "AutoTrainSwimSpeed", function(enabled)
     if enabled then
         ShowNotification("TreadPool", "Swim Training Activated!")
     else
@@ -1972,38 +1489,145 @@ AddToggleRow("Auto Train Swim Speed", "AutoTrainSwimSpeed", function(enabled)
     end
 end)
 
--- 7. Auto Collect Money
-AddToggleRow("Auto Collect Money", "AutoCollectMoney")
-
--- 8. Auto Upgrade Base
-AddToggleRow("Auto Upgrade Base", "AutoUpgradeBase", function(enabled)
+-- 6. Auto Hatch & Place Eggs
+AddToggleRow("6. Auto Hatch & Place Eggs", "AutoHatchAndPlace", function(enabled)
     if enabled then
-        ShowNotification("Base Upgrades", "Auto Upgrading Tank & TreadPool!")
+        ShowNotification("Hatch & Place", "Auto Hatching & Placing Active!")
     end
 end)
 
--- 9. Instant TP to Base
-AddActionRow("⚡ Instant TP to Base", TeleportToBase)
+-- 7. Instant Teleport to All Biomes (8 Zones + Base + Escape)
+local TPMainRow = Instance.new("Frame")
+TPMainRow.Name = "TPMainRow"
+TPMainRow.Size = UDim2.new(1, 0, 0, 24)
+TPMainRow.BackgroundTransparency = 1
+TPMainRow.LayoutOrder = getNextOrder()
+TPMainRow.Parent = FeaturesContainer
 
--- 10. Fly Mode with Interactive Line Bar Slider
-AddSliderRow("Fly Mode", "FlyMode", 20, 200, FlySpeedValue, function(val)
-    FlySpeedValue = val
-end, function(enabled)
-    if enabled then
-        startFlying()
+local TPMainLabel = Instance.new("TextLabel")
+TPMainLabel.Size = UDim2.new(0.5, 0, 1, 0)
+TPMainLabel.BackgroundTransparency = 1
+TPMainLabel.Text = "7. Biome Teleporter"
+TPMainLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
+TPMainLabel.TextSize = 12
+TPMainLabel.Font = Enum.Font.GothamBold
+TPMainLabel.TextXAlignment = Enum.TextXAlignment.Left
+TPMainLabel.Parent = TPMainRow
+
+local TPOpenBtn = Instance.new("TextButton")
+TPOpenBtn.Size = UDim2.new(0.48, 0, 1, 0)
+TPOpenBtn.Position = UDim2.new(0.52, 0, 0, 0)
+TPOpenBtn.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+TPOpenBtn.BorderSizePixel = 0
+TPOpenBtn.Text = "Open Teleports ▾"
+TPOpenBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+TPOpenBtn.Font = Enum.Font.GothamBold
+TPOpenBtn.TextSize = 10
+TPOpenBtn.Parent = TPMainRow
+
+local TPOpenCorner = Instance.new("UICorner")
+TPOpenCorner.CornerRadius = UDim.new(0, 4)
+TPOpenCorner.Parent = TPOpenBtn
+
+local TPOpenStroke = Instance.new("UIStroke")
+TPOpenStroke.Color = Color3.fromRGB(45, 45, 55)
+TPOpenStroke.Thickness = 1
+TPOpenStroke.Parent = TPOpenBtn
+
+local TPOptionsContainer = Instance.new("Frame")
+TPOptionsContainer.Name = "TPOptionsContainer"
+TPOptionsContainer.Size = UDim2.new(1, 0, 0, 0)
+TPOptionsContainer.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
+TPOptionsContainer.BorderSizePixel = 0
+TPOptionsContainer.Visible = false
+TPOptionsContainer.ClipsDescendants = true
+TPOptionsContainer.LayoutOrder = getNextOrder()
+TPOptionsContainer.Parent = FeaturesContainer
+
+local TPOptCorner = Instance.new("UICorner")
+TPOptCorner.CornerRadius = UDim.new(0, 6)
+TPOptCorner.Parent = TPOptionsContainer
+
+local TPOptStroke = Instance.new("UIStroke")
+TPOptStroke.Color = Color3.fromRGB(38, 38, 46)
+TPOptStroke.Thickness = 1
+TPOptStroke.Parent = TPOptionsContainer
+
+local TPOptLayout = Instance.new("UIGridLayout")
+TPOptLayout.CellSize = UDim2.new(0.48, 0, 0, 22)
+TPOptLayout.CellPadding = UDim2.new(0.04, 0, 0, 3)
+TPOptLayout.SortOrder = Enum.SortOrder.LayoutOrder
+TPOptLayout.Parent = TPOptionsContainer
+
+local TPOptPadding = Instance.new("UIPadding")
+TPOptPadding.PaddingTop = UDim.new(0, 4)
+TPOptPadding.PaddingBottom = UDim.new(0, 4)
+TPOptPadding.PaddingLeft = UDim.new(0, 4)
+TPOptPadding.PaddingRight = UDim.new(0, 4)
+TPOptPadding.Parent = TPOptionsContainer
+
+local tpLocations = {
+    { name = "🏠 Base Tank", target = "Base" },
+    { name = "🏁 Escape Line", target = "EscapeLine" },
+    { name = "🌊 Coral Reef", target = "Coral Reef" },
+    { name = "🌊 Deep Ocean", target = "Deep Ocean" },
+    { name = "🌊 Pearl Lagoon", target = "Pearl Lagoon" },
+    { name = "🌊 Snowy Sea", target = "Snowy Sea" },
+    { name = "🌊 Volcanic Sea", target = "Volcanic Sea" },
+    { name = "🌊 Jelly Ocean", target = "Jelly Ocean" },
+    { name = "🌊 Sunken Ruins", target = "Sunken Ruins" },
+    { name = "🌊 Atlantis", target = "Atlantis" }
+}
+
+for idx, loc in ipairs(tpLocations) do
+    local tpBtn = Instance.new("TextButton")
+    tpBtn.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+    tpBtn.BorderSizePixel = 0
+    tpBtn.AutoButtonColor = false
+    tpBtn.Text = loc.name
+    tpBtn.TextColor3 = Color3.fromRGB(220, 220, 230)
+    tpBtn.Font = Enum.Font.GothamBold
+    tpBtn.TextSize = 9
+    tpBtn.LayoutOrder = idx
+    tpBtn.Parent = TPOptionsContainer
+
+    local bCorner = Instance.new("UICorner")
+    bCorner.CornerRadius = UDim.new(0, 4)
+    bCorner.Parent = tpBtn
+
+    local bStroke = Instance.new("UIStroke")
+    bStroke.Color = Color3.fromRGB(38, 38, 46)
+    bStroke.Thickness = 1
+    bStroke.Parent = tpBtn
+
+    tpBtn.MouseButton1Click:Connect(function()
+        TeleportToLocation(loc.target)
+    end)
+end
+
+local isTPOpen = false
+local totalTPHeight = 5 * 25 + 10
+
+TPOpenBtn.MouseButton1Click:Connect(function()
+    isTPOpen = not isTPOpen
+    TPOpenBtn.Text = isTPOpen and "Close Teleports ▴" or "Open Teleports ▾"
+    if isTPOpen then
+        TPOptionsContainer.Visible = true
+        TweenService:Create(TPOptionsContainer, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Size = UDim2.new(1, 0, 0, totalTPHeight)
+        }):Play()
     else
-        stopFlying()
+        local tw = TweenService:Create(TPOptionsContainer, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Size = UDim2.new(1, 0, 0, 0)
+        })
+        tw:Play()
+        tw.Completed:Connect(function()
+            if not isTPOpen then
+                TPOptionsContainer.Visible = false
+            end
+        end)
     end
 end)
-
--- 11. Noclip
-AddToggleRow("Noclip", "Noclip")
-
--- 12. Rare Egg Only ESP
-AddToggleRow("Rare Egg Only ESP", "RareEggOnlyESP")
-
--- 13. Player ESP
-AddToggleRow("Player ESP", "PlayerESP")
 
 -- =================================================================
 -- DRAGGABLE WINDOW HANDLING
@@ -2042,5 +1666,5 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
-ShowNotification("Junejo Script Hub", "Steal Fish Eggs Loaded Successfully!")
-print("Junejo Ultra Script Hub loaded successfully for Steal Fish Eggs!")
+ShowNotification("Junejo Script Hub", "Steal Fish Eggs 7-Feature Master Loaded!")
+print("Junejo Ultra Script Hub 7 Main Features loaded successfully for Steal Fish Eggs!")
