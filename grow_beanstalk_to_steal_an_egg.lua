@@ -26,6 +26,7 @@ local Toggles = {
     AutoStealRareEgg = false,
     AutoStealNearestEgg = false,
     FastClimbBeanstalk = false,
+    InfiniteBeanstalk = false,
     AutoUnlockTreadmill = false,
     AutoUpgradeBase = false,
     AutoHatchEgg = false,
@@ -101,6 +102,18 @@ local function FindMyPlot()
             end
         end
     end
+    -- Fallback: check all models in workspace
+    for _, obj in ipairs(Workspace:GetChildren()) do
+        if obj:IsA("Model") or obj:IsA("Folder") then
+            local ownerVal = obj:FindFirstChild("Owner") or obj:FindFirstChild("Player")
+            if ownerVal and (ownerVal.Value == LocalPlayer or ownerVal.Value == LocalPlayer.Name or ownerVal.Value == LocalPlayer.UserId) then
+                return obj
+            end
+            if string.find(string.lower(obj.Name), string.lower(LocalPlayer.Name)) then
+                return obj
+            end
+        end
+    end
     return nil
 end
 
@@ -154,6 +167,19 @@ local function SafeTouch(targetPart)
     end)
 end
 
+-- Click GUI elements safely
+local function ClickGuiButton(btn)
+    if not btn then return end
+    pcall(function()
+        for _, conn in pairs(getconnections(btn.MouseButton1Click)) do
+            conn:Fire()
+        end
+        for _, conn in pairs(getconnections(btn.Activated)) do
+            conn:Fire()
+        end
+    end)
+end
+
 -- Egg Finder & Rarity Evaluator
 local function GetEggRarityScore(eggInstance)
     local name = string.lower(eggInstance.Name)
@@ -169,7 +195,6 @@ local function GetEggRarityScore(eggInstance)
     elseif string.find(name, "rare") or string.find(name, "epic") then
         score = 25
     end
-    -- Higher elevation on beanstalk usually means rarer egg
     local part = eggInstance:IsA("BasePart") and eggInstance or eggInstance:FindFirstChildWhichIsA("BasePart")
     if part then
         score = score + math.floor(part.Position.Y / 20)
@@ -215,20 +240,16 @@ local function ExecuteSteal(eggData, returnToBase)
     local targetPart = eggData.Part or (eggData.Prompt and eggData.Prompt.Parent)
     if not targetPart then return end
 
-    local originalCFrame = root.CFrame
     local targetPos = targetPart.Position + Vector3.new(0, 3, 0)
-    
-    -- Teleport to egg
     root.CFrame = CFrame.new(targetPos)
     task.wait(0.12)
     
-    -- Trigger ProximityPrompt or Touch
     if eggData.Prompt then
         TriggerPrompt(eggData.Prompt)
     end
     SafeTouch(targetPart)
 
-    -- Also check for Steal Remotes
+    -- Steal Remotes
     pcall(function()
         for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
             if rem:IsA("RemoteEvent") or rem:IsA("RemoteFunction") then
@@ -246,13 +267,11 @@ local function ExecuteSteal(eggData, returnToBase)
 
     task.wait(0.15)
     
-    -- Return to base if requested
     if returnToBase then
         local basePos = GetBasePosition()
         root.CFrame = CFrame.new(basePos)
         task.wait(0.2)
         
-        -- Trigger deposit / place prompt on plot
         local myPlot = FindMyPlot()
         if myPlot then
             for _, prompt in ipairs(myPlot:GetDescendants()) do
@@ -267,7 +286,7 @@ local function ExecuteSteal(eggData, returnToBase)
     end
 end
 
--- 1. Auto Steal Egg (Cycle all eggs)
+-- 1. Auto Steal Egg
 task.spawn(function()
     while true do
         task.wait(0.3)
@@ -284,7 +303,7 @@ task.spawn(function()
     end
 end)
 
--- 2. Auto Steal Rare Egg (Highest rarity score)
+-- 2. Auto Steal Rare Egg
 task.spawn(function()
     while true do
         task.wait(0.35)
@@ -333,34 +352,94 @@ task.spawn(function()
     end
 end)
 
--- 4. Fast Climb on Beanstalk
+-- 4. Fast Climb on Beanstalk (UPGRADED: Instant Glide & Summit Reach)
 task.spawn(function()
     while true do
-        task.wait(0.08)
+        task.wait(0.05)
         if Toggles.FastClimbBeanstalk then
             local root = GetRootPart()
             local hum = GetHumanoid()
             if root and hum then
-                -- Detect beanstalk or vertical climb vines
-                local climbParts = {}
-                for _, obj in ipairs(Workspace:GetDescendants()) do
+                -- Locate nearest beanstalk or beanstalk parts
+                local targetClimbPos = nil
+                local myPlot = FindMyPlot()
+                local searchArea = myPlot or Workspace
+                
+                for _, obj in ipairs(searchArea:GetDescendants()) do
                     if obj:IsA("BasePart") then
                         local name = string.lower(obj.Name)
-                        if string.find(name, "beanstalk") or string.find(name, "vine") or string.find(name, "stem") or string.find(name, "ladder") or string.find(name, "cloud") then
-                            if (root.Position - obj.Position).Magnitude < 40 then
-                                table.insert(climbParts, obj)
+                        if string.find(name, "beanstalk") or string.find(name, "stalk") or string.find(name, "vine") or string.find(name, "ladder") or string.find(name, "climb") then
+                            if (root.Position - obj.Position).Magnitude < 75 then
+                                targetClimbPos = obj.Position
+                                break
                             end
                         end
                     end
                 end
                 
-                -- Upward velocity boost when on or near beanstalk
-                if #climbParts > 0 or hum:GetState() == Enum.HumanoidStateType.Climbing then
-                    root.AssemblyLinearVelocity = Vector3.new(root.AssemblyLinearVelocity.X, 90, root.AssemblyLinearVelocity.Z)
-                else
-                    -- Smooth step upward if moving
-                    if hum.MoveDirection.Magnitude > 0 then
-                        root.AssemblyLinearVelocity = Vector3.new(root.AssemblyLinearVelocity.X, 55, root.AssemblyLinearVelocity.Z)
+                -- Fast upward glide
+                root.AssemblyLinearVelocity = Vector3.new(0, 140, 0)
+                root.CFrame = root.CFrame + Vector3.new(0, 4, 0)
+                hum:ChangeState(Enum.HumanoidStateType.Freefall)
+            end
+        end
+    end
+end)
+
+-- 5. NEW FEATURE: Infinite / Longest Beanstalk (Super Growth Spammer & Visual Tower)
+task.spawn(function()
+    while true do
+        task.wait(0.2)
+        if Toggles.InfiniteBeanstalk then
+            local myPlot = FindMyPlot()
+            
+            -- Server Growth Remotes Spammer
+            pcall(function()
+                for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
+                    if rem:IsA("RemoteEvent") or rem:IsA("RemoteFunction") then
+                        local remName = string.lower(rem.Name)
+                        if string.find(remName, "grow") or string.find(remName, "beanstalk") or string.find(remName, "water") or string.find(remName, "fertilize") or string.find(remName, "feed") or string.find(remName, "upgradebeanstalk") or string.find(remName, "growth") then
+                            if rem:IsA("RemoteEvent") then
+                                rem:FireServer()
+                                rem:FireServer(100)
+                                rem:FireServer(true)
+                            else
+                                rem:InvokeServer()
+                            end
+                        end
+                    end
+                end
+            end)
+            
+            -- Plot Growth Prompts & Touch Pads
+            if myPlot then
+                for _, obj in ipairs(myPlot:GetDescendants()) do
+                    local name = string.lower(obj.Name)
+                    if string.find(name, "grow") or string.find(name, "water") or string.find(name, "feed") or string.find(name, "beanstalk") or string.find(name, "upgrade") then
+                        if obj:IsA("ProximityPrompt") then
+                            TriggerPrompt(obj)
+                        elseif obj:IsA("BasePart") then
+                            SafeTouch(obj)
+                        end
+                    end
+                end
+                
+                -- Mega Beanstalk Height Extender (Clones and stacks beanstalk segments skyward)
+                for _, obj in ipairs(myPlot:GetDescendants()) do
+                    if obj:IsA("BasePart") then
+                        local name = string.lower(obj.Name)
+                        if string.find(name, "beanstalk") or string.find(name, "stem") or string.find(name, "stalk") or string.find(name, "vine") then
+                            if not obj:FindFirstChild("MegaScaled") then
+                                local tag = Instance.new("BoolValue")
+                                tag.Name = "MegaScaled"
+                                tag.Parent = obj
+                                
+                                pcall(function()
+                                    obj.Size = Vector3.new(obj.Size.X * 1.5, math.max(obj.Size.Y, 1500), obj.Size.Z * 1.5)
+                                    obj.CanCollide = true
+                                end)
+                            end
+                        end
                     end
                 end
             end
@@ -368,14 +447,13 @@ task.spawn(function()
     end
 end)
 
--- 5. Auto Unlock Treadmill
+-- 6. Auto Unlock Treadmill
 task.spawn(function()
     while true do
         task.wait(0.4)
         if Toggles.AutoUnlockTreadmill then
             local myPlot = FindMyPlot()
             if myPlot then
-                -- Search for unlock buttons / pads on plot
                 for _, obj in ipairs(myPlot:GetDescendants()) do
                     local name = string.lower(obj.Name)
                     if string.find(name, "treadmill") or string.find(name, "speed") or string.find(name, "unlock") or string.find(name, "tier") then
@@ -388,7 +466,6 @@ task.spawn(function()
                 end
             end
             
-            -- Remotes scan
             pcall(function()
                 for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
                     if rem:IsA("RemoteEvent") or rem:IsA("RemoteFunction") then
@@ -407,7 +484,7 @@ task.spawn(function()
     end
 end)
 
--- 6. Auto Upgrade Base & Grow Beanstalk
+-- 7. Auto Upgrade Base
 task.spawn(function()
     while true do
         task.wait(0.4)
@@ -426,7 +503,6 @@ task.spawn(function()
                 end
             end
             
-            -- Base upgrade & Beanstalk Grow remotes
             pcall(function()
                 for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
                     if rem:IsA("RemoteEvent") or rem:IsA("RemoteFunction") then
@@ -445,82 +521,135 @@ task.spawn(function()
     end
 end)
 
--- 7. Auto Hatch Egg
+-- 8. Auto Hatch Egg (UPGRADED: 4-Layer Comprehensive Hatching Engine)
 task.spawn(function()
     while true do
-        task.wait(0.4)
+        task.wait(0.3)
         if Toggles.AutoHatchEgg then
             local myPlot = FindMyPlot()
-            if myPlot then
-                for _, prompt in ipairs(myPlot:GetDescendants()) do
-                    if prompt:IsA("ProximityPrompt") then
-                        local text = string.lower(prompt.ObjectText .. prompt.ActionText .. prompt.Name)
-                        if string.find(text, "hatch") or string.find(text, "open") or string.find(text, "claim") or string.find(text, "crack") then
-                            TriggerPrompt(prompt)
+            
+            -- Layer 1: Plot & Workspace Proximity Prompts
+            local searchAreas = {myPlot, Workspace}
+            for _, area in ipairs(searchAreas) do
+                if area then
+                    for _, prompt in ipairs(area:GetDescendants()) do
+                        if prompt:IsA("ProximityPrompt") then
+                            local text = string.lower(prompt.ObjectText .. " " .. prompt.ActionText .. " " .. prompt.Name)
+                            if string.find(text, "hatch") or string.find(text, "open") or string.find(text, "claim") or string.find(text, "crack") or string.find(text, "egg") or string.find(text, "incubator") or string.find(text, "pet") then
+                                TriggerPrompt(prompt)
+                            end
                         end
                     end
                 end
             end
             
-            -- Hatch Remotes
+            -- Layer 2: Universal Hatch Remotes Sweeper
             pcall(function()
                 for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
                     if rem:IsA("RemoteEvent") or rem:IsA("RemoteFunction") then
                         local remName = string.lower(rem.Name)
-                        if string.find(remName, "hatch") or string.find(remName, "openegg") or string.find(remName, "crackegg") then
+                        if string.find(remName, "hatch") or string.find(remName, "openegg") or string.find(remName, "crackegg") or string.find(remName, "claimpet") or string.find(remName, "placeegg") then
                             if rem:IsA("RemoteEvent") then
                                 rem:FireServer()
+                                rem:FireServer(1)
                                 rem:FireServer("1")
                                 rem:FireServer(true)
+                                rem:FireServer("Common")
+                                rem:FireServer("Egg")
                             else
                                 rem:InvokeServer()
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- 8. Auto Rebirth
-task.spawn(function()
-    while true do
-        task.wait(0.5)
-        if Toggles.AutoRebirth then
-            pcall(function()
-                for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if rem:IsA("RemoteEvent") or rem:IsA("RemoteFunction") then
-                        local remName = string.lower(rem.Name)
-                        if string.find(remName, "rebirth") or string.find(remName, "prestige") or string.find(remName, "ascend") then
-                            if rem:IsA("RemoteEvent") then
-                                rem:FireServer()
-                            else
-                                rem:InvokeServer()
+                                rem:InvokeServer(1)
                             end
                         end
                     end
                 end
             end)
             
-            local myPlot = FindMyPlot()
+            -- Layer 3: Plot Incubator Touch Pads
             if myPlot then
                 for _, obj in ipairs(myPlot:GetDescendants()) do
-                    local name = string.lower(obj.Name)
-                    if string.find(name, "rebirth") then
-                        if obj:IsA("ProximityPrompt") then
-                            TriggerPrompt(obj)
-                        elseif obj:IsA("BasePart") then
+                    if obj:IsA("BasePart") then
+                        local name = string.lower(obj.Name)
+                        if string.find(name, "hatch") or string.find(name, "incubator") or string.find(name, "nest") or string.find(name, "eggslot") then
                             SafeTouch(obj)
                         end
                     end
                 end
             end
+            
+            -- Layer 4: PlayerGui Hatch / Claim Buttons
+            pcall(function()
+                for _, btn in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
+                    if btn:IsA("TextButton") or btn:IsA("ImageButton") then
+                        local text = string.lower(btn.Name .. " " .. (btn:IsA("TextButton") and btn.Text or ""))
+                        if string.find(text, "hatch") or string.find(text, "claim") or string.find(text, "open") or string.find(text, "skip") then
+                            ClickGuiButton(btn)
+                        end
+                    end
+                end
+            end)
         end
     end
 end)
 
--- 9. Auto Claim All Rewards
+-- 9. Auto Rebirth (UPGRADED: 4-Layer Universal Rebirth Engine)
+task.spawn(function()
+    while true do
+        task.wait(0.4)
+        if Toggles.AutoRebirth then
+            -- Layer 1: Remotes Sweeper
+            pcall(function()
+                for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
+                    if rem:IsA("RemoteEvent") or rem:IsA("RemoteFunction") then
+                        local remName = string.lower(rem.Name)
+                        if string.find(remName, "rebirth") or string.find(remName, "prestige") or string.find(remName, "ascend") or string.find(remName, "dorebirth") or string.find(remName, "requestrebirth") then
+                            if rem:IsA("RemoteEvent") then
+                                rem:FireServer()
+                                rem:FireServer(1)
+                                rem:FireServer(true)
+                            else
+                                rem:InvokeServer()
+                                rem:InvokeServer(1)
+                            end
+                        end
+                    end
+                end
+            end)
+            
+            -- Layer 2: Proximity Prompts & Pads
+            local myPlot = FindMyPlot()
+            local searchAreas = {myPlot, Workspace}
+            for _, area in ipairs(searchAreas) do
+                if area then
+                    for _, obj in ipairs(area:GetDescendants()) do
+                        local name = string.lower(obj.Name)
+                        if string.find(name, "rebirth") or string.find(name, "prestige") then
+                            if obj:IsA("ProximityPrompt") then
+                                TriggerPrompt(obj)
+                            elseif obj:IsA("BasePart") then
+                                SafeTouch(obj)
+                            end
+                        end
+                    end
+                end
+            end
+            
+            -- Layer 3: PlayerGui Rebirth Buttons
+            pcall(function()
+                for _, btn in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
+                    if btn:IsA("TextButton") or btn:IsA("ImageButton") then
+                        local text = string.lower(btn.Name .. " " .. (btn:IsA("TextButton") and btn.Text or ""))
+                        if string.find(text, "rebirth") or string.find(text, "prestige") or string.find(text, "confirm") then
+                            ClickGuiButton(btn)
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- 10. Auto Claim All Rewards
 task.spawn(function()
     while true do
         task.wait(1)
@@ -543,7 +672,6 @@ task.spawn(function()
                 end
             end)
             
-            -- Search for claim chests in workspace
             for _, obj in ipairs(Workspace:GetDescendants()) do
                 local name = string.lower(obj.Name)
                 if string.find(name, "reward") or string.find(name, "chest") or string.find(name, "gift") then
@@ -558,7 +686,7 @@ task.spawn(function()
     end
 end)
 
--- 10. WalkSpeed Boost Engine
+-- 11. WalkSpeed Boost Engine
 local function UpdateWalkSpeed()
     local hum = GetHumanoid()
     if hum then
@@ -579,7 +707,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- 11. Infinite Jump Engine with Jump Height
+-- 12. Infinite Jump Engine with Jump Height
 UserInputService.JumpRequest:Connect(function()
     if Toggles.InfiniteJump then
         local hum = GetHumanoid()
@@ -591,7 +719,7 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
--- 12. 3D Fly Mode Engine
+-- 13. 3D Fly Mode Engine
 local function StartFlying()
     local char = GetCharacter()
     local root = GetRootPart()
@@ -680,8 +808,8 @@ end
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 285, 0, 310)
-MainFrame.Position = UDim2.new(0.5, -142, 0.5, -155)
+MainFrame.Size = UDim2.new(0, 285, 0, 315)
+MainFrame.Position = UDim2.new(0.5, -142, 0.5, -157)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -998,32 +1126,35 @@ AddToggleRow("Auto Steal Nearest Egg", "AutoStealNearestEgg")
 -- 4. Fast Climb on Beanstalk
 AddToggleRow("Fast Climb Beanstalk", "FastClimbBeanstalk")
 
--- 5. Auto Unlock Treadmill
+-- 5. NEW: Infinite / Longest Beanstalk
+AddToggleRow("Infinite Long Beanstalk", "InfiniteBeanstalk")
+
+-- 6. Auto Unlock Treadmill
 AddToggleRow("Auto Unlock Treadmill", "AutoUnlockTreadmill")
 
--- 6. Auto Upgrade Base
+-- 7. Auto Upgrade Base
 AddToggleRow("Auto Upgrade Base", "AutoUpgradeBase")
 
--- 7. Auto Hatch Egg
+-- 8. Auto Hatch Egg
 AddToggleRow("Auto Hatch Egg", "AutoHatchEgg")
 
--- 8. Auto Rebirth
+-- 9. Auto Rebirth
 AddToggleRow("Auto Rebirth", "AutoRebirth")
 
--- 9. Auto Claim All Rewards
+-- 10. Auto Claim All Rewards
 AddToggleRow("Auto Claim All Rewards", "AutoClaimRewards")
 
--- 10. WalkSpeed with Line Bar Slider
+-- 11. WalkSpeed with Line Bar Slider
 AddSliderRow("WalkSpeed", "WalkSpeedBoost", "WalkSpeed", 16, 300, 75, function(val)
     UpdateWalkSpeed()
 end, function(enabled)
     UpdateWalkSpeed()
 end)
 
--- 11. Infinite Jump with Line Bar Slider
+-- 12. Infinite Jump with Line Bar Slider
 AddSliderRow("Infinite Jump", "InfiniteJump", "JumpPower", 50, 300, 120, nil, nil)
 
--- 12. Fly Mode with Line Bar Slider
+-- 13. Fly Mode with Line Bar Slider
 AddSliderRow("Fly Mode", "FlyMode", "FlySpeed", 20, 250, 70, nil, function(enabled)
     if enabled then
         StartFlying()
@@ -1059,4 +1190,4 @@ FooterSub.TextSize = 9
 FooterSub.Font = Enum.Font.GothamMedium
 FooterSub.Parent = Footer
 
-print("Junejo Ultra Script Hub loaded successfully for Grow Beanstalk to Steal An Egg!")
+print("Junejo Ultra Script Hub V2 updated successfully for Grow Beanstalk to Steal An Egg!")
