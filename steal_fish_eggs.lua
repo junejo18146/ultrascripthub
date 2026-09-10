@@ -1,5 +1,5 @@
 -- =================================================================
--- JUNEJO SCRIPT HUB: STEAL FISH EGGS (ULTRA MASTER V3)
+-- JUNEJO SCRIPT HUB: STEAL FISH EGGS (ULTRA MASTER V4)
 -- Game: Steal Fish Eggs (PlaceId: 99183404085821)
 -- Creator: Made by Junejo (junejo18146)
 -- Repository: ultrascripthub
@@ -187,8 +187,8 @@ local function ShowNotification(title, message)
 
         local Toast = Instance.new("Frame")
         Toast.Name = "JunejoToast"
-        Toast.Size = UDim2.new(0, 210, 0, 36)
-        Toast.Position = UDim2.new(0.5, -105, 0.08, 0)
+        Toast.Size = UDim2.new(0, 220, 0, 36)
+        Toast.Position = UDim2.new(0.5, -110, 0.06, 0)
         Toast.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
         Toast.BorderSizePixel = 0
         Toast.ZIndex = 999
@@ -301,10 +301,9 @@ local function TouchWithCharacter(targetPart)
 end
 
 -- =================================================================
--- BASE & PLACEMENT RESOLUTION ENGINE (Multi-Layer Robust)
+-- BASE & PLACEMENT RESOLUTION ENGINE
 -- =================================================================
 local function GetPlayerBase()
-    -- 1. Check Workspace.Bases
     local basesFolder = Workspace:FindFirstChild("Bases") or Workspace:FindFirstChild("PlayerBases") or Workspace:FindFirstChild("Plots") or Workspace:FindFirstChild("Tycoons")
     if basesFolder then
         local baseName = LocalPlayer:GetAttribute("BaseName")
@@ -331,7 +330,6 @@ local function GetPlayerBase()
         end
     end
 
-    -- 2. Global search for base belonging to player
     for _, item in ipairs(Workspace:GetChildren()) do
         if item:IsA("Model") and (item.Name:find("Base") or item.Name:find("Plot") or item.Name:find("Tycoon")) then
             local ownerAttr = item:GetAttribute("OwnerUserId") or item:GetAttribute("Owner")
@@ -358,7 +356,6 @@ local function GetPlayerPlacementZone()
         end
     end
 
-    -- Fallback: Global search
     local globalZone = Workspace:FindFirstChild("EggPlacementZone", true)
     if globalZone and globalZone:IsA("BasePart") then return globalZone end
 
@@ -502,7 +499,6 @@ local function GetBestEggInZone(chosenBiomeInternal)
         end
     end
 
-    -- 1. Check Workspace.SpawnedEggs / Eggs
     local eggFolders = {
         Workspace:FindFirstChild("SpawnedEggs"),
         Workspace:FindFirstChild("Eggs"),
@@ -538,7 +534,6 @@ local function GetBestEggInZone(chosenBiomeInternal)
         end
     end
 
-    -- 2. Fallback: Check Biome EggSpawns
     if #candidates == 0 and biomeFolder then
         for _, child in ipairs(biomeFolder:GetDescendants()) do
             if child:IsA("Model") and not CooldownEggs[child] and (child.Name:lower():find("egg") or child:GetAttribute("Rarity") ~= nil or child:FindFirstChildWhichIsA("ProximityPrompt", true)) then
@@ -549,7 +544,6 @@ local function GetBestEggInZone(chosenBiomeInternal)
         end
     end
 
-    -- 3. Ultimate Fallback: Global recursive search
     if #candidates == 0 then
         for _, item in ipairs(Workspace:GetChildren()) do
             if item:IsA("Model") and not CooldownEggs[item] and (item:GetAttribute("Rarity") ~= nil or (item.Name:lower():find("egg") and not item.Name:lower():find("placed") and not item.Name:lower():find("carried"))) then
@@ -599,7 +593,6 @@ task.spawn(function()
 
                             EquipCarriedEggTool()
 
-                            -- Fire exact place remote
                             local eggSys = ReplicatedStorage:FindFirstChild("EggSystem") or ReplicatedStorage
                             local placeEggRemote = eggSys:FindFirstChild("PlaceEgg", true) or eggSys:FindFirstChild("Place", true) or ReplicatedStorage:FindFirstChild("PlaceEgg", true)
                             if placeEggRemote and placeEggRemote:IsA("RemoteEvent") then
@@ -628,7 +621,6 @@ task.spawn(function()
                             hrp.CFrame = pivot * CFrame.new(0, 0.5, 0)
                             hrp.AssemblyLinearVelocity = Vector3.zero
 
-                            -- Multi-Layer Prompt & Touch
                             local prompt = targetEgg:FindFirstChildWhichIsA("ProximityPrompt", true)
                             if prompt then
                                 InstantTriggerPrompt(prompt)
@@ -641,7 +633,6 @@ task.spawn(function()
                                 end
                             end
 
-                            -- Remote pickup try
                             for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
                                 if rem:IsA("RemoteEvent") and (rem.Name:lower():find("take") or rem.Name:lower():find("steal") or rem.Name:lower():find("pickupegg")) then
                                     pcall(function() rem:FireServer(targetEgg) end)
@@ -678,64 +669,78 @@ task.spawn(function()
 end)
 
 -- =================================================================
--- GAME FEATURE 2: REMOVE GUARDS (COMPREHENSIVE MULTI-LAYER KILLER)
--- Neutralizes ALL guard fishes, chasers, sharks, hazards & obstacles!
+-- GAME FEATURE 2: REMOVE GUARDS (UNIVERSAL FISH & HAZARD KILLER)
+-- Neutralizes Models, MeshParts, Parts & TouchTransmitters
 -- =================================================================
-local function NeutralizeGuard(guard)
-    if not guard or not guard:IsA("Model") or guard == LocalPlayer.Character then return end
-    -- Check if it is another player
-    if Players:GetPlayerFromCharacter(guard) then return end
+local function NeutralizeTarget(target)
+    if not target or target == LocalPlayer.Character or target.Parent == LocalPlayer.Character then return end
+    if Players:GetPlayerFromCharacter(target) or Players:GetPlayerFromCharacter(target.Parent) then return end
 
     pcall(function()
-        -- 1. Teleport model far below world
-        guard:PivotTo(CFrame.new(0, -99999, 0))
-
-        -- 2. Strip collision, touching, query, transparency and size
-        for _, p in ipairs(guard:GetDescendants()) do
-            if p:IsA("BasePart") then
-                p.CanTouch = false
-                p.CanCollide = false
-                p.CanQuery = false
-                p.Transparency = 1
-                p.Size = Vector3.new(0.001, 0.001, 0.001)
-                p.CFrame = CFrame.new(0, -99999, 0)
-                p.AssemblyLinearVelocity = Vector3.zero
-                p.AssemblyAngularVelocity = Vector3.zero
-            elseif p:IsA("TouchTransmitter") then
-                p:Destroy()
+        if target:IsA("Model") then
+            target:PivotTo(CFrame.new(0, -99999, 0))
+            for _, p in ipairs(target:GetDescendants()) do
+                if p:IsA("BasePart") then
+                    p.CanTouch = false
+                    p.CanCollide = false
+                    p.CanQuery = false
+                    p.Transparency = 1
+                    p.Size = Vector3.new(0.001, 0.001, 0.001)
+                    p.CFrame = CFrame.new(0, -99999, 0)
+                    p.AssemblyLinearVelocity = Vector3.zero
+                    p.AssemblyAngularVelocity = Vector3.zero
+                elseif p:IsA("TouchTransmitter") then
+                    p:Destroy()
+                end
             end
+            local hum = target:FindFirstChildOfClass("Humanoid")
+            if hum then
+                hum.Health = 0
+                hum.MaxHealth = 0
+                hum:ChangeState(Enum.HumanoidStateType.Dead)
+            end
+            target:Destroy()
+        elseif target:IsA("BasePart") then
+            target.CanTouch = false
+            target.CanCollide = false
+            target.CanQuery = false
+            target.Transparency = 1
+            target.Size = Vector3.new(0.001, 0.001, 0.001)
+            target.CFrame = CFrame.new(0, -99999, 0)
+            target.AssemblyLinearVelocity = Vector3.zero
+            target.AssemblyAngularVelocity = Vector3.zero
+            for _, tt in ipairs(target:GetChildren()) do
+                if tt:IsA("TouchTransmitter") then tt:Destroy() end
+            end
+            target:Destroy()
         end
-
-        -- 3. Kill Humanoid if present
-        local hum = guard:FindFirstChildOfClass("Humanoid")
-        if hum then
-            hum.Health = 0
-            hum.MaxHealth = 0
-            hum:ChangeState(Enum.HumanoidStateType.Dead)
-        end
-
-        -- 4. Destroy client-side
-        guard:Destroy()
     end)
 end
 
-local function IsGuardOrFish(model)
-    if not model or not model:IsA("Model") or model == LocalPlayer.Character then return false end
-    if Players:GetPlayerFromCharacter(model) then return false end
+local function IsGuardOrFish(instance)
+    if not instance or instance == LocalPlayer.Character or instance.Parent == LocalPlayer.Character then return false end
+    if Players:GetPlayerFromCharacter(instance) or Players:GetPlayerFromCharacter(instance.Parent) then return false end
 
-    local name = model.Name:lower()
-    local isMatch = false
+    -- Avoid deleting eggs or base elements
+    local name = instance.Name:lower()
+    if name:find("egg") or name:find("spawn") or name:find("tank") or name:find("pad") or name:find("tread") or name:find("base") or name:find("theline") then
+        return false
+    end
+    if instance:GetAttribute("EggType") ~= nil or instance:GetAttribute("OwnerUserId") ~= nil then
+        return false
+    end
 
-    -- Check attributes
-    if model:GetAttribute("ChaserAggroActive") ~= nil or model:GetAttribute("IsGuard") ~= nil or model:GetAttribute("IsChaser") ~= nil or model:GetAttribute("Chaser") ~= nil then
+    -- Match attributes
+    if instance:GetAttribute("ChaserAggroActive") ~= nil or instance:GetAttribute("IsGuard") ~= nil or instance:GetAttribute("IsChaser") ~= nil or instance:GetAttribute("Chaser") ~= nil then
         return true
     end
 
-    -- Match fish/guard names
+    -- Match fish/guard/hazard keywords
     local keywords = {
         "chaser", "guard", "fish", "shark", "piranha", "coralreef", "deepocean",
         "hazard", "enemy", "monster", "obstacle", "creature", "jellyfish", "angler",
-        "dolphin", "killer", "attacker", "ray", "squid", "patrol", "leviathan"
+        "dolphin", "killer", "attacker", "ray", "squid", "patrol", "leviathan",
+        "killpart", "damagepart", "bitepart", "hitbox", "eel", "crab", "whale"
     }
     for _, kw in ipairs(keywords) do
         if name:find(kw) then
@@ -743,10 +748,12 @@ local function IsGuardOrFish(model)
         end
     end
 
-    -- Check if model has a Humanoid and is an NPC swimming in workspace
-    local hum = model:FindFirstChildOfClass("Humanoid")
-    if hum and not Players:GetPlayerFromCharacter(model) then
-        return true
+    -- If Model with Humanoid in ocean
+    if instance:IsA("Model") then
+        local hum = instance:FindFirstChildOfClass("Humanoid")
+        if hum and not Players:GetPlayerFromCharacter(instance) then
+            return true
+        end
     end
 
     return false
@@ -754,46 +761,10 @@ end
 
 local function SweepAndRemoveAllGuards()
     pcall(function()
-        -- 1. Check known specific folders
-        local guardFolders = {
-            Workspace:FindFirstChild("ChaserFishes"),
-            Workspace:FindFirstChild("ActiveChaserFishes"),
-            Workspace:FindFirstChild("Chasers"),
-            Workspace:FindFirstChild("Guards"),
-            Workspace:FindFirstChild("FishGuards"),
-            Workspace:FindFirstChild("Fishes"),
-            Workspace:FindFirstChild("Fish"),
-            Workspace:FindFirstChild("Enemies"),
-            Workspace:FindFirstChild("NPCs"),
-            Workspace:FindFirstChild("Creatures"),
-            Workspace:FindFirstChild("Hazards"),
-            Workspace:FindFirstChild("Obstacles")
-        }
-
-        for _, folder in ipairs(guardFolders) do
-            if folder then
-                for _, g in ipairs(folder:GetChildren()) do
-                    if g:IsA("Model") then
-                        NeutralizeGuard(g)
-                    end
-                end
-            end
-        end
-
-        -- 2. Sweep Workspace Biomes
-        local biomesFolder = Workspace:FindFirstChild("Biomes") or Workspace:FindFirstChild("Zones") or Workspace:FindFirstChild("Oceans")
-        if biomesFolder then
-            for _, item in ipairs(biomesFolder:GetDescendants()) do
-                if item:IsA("Model") and IsGuardOrFish(item) then
-                    NeutralizeGuard(item)
-                end
-            end
-        end
-
-        -- 3. Sweep all Workspace Children
-        for _, m in ipairs(Workspace:GetChildren()) do
-            if m:IsA("Model") and IsGuardOrFish(m) then
-                NeutralizeGuard(m)
+        -- Sweep Workspace Descendants
+        for _, desc in ipairs(Workspace:GetDescendants()) do
+            if IsGuardOrFish(desc) then
+                NeutralizeTarget(desc)
             end
         end
     end)
@@ -813,33 +784,33 @@ end)
 
 -- Instant Neutralization on Spawn
 Workspace.ChildAdded:Connect(function(child)
-    if Toggles.RemoveGuards and child:IsA("Model") then
+    if Toggles.RemoveGuards then
         task.wait(0.02)
         if IsGuardOrFish(child) then
-            NeutralizeGuard(child)
+            NeutralizeTarget(child)
         end
     end
 end)
 
 Workspace.DescendantAdded:Connect(function(desc)
-    if Toggles.RemoveGuards and desc:IsA("Model") then
+    if Toggles.RemoveGuards then
         if IsGuardOrFish(desc) then
             task.wait(0.02)
-            NeutralizeGuard(desc)
+            NeutralizeTarget(desc)
         end
     end
 end)
 
--- Proximity Kill Shield: Protects LocalPlayer every step
+-- Proximity Kill Shield
 RunService.Heartbeat:Connect(function()
     if Toggles.RemoveGuards and isAlive() then
         local myPos = LocalPlayer.Character.HumanoidRootPart.Position
         for _, m in ipairs(Workspace:GetChildren()) do
-            if m:IsA("Model") and m ~= LocalPlayer.Character and not Players:GetPlayerFromCharacter(m) then
+            if m ~= LocalPlayer.Character and not Players:GetPlayerFromCharacter(m) then
                 if IsGuardOrFish(m) then
-                    local pivot = m:GetPivot()
-                    if (pivot.Position - myPos).Magnitude < 100 then
-                        NeutralizeGuard(m)
+                    local pivot = m:IsA("Model") and m:GetPivot() or (m:IsA("BasePart") and m.CFrame)
+                    if pivot and (pivot.Position - myPos).Magnitude < 120 then
+                        NeutralizeTarget(m)
                     end
                 end
             end
@@ -857,7 +828,6 @@ task.spawn(function()
                 local eggSys = ReplicatedStorage:FindFirstChild("EggSystem") or ReplicatedStorage
                 local hatchRemote = eggSys:FindFirstChild("HatchEgg", true) or eggSys:FindFirstChild("Hatch", true) or ReplicatedStorage:FindFirstChild("HatchEgg", true)
 
-                -- 1. Placed Eggs in Workspace
                 local placedFolders = {
                     Workspace:FindFirstChild("PlacedEggs"),
                     Workspace:FindFirstChild("EggsPlaced"),
@@ -881,7 +851,6 @@ task.spawn(function()
                     end
                 end
 
-                -- 2. Placed Eggs inside Player's Base
                 local base = GetPlayerBase()
                 if base then
                     for _, child in ipairs(base:GetDescendants()) do
@@ -895,7 +864,6 @@ task.spawn(function()
                     end
                 end
 
-                -- 3. Click Open / Hatch UI Buttons in PlayerGui
                 local pGui = LocalPlayer:FindFirstChild("PlayerGui")
                 if pGui then
                     for _, btn in ipairs(pGui:GetDescendants()) do
@@ -962,7 +930,6 @@ task.spawn(function()
                     local hrp = getRoot()
                     local hum = getHum()
 
-                    -- 1. Find Own TreadPool
                     local wsPools = Workspace:FindFirstChild("LocalTreadPools") or Workspace:FindFirstChild("TreadPools") or Workspace:FindFirstChild("Pools")
                     local ownPool = wsPools and wsPools:FindFirstChild("OwnTreadPool")
                     local targetPool = ownPool or (wsPools and wsPools:FindFirstChild("AdminTreadPool")) or (Workspace:FindFirstChild("TreadPools") and Workspace.TreadPools:FindFirstChild("AdminTreadPool"))
@@ -986,7 +953,6 @@ task.spawn(function()
                         hum:ChangeState(Enum.HumanoidStateType.Swimming)
                     end
 
-                    -- Fire TreadPool remotes
                     local tpFolder = ReplicatedStorage:FindFirstChild("TreadPools") or ReplicatedStorage
                     local tpRemote = tpFolder:FindFirstChild("TreadPoolRemote", true) or tpFolder:FindFirstChild("TrainRemote", true)
                     if tpRemote and tpRemote:IsA("RemoteEvent") then
@@ -998,7 +964,6 @@ task.spawn(function()
                         adminRemote:FireServer("Start")
                     end
 
-                    -- If Level 0, purchase TreadPool
                     if tonumber(LocalPlayer:GetAttribute("TreadPoolLevel") or 0) == 0 then
                         local poolLevels = ReplicatedStorage:FindFirstChild("TreadPoolLevels") or ReplicatedStorage
                         local upPool = poolLevels:FindFirstChild("UpgradeTreadPool", true)
@@ -1031,14 +996,12 @@ task.spawn(function()
                         end
                     end
 
-                    -- Offline cash claim
                     local offCashSys = ReplicatedStorage:FindFirstChild("OfflineCashSystem") or ReplicatedStorage
                     local claimRemote = offCashSys:FindFirstChild("ClaimOfflineCash", true) or offCashSys:FindFirstChild("ClaimCash", true)
                     if claimRemote and claimRemote:IsA("RemoteEvent") then
                         claimRemote:FireServer()
                     end
 
-                    -- Fire general money remotes
                     for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
                         if rem:IsA("RemoteEvent") and (rem.Name:lower():find("cash") or rem.Name:lower():find("money") or rem.Name:lower():find("collect")) then
                             pcall(function() rem:FireServer() end)
@@ -1060,14 +1023,12 @@ task.spawn(function()
     while true do
         if Toggles.AutoUpgradeBase then
             pcall(function()
-                -- Tank Upgrade Remote
                 local tankLevels = ReplicatedStorage:FindFirstChild("TankLevels") or ReplicatedStorage
                 local upTank = tankLevels:FindFirstChild("UpgradeTank", true) or ReplicatedStorage:FindFirstChild("UpgradeTank", true)
                 if upTank and upTank:IsA("RemoteEvent") then
                     upTank:FireServer()
                 end
 
-                -- TreadPool Upgrade Remote
                 local poolLevels = ReplicatedStorage:FindFirstChild("TreadPoolLevels") or ReplicatedStorage
                 local upPool = poolLevels:FindFirstChild("UpgradeTreadPool", true) or ReplicatedStorage:FindFirstChild("UpgradeTreadPool", true)
                 if upPool and upPool:IsA("RemoteEvent") then
@@ -1079,7 +1040,6 @@ task.spawn(function()
                     end
                 end
 
-                -- Physical Base Upgrade Buttons
                 local base = GetPlayerBase()
                 if base and isAlive() then
                     for _, btn in ipairs(base:GetDescendants()) do
@@ -1164,7 +1124,6 @@ local function startFlying()
                 flyBodyVel.Velocity = Vector3.zero
             end
 
-            -- PC Vertical Controls
             if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
                 flyBodyVel.Velocity = flyBodyVel.Velocity + Vector3.new(0, FlySpeedValue, 0)
             end
@@ -1383,8 +1342,8 @@ ScreenGui.Parent = UIContainer
 
 local MainWindow = Instance.new("Frame")
 MainWindow.Name = "MainFrame"
-MainWindow.Size = UDim2.new(0, 285, 0, 330)
-MainWindow.Position = UDim2.new(0.5, -142, 0.5, -165)
+MainWindow.Size = UDim2.new(0, 285, 0, 340)
+MainWindow.Position = UDim2.new(0.5, -142, 0.5, -170)
 MainWindow.BackgroundColor3 = Color3.fromRGB(15, 15, 17) -- Matte Black
 MainWindow.BorderSizePixel = 0
 MainWindow.Active = true
@@ -1498,12 +1457,18 @@ FooterSub.Parent = Footer
 -- =================================================================
 -- OFFICIAL JUNEJO UI BUILDERS (BORDERLESS FLAT ROWS)
 -- =================================================================
+local currentOrder = 0
+local function getNextOrder()
+    currentOrder = currentOrder + 1
+    return currentOrder
+end
 
 -- 1. Helper: Add Borderless Toggle Row
 local function AddToggleRow(text, configKey, callback)
     local Row = Instance.new("Frame")
     Row.Size = UDim2.new(1, 0, 0, 23)
     Row.BackgroundTransparency = 1
+    Row.LayoutOrder = getNextOrder()
     Row.Parent = FeaturesContainer
     
     local RowBtn = Instance.new("TextButton")
@@ -1561,6 +1526,7 @@ local function AddToggleRow(text, configKey, callback)
         updateVisuals()
         if callback then callback(Toggles[configKey]) end
     end)
+    return Row
 end
 
 -- 2. Helper: Add 1-Click Action Row
@@ -1568,6 +1534,7 @@ local function AddActionRow(text, callback)
     local Row = Instance.new("Frame")
     Row.Size = UDim2.new(1, 0, 0, 23)
     Row.BackgroundTransparency = 1
+    Row.LayoutOrder = getNextOrder()
     Row.Parent = FeaturesContainer
     
     local RowBtn = Instance.new("TextButton")
@@ -1617,6 +1584,7 @@ local function AddActionRow(text, callback)
         task.delay(0.15, function() ActionBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32) end)
         if callback then callback() end
     end)
+    return Row
 end
 
 -- 3. Helper: Add Interactive Line Bar Slider Row
@@ -1624,6 +1592,7 @@ local function AddSliderRow(title, configKey, minVal, maxVal, defaultVal, onChan
     local Container = Instance.new("Frame")
     Container.Size = UDim2.new(1, 0, 0, 38)
     Container.BackgroundTransparency = 1
+    Container.LayoutOrder = getNextOrder()
     Container.Parent = FeaturesContainer
     
     local TopRow = Instance.new("Frame")
@@ -1757,20 +1726,33 @@ local function AddSliderRow(title, configKey, minVal, maxVal, defaultVal, onChan
             UpdateSlider(input)
         end
     end)
+    return Container
 end
 
 -- =================================================================
--- ZONE SELECTOR (JUNEJO EXECUTIVE EXPANDABLE AREA SELECTOR)
+-- POPULATE FEATURES (ORDERED CLEANLY)
 -- =================================================================
+
+-- 1. Auto Steal Eggs
+AddToggleRow("Auto Steal Eggs", "AutoSteal", function(enabled)
+    if enabled then
+        table.clear(CooldownEggs)
+        ShowNotification("Auto Steal", "Stealing best eggs from " .. AvailableZones[CurrentZoneIndex])
+    end
+end)
+
+-- 2. ZONE SELECTOR (DEDICATED BUTTON & EXPANDABLE OPTIONS LIST)
 local ZoneMainRow = Instance.new("Frame")
+ZoneMainRow.Name = "ZoneMainRow"
 ZoneMainRow.Size = UDim2.new(1, 0, 0, 24)
 ZoneMainRow.BackgroundTransparency = 1
+ZoneMainRow.LayoutOrder = getNextOrder()
 ZoneMainRow.Parent = FeaturesContainer
 
 local ZoneMainLabel = Instance.new("TextLabel")
 ZoneMainLabel.Size = UDim2.new(0.38, 0, 1, 0)
 ZoneMainLabel.BackgroundTransparency = 1
-ZoneMainLabel.Text = "Target Zone"
+ZoneMainLabel.Text = "Select Area"
 ZoneMainLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
 ZoneMainLabel.TextSize = 12
 ZoneMainLabel.Font = Enum.Font.GothamBold
@@ -1832,6 +1814,7 @@ ZoneOptionsContainer.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
 ZoneOptionsContainer.BorderSizePixel = 0
 ZoneOptionsContainer.Visible = false
 ZoneOptionsContainer.ClipsDescendants = true
+ZoneOptionsContainer.LayoutOrder = getNextOrder()
 ZoneOptionsContainer.Parent = FeaturesContainer
 
 local ZoneOptCorner = Instance.new("UICorner")
@@ -1879,7 +1862,7 @@ local function updateZoneSelection(newIdx, notify)
     end
     
     if notify then
-        ShowNotification("Target Zone", zoneName)
+        ShowNotification("Target Area", zoneName)
     end
 end
 
@@ -1960,19 +1943,7 @@ NextZoneBtn.MouseButton1Click:Connect(function()
     updateZoneSelection(newIdx, true)
 end)
 
--- =================================================================
--- POPULATE FEATURES
--- =================================================================
-
--- 1. Auto Steal Eggs
-AddToggleRow("Auto Steal Eggs", "AutoSteal", function(enabled)
-    if enabled then
-        table.clear(CooldownEggs)
-        ShowNotification("Auto Steal", "Stealing best eggs from " .. AvailableZones[CurrentZoneIndex])
-    end
-end)
-
--- 2. Remove Guards (Fishes)
+-- 3. Remove Guards (Fishes)
 AddToggleRow("Remove Guards (Fishes)", "RemoveGuards", function(enabled)
     if enabled then
         SweepAndRemoveAllGuards()
@@ -1980,21 +1951,21 @@ AddToggleRow("Remove Guards (Fishes)", "RemoveGuards", function(enabled)
     end
 end)
 
--- 3. Auto Hatch
+-- 4. Auto Hatch
 AddToggleRow("Auto Hatch", "AutoHatch", function(enabled)
     if enabled then
         ShowNotification("Auto Hatch", "Auto Hatching Ready Eggs!")
     end
 end)
 
--- 4. Auto Place
+-- 5. Auto Place
 AddToggleRow("Auto Place", "AutoPlace", function(enabled)
     if enabled then
         ShowNotification("Auto Place", "Auto Placing Carried Eggs in Tank!")
     end
 end)
 
--- 5. Auto Train Swim Speed
+-- 6. Auto Train Swim Speed
 AddToggleRow("Auto Train Swim Speed", "AutoTrainSwimSpeed", function(enabled)
     if enabled then
         ShowNotification("TreadPool", "Swim Training Activated!")
@@ -2006,20 +1977,20 @@ AddToggleRow("Auto Train Swim Speed", "AutoTrainSwimSpeed", function(enabled)
     end
 end)
 
--- 6. Auto Collect Money
+-- 7. Auto Collect Money
 AddToggleRow("Auto Collect Money", "AutoCollectMoney")
 
--- 7. Auto Upgrade Base
+-- 8. Auto Upgrade Base
 AddToggleRow("Auto Upgrade Base", "AutoUpgradeBase", function(enabled)
     if enabled then
         ShowNotification("Base Upgrades", "Auto Upgrading Tank & TreadPool!")
     end
 end)
 
--- 8. Instant TP to Base
+-- 9. Instant TP to Base
 AddActionRow("⚡ Instant TP to Base", TeleportToBase)
 
--- 9. Fly Mode with Interactive Line Bar Slider
+-- 10. Fly Mode with Interactive Line Bar Slider
 AddSliderRow("Fly Mode", "FlyMode", 20, 200, FlySpeedValue, function(val)
     FlySpeedValue = val
 end, function(enabled)
@@ -2030,13 +2001,13 @@ end, function(enabled)
     end
 end)
 
--- 10. Noclip
+-- 11. Noclip
 AddToggleRow("Noclip", "Noclip")
 
--- 11. Rare Egg Only ESP
+-- 12. Rare Egg Only ESP
 AddToggleRow("Rare Egg Only ESP", "RareEggOnlyESP")
 
--- 12. Player ESP
+-- 13. Player ESP
 AddToggleRow("Player ESP", "PlayerESP")
 
 -- =================================================================
