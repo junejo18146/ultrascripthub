@@ -1,11 +1,11 @@
 -- ====================================================
--- JUNEJO ULTRA SCRIPT HUB - ANIME ABILITY ARENA (OFFICIAL)
+-- JUNEJO ULTRA SCRIPT HUB - ANIME ABILITY ARENA
 -- Game: Anime Ability Arena (Roblox)
 -- Link: https://www.roblox.com/games/108567435288296/Anime-Ability-Arena
 -- Author: Made by Junejo (junejo18146)
 -- GitHub: https://github.com/junejo18146/ultrascripthub
 -- Universal Mobile (Delta / Codex / Fluxus) & PC Compatible
--- 100% Flat & Borderless Junejo Standard UI (20 Features)
+-- Official Classic Executive Dark UI (7 Core Features)
 -- ====================================================
 
 local function elevate()
@@ -83,36 +83,20 @@ local function notify(title, message, dur)
 end
 
 -- ====================================================
--- GLOBAL STATE & SETTINGS (20 FEATURES)
+-- GLOBAL STATE & SETTINGS (7 CORE FEATURES)
 -- ====================================================
 local Settings = {
-    -- 1. Combat & Auto Farm
     KillAura = false,
     AuraRadius = 25,
     AutoFarmKills = false,
-    AutoCounter = false,
-    AutoSkills = false,
     HitboxExpander = false,
     HitboxSize = 18,
-    AutoAwakening = false,
-    AutoBlock = false,
-
-    -- 2. Defense & Movement
+    AutoSkills = false,
     InstantGetUp = true,
-    AntiVoid = true,
     WalkSpeedBoost = false,
     WalkSpeed = 55,
-    InfJump = false,
     Fly = false,
     FlySpeed = 50,
-    NoClip = false,
-
-    -- 3. Visuals & ESP
-    PlayerESP = false,
-    HealthTags = false,
-    Tracers = false,
-
-    -- 4. System
     AntiAFK = true,
 }
 
@@ -129,25 +113,8 @@ local function isAlive()
     return root ~= nil and hum ~= nil and hum.Health > 0
 end
 
--- Find Safe Zone / Spawn CFrame
-local function GetSafeZoneCFrame()
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj:IsA("BasePart") then
-            local n = obj.Name:lower()
-            if n:find("safezone") or n:find("lobby") or n:find("spawn") or n:find("hub") then
-                return obj.CFrame + Vector3.new(0, 5, 0)
-            end
-        end
-    end
-    local spawnLoc = Workspace:FindFirstChildOfClass("SpawnLocation")
-    if spawnLoc then
-        return spawnLoc.CFrame + Vector3.new(0, 5, 0)
-    end
-    return CFrame.new(0, 45, 0)
-end
-
 -- ====================================================
--- 8. INSTANT ANTI-RAGDOLL & AUTO GET UP (< 0.1s)
+-- 5. INSTANT AUTO GET UP / ANTI-RAGDOLL (< 0.1s)
 -- ====================================================
 local function handleInstantGetUp()
     if not Settings.InstantGetUp or not isAlive() then return end
@@ -178,51 +145,7 @@ RunService.Heartbeat:Connect(handleInstantGetUp)
 RunService.Stepped:Connect(handleInstantGetUp)
 
 -- ====================================================
--- 3. AUTO COUNTER-ATTACK & DAMAGE TRACKER
--- ====================================================
-local lastHealth = 100
-local lastAttacker = nil
-local lastAttackedTime = 0
-
-local function setupHealthTracker()
-    local char = LocalPlayer.Character
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
-    if hum then
-        lastHealth = hum.Health
-        hum.HealthChanged:Connect(function(newHealth)
-            if newHealth < lastHealth and isAlive() then
-                lastAttackedTime = os.clock()
-                local root = char:FindFirstChild("HumanoidRootPart")
-                if root then
-                    local closest = nil
-                    local closestDist = 55
-                    for _, p in ipairs(Players:GetPlayers()) do
-                        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                            local eHum = p.Character:FindFirstChildOfClass("Humanoid")
-                            if eHum and eHum.Health > 0 then
-                                local dist = (p.Character.HumanoidRootPart.Position - root.Position).Magnitude
-                                if dist < closestDist then
-                                    closestDist = dist
-                                    closest = p
-                                end
-                            end
-                        end
-                    end
-                    if closest then
-                        lastAttacker = closest
-                    end
-                end
-            end
-            lastHealth = newHealth
-        end)
-    end
-end
-
-LocalPlayer.CharacterAdded:Connect(setupHealthTracker)
-if LocalPlayer.Character then setupHealthTracker() end
-
--- ====================================================
--- 5. HITBOX EXPANDER (18x18 Neon Hitboxes)
+-- 3. HITBOX EXPANDER (18x18 Red Neon Hitboxes)
 -- ====================================================
 local originalSizes = {}
 
@@ -268,12 +191,9 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- ==========================================
--- COMBAT PACKET & VIRTUAL ATTACK ENGINE
--- ==========================================
+-- Combat Execution Helper
 local function executeM1Attack()
     elevate()
-    -- 1. Virtual Mouse Click
     if VirtualUser then
         pcall(function()
             VirtualUser:CaptureController()
@@ -281,7 +201,6 @@ local function executeM1Attack()
         end)
     end
 
-    -- 2. Virtual Input Manager (Mobile & PC Input)
     if VirtualInputManager then
         pcall(function()
             VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
@@ -290,7 +209,6 @@ local function executeM1Attack()
         end)
     end
 
-    -- 3. Direct Tool & Combat Remote Fire
     local char = LocalPlayer.Character
     if char then
         local tool = char:FindFirstChildOfClass("Tool")
@@ -303,7 +221,7 @@ local function executeM1Attack()
         for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
             if rem:IsA("RemoteEvent") then
                 local n = rem.Name:lower()
-                if n:find("attack") or n:find("m1") or n:find("punch") or n:find("combat") or n:find("hit") or n:find("slash") or n:find("swing") then
+                if n:find("attack") or n:find("m1") or n:find("punch") or n:find("combat") or n:find("hit") or n:find("slash") then
                     rem:FireServer()
                     rem:FireServer(1)
                     rem:FireServer(true)
@@ -344,7 +262,7 @@ spawnTask(function()
 end)
 
 -- ====================================================
--- 2. AUTO FARM KILLS / YEN FARM (Target Lowest HP)
+-- 2. AUTO FARM KILLS (YEN FARM)
 -- ====================================================
 spawnTask(function()
     while true do
@@ -370,29 +288,6 @@ spawnTask(function()
                     local tRoot = bestTarget.Character.HumanoidRootPart
                     myRoot.CFrame = tRoot.CFrame * CFrame.new(0, 0, 3)
                     executeM1Attack()
-                end
-            end
-        end
-    end
-end)
-
--- ====================================================
--- 3. AUTO COUNTER-ATTACK (REVENGE AURA)
--- ====================================================
-spawnTask(function()
-    while true do
-        task.wait(0.08)
-        if Settings.AutoCounter and isAlive() and lastAttacker and (os.clock() - lastAttackedTime < 5) then
-            local _, myRoot = getPlayerChar()
-            if myRoot and lastAttacker.Character and lastAttacker.Character:FindFirstChild("HumanoidRootPart") then
-                local eHum = lastAttacker.Character:FindFirstChildOfClass("Humanoid")
-                if eHum and eHum.Health > 0 then
-                    local dist = (lastAttacker.Character.HumanoidRootPart.Position - myRoot.Position).Magnitude
-                    if dist <= (Settings.AuraRadius + 15) then
-                        executeM1Attack()
-                    end
-                else
-                    lastAttacker = nil
                 end
             end
         end
@@ -442,138 +337,7 @@ spawnTask(function()
 end)
 
 -- ====================================================
--- 6. AUTO ULTIMATE / AWAKENING (G Key)
--- ====================================================
-spawnTask(function()
-    while true do
-        task.wait(1.5)
-        if Settings.AutoAwakening and isAlive() then
-            castKey(Enum.KeyCode.G)
-            pcall(function()
-                for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if rem:IsA("RemoteEvent") then
-                        local n = rem.Name:lower()
-                        if n:find("awake") or n:find("ultimate") or n:find("mode") then
-                            rem:FireServer()
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- ====================================================
--- 7. AUTO BLOCK / AUTO PARRY (F Key)
--- ====================================================
-spawnTask(function()
-    while true do
-        task.wait(0.1)
-        if Settings.AutoBlock and isAlive() then
-            local _, myRoot = getPlayerChar()
-            if myRoot then
-                local attackerNear = false
-                for _, p in ipairs(Players:GetPlayers()) do
-                    if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                        local eHum = p.Character:FindFirstChildOfClass("Humanoid")
-                        if eHum and eHum.Health > 0 then
-                            local dist = (p.Character.HumanoidRootPart.Position - myRoot.Position).Magnitude
-                            if dist < 16 then
-                                attackerNear = true
-                                break
-                            end
-                        end
-                    end
-                end
-                if attackerNear then
-                    castKey(Enum.KeyCode.F)
-                end
-            end
-        end
-    end
-end)
-
--- ====================================================
--- 9. ANTI-VOID / FALL RECOVERY
--- ====================================================
-RunService.Heartbeat:Connect(function()
-    if Settings.AntiVoid and isAlive() then
-        local _, myRoot = getPlayerChar()
-        if myRoot and myRoot.Position.Y < -40 then
-            myRoot.AssemblyLinearVelocity = Vector3.zero
-            myRoot.CFrame = GetSafeZoneCFrame()
-            notify("Anti-Void", "Recovered from void safely!", 2)
-        end
-    end
-end)
-
--- ====================================================
--- 10. SAFE ZONE TELEPORT (1-Click Action)
--- ====================================================
-local function TeleportToSafeZone()
-    local _, myRoot = getPlayerChar()
-    if myRoot then
-        myRoot.AssemblyLinearVelocity = Vector3.zero
-        myRoot.CFrame = GetSafeZoneCFrame()
-        notify("Safe Zone", "Teleported to Safe Zone Lobby!", 2)
-    end
-end
-
--- ====================================================
--- 11. TELEPORT BEHIND NEAREST ENEMY (1-Click Backstab)
--- ====================================================
-local function TeleportBehindNearestEnemy()
-    local _, myRoot = getPlayerChar()
-    if not myRoot then return end
-    local nearest = nil
-    local nearestDist = math.huge
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-            local eHum = p.Character:FindFirstChildOfClass("Humanoid")
-            if eHum and eHum.Health > 0 then
-                local dist = (p.Character.HumanoidRootPart.Position - myRoot.Position).Magnitude
-                if dist < nearestDist then
-                    nearestDist = dist
-                    nearest = p
-                end
-            end
-        end
-    end
-    if nearest and nearest.Character and nearest.Character:FindFirstChild("HumanoidRootPart") then
-        local targetRoot = nearest.Character.HumanoidRootPart
-        myRoot.AssemblyLinearVelocity = Vector3.zero
-        myRoot.CFrame = targetRoot.CFrame * CFrame.new(0, 0, 3)
-        notify("Backstab", "Teleported behind " .. nearest.DisplayName, 2)
-    else
-        notify("Teleport", "No target enemy in range!", 2)
-    end
-end
-
--- ====================================================
--- 12. CLICK-TO-TELEPORT TOOL (Backpack Tool)
--- ====================================================
-local function GiveClickToTPTool()
-    local mouse = LocalPlayer:GetMouse()
-    local tool = Instance.new("Tool")
-    tool.RequiresHandle = false
-    tool.Name = "⚡ Click to Teleport"
-    tool.CanBeDropped = false
-
-    tool.Activated:Connect(function()
-        local pos = mouse.Hit.Position
-        local _, myRoot = getPlayerChar()
-        if myRoot then
-            myRoot.AssemblyLinearVelocity = Vector3.zero
-            myRoot.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
-        end
-    end)
-
-    tool.Parent = LocalPlayer:WaitForChild("Backpack")
-    notify("Teleport Tool", "Equipped 'Click to Teleport' Tool in Backpack!", 3)
-end
-
--- ====================================================
--- 13. WALKSPEED BOOST ENGINE (Persistent)
+-- 6. WALKSPEED BOOST ENGINE (Persistent)
 -- ====================================================
 local function applyWalkSpeed()
     local _, _, hum = getPlayerChar()
@@ -596,20 +360,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- ====================================================
--- 14. INFINITE JUMP ENGINE
--- ====================================================
-UserInputService.JumpRequest:Connect(function()
-    if Settings.InfJump and isAlive() then
-        local _, root, hum = getPlayerChar()
-        if hum and root then
-            hum:ChangeState(Enum.HumanoidStateType.Jumping)
-            root.AssemblyLinearVelocity = Vector3.new(root.AssemblyLinearVelocity.X, 55, root.AssemblyLinearVelocity.Z)
-        end
-    end
-end)
-
--- ====================================================
--- 15. ARENA FLY MODE ENGINE (WASD + Mobile Support)
+-- 7. ARENA FLY MODE ENGINE (WASD + Mobile Support)
 -- ====================================================
 local flying = false
 local flyBV = nil
@@ -667,147 +418,7 @@ local function stopFly()
     if flyBG then flyBG:Destroy() flyBG = nil end
 end
 
--- ====================================================
--- 16. NOCLIP MODE ENGINE
--- ====================================================
-RunService.Stepped:Connect(function()
-    if Settings.NoClip and isAlive() then
-        local char = LocalPlayer.Character
-        if char then
-            for _, part in ipairs(char:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = false
-                end
-            end
-        end
-    end
-end)
-
--- ====================================================
--- 17, 18, 19. VISUALS & ESP ENGINE (Highlights, Tags, Tracers)
--- ====================================================
-local espHighlights = {}
-local espTags = {}
-local espTracers = {}
-
-local function createESP(player)
-    if player == LocalPlayer then return end
-
-    local function setupChar(char)
-        if not char then return end
-        local root = char:WaitForChild("HumanoidRootPart", 5)
-        local hum = char:WaitForChild("Humanoid", 5)
-        if not root or not hum then return end
-
-        -- 17. Highlight
-        local hl = Instance.new("Highlight")
-        hl.Name = "JunejoESP"
-        hl.FillColor = Color3.fromRGB(255, 45, 45)
-        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-        hl.FillTransparency = 0.5
-        hl.OutlineTransparency = 0.1
-        hl.Adornee = char
-        hl.Enabled = Settings.PlayerESP
-        hl.Parent = char
-        espHighlights[player] = hl
-
-        -- 18. Billboard Tag (Name, Distance, HP)
-        local bb = Instance.new("BillboardGui")
-        bb.Name = "JunejoTag"
-        bb.Size = UDim2.new(0, 160, 0, 40)
-        bb.StudsOffset = Vector3.new(0, 3.2, 0)
-        bb.AlwaysOnTop = true
-        bb.Adornee = root
-        bb.Enabled = Settings.HealthTags
-
-        local nameLbl = Instance.new("TextLabel")
-        nameLbl.Size = UDim2.new(1, 0, 0, 16)
-        nameLbl.BackgroundTransparency = 1
-        nameLbl.Text = player.DisplayName .. " (@" .. player.Name .. ")"
-        nameLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
-        nameLbl.TextSize = 11
-        nameLbl.Font = Enum.Font.GothamBold
-        nameLbl.Parent = bb
-
-        local hpLbl = Instance.new("TextLabel")
-        hpLbl.Size = UDim2.new(1, 0, 0, 14)
-        hpLbl.Position = UDim2.new(0, 0, 0, 16)
-        hpLbl.BackgroundTransparency = 1
-        hpLbl.Text = string.format("HP: %d | %d Studs", math.floor(hum.Health), 0)
-        hpLbl.TextColor3 = Color3.fromRGB(255, 80, 80)
-        hpLbl.TextSize = 10
-        hpLbl.Font = Enum.Font.GothamMedium
-        hpLbl.Parent = bb
-
-        bb.Parent = root
-        espTags[player] = {Gui = bb, Text = hpLbl, Hum = hum, Root = root}
-    end
-
-    player.CharacterAdded:Connect(setupChar)
-    if player.Character then setupChar(player.Character) end
-end
-
-for _, p in ipairs(Players:GetPlayers()) do createESP(p) end
-Players.PlayerAdded:Connect(createESP)
-
--- Dynamic ESP Updater
-RunService.RenderStepped:Connect(function()
-    local _, myRoot = getPlayerChar()
-    for p, data in pairs(espTags) do
-        if data.Gui and data.Root and data.Hum and myRoot then
-            local dist = math.floor((data.Root.Position - myRoot.Position).Magnitude)
-            local hp = math.max(0, math.floor(data.Hum.Health))
-            data.Text.Text = string.format("HP: %d | %d Studs", hp, dist)
-            data.Gui.Enabled = Settings.HealthTags
-        end
-    end
-    for p, hl in pairs(espHighlights) do
-        if hl then hl.Enabled = Settings.PlayerESP end
-    end
-end)
-
--- 19. Tracers Drawing Loop
-local function updateTracers()
-    if not Drawing then return end
-    RunService.RenderStepped:Connect(function()
-        if not Settings.Tracers then
-            for _, line in pairs(espTracers) do line.Visible = false end
-            return
-        end
-
-        local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                local root = p.Character.HumanoidRootPart
-                local pos, onScreen = Camera:WorldToViewportPoint(root.Position)
-
-                if not espTracers[p] then
-                    local line = Drawing.new("Line")
-                    line.Thickness = 1.2
-                    line.Color = Color3.fromRGB(255, 60, 60)
-                    line.Transparency = 0.8
-                    espTracers[p] = line
-                end
-
-                local line = espTracers[p]
-                if onScreen then
-                    line.From = screenCenter
-                    line.To = Vector2.new(pos.X, pos.Y)
-                    line.Visible = true
-                else
-                    line.Visible = false
-                end
-            elseif espTracers[p] then
-                espTracers[p].Visible = false
-            end
-        end
-    end)
-end
-pcall(updateTracers)
-
--- ====================================================
--- 20. ANTI-AFK DISCONNECT ENGINE
--- ====================================================
+-- Anti-AFK Disconnect Engine
 if getconnections then
     for _, conn in pairs(getconnections(LocalPlayer.Idled)) do
         if conn.Disable then conn:Disable() elseif conn.Disconnect then conn:Disconnect() end
@@ -835,8 +446,8 @@ ScreenGui.Parent = guiParent
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 285, 0, 320)
-MainFrame.Position = UDim2.new(0.5, -142, 0.5, -160)
+MainFrame.Size = UDim2.new(0, 285, 0, 275)
+MainFrame.Position = UDim2.new(0.5, -142, 0.5, -137)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -914,7 +525,7 @@ HeaderLine.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
 HeaderLine.BorderSizePixel = 0
 HeaderLine.Parent = MainFrame
 
--- Content Frame (Scrolling)
+-- Content Frame
 local ContentScroll = Instance.new("ScrollingFrame")
 ContentScroll.Name = "ContentScroll"
 ContentScroll.Size = UDim2.new(1, -24, 1, -74)
@@ -988,62 +599,6 @@ local function AddToggleRow(text, configKey, callback)
         Settings[configKey] = not Settings[configKey]
         CheckMark.BackgroundTransparency = Settings[configKey] and 0 or 1
         if callback then callback(Settings[configKey]) end
-    end)
-end
-
--- Helper: Add 1-Click Action Row
-local function AddActionRow(text, callback)
-    local Row = Instance.new("Frame")
-    Row.Size = UDim2.new(1, 0, 0, 23)
-    Row.BackgroundTransparency = 1
-    Row.Parent = ContentScroll
-    
-    local RowBtn = Instance.new("TextButton")
-    RowBtn.Size = UDim2.new(1, 0, 1, 0)
-    RowBtn.BackgroundTransparency = 1
-    RowBtn.Text = ""
-    RowBtn.ZIndex = 5
-    RowBtn.Parent = Row
-    
-    local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(1, -28, 1, 0)
-    Label.BackgroundTransparency = 1
-    Label.Text = text
-    Label.TextColor3 = Color3.fromRGB(240, 240, 240)
-    Label.TextSize = 12
-    Label.Font = Enum.Font.GothamBold
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.Parent = Row
-    
-    local ActionBox = Instance.new("Frame")
-    ActionBox.Size = UDim2.new(0, 18, 0, 18)
-    ActionBox.Position = UDim2.new(1, -18, 0.5, -9)
-    ActionBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-    ActionBox.BorderSizePixel = 0
-    ActionBox.Parent = Row
-    
-    local ActionCorner = Instance.new("UICorner")
-    ActionCorner.CornerRadius = UDim.new(0, 4)
-    ActionCorner.Parent = ActionBox
-    
-    local ActionStroke = Instance.new("UIStroke")
-    ActionStroke.Color = Color3.fromRGB(45, 45, 55)
-    ActionStroke.Thickness = 1.2
-    ActionStroke.Parent = ActionBox
-    
-    local ActionIcon = Instance.new("TextLabel")
-    ActionIcon.Size = UDim2.new(1, 0, 1, 0)
-    ActionIcon.BackgroundTransparency = 1
-    ActionIcon.Text = "⚡"
-    ActionIcon.TextColor3 = Color3.fromRGB(255, 255, 255)
-    ActionIcon.TextSize = 9
-    ActionIcon.Font = Enum.Font.GothamBold
-    ActionIcon.Parent = ActionBox
-    
-    RowBtn.MouseButton1Click:Connect(function()
-        ActionBox.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-        task.delay(0.15, function() ActionBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32) end)
-        if callback then callback() end
     end)
 end
 
@@ -1190,62 +745,32 @@ local function AddSliderRow(title, configKey, sliderKey, minVal, maxVal, default
 end
 
 -- ==========================================
--- POPULATE ALL 20 FEATURES (EXACT JUNEJO STANDARD)
+-- POPULATE EXACT 7 MAIN FEATURES
 -- ==========================================
 
 -- 1. Zero-Delay Kill Aura
 AddToggleRow("Zero-Delay Kill Aura", "KillAura")
 
--- 2. Auto Farm Kills / Yen Farm
-AddToggleRow("Auto Farm Kills (Yen Farm)", "AutoFarmKills")
+-- 2. Auto Farm Kills
+AddToggleRow("Auto Farm Kills", "AutoFarmKills")
 
--- 3. Auto Counter Attack
-AddToggleRow("Auto Counter Attack", "AutoCounter")
-
--- 4. Auto Cast Skills (Q, E, R)
-AddToggleRow("Auto Cast Skills (Q, E, R)", "AutoSkills")
-
--- 5. Hitbox Expander (18x18 Red Neon)
+-- 3. Hitbox Expander
 AddToggleRow("Hitbox Expander", "HitboxExpander")
 
--- 6. Auto Ultimate / Awakening (Auto G)
-AddToggleRow("Auto Ultimate (Awakening)", "AutoAwakening")
+-- 4. Auto Cast Skills
+AddToggleRow("Auto Cast Skills", "AutoSkills")
 
--- 7. Auto Block / Auto Parry (Auto F)
-AddToggleRow("Auto Block / Auto Parry", "AutoBlock")
-
--- 8. Instant Auto Get Up / Anti-Ragdoll
+-- 5. Instant Auto Get Up
 AddToggleRow("Instant Auto Get Up", "InstantGetUp")
 
--- 9. Anti-Void / Fall Recovery
-AddToggleRow("Anti-Void (Fall Recovery)", "AntiVoid")
-
--- 10. Safe Zone Teleport
-AddActionRow("⚡ Safe Zone Teleport", function()
-    TeleportToSafeZone()
-end)
-
--- 11. Teleport Behind Enemy
-AddActionRow("⚡ Teleport Behind Enemy", function()
-    TeleportBehindNearestEnemy()
-end)
-
--- 12. Click-to-Teleport Tool
-AddActionRow("⚡ Give Click-to-TP Tool", function()
-    GiveClickToTPTool()
-end)
-
--- 13. WalkSpeed Boost with Line Bar
-AddSliderRow("WalkSpeed", "WalkSpeedBoost", "WalkSpeed", 16, 150, 55, function(val)
+-- 6. WalkSpeed Boost (Interactive Line Bar)
+AddSliderRow("WalkSpeed Boost", "WalkSpeedBoost", "WalkSpeed", 16, 150, 55, function(val)
     applyWalkSpeed()
 end, function(enabled)
     applyWalkSpeed()
 end)
 
--- 14. Infinite Jump
-AddToggleRow("Infinite Jump", "InfJump")
-
--- 15. Arena Fly Mode with Line Bar
+-- 7. Arena Fly Mode (Interactive Line Bar)
 AddSliderRow("Arena Fly Mode", "Fly", "FlySpeed", 10, 120, 50, nil, function(enabled)
     if enabled then
         startFly()
@@ -1253,21 +778,6 @@ AddSliderRow("Arena Fly Mode", "Fly", "FlySpeed", 10, 120, 50, nil, function(ena
         stopFly()
     end
 end)
-
--- 16. NoClip
-AddToggleRow("NoClip", "NoClip")
-
--- 17. Player ESP Highlights
-AddToggleRow("Player ESP Highlights", "PlayerESP")
-
--- 18. Health Bar & Distance ESP
-AddToggleRow("Health & Distance ESP", "HealthTags")
-
--- 19. ESP Tracers
-AddToggleRow("ESP Tracers", "Tracers")
-
--- 20. Anti-AFK Protection
-AddToggleRow("Anti-AFK Protection", "AntiAFK")
 
 -- Footer (Pinned at bottom)
 local Footer = Instance.new("Frame")
@@ -1296,4 +806,4 @@ FooterSub.TextSize = 9
 FooterSub.Font = Enum.Font.GothamMedium
 FooterSub.Parent = Footer
 
-print("Junejo Ultra Script Hub loaded successfully for Anime Ability Arena with 20 features!")
+print("Junejo Ultra Script Hub loaded successfully for Anime Ability Arena (7 Core Features)!")
