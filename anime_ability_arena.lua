@@ -1,11 +1,11 @@
 -- ====================================================
--- JUNEJO ULTRA SCRIPT HUB - ANIME ABILITY ARENA
+-- JUNEJO ULTRA SCRIPT HUB - ANIME ABILITY ARENA (V2 EDITION)
 -- Game: Anime Ability Arena (Roblox)
 -- Link: https://www.roblox.com/games/108567435288296/Anime-Ability-Arena
 -- Author: Made by Junejo (junejo18146)
 -- GitHub: https://github.com/junejo18146/ultrascripthub
 -- Universal Mobile (Delta / Codex / Fluxus) & PC Compatible
--- Official Classic Executive Dark UI (7 Core Features)
+-- Official Classic Executive Dark UI (New 7 Core Hybrid Features)
 -- ====================================================
 
 local function elevate()
@@ -83,20 +83,24 @@ local function notify(title, message, dur)
 end
 
 -- ====================================================
--- GLOBAL STATE & SETTINGS (7 CORE FEATURES)
+-- GLOBAL STATE & SETTINGS (NEW 7 CORE FEATURES)
 -- ====================================================
 local Settings = {
+    -- 5 Top Features from previous 7
     KillAura = false,
     AuraRadius = 25,
     AutoFarmKills = false,
     HitboxExpander = false,
     HitboxSize = 18,
-    AutoSkills = false,
     InstantGetUp = true,
     WalkSpeedBoost = false,
     WalkSpeed = 55,
-    Fly = false,
-    FlySpeed = 50,
+
+    -- 2 Selected Features from remaining 13
+    AutoAwakening = false,
+    PlayerESP = false,
+
+    -- Built-in Protection
     AntiAFK = true,
 }
 
@@ -114,84 +118,8 @@ local function isAlive()
 end
 
 -- ====================================================
--- 5. INSTANT AUTO GET UP / ANTI-RAGDOLL (< 0.1s)
+-- 1. ZERO-DELAY KILL AURA
 -- ====================================================
-local function handleInstantGetUp()
-    if not Settings.InstantGetUp or not isAlive() then return end
-    local char = LocalPlayer.Character
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    if hum and root then
-        local state = hum:GetState()
-        if hum.Sit or hum.PlatformStand or state == Enum.HumanoidStateType.Ragdoll or state == Enum.HumanoidStateType.FallingDown or state == Enum.HumanoidStateType.Physics then
-            hum.Sit = false
-            hum.PlatformStand = false
-            hum:ChangeState(Enum.HumanoidStateType.GettingUp)
-            hum:ChangeState(Enum.HumanoidStateType.Running)
-            root.AssemblyAngularVelocity = Vector3.zero
-        end
-
-        for _, obj in ipairs(char:GetDescendants()) do
-            if obj:IsA("BallSocketConstraint") or obj.Name:lower():find("ragdoll") or obj.Name:lower():find("knockdown") then
-                pcall(function() obj:Destroy() end)
-            elseif obj:IsA("Motor6D") and not obj.Enabled then
-                obj.Enabled = true
-            end
-        end
-    end
-end
-
-RunService.Heartbeat:Connect(handleInstantGetUp)
-RunService.Stepped:Connect(handleInstantGetUp)
-
--- ====================================================
--- 3. HITBOX EXPANDER (18x18 Red Neon Hitboxes)
--- ====================================================
-local originalSizes = {}
-
-local function applyHitbox(targetChar)
-    if not targetChar or targetChar == LocalPlayer.Character then return end
-    local root = targetChar:FindFirstChild("HumanoidRootPart")
-    if root and root:IsA("BasePart") then
-        if not originalSizes[root] then
-            originalSizes[root] = {
-                Size = root.Size,
-                Transparency = root.Transparency,
-                CanCollide = root.CanCollide,
-                Material = root.Material,
-                Color = root.Color
-            }
-        end
-        if Settings.HitboxExpander then
-            root.Size = Vector3.new(Settings.HitboxSize, Settings.HitboxSize, Settings.HitboxSize)
-            root.Transparency = 0.65
-            root.Color = Color3.fromRGB(255, 35, 35)
-            root.Material = Enum.Material.Neon
-            root.CanCollide = false
-        else
-            local orig = originalSizes[root]
-            if orig then
-                root.Size = orig.Size
-                root.Transparency = orig.Transparency
-                root.Color = orig.Color
-                root.Material = orig.Material
-                root.CanCollide = orig.CanCollide
-            end
-        end
-    end
-end
-
-RunService.RenderStepped:Connect(function()
-    if Settings.HitboxExpander then
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and p.Character then
-                applyHitbox(p.Character)
-            end
-        end
-    end
-end)
-
--- Combat Execution Helper
 local function executeM1Attack()
     elevate()
     if VirtualUser then
@@ -231,9 +159,6 @@ local function executeM1Attack()
     end)
 end
 
--- ====================================================
--- 1. ZERO-DELAY KILL AURA
--- ====================================================
 spawnTask(function()
     while true do
         task.wait(0.05)
@@ -295,7 +220,54 @@ spawnTask(function()
 end)
 
 -- ====================================================
--- 4. AUTO CAST SKILLS (Q, E, R)
+-- 3. HITBOX EXPANDER (18x18 Red Neon)
+-- ====================================================
+local originalSizes = {}
+
+local function applyHitbox(targetChar)
+    if not targetChar or targetChar == LocalPlayer.Character then return end
+    local root = targetChar:FindFirstChild("HumanoidRootPart")
+    if root and root:IsA("BasePart") then
+        if not originalSizes[root] then
+            originalSizes[root] = {
+                Size = root.Size,
+                Transparency = root.Transparency,
+                CanCollide = root.CanCollide,
+                Material = root.Material,
+                Color = root.Color
+            }
+        end
+        if Settings.HitboxExpander then
+            root.Size = Vector3.new(Settings.HitboxSize, Settings.HitboxSize, Settings.HitboxSize)
+            root.Transparency = 0.65
+            root.Color = Color3.fromRGB(255, 35, 35)
+            root.Material = Enum.Material.Neon
+            root.CanCollide = false
+        else
+            local orig = originalSizes[root]
+            if orig then
+                root.Size = orig.Size
+                root.Transparency = orig.Transparency
+                root.Color = orig.Color
+                root.Material = orig.Material
+                root.CanCollide = orig.CanCollide
+            end
+        end
+    end
+end
+
+RunService.RenderStepped:Connect(function()
+    if Settings.HitboxExpander then
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character then
+                applyHitbox(p.Character)
+            end
+        end
+    end
+end)
+
+-- ====================================================
+-- 4. AUTO ULTIMATE / AWAKENING (G Key Spammer)
 -- ====================================================
 local function castKey(keyCode)
     if VirtualInputManager then
@@ -308,36 +280,95 @@ local function castKey(keyCode)
 end
 
 spawnTask(function()
-    local skillKeys = {Enum.KeyCode.Q, Enum.KeyCode.E, Enum.KeyCode.R}
-    local idx = 1
     while true do
-        task.wait(0.35)
-        if Settings.AutoSkills and isAlive() then
-            local _, myRoot = getPlayerChar()
-            if myRoot then
-                local enemyInRange = false
-                for _, p in ipairs(Players:GetPlayers()) do
-                    if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                        local eHum = p.Character:FindFirstChildOfClass("Humanoid")
-                        if eHum and eHum.Health > 0 then
-                            if (p.Character.HumanoidRootPart.Position - myRoot.Position).Magnitude <= Settings.AuraRadius then
-                                enemyInRange = true
-                                break
-                            end
+        task.wait(1.5)
+        if Settings.AutoAwakening and isAlive() then
+            castKey(Enum.KeyCode.G)
+            pcall(function()
+                for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
+                    if rem:IsA("RemoteEvent") then
+                        local n = rem.Name:lower()
+                        if n:find("awake") or n:find("ultimate") or n:find("mode") then
+                            rem:FireServer()
                         end
                     end
                 end
-                if enemyInRange then
-                    castKey(skillKeys[idx])
-                    idx = (idx % #skillKeys) + 1
-                end
-            end
+            end)
         end
     end
 end)
 
 -- ====================================================
--- 6. WALKSPEED BOOST ENGINE (Persistent)
+-- 5. INSTANT AUTO GET UP / ANTI-RAGDOLL (< 0.1s)
+-- ====================================================
+local function handleInstantGetUp()
+    if not Settings.InstantGetUp or not isAlive() then return end
+    local char = LocalPlayer.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    if hum and root then
+        local state = hum:GetState()
+        if hum.Sit or hum.PlatformStand or state == Enum.HumanoidStateType.Ragdoll or state == Enum.HumanoidStateType.FallingDown or state == Enum.HumanoidStateType.Physics then
+            hum.Sit = false
+            hum.PlatformStand = false
+            hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+            hum:ChangeState(Enum.HumanoidStateType.Running)
+            root.AssemblyAngularVelocity = Vector3.zero
+        end
+
+        for _, obj in ipairs(char:GetDescendants()) do
+            if obj:IsA("BallSocketConstraint") or obj.Name:lower():find("ragdoll") or obj.Name:lower():find("knockdown") then
+                pcall(function() obj:Destroy() end)
+            elseif obj:IsA("Motor6D") and not obj.Enabled then
+                obj.Enabled = true
+            end
+        end
+    end
+end
+
+RunService.Heartbeat:Connect(handleInstantGetUp)
+RunService.Stepped:Connect(handleInstantGetUp)
+
+-- ====================================================
+-- 6. PLAYER ESP HIGHLIGHTS (Wallhacks)
+-- ====================================================
+local espHighlights = {}
+
+local function createESP(player)
+    if player == LocalPlayer then return end
+
+    local function setupChar(char)
+        if not char then return end
+        local root = char:WaitForChild("HumanoidRootPart", 5)
+        if not root then return end
+
+        local hl = Instance.new("Highlight")
+        hl.Name = "JunejoESP"
+        hl.FillColor = Color3.fromRGB(255, 45, 45)
+        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+        hl.FillTransparency = 0.5
+        hl.OutlineTransparency = 0.1
+        hl.Adornee = char
+        hl.Enabled = Settings.PlayerESP
+        hl.Parent = char
+        espHighlights[player] = hl
+    end
+
+    player.CharacterAdded:Connect(setupChar)
+    if player.Character then setupChar(player.Character) end
+end
+
+for _, p in ipairs(Players:GetPlayers()) do createESP(p) end
+Players.PlayerAdded:Connect(createESP)
+
+RunService.RenderStepped:Connect(function()
+    for _, hl in pairs(espHighlights) do
+        if hl then hl.Enabled = Settings.PlayerESP end
+    end
+end)
+
+-- ====================================================
+-- 7. WALKSPEED BOOST ENGINE (Persistent)
 -- ====================================================
 local function applyWalkSpeed()
     local _, _, hum = getPlayerChar()
@@ -358,65 +389,6 @@ RunService.RenderStepped:Connect(function()
         end
     end
 end)
-
--- ====================================================
--- 7. ARENA FLY MODE ENGINE (WASD + Mobile Support)
--- ====================================================
-local flying = false
-local flyBV = nil
-local flyBG = nil
-
-local function startFly()
-    local _, root = getPlayerChar()
-    if not root then return end
-    flying = true
-
-    flyBV = Instance.new("BodyVelocity")
-    flyBV.Velocity = Vector3.zero
-    flyBV.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-    flyBV.Parent = root
-
-    flyBG = Instance.new("BodyGyro")
-    flyBG.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
-    flyBG.P = 9e4
-    flyBG.CFrame = root.CFrame
-    flyBG.Parent = root
-
-    spawnTask(function()
-        while flying and Settings.Fly do
-            local moveDir = Vector3.zero
-            if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Camera.CFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - Camera.CFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - Camera.CFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + Camera.CFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir = moveDir - Vector3.new(0, 1, 0) end
-
-            local _, _, hum = getPlayerChar()
-            if hum and hum.MoveDirection.Magnitude > 0 then
-                moveDir = moveDir + Camera.CFrame:VectorToWorldSpace(hum.MoveDirection)
-            end
-
-            if moveDir.Magnitude > 0 then
-                flyBV.Velocity = moveDir.Unit * Settings.FlySpeed
-            else
-                flyBV.Velocity = Vector3.zero
-            end
-
-            flyBG.CFrame = Camera.CFrame
-            RunService.RenderStepped:Wait()
-        end
-        if flyBV then flyBV:Destroy() flyBV = nil end
-        if flyBG then flyBG:Destroy() flyBG = nil end
-        flying = false
-    end)
-end
-
-local function stopFly()
-    flying = false
-    if flyBV then flyBV:Destroy() flyBV = nil end
-    if flyBG then flyBG:Destroy() flyBG = nil end
-end
 
 -- Anti-AFK Disconnect Engine
 if getconnections then
@@ -745,38 +717,32 @@ local function AddSliderRow(title, configKey, sliderKey, minVal, maxVal, default
 end
 
 -- ==========================================
--- POPULATE EXACT 7 MAIN FEATURES
+-- POPULATE NEW 7 HYBRID FEATURES
 -- ==========================================
 
 -- 1. Zero-Delay Kill Aura
 AddToggleRow("Zero-Delay Kill Aura", "KillAura")
 
--- 2. Auto Farm Kills
+-- 2. Auto Farm Kills (Yen Farm)
 AddToggleRow("Auto Farm Kills", "AutoFarmKills")
 
--- 3. Hitbox Expander
+-- 3. Hitbox Expander (18x18 Red Neon)
 AddToggleRow("Hitbox Expander", "HitboxExpander")
 
--- 4. Auto Cast Skills
-AddToggleRow("Auto Cast Skills", "AutoSkills")
+-- 4. Auto Ultimate / Awakening (G Key)
+AddToggleRow("Auto Ultimate (Awakening)", "AutoAwakening")
 
--- 5. Instant Auto Get Up
+-- 5. Instant Auto Get Up (Anti-Ragdoll)
 AddToggleRow("Instant Auto Get Up", "InstantGetUp")
 
--- 6. WalkSpeed Boost (Interactive Line Bar)
+-- 6. Player ESP Highlights (Wallhacks)
+AddToggleRow("Player ESP Highlights", "PlayerESP")
+
+-- 7. WalkSpeed Boost (Interactive Line Bar)
 AddSliderRow("WalkSpeed Boost", "WalkSpeedBoost", "WalkSpeed", 16, 150, 55, function(val)
     applyWalkSpeed()
 end, function(enabled)
     applyWalkSpeed()
-end)
-
--- 7. Arena Fly Mode (Interactive Line Bar)
-AddSliderRow("Arena Fly Mode", "Fly", "FlySpeed", 10, 120, 50, nil, function(enabled)
-    if enabled then
-        startFly()
-    else
-        stopFly()
-    end
 end)
 
 -- Footer (Pinned at bottom)
@@ -806,4 +772,4 @@ FooterSub.TextSize = 9
 FooterSub.Font = Enum.Font.GothamMedium
 FooterSub.Parent = Footer
 
-print("Junejo Ultra Script Hub loaded successfully for Anime Ability Arena (7 Core Features)!")
+print("Junejo Ultra Script Hub V2 loaded successfully for Anime Ability Arena (New 7 Hybrid Features)!")
