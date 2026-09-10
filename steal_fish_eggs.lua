@@ -1760,87 +1760,204 @@ local function AddSliderRow(title, configKey, minVal, maxVal, defaultVal, onChan
 end
 
 -- =================================================================
--- ZONE SELECTOR ROW (JUNEJO EXECUTIVE PILL SELECTOR)
+-- ZONE SELECTOR (JUNEJO EXECUTIVE EXPANDABLE AREA SELECTOR)
 -- =================================================================
-local ZoneRow = Instance.new("Frame")
-ZoneRow.Size = UDim2.new(1, 0, 0, 23)
-ZoneRow.BackgroundTransparency = 1
-ZoneRow.Parent = FeaturesContainer
+local ZoneMainRow = Instance.new("Frame")
+ZoneMainRow.Size = UDim2.new(1, 0, 0, 24)
+ZoneMainRow.BackgroundTransparency = 1
+ZoneMainRow.Parent = FeaturesContainer
 
-local ZoneLabel = Instance.new("TextLabel")
-ZoneLabel.Size = UDim2.new(0.42, 0, 1, 0)
-ZoneLabel.BackgroundTransparency = 1
-ZoneLabel.Text = "Target Zone"
-ZoneLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
-ZoneLabel.TextSize = 12
-ZoneLabel.Font = Enum.Font.GothamBold
-ZoneLabel.TextXAlignment = Enum.TextXAlignment.Left
-ZoneLabel.Parent = ZoneRow
+local ZoneMainLabel = Instance.new("TextLabel")
+ZoneMainLabel.Size = UDim2.new(0.38, 0, 1, 0)
+ZoneMainLabel.BackgroundTransparency = 1
+ZoneMainLabel.Text = "Target Zone"
+ZoneMainLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
+ZoneMainLabel.TextSize = 12
+ZoneMainLabel.Font = Enum.Font.GothamBold
+ZoneMainLabel.TextXAlignment = Enum.TextXAlignment.Left
+ZoneMainLabel.Parent = ZoneMainRow
 
-local ZoneSelectorFrame = Instance.new("Frame")
-ZoneSelectorFrame.Size = UDim2.new(0.55, 0, 1, 0)
-ZoneSelectorFrame.Position = UDim2.new(0.45, 0, 0, 0)
-ZoneSelectorFrame.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-ZoneSelectorFrame.BorderSizePixel = 0
-ZoneSelectorFrame.Parent = ZoneRow
+local ZonePillFrame = Instance.new("Frame")
+ZonePillFrame.Size = UDim2.new(0.6, 0, 1, 0)
+ZonePillFrame.Position = UDim2.new(0.4, 0, 0, 0)
+ZonePillFrame.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+ZonePillFrame.BorderSizePixel = 0
+ZonePillFrame.Parent = ZoneMainRow
 
-local ZoneCorner = Instance.new("UICorner")
-ZoneCorner.CornerRadius = UDim.new(0, 4)
-ZoneCorner.Parent = ZoneSelectorFrame
+local ZonePillCorner = Instance.new("UICorner")
+ZonePillCorner.CornerRadius = UDim.new(0, 4)
+ZonePillCorner.Parent = ZonePillFrame
 
-local ZoneStroke = Instance.new("UIStroke")
-ZoneStroke.Color = Color3.fromRGB(45, 45, 55)
-ZoneStroke.Thickness = 1
-ZoneStroke.Parent = ZoneSelectorFrame
+local ZonePillStroke = Instance.new("UIStroke")
+ZonePillStroke.Color = Color3.fromRGB(45, 45, 55)
+ZonePillStroke.Thickness = 1
+ZonePillStroke.Parent = ZonePillFrame
 
 local PrevZoneBtn = Instance.new("TextButton")
-PrevZoneBtn.Size = UDim2.new(0, 20, 1, 0)
+PrevZoneBtn.Size = UDim2.new(0, 18, 1, 0)
 PrevZoneBtn.Position = UDim2.new(0, 0, 0, 0)
 PrevZoneBtn.BackgroundTransparency = 1
 PrevZoneBtn.Text = "<"
 PrevZoneBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
 PrevZoneBtn.TextSize = 12
 PrevZoneBtn.Font = Enum.Font.GothamBold
-PrevZoneBtn.Parent = ZoneSelectorFrame
+PrevZoneBtn.Parent = ZonePillFrame
 
-local ZoneDisplay = Instance.new("TextLabel")
-ZoneDisplay.Size = UDim2.new(1, -40, 1, 0)
-ZoneDisplay.Position = UDim2.new(0, 20, 0, 0)
-ZoneDisplay.BackgroundTransparency = 1
-ZoneDisplay.Text = AvailableZones[CurrentZoneIndex]
-ZoneDisplay.TextColor3 = Color3.fromRGB(255, 255, 255)
-ZoneDisplay.TextSize = 10
-ZoneDisplay.Font = Enum.Font.GothamBold
-ZoneDisplay.TextTruncate = Enum.TextTruncate.AtEnd
-ZoneDisplay.Parent = ZoneSelectorFrame
+local ZoneDropdownToggleBtn = Instance.new("TextButton")
+ZoneDropdownToggleBtn.Size = UDim2.new(1, -36, 1, 0)
+ZoneDropdownToggleBtn.Position = UDim2.new(0, 18, 0, 0)
+ZoneDropdownToggleBtn.BackgroundTransparency = 1
+ZoneDropdownToggleBtn.Text = AvailableZones[CurrentZoneIndex] .. " ▾"
+ZoneDropdownToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ZoneDropdownToggleBtn.TextSize = 10
+ZoneDropdownToggleBtn.Font = Enum.Font.GothamBold
+ZoneDropdownToggleBtn.TextTruncate = Enum.TextTruncate.AtEnd
+ZoneDropdownToggleBtn.Parent = ZonePillFrame
 
 local NextZoneBtn = Instance.new("TextButton")
-NextZoneBtn.Size = UDim2.new(0, 20, 1, 0)
-NextZoneBtn.Position = UDim2.new(1, -20, 0, 0)
+NextZoneBtn.Size = UDim2.new(0, 18, 1, 0)
+NextZoneBtn.Position = UDim2.new(1, -18, 0, 0)
 NextZoneBtn.BackgroundTransparency = 1
 NextZoneBtn.Text = ">"
 NextZoneBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
 NextZoneBtn.TextSize = 12
 NextZoneBtn.Font = Enum.Font.GothamBold
-NextZoneBtn.Parent = ZoneSelectorFrame
+NextZoneBtn.Parent = ZonePillFrame
 
-local function updateZone(newIdx)
+-- Expandable Options Container
+local ZoneOptionsContainer = Instance.new("Frame")
+ZoneOptionsContainer.Name = "ZoneOptionsContainer"
+ZoneOptionsContainer.Size = UDim2.new(1, 0, 0, 0)
+ZoneOptionsContainer.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
+ZoneOptionsContainer.BorderSizePixel = 0
+ZoneOptionsContainer.Visible = false
+ZoneOptionsContainer.ClipsDescendants = true
+ZoneOptionsContainer.Parent = FeaturesContainer
+
+local ZoneOptCorner = Instance.new("UICorner")
+ZoneOptCorner.CornerRadius = UDim.new(0, 6)
+ZoneOptCorner.Parent = ZoneOptionsContainer
+
+local ZoneOptStroke = Instance.new("UIStroke")
+ZoneOptStroke.Color = Color3.fromRGB(38, 38, 46)
+ZoneOptStroke.Thickness = 1
+ZoneOptStroke.Parent = ZoneOptionsContainer
+
+local ZoneOptLayout = Instance.new("UIListLayout")
+ZoneOptLayout.Padding = UDim.new(0, 3)
+ZoneOptLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ZoneOptLayout.Parent = ZoneOptionsContainer
+
+local ZoneOptPadding = Instance.new("UIPadding")
+ZoneOptPadding.PaddingTop = UDim.new(0, 4)
+ZoneOptPadding.PaddingBottom = UDim.new(0, 4)
+ZoneOptPadding.PaddingLeft = UDim.new(0, 4)
+ZoneOptPadding.PaddingRight = UDim.new(0, 4)
+ZoneOptPadding.Parent = ZoneOptionsContainer
+
+local isZoneDropdownOpen = false
+local zoneButtons = {}
+
+local function updateZoneSelection(newIdx, notify)
     CurrentZoneIndex = newIdx
-    ZoneDisplay.Text = AvailableZones[CurrentZoneIndex]
+    local zoneName = AvailableZones[CurrentZoneIndex]
+    ZoneDropdownToggleBtn.Text = zoneName .. (isZoneDropdownOpen and " ▴" or " ▾")
     table.clear(CooldownEggs)
-    ShowNotification("Target Zone", AvailableZones[CurrentZoneIndex])
+    
+    for idx, btn in ipairs(zoneButtons) do
+        if idx == CurrentZoneIndex then
+            btn.BackgroundColor3 = Color3.fromRGB(45, 45, 58)
+            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            local stroke = btn:FindFirstChildOfClass("UIStroke")
+            if stroke then stroke.Color = Color3.fromRGB(80, 80, 100) end
+        else
+            btn.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+            btn.TextColor3 = Color3.fromRGB(200, 200, 210)
+            local stroke = btn:FindFirstChildOfClass("UIStroke")
+            if stroke then stroke.Color = Color3.fromRGB(38, 38, 46) end
+        end
+    end
+    
+    if notify then
+        ShowNotification("Target Zone", zoneName)
+    end
 end
+
+for idx, zoneName in ipairs(AvailableZones) do
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 22)
+    btn.BackgroundColor3 = idx == CurrentZoneIndex and Color3.fromRGB(45, 45, 58) or Color3.fromRGB(27, 27, 32)
+    btn.BorderSizePixel = 0
+    btn.AutoButtonColor = false
+    btn.Text = (zoneName == "All Zones" and "⭐ " or "🌊 ") .. zoneName
+    btn.TextColor3 = idx == CurrentZoneIndex and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(200, 200, 210)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 10
+    btn.LayoutOrder = idx
+    btn.Parent = ZoneOptionsContainer
+
+    local bCorner = Instance.new("UICorner")
+    bCorner.CornerRadius = UDim.new(0, 4)
+    bCorner.Parent = btn
+
+    local bStroke = Instance.new("UIStroke")
+    bStroke.Color = idx == CurrentZoneIndex and Color3.fromRGB(80, 80, 100) or Color3.fromRGB(38, 38, 46)
+    bStroke.Thickness = 1
+    bStroke.Parent = btn
+
+    btn.MouseButton1Click:Connect(function()
+        updateZoneSelection(idx, true)
+        isZoneDropdownOpen = false
+        ZoneDropdownToggleBtn.Text = AvailableZones[CurrentZoneIndex] .. " ▾"
+        local tw = TweenService:Create(ZoneOptionsContainer, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Size = UDim2.new(1, 0, 0, 0)
+        })
+        tw:Play()
+        tw.Completed:Connect(function()
+            if not isZoneDropdownOpen then
+                ZoneOptionsContainer.Visible = false
+            end
+        end)
+    end)
+
+    table.insert(zoneButtons, btn)
+end
+
+local totalOptHeight = #AvailableZones * 25 + 8
+
+local function toggleZoneDropdown()
+    isZoneDropdownOpen = not isZoneDropdownOpen
+    ZoneDropdownToggleBtn.Text = AvailableZones[CurrentZoneIndex] .. (isZoneDropdownOpen and " ▴" or " ▾")
+    if isZoneDropdownOpen then
+        ZoneOptionsContainer.Visible = true
+        TweenService:Create(ZoneOptionsContainer, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Size = UDim2.new(1, 0, 0, totalOptHeight)
+        }):Play()
+    else
+        local tw = TweenService:Create(ZoneOptionsContainer, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Size = UDim2.new(1, 0, 0, 0)
+        })
+        tw:Play()
+        tw.Completed:Connect(function()
+            if not isZoneDropdownOpen then
+                ZoneOptionsContainer.Visible = false
+            end
+        end)
+    end
+end
+
+ZoneDropdownToggleBtn.MouseButton1Click:Connect(toggleZoneDropdown)
 
 PrevZoneBtn.MouseButton1Click:Connect(function()
     local newIdx = CurrentZoneIndex - 1
     if newIdx < 1 then newIdx = #AvailableZones end
-    updateZone(newIdx)
+    updateZoneSelection(newIdx, true)
 end)
 
 NextZoneBtn.MouseButton1Click:Connect(function()
     local newIdx = CurrentZoneIndex + 1
     if newIdx > #AvailableZones then newIdx = 1 end
-    updateZone(newIdx)
+    updateZoneSelection(newIdx, true)
 end)
 
 -- =================================================================
