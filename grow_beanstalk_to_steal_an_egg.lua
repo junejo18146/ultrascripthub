@@ -20,6 +20,16 @@ local VirtualUser = game:GetService("VirtualUser")
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
+-- Destroy existing UI if re-executed
+for _, guiName in ipairs({"JunejoHubUI_GrowBeanstalk", "JunejoHubUI"}) do
+    pcall(function()
+        if CoreGui:FindFirstChild(guiName) then CoreGui[guiName]:Destroy() end
+        if LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild(guiName) then
+            LocalPlayer.PlayerGui[guiName]:Destroy()
+        end
+    end)
+end
+
 -- Configuration & State
 local Toggles = {
     InfiniteCash = false,
@@ -29,7 +39,6 @@ local Toggles = {
     FastClimbBeanstalk = false,
     InfiniteBeanstalk = false,
     AutoUnlockTreadmill = false,
-    AutoTrainTreadmill = false,
     AutoUpgradeBase = false,
     AutoHatchEgg = false,
     AutoRebirth = false,
@@ -92,7 +101,7 @@ local function GetHumanoid()
     return char and char:FindFirstChildOfClass("Humanoid")
 end
 
--- Auto-Locate Player's Base/Plot (Multi-Layer Finder)
+-- Auto-Locate Player's Base/Plot
 local function FindMyPlot()
     local possibleContainers = {
         Workspace:FindFirstChild("Plots"),
@@ -229,51 +238,46 @@ local function FireRemotesByKeywords(keywords, argsList)
     end)
 end
 
--- 1. INFINITE CASH (+999B) ENGINE
-task.spawn(function()
-    while true do
-        task.wait(0.15)
-        if Toggles.InfiniteCash then
-            local myPlot = FindMyPlot()
-            
-            -- Method 1: Continuous Plot & Map Collector Sweeper
-            if myPlot then
-                for _, obj in ipairs(myPlot:GetDescendants()) do
-                    local name = string.lower(obj.Name)
-                    if string.find(name, "collector") or string.find(name, "cash") or string.find(name, "money") or string.find(name, "bank") or string.find(name, "drop") or string.find(name, "earnings") or string.find(name, "atm") or string.find(name, "safe") then
-                        if obj:IsA("ProximityPrompt") then
-                            TriggerPrompt(obj)
-                        elseif obj:IsA("ClickDetector") then
-                            TriggerClickDetector(obj)
-                        elseif obj:IsA("BasePart") then
-                            SafeTouch(obj)
-                        end
+-- Instant Cash Add Function
+local function AddCashInstant()
+    local myPlot = FindMyPlot()
+    if myPlot then
+        for _, obj in ipairs(myPlot:GetDescendants()) do
+            local name = string.lower(obj.Name)
+            if string.find(name, "collector") or string.find(name, "cash") or string.find(name, "money") or string.find(name, "bank") or string.find(name, "drop") or string.find(name, "earnings") or string.find(name, "atm") or string.find(name, "safe") then
+                if obj:IsA("ProximityPrompt") then TriggerPrompt(obj)
+                elseif obj:IsA("ClickDetector") then TriggerClickDetector(obj)
+                elseif obj:IsA("BasePart") then SafeTouch(obj) end
+            end
+        end
+    end
+    FireRemotesByKeywords(
+        {"collect", "claimcash", "withdraw", "collectcash", "getmoney", "bank", "addcash", "givecash", "claimincome", "petrevenue", "claimall", "cashreward"},
+        {999999999, 1000000, 50000, true, "Max", "Cash", "All"}
+    )
+    pcall(function()
+        local stats = LocalPlayer:FindFirstChild("leaderstats") or LocalPlayer:FindFirstChild("Data") or LocalPlayer:FindFirstChild("Values") or LocalPlayer
+        if stats then
+            for _, val in ipairs(stats:GetChildren()) do
+                local vName = string.lower(val.Name)
+                if string.find(vName, "cash") or string.find(vName, "money") or string.find(vName, "coin") or string.find(vName, "gold") then
+                    if val:IsA("NumberValue") or val:IsA("IntValue") then
+                        val.Value = 999999999999
+                    elseif val:IsA("StringValue") then
+                        val.Value = "$999.9B"
                     end
                 end
             end
-            
-            -- Method 2: Fire All Cash / Revenue Remotes
-            FireRemotesByKeywords(
-                {"collect", "claimcash", "withdraw", "collectcash", "getmoney", "bank", "addcash", "givecash", "claimincome", "petrevenue", "claimall", "cashreward"},
-                {999999999, 1000000, 50000, true, "Max", "Cash", "All"}
-            )
-            
-            -- Method 3: Client Value Lock & Leaderstats Booster
-            pcall(function()
-                local stats = LocalPlayer:FindFirstChild("leaderstats") or LocalPlayer:FindFirstChild("Data") or LocalPlayer:FindFirstChild("Values") or LocalPlayer
-                if stats then
-                    for _, val in ipairs(stats:GetChildren()) do
-                        local vName = string.lower(val.Name)
-                        if string.find(vName, "cash") or string.find(vName, "money") or string.find(vName, "coin") or string.find(vName, "gold") then
-                            if val:IsA("NumberValue") or val:IsA("IntValue") then
-                                val.Value = 999999999999
-                            elseif val:IsA("StringValue") then
-                                val.Value = "$999.9B"
-                            end
-                        end
-                    end
-                end
-            end)
+        end
+    end)
+end
+
+-- 1. INFINITE CASH (+999B) CONTINUOUS ENGINE
+task.spawn(function()
+    while true do
+        task.wait(0.12)
+        if Toggles.InfiniteCash then
+            AddCashInstant()
         end
     end
 end)
@@ -459,13 +463,11 @@ task.spawn(function()
         if Toggles.InfiniteBeanstalk then
             local myPlot = FindMyPlot()
             
-            -- Method 1: Remote Spammer
             FireRemotesByKeywords(
                 {"grow", "beanstalk", "water", "fertilize", "feed", "upgradebeanstalk", "growth", "plantgrow", "buygrowth"},
                 {1, 10, 100, 1000, true, "Beanstalk", "Grow", "Max"}
             )
             
-            -- Method 2: Physical Pad & Prompt sweep on Plot
             if myPlot then
                 for _, obj in ipairs(myPlot:GetDescendants()) do
                     local name = string.lower(obj.Name)
@@ -473,17 +475,12 @@ task.spawn(function()
                     local isGrowTarget = string.find(name, "grow") or string.find(name, "beanstalk") or string.find(name, "water") or string.find(name, "feed") or string.find(name, "stalk") or string.find(name, "plant") or string.find(parentName, "grow") or string.find(parentName, "beanstalk")
                     
                     if isGrowTarget then
-                        if obj:IsA("ProximityPrompt") then
-                            TriggerPrompt(obj)
-                        elseif obj:IsA("ClickDetector") then
-                            TriggerClickDetector(obj)
-                        elseif obj:IsA("BasePart") then
-                            SafeTouch(obj)
-                        end
+                        if obj:IsA("ProximityPrompt") then TriggerPrompt(obj)
+                        elseif obj:IsA("ClickDetector") then TriggerClickDetector(obj)
+                        elseif obj:IsA("BasePart") then SafeTouch(obj) end
                     end
                 end
                 
-                -- Method 3: Visual & Physical Mega Height Scaler (Longest Beanstalk)
                 for _, obj in ipairs(myPlot:GetDescendants()) do
                     if obj:IsA("BasePart") then
                         local name = string.lower(obj.Name)
@@ -521,13 +518,9 @@ task.spawn(function()
                         local isTreadmillTarget = string.find(name, "treadmill") or string.find(name, "speed") or string.find(name, "runner") or string.find(name, "track") or string.find(name, "unlock") or string.find(parentName, "treadmill") or string.find(parentName, "speed")
                         
                         if isTreadmillTarget then
-                            if obj:IsA("ProximityPrompt") then
-                                TriggerPrompt(obj)
-                            elseif obj:IsA("ClickDetector") then
-                                TriggerClickDetector(obj)
-                            elseif obj:IsA("BasePart") then
-                                SafeTouch(obj)
-                            end
+                            if obj:IsA("ProximityPrompt") then TriggerPrompt(obj)
+                            elseif obj:IsA("ClickDetector") then TriggerClickDetector(obj)
+                            elseif obj:IsA("BasePart") then SafeTouch(obj) end
                         end
                     end
                 end
@@ -558,13 +551,9 @@ task.spawn(function()
                     local name = string.lower(obj.Name)
                     local parentName = obj.Parent and string.lower(obj.Parent.Name) or ""
                     if string.find(name, "upgrade") or string.find(name, "buy") or string.find(name, "button") or string.find(name, "pad") or string.find(parentName, "buttons") or string.find(parentName, "upgrades") then
-                        if obj:IsA("ProximityPrompt") then
-                            TriggerPrompt(obj)
-                        elseif obj:IsA("ClickDetector") then
-                            TriggerClickDetector(obj)
-                        elseif obj:IsA("BasePart") then
-                            SafeTouch(obj)
-                        end
+                        if obj:IsA("ProximityPrompt") then TriggerPrompt(obj)
+                        elseif obj:IsA("ClickDetector") then TriggerClickDetector(obj)
+                        elseif obj:IsA("BasePart") then SafeTouch(obj) end
                     end
                 end
             end
@@ -580,7 +569,6 @@ task.spawn(function()
         task.wait(0.25)
         if Toggles.AutoHatchEgg then
             local myPlot = FindMyPlot()
-            
             local searchAreas = {myPlot, Workspace}
             for _, area in ipairs(searchAreas) do
                 if area then
@@ -642,13 +630,9 @@ task.spawn(function()
                     for _, obj in ipairs(area:GetDescendants()) do
                         local name = string.lower(obj.Name)
                         if string.find(name, "rebirth") or string.find(name, "prestige") then
-                            if obj:IsA("ProximityPrompt") then
-                                TriggerPrompt(obj)
-                            elseif obj:IsA("ClickDetector") then
-                                TriggerClickDetector(obj)
-                            elseif obj:IsA("BasePart") then
-                                SafeTouch(obj)
-                            end
+                            if obj:IsA("ProximityPrompt") then TriggerPrompt(obj)
+                            elseif obj:IsA("ClickDetector") then TriggerClickDetector(obj)
+                            elseif obj:IsA("BasePart") then SafeTouch(obj) end
                         end
                     end
                 end
@@ -681,13 +665,9 @@ task.spawn(function()
             for _, obj in ipairs(Workspace:GetDescendants()) do
                 local name = string.lower(obj.Name)
                 if string.find(name, "reward") or string.find(name, "chest") or string.find(name, "gift") then
-                    if obj:IsA("ProximityPrompt") then
-                        TriggerPrompt(obj)
-                    elseif obj:IsA("ClickDetector") then
-                        TriggerClickDetector(obj)
-                    elseif obj:IsA("BasePart") then
-                        SafeTouch(obj)
-                    end
+                    if obj:IsA("ProximityPrompt") then TriggerPrompt(obj)
+                    elseif obj:IsA("ClickDetector") then TriggerClickDetector(obj)
+                    elseif obj:IsA("BasePart") then SafeTouch(obj) end
                 end
             end
         end
@@ -767,7 +747,6 @@ local function StartFlying()
                 moveDir = moveDir - Vector3.new(0, 1, 0)
             end
 
-            -- Mobile Touch Joystick Support
             local hum = GetHumanoid()
             if hum and hum.MoveDirection.Magnitude > 0 then
                 moveDir = moveDir + (Camera.CFrame:VectorToWorldSpace(hum.MoveDirection))
@@ -804,7 +783,6 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999999
 
--- Parent safely
 if syn and syn.protect_gui then
     syn.protect_gui(ScreenGui)
     ScreenGui.Parent = CoreGui
@@ -974,6 +952,62 @@ local function AddToggleRow(text, configKey, callback)
     end)
 end
 
+-- Helper: Add 1-Click Action Button Row
+local function AddActionRow(text, callback)
+    local Row = Instance.new("Frame")
+    Row.Size = UDim2.new(1, 0, 0, 23)
+    Row.BackgroundTransparency = 1
+    Row.Parent = ContentScroll
+    
+    local RowBtn = Instance.new("TextButton")
+    RowBtn.Size = UDim2.new(1, 0, 1, 0)
+    RowBtn.BackgroundTransparency = 1
+    RowBtn.Text = ""
+    RowBtn.ZIndex = 5
+    RowBtn.Parent = Row
+    
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(1, -28, 1, 0)
+    Label.BackgroundTransparency = 1
+    Label.Text = text
+    Label.TextColor3 = Color3.fromRGB(240, 240, 240)
+    Label.TextSize = 12
+    Label.Font = Enum.Font.GothamBold
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = Row
+    
+    local ActionBox = Instance.new("Frame")
+    ActionBox.Size = UDim2.new(0, 18, 0, 18)
+    ActionBox.Position = UDim2.new(1, -18, 0.5, -9)
+    ActionBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+    ActionBox.BorderSizePixel = 0
+    ActionBox.Parent = Row
+    
+    local ActionCorner = Instance.new("UICorner")
+    ActionCorner.CornerRadius = UDim.new(0, 4)
+    ActionCorner.Parent = ActionBox
+    
+    local ActionStroke = Instance.new("UIStroke")
+    ActionStroke.Color = Color3.fromRGB(45, 45, 55)
+    ActionStroke.Thickness = 1.2
+    ActionStroke.Parent = ActionBox
+    
+    local ActionIcon = Instance.new("TextLabel")
+    ActionIcon.Size = UDim2.new(1, 0, 1, 0)
+    ActionIcon.BackgroundTransparency = 1
+    ActionIcon.Text = "⚡"
+    ActionIcon.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ActionIcon.TextSize = 9
+    ActionIcon.Font = Enum.Font.GothamBold
+    ActionIcon.Parent = ActionBox
+    
+    RowBtn.MouseButton1Click:Connect(function()
+        ActionBox.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+        task.delay(0.15, function() ActionBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32) end)
+        if callback then callback() end
+    end)
+end
+
 -- Helper: Add Interactive Line Bar Slider Row (Toggle + Smooth Line Bar)
 local function AddSliderRow(title, configKey, sliderKey, minVal, maxVal, defaultVal, onChangeCallback, onToggleCallback)
     Sliders[sliderKey] = defaultVal
@@ -983,7 +1017,6 @@ local function AddSliderRow(title, configKey, sliderKey, minVal, maxVal, default
     Container.BackgroundTransparency = 1
     Container.Parent = ContentScroll
     
-    -- Top Row: Label + Value + Toggle Checkbox
     local TopRow = Instance.new("Frame")
     TopRow.Size = UDim2.new(1, 0, 0, 20)
     TopRow.BackgroundTransparency = 1
@@ -1051,7 +1084,6 @@ local function AddSliderRow(title, configKey, sliderKey, minVal, maxVal, default
         if onToggleCallback then onToggleCallback(Toggles[configKey]) end
     end)
     
-    -- Bottom Line Bar Slider Track
     local SliderTrack = Instance.new("Frame")
     SliderTrack.Size = UDim2.new(1, 0, 0, 6)
     SliderTrack.Position = UDim2.new(0, 0, 0, 24)
@@ -1119,53 +1151,58 @@ local function AddSliderRow(title, configKey, sliderKey, minVal, maxVal, default
 end
 
 -- ==========================================
--- POPULATE FEATURES
+-- POPULATE FEATURES (EXACT JUNEJO STANDARD)
 -- ==========================================
 
--- 1. Infinite Cash (+999B)
+-- 1. Infinite Cash (+999B) Toggle
 AddToggleRow("Infinite Cash (+999B)", "InfiniteCash")
 
--- 2. Auto Steal Egg
+-- 2. Add Cash Now (1-Click Instant Action)
+AddActionRow("⚡ Add +1B Cash Now", function()
+    AddCashInstant()
+end)
+
+-- 3. Auto Steal Egg
 AddToggleRow("Auto Steal Egg", "AutoStealEgg")
 
--- 3. Auto Steal Rare Egg
+-- 4. Auto Steal Rare Egg
 AddToggleRow("Auto Steal Rare Egg", "AutoStealRareEgg")
 
--- 4. Auto Steal Nearest Egg
+-- 5. Auto Steal Nearest Egg
 AddToggleRow("Auto Steal Nearest Egg", "AutoStealNearestEgg")
 
--- 5. Fast Climb on Beanstalk
+-- 6. Fast Climb on Beanstalk
 AddToggleRow("Fast Climb Beanstalk", "FastClimbBeanstalk")
 
--- 6. Infinite Long Beanstalk (Mega Height & Auto Grow)
+-- 7. Infinite Long Beanstalk (Mega Height & Auto Grow)
 AddToggleRow("Infinite Long Beanstalk", "InfiniteBeanstalk")
 
--- 7. Auto Unlock Treadmill
+-- 8. Auto Unlock Treadmill
 AddToggleRow("Auto Unlock Treadmill", "AutoUnlockTreadmill")
 
--- 8. Auto Upgrade Base
+-- 9. Auto Upgrade Base
 AddToggleRow("Auto Upgrade Base", "AutoUpgradeBase")
 
--- 9. Auto Hatch Egg
+-- 10. Auto Hatch Egg
 AddToggleRow("Auto Hatch Egg", "AutoHatchEgg")
 
--- 10. Auto Rebirth
+-- 11. Auto Rebirth
 AddToggleRow("Auto Rebirth", "AutoRebirth")
 
--- 11. Auto Claim All Rewards
+-- 12. Auto Claim All Rewards
 AddToggleRow("Auto Claim All Rewards", "AutoClaimRewards")
 
--- 12. WalkSpeed with Line Bar Slider
+-- 13. WalkSpeed with Line Bar Slider
 AddSliderRow("WalkSpeed", "WalkSpeedBoost", "WalkSpeed", 16, 300, 75, function(val)
     UpdateWalkSpeed()
 end, function(enabled)
     UpdateWalkSpeed()
 end)
 
--- 13. Infinite Jump with Line Bar Slider
+-- 14. Infinite Jump with Line Bar Slider
 AddSliderRow("Infinite Jump", "InfiniteJump", "JumpPower", 50, 300, 120, nil, nil)
 
--- 14. Fly Mode with Line Bar Slider
+-- 15. Fly Mode with Line Bar Slider
 AddSliderRow("Fly Mode", "FlyMode", "FlySpeed", 20, 250, 70, nil, function(enabled)
     if enabled then
         StartFlying()
@@ -1201,4 +1238,4 @@ FooterSub.TextSize = 9
 FooterSub.Font = Enum.Font.GothamMedium
 FooterSub.Parent = Footer
 
-print("Junejo Ultra Script Hub V4 loaded successfully with Infinite Cash!")
+print("Junejo Ultra Script Hub V5 loaded successfully with Infinite Cash & 1-Click Cash!")
