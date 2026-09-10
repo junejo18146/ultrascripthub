@@ -721,7 +721,6 @@ local function IsGuardOrFish(instance)
     if not instance or instance == LocalPlayer.Character or instance.Parent == LocalPlayer.Character then return false end
     if Players:GetPlayerFromCharacter(instance) or Players:GetPlayerFromCharacter(instance.Parent) then return false end
 
-    -- Avoid deleting eggs or base elements
     local name = instance.Name:lower()
     if name:find("egg") or name:find("spawn") or name:find("tank") or name:find("pad") or name:find("tread") or name:find("base") or name:find("theline") then
         return false
@@ -730,12 +729,10 @@ local function IsGuardOrFish(instance)
         return false
     end
 
-    -- Match attributes
     if instance:GetAttribute("ChaserAggroActive") ~= nil or instance:GetAttribute("IsGuard") ~= nil or instance:GetAttribute("IsChaser") ~= nil or instance:GetAttribute("Chaser") ~= nil then
         return true
     end
 
-    -- Match fish/guard/hazard keywords
     local keywords = {
         "chaser", "guard", "fish", "shark", "piranha", "coralreef", "deepocean",
         "hazard", "enemy", "monster", "obstacle", "creature", "jellyfish", "angler",
@@ -748,7 +745,6 @@ local function IsGuardOrFish(instance)
         end
     end
 
-    -- If Model with Humanoid in ocean
     if instance:IsA("Model") then
         local hum = instance:FindFirstChildOfClass("Humanoid")
         if hum and not Players:GetPlayerFromCharacter(instance) then
@@ -761,7 +757,6 @@ end
 
 local function SweepAndRemoveAllGuards()
     pcall(function()
-        -- Sweep Workspace Descendants
         for _, desc in ipairs(Workspace:GetDescendants()) do
             if IsGuardOrFish(desc) then
                 NeutralizeTarget(desc)
