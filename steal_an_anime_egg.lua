@@ -1,5 +1,5 @@
 -- ====================================================================
--- ULTRA SCRIPT HUB - STEAL AN ANIME EGG
+-- ULTRA SCRIPT HUB - STEAL AN ANIME EGG (V2.0 COMPACT SCROLLING EDITION)
 -- Creator: Junejo (junejo18146)
 -- Target Game: Steal An Anime Egg (Place ID: 76377501906469)
 -- ====================================================================
@@ -11,6 +11,7 @@ local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ProximityPromptService = game:GetService("ProximityPromptService")
+local VirtualUser = game:GetService("VirtualUser")
 
 local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
@@ -23,7 +24,16 @@ LocalPlayer.CharacterAdded:Connect(function(newChar)
     HumanoidRootPart = newChar:WaitForChild("HumanoidRootPart")
 end)
 
--- Feature States
+-- Saved Base CFrame anchor
+local SavedBaseCFrame = nil
+task.spawn(function()
+    task.wait(1)
+    if HumanoidRootPart then
+        SavedBaseCFrame = HumanoidRootPart.CFrame
+    end
+end)
+
+-- Feature Toggles
 local Toggles = {
     AutoSteal = false,
     InstantPrompt = false,
@@ -33,34 +43,43 @@ local Toggles = {
     AutoRebirth = false,
     AutoAttackBoss = false,
     EggESP = false,
+    PlayerESP = false,
+    BaseESP = false,
+    BossESP = false,
     WalkSpeedBoost = false,
-    InfiniteJump = false
+    InfiniteJump = false,
+    AntiRagdoll = false
 }
 
 local CustomSpeedValue = 32
-local ESPObjects = {}
+local ESPStorage = {
+    Eggs = {},
+    Players = {},
+    Bases = {},
+    Boss = {}
+}
 
--- Anti-AFK
-local VirtualUser = game:GetService("VirtualUser")
+-- Anti-AFK Engine
 LocalPlayer.Idled:Connect(function()
     VirtualUser:CaptureController()
     VirtualUser:ClickButton2(Vector2.new())
 end)
 
--- Speed updater
+-- Speed Enforcer Loop (Bypasses Game Anti-Cheat Overrides)
 local function UpdateCharacterSpeed()
     if Humanoid then
-        if Toggles.WalkSpeedBoost then
-            Humanoid.WalkSpeed = CustomSpeedValue
-        else
-            Humanoid.WalkSpeed = 16
-        end
+        Humanoid.WalkSpeed = Toggles.WalkSpeedBoost and CustomSpeedValue or 16
     end
 end
 
 RunService.Heartbeat:Connect(function()
     if Toggles.WalkSpeedBoost and Humanoid and Humanoid.WalkSpeed ~= CustomSpeedValue then
         Humanoid.WalkSpeed = CustomSpeedValue
+    end
+    if Toggles.AntiRagdoll and Humanoid then
+        Humanoid.PlatformStand = false
+        Humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+        Humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
     end
 end)
 
@@ -71,75 +90,171 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
--- Instant Steal Prompts
+-- Instant Steal / Prompt Bypass (0s Hold)
+local function PatchPrompt(prompt)
+    if prompt:IsA("ProximityPrompt") then
+        prompt.HoldDuration = 0
+        prompt.MaxActivationDistance = 40
+        prompt.RequiresLineOfSight = false
+    end
+end
+
+ProximityPromptService.PromptButtonHoldBegan:Connect(function(prompt, player)
+    if Toggles.InstantPrompt and player == LocalPlayer then
+        fireproximityprompt(prompt, 0)
+    end
+end)
+
 task.spawn(function()
     while true do
         if Toggles.InstantPrompt then
             for _, prompt in ipairs(Workspace:GetDescendants()) do
                 if prompt:IsA("ProximityPrompt") then
-                    prompt.HoldDuration = 0
-                    prompt.MaxActivationDistance = 35
+                    PatchPrompt(prompt)
                 end
             end
         end
-        task.wait(1)
+        task.wait(0.8)
     end
 end)
 
--- Helper: Get Player Base / Plot
-local function GetPlayerBase()
-    local basesFolder = Workspace:FindFirstChild("Bases") or Workspace:FindFirstChild("Plots") or Workspace:FindFirstChild("PlayerBases")
-    if basesFolder then
-        for _, base in ipairs(basesFolder:GetChildren()) do
-            local owner = base:FindFirstChild("Owner") or base:FindFirstChild("Player")
-            if (owner and owner.Value == LocalPlayer) or base.Name == LocalPlayer.Name then
-                return base
+-- Robust Multi-Method Base Detector
+local function FindMyBase()
+    -- 1. Check Plots/Bases Folders
+    local potentialFolders = {
+        Workspace:FindFirstChild("Bases"),
+        Workspace:FindFirstChild("Plots"),
+        Workspace:FindFirstChild("PlayerBases"),
+        Workspace:FindFirstChild("Islands"),
+        Workspace:FindFirstChild("Houses")
+    }
+    for _, folder in ipairs(potentialFolders) do
+        if folder then
+            for _, base in ipairs(folder:GetChildren()) do
+                local ownerVal = base:FindFirstChild("Owner") or base:FindFirstChild("Player") or base:FindFirstChild("OwnerName")
+                if ownerVal and (ownerVal.Value == LocalPlayer or ownerVal.Value == LocalPlayer.Name or tostring(ownerVal.Value) == tostring(LocalPlayer.UserId)) then
+                    return base
+                end
+                if base.Name == LocalPlayer.Name or base:GetAttribute("Owner") == LocalPlayer.UserId or base:GetAttribute("OwnerName") == LocalPlayer.Name then
+                    return base
+                end
             end
         end
     end
-    -- Fallback search by descendants
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if (obj.Name == "Base" or obj.Name == "Nest" or obj.Name == "Plot") and obj:FindFirstChild("Owner") and obj.Owner.Value == LocalPlayer then
-            return obj
+
+    -- 2. Deep scan across Workspace
+    for _, obj in ipairs(Workspace:GetChildren()) do
+        if obj:IsA("Model") or obj:IsA("Folder") then
+            local owner = obj:FindFirstChild("Owner")
+            if owner and (owner.Value == LocalPlayer or owner.Value == LocalPlayer.Name) then
+                return obj
+            end
         end
     end
+
     return nil
 end
 
--- Auto Steal Loop
+local function GetBaseDepositPosition()
+    local base = FindMyBase()
+    if base then
+        local nest = base:FindFirstChild("Nest", true) or base:FindFirstChild("Deposit", true) or base:FindFirstChild("EggStand", true) or base:FindFirstChild("Spawn", true) or base:FindFirstChild("Collector", true)
+        if nest and nest:IsA("BasePart") then
+            return nest.CFrame * CFrame.new(0, 3, 0)
+        elseif base:IsA("Model") and (base.PrimaryPart or base:FindFirstChildWhichIsA("BasePart")) then
+            local part = base.PrimaryPart or base:FindFirstChildWhichIsA("BasePart")
+            return part.CFrame * CFrame.new(0, 3, 0)
+        end
+    end
+    return SavedBaseCFrame or (HumanoidRootPart and HumanoidRootPart.CFrame)
+end
+
+-- ====================================================================
+-- AUTO FARM ENGINES
+-- ====================================================================
+
+-- 1. Auto Steal Eggs Loop
 task.spawn(function()
     while true do
         if Toggles.AutoSteal and HumanoidRootPart and Humanoid and Humanoid.Health > 0 then
             pcall(function()
-                -- Find eggs in arena
-                local eggFound = nil
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if obj:IsA("ProximityPrompt") and (string.find(string.lower(obj.ActionText), "steal") or string.find(string.lower(obj.ActionText), "grab") or string.find(string.lower(obj.ObjectText), "egg")) then
-                        local promptPart = obj.Parent
-                        if promptPart and promptPart:IsA("BasePart") then
-                            eggFound = { part = promptPart, prompt = obj }
-                            break
+                local eggTargets = {}
+                
+                -- Collect all available stealable eggs in arena
+                for _, prompt in ipairs(Workspace:GetDescendants()) do
+                    if prompt:IsA("ProximityPrompt") and prompt.Enabled then
+                        local text = string.lower(prompt.ActionText .. " " .. prompt.ObjectText)
+                        local parentName = string.lower(prompt.Parent and prompt.Parent.Name or "")
+                        if string.find(text, "steal") or string.find(text, "grab") or string.find(text, "take") or string.find(text, "egg") or string.find(parentName, "egg") or string.find(parentName, "nest") then
+                            local part = prompt.Parent
+                            if part:IsA("BasePart") then
+                                table.insert(eggTargets, { part = part, prompt = prompt })
+                            elseif part:IsA("Model") and (part.PrimaryPart or part:FindFirstChildWhichIsA("BasePart")) then
+                                table.insert(eggTargets, { part = part.PrimaryPart or part:FindFirstChildWhichIsA("BasePart"), prompt = prompt })
+                            end
                         end
                     end
                 end
 
-                if eggFound then
-                    local originalCFrame = HumanoidRootPart.CFrame
-                    HumanoidRootPart.CFrame = eggFound.part.CFrame * CFrame.new(0, 2, 0)
-                    task.wait(0.2)
-                    fireproximityprompt(eggFound.prompt, 0)
-                    task.wait(0.3)
+                if #eggTargets > 0 then
+                    for _, target in ipairs(eggTargets) do
+                        if not Toggles.AutoSteal then break end
+                        if target.part and target.part.Parent then
+                            -- Teleport directly to egg
+                            HumanoidRootPart.CFrame = target.part.CFrame * CFrame.new(0, 2, 0)
+                            task.wait(0.15)
+                            
+                            -- Multi-Method Prompt Trigger
+                            PatchPrompt(target.prompt)
+                            fireproximityprompt(target.prompt, 0)
+                            fireproximityprompt(target.prompt, 1)
+                            task.wait(0.2)
 
-                    -- Teleport back to base if deposit enabled or return
-                    local base = GetPlayerBase()
-                    if base then
-                        local nest = base:FindFirstChild("Nest") or base:FindFirstChild("Deposit") or base:FindFirstChild("Spawn") or base:FindFirstChildWhichIsA("BasePart")
-                        if nest then
-                            HumanoidRootPart.CFrame = nest.CFrame * CFrame.new(0, 3, 0)
-                            task.wait(0.4)
+                            -- Auto Teleport back to Base & secure
+                            local depositCFrame = GetBaseDepositPosition()
+                            if depositCFrame then
+                                HumanoidRootPart.CFrame = depositCFrame
+                                task.wait(0.3)
+                            end
                         end
-                    else
-                        HumanoidRootPart.CFrame = originalCFrame
+                    end
+                end
+            end)
+        end
+        task.wait(0.8)
+    end
+end)
+
+-- 2. Auto Deposit Eggs Loop
+task.spawn(function()
+    while true do
+        if Toggles.AutoDeposit and HumanoidRootPart then
+            pcall(function()
+                local base = FindMyBase()
+                if base then
+                    for _, prompt in ipairs(base:GetDescendants()) do
+                        if prompt:IsA("ProximityPrompt") then
+                            PatchPrompt(prompt)
+                            fireproximityprompt(prompt, 0)
+                        end
+                    end
+                    -- Touch deposit pads
+                    for _, part in ipairs(base:GetDescendants()) do
+                        if part:IsA("BasePart") and (string.find(string.lower(part.Name), "deposit") or string.find(string.lower(part.Name), "nest") or string.find(string.lower(part.Name), "collector")) then
+                            firetouchinterest(HumanoidRootPart, part, 0)
+                            firetouchinterest(HumanoidRootPart, part, 1)
+                        end
+                    end
+                end
+
+                -- Sweep Deposit Remotes
+                local depositRemotes = {"Deposit", "DepositEgg", "StoreEgg", "PlaceEgg", "CollectEgg", "SellEgg"}
+                for _, rName in ipairs(depositRemotes) do
+                    local rem = ReplicatedStorage:FindFirstChild(rName, true)
+                    if rem and rem:IsA("RemoteEvent") then
+                        rem:FireServer()
+                    elseif rem and rem:IsA("RemoteFunction") then
+                        rem:InvokeServer()
                     end
                 end
             end)
@@ -148,37 +263,60 @@ task.spawn(function()
     end
 end)
 
--- Auto Deposit Eggs
-task.spawn(function()
-    while true do
-        if Toggles.AutoDeposit and HumanoidRootPart then
-            pcall(function()
-                local base = GetPlayerBase()
-                if base then
-                    local dropPrompt = base:FindFirstChildWhichIsA("ProximityPrompt", true)
-                    if dropPrompt then
-                        fireproximityprompt(dropPrompt, 0)
-                    end
-                end
-            end)
-        end
-        task.wait(1.5)
-    end
-end)
-
--- Auto Collect Cash / Drops
+-- 3. Auto Collect Cash Engine
 task.spawn(function()
     while true do
         if Toggles.AutoCollectCash and HumanoidRootPart then
             pcall(function()
+                -- Magnet pull dropped coins/cash in Workspace
                 for _, item in ipairs(Workspace:GetChildren()) do
-                    if item:IsA("BasePart") and (string.find(string.lower(item.Name), "coin") or string.find(string.lower(item.Name), "cash") or string.find(string.lower(item.Name), "money") or string.find(string.lower(item.Name), "drop")) then
-                        item.CFrame = HumanoidRootPart.CFrame
-                    elseif item:IsA("Model") and (string.find(string.lower(item.Name), "coin") or string.find(string.lower(item.Name), "cash") or string.find(string.lower(item.Name), "money")) then
-                        local primary = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
-                        if primary then
-                            primary.CFrame = HumanoidRootPart.CFrame
+                    local iName = string.lower(item.Name)
+                    if string.find(iName, "coin") or string.find(iName, "cash") or string.find(iName, "money") or string.find(iName, "drop") or string.find(iName, "gem") or string.find(iName, "yen") then
+                        if item:IsA("BasePart") then
+                            item.CFrame = HumanoidRootPart.CFrame
+                            firetouchinterest(HumanoidRootPart, item, 0)
+                            firetouchinterest(HumanoidRootPart, item, 1)
+                        elseif item:IsA("Model") then
+                            local prim = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
+                            if prim then
+                                prim.CFrame = HumanoidRootPart.CFrame
+                                firetouchinterest(HumanoidRootPart, prim, 0)
+                                firetouchinterest(HumanoidRootPart, prim, 1)
+                            end
                         end
+                    end
+                end
+
+                -- Base ATM / Collector Pad Magnet
+                local base = FindMyBase()
+                if base then
+                    for _, p in ipairs(base:GetDescendants()) do
+                        if p:IsA("BasePart") and (string.find(string.lower(p.Name), "cash") or string.find(string.lower(p.Name), "atm") or string.find(string.lower(p.Name), "collect")) then
+                            firetouchinterest(HumanoidRootPart, p, 0)
+                            firetouchinterest(HumanoidRootPart, p, 1)
+                        end
+                    end
+                end
+            end)
+        end
+        task.wait(0.4)
+    end
+end)
+
+-- 4. Auto Hatch Eggs Engine
+task.spawn(function()
+    while true do
+        if Toggles.AutoHatch then
+            pcall(function()
+                local hatchRemotes = {"Hatch", "HatchEgg", "OpenEgg", "BuyEgg", "EggHatch", "Roll", "Summon", "Draw"}
+                for _, name in ipairs(hatchRemotes) do
+                    local rem = ReplicatedStorage:FindFirstChild(name, true)
+                    if rem and rem:IsA("RemoteEvent") then
+                        rem:FireServer(1)
+                        rem:FireServer("Egg", 1)
+                        rem:FireServer("AnimeEgg", 1)
+                    elseif rem and rem:IsA("RemoteFunction") then
+                        rem:InvokeServer(1)
                     end
                 end
             end)
@@ -187,54 +325,36 @@ task.spawn(function()
     end
 end)
 
--- Auto Hatch Eggs
-task.spawn(function()
-    while true do
-        if Toggles.AutoHatch then
-            pcall(function()
-                local hatchRemotes = {"Hatch", "HatchEgg", "OpenEgg", "BuyEgg", "EggHatch"}
-                for _, name in ipairs(hatchRemotes) do
-                    local remote = ReplicatedStorage:FindFirstChild(name, true)
-                    if remote and remote:IsA("RemoteEvent") then
-                        remote:FireServer(1)
-                    elseif remote and remote:IsA("RemoteFunction") then
-                        remote:InvokeServer(1)
-                    end
-                end
-            end)
-        end
-        task.wait(0.6)
-    end
-end)
-
--- Auto Rebirth
+-- 5. Auto Rebirth Engine
 task.spawn(function()
     while true do
         if Toggles.AutoRebirth then
             pcall(function()
-                local rebirthRemotes = {"Rebirth", "AutoRebirth", "BuyRebirth", "RebirthEvent"}
+                local rebirthRemotes = {"Rebirth", "AutoRebirth", "BuyRebirth", "RebirthEvent", "Prestige", "Ascend"}
                 for _, name in ipairs(rebirthRemotes) do
-                    local remote = ReplicatedStorage:FindFirstChild(name, true)
-                    if remote and remote:IsA("RemoteEvent") then
-                        remote:FireServer(1)
-                    elseif remote and remote:IsA("RemoteFunction") then
-                        remote:InvokeServer(1)
+                    local rem = ReplicatedStorage:FindFirstChild(name, true)
+                    if rem and rem:IsA("RemoteEvent") then
+                        rem:FireServer(1)
+                        rem:FireServer()
+                    elseif rem and rem:IsA("RemoteFunction") then
+                        rem:InvokeServer(1)
+                        rem:InvokeServer()
                     end
                 end
             end)
         end
-        task.wait(2)
+        task.wait(1.5)
     end
 end)
 
--- Auto Attack Boss
+-- 6. Auto Attack Boss Engine
 task.spawn(function()
     while true do
         if Toggles.AutoAttackBoss and HumanoidRootPart and Humanoid and Humanoid.Health > 0 then
             pcall(function()
                 local bossModel = nil
                 for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if (obj.Name == "bosshealth" or obj.Name == "bosshealthmax" or string.find(string.lower(obj.Name), "boss")) and obj.Parent and obj.Parent:IsA("Model") then
+                    if obj:IsA("Humanoid") and obj.Parent ~= Character and (obj.MaxHealth >= 1000 or string.find(string.lower(obj.Parent.Name), "boss") or obj.Parent:FindFirstChild("bosshealth") or obj.Parent:FindFirstChild("bosshealthmax")) then
                         bossModel = obj.Parent
                         break
                     end
@@ -243,16 +363,19 @@ task.spawn(function()
                 if bossModel then
                     local bossPart = bossModel:FindFirstChild("HumanoidRootPart") or bossModel:FindFirstChild("Head") or bossModel:FindFirstChildWhichIsA("BasePart")
                     if bossPart then
-                        -- Safe float above boss
+                        -- Hover safely above boss
                         HumanoidRootPart.CFrame = bossPart.CFrame * CFrame.new(0, 10, 0)
                         
-                        -- Fire attack remotes or tool activated
-                        local tool = Character:FindFirstChildWhichIsA("Tool")
+                        -- Equip tool and attack
+                        local tool = Character:FindFirstChildWhichIsA("Tool") or LocalPlayer.Backpack:FindFirstChildWhichIsA("Tool")
                         if tool then
+                            if tool.Parent ~= Character then
+                                Humanoid:EquipTool(tool)
+                            end
                             tool:Activate()
                         end
 
-                        local attackRemotes = {"Attack", "Hit", "DamageBoss", "BossHit", "Punch", "Slash"}
+                        local attackRemotes = {"Attack", "Hit", "DamageBoss", "BossHit", "Punch", "Slash", "Damage"}
                         for _, rName in ipairs(attackRemotes) do
                             local rem = ReplicatedStorage:FindFirstChild(rName, true)
                             if rem and rem:IsA("RemoteEvent") then
@@ -267,58 +390,156 @@ task.spawn(function()
     end
 end)
 
--- Egg ESP
-local function ClearESP()
-    for _, item in ipairs(ESPObjects) do
+-- ====================================================================
+-- ESP SYSTEMS (EGGS, PLAYERS, BASES, BOSS)
+-- ====================================================================
+
+local function ClearESPFolder(list)
+    for _, item in ipairs(list) do
         if item then item:Destroy() end
     end
-    ESPObjects = {}
+    return {}
 end
 
+-- 1. Anime Egg ESP
 task.spawn(function()
     while true do
         if Toggles.EggESP then
             for _, obj in ipairs(Workspace:GetDescendants()) do
-                if (string.find(string.lower(obj.Name), "egg") or string.find(string.lower(obj.Name), "nest")) and obj:IsA("BasePart") and not obj:FindFirstChild("JunejoEggHighlight") then
-                    local highlight = Instance.new("Highlight")
-                    highlight.Name = "JunejoEggHighlight"
-                    highlight.FillColor = Color3.fromRGB(255, 170, 0)
-                    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-                    highlight.FillTransparency = 0.5
-                    highlight.OutlineTransparency = 0
-                    highlight.Adornee = obj
-                    highlight.Parent = obj
-                    table.insert(ESPObjects, highlight)
+                if (string.find(string.lower(obj.Name), "egg") or string.find(string.lower(obj.Name), "nest")) and (obj:IsA("BasePart") or obj:IsA("Model")) and not obj:FindFirstChild("JunejoEggHighlight") then
+                    local targetPart = obj:IsA("BasePart") and obj or (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart"))
+                    if targetPart then
+                        local hl = Instance.new("Highlight")
+                        hl.Name = "JunejoEggHighlight"
+                        hl.FillColor = Color3.fromRGB(255, 180, 0)
+                        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                        hl.FillTransparency = 0.4
+                        hl.Adornee = obj
+                        hl.Parent = obj
+                        table.insert(ESPStorage.Eggs, hl)
 
-                    local billboard = Instance.new("BillboardGui")
-                    billboard.Name = "JunejoEggBillboard"
-                    billboard.Adornee = obj
-                    billboard.Size = UDim2.new(0, 100, 0, 30)
-                    billboard.StudsOffset = Vector3.new(0, 2, 0)
-                    billboard.AlwaysOnTop = true
-                    billboard.Parent = obj
+                        local bb = Instance.new("BillboardGui")
+                        bb.Name = "JunejoEggBillboard"
+                        bb.Adornee = targetPart
+                        bb.Size = UDim2.new(0, 120, 0, 24)
+                        bb.StudsOffset = Vector3.new(0, 2.5, 0)
+                        bb.AlwaysOnTop = true
+                        bb.Parent = targetPart
 
-                    local textLabel = Instance.new("TextLabel")
-                    textLabel.Size = UDim2.new(1, 0, 1, 0)
-                    textLabel.BackgroundTransparency = 1
-                    textLabel.Text = "[EGG] " .. obj.Name
-                    textLabel.TextColor3 = Color3.fromRGB(255, 220, 50)
-                    textLabel.TextSize = 11
-                    textLabel.Font = Enum.Font.GothamBold
-                    textLabel.Parent = billboard
+                        local txt = Instance.new("TextLabel")
+                        txt.Size = UDim2.new(1, 0, 1, 0)
+                        txt.BackgroundTransparency = 1
+                        txt.Text = "🥚 " .. obj.Name
+                        txt.TextColor3 = Color3.fromRGB(255, 220, 50)
+                        txt.TextSize = 11
+                        txt.Font = Enum.Font.GothamBold
+                        txt.Parent = bb
 
-                    table.insert(ESPObjects, billboard)
+                        table.insert(ESPStorage.Eggs, bb)
+                    end
                 end
             end
         else
-            ClearESP()
+            ESPStorage.Eggs = ClearESPFolder(ESPStorage.Eggs)
+        end
+        task.wait(2.5)
+    end
+end)
+
+-- 2. Player ESP
+task.spawn(function()
+    while true do
+        if Toggles.PlayerESP then
+            for _, plr in ipairs(Players:GetPlayers()) do
+                if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and not plr.Character:FindFirstChild("JunejoPlrHighlight") then
+                    local hl = Instance.new("Highlight")
+                    hl.Name = "JunejoPlrHighlight"
+                    hl.FillColor = Color3.fromRGB(255, 60, 60)
+                    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                    hl.FillTransparency = 0.5
+                    hl.Adornee = plr.Character
+                    hl.Parent = plr.Character
+                    table.insert(ESPStorage.Players, hl)
+
+                    local bb = Instance.new("BillboardGui")
+                    bb.Name = "JunejoPlrBillboard"
+                    bb.Adornee = plr.Character.HumanoidRootPart
+                    bb.Size = UDim2.new(0, 120, 0, 24)
+                    bb.StudsOffset = Vector3.new(0, 3, 0)
+                    bb.AlwaysOnTop = true
+                    bb.Parent = plr.Character.HumanoidRootPart
+
+                    local txt = Instance.new("TextLabel")
+                    txt.Size = UDim2.new(1, 0, 1, 0)
+                    txt.BackgroundTransparency = 1
+                    txt.Text = "👤 " .. plr.DisplayName
+                    txt.TextColor3 = Color3.fromRGB(255, 100, 100)
+                    txt.TextSize = 11
+                    txt.Font = Enum.Font.GothamBold
+                    txt.Parent = bb
+
+                    table.insert(ESPStorage.Players, bb)
+                end
+            end
+        else
+            ESPStorage.Players = ClearESPFolder(ESPStorage.Players)
+        end
+        task.wait(2.5)
+    end
+end)
+
+-- 3. Player Base ESP
+task.spawn(function()
+    while true do
+        if Toggles.BaseESP then
+            local basesFolder = Workspace:FindFirstChild("Bases") or Workspace:FindFirstChild("Plots") or Workspace:FindFirstChild("PlayerBases")
+            if basesFolder then
+                for _, base in ipairs(basesFolder:GetChildren()) do
+                    if not base:FindFirstChild("JunejoBaseHighlight") then
+                        local hl = Instance.new("Highlight")
+                        hl.Name = "JunejoBaseHighlight"
+                        hl.FillColor = Color3.fromRGB(0, 180, 255)
+                        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                        hl.FillTransparency = 0.6
+                        hl.Adornee = base
+                        hl.Parent = base
+                        table.insert(ESPStorage.Bases, hl)
+                    end
+                end
+            end
+        else
+            ESPStorage.Bases = ClearESPFolder(ESPStorage.Bases)
+        end
+        task.wait(3)
+    end
+end)
+
+-- 4. Boss ESP
+task.spawn(function()
+    while true do
+        if Toggles.BossESP then
+            for _, obj in ipairs(Workspace:GetDescendants()) do
+                if obj:IsA("Humanoid") and obj.Parent ~= Character and (obj.MaxHealth >= 1000 or string.find(string.lower(obj.Parent.Name), "boss") or obj.Parent:FindFirstChild("bosshealth")) and not obj.Parent:FindFirstChild("JunejoBossHighlight") then
+                    local bossModel = obj.Parent
+                    local hl = Instance.new("Highlight")
+                    hl.Name = "JunejoBossHighlight"
+                    hl.FillColor = Color3.fromRGB(200, 50, 255)
+                    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                    hl.FillTransparency = 0.4
+                    hl.Adornee = bossModel
+                    hl.Parent = bossModel
+                    table.insert(ESPStorage.Boss, hl)
+                end
+            end
+        else
+            ESPStorage.Boss = ClearESPFolder(ESPStorage.Boss)
         end
         task.wait(3)
     end
 end)
 
 -- ====================================================================
--- JUNEJO OFFICIAL STANDARD UI CREATION
+-- JUNEJO OFFICIAL COMPACT SCROLLING UI (5 FEATURES VISIBLE AT A TIME)
 -- ====================================================================
 
 local CoreGui = game:GetService("CoreGui")
@@ -332,10 +553,11 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999999
 ScreenGui.Parent = CoreGui
 
+-- Compact Standard MainFrame (280x225px)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 360)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -180)
+MainFrame.Size = UDim2.new(0, 280, 0, 225)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -112)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -352,7 +574,7 @@ MainStroke.Color = Color3.fromRGB(35, 35, 42)
 MainStroke.Thickness = 1
 MainStroke.Parent = MainFrame
 
--- Header
+-- Header (32px)
 local Header = Instance.new("Frame")
 Header.Name = "Header"
 Header.Size = UDim2.new(1, 0, 0, 32)
@@ -380,7 +602,10 @@ CloseButton.TextSize = 13
 CloseButton.Font = Enum.Font.GothamBold
 CloseButton.Parent = Header
 CloseButton.MouseButton1Click:Connect(function() 
-    ClearESP()
+    ClearESPFolder(ESPStorage.Eggs)
+    ClearESPFolder(ESPStorage.Players)
+    ClearESPFolder(ESPStorage.Bases)
+    ClearESPFolder(ESPStorage.Boss)
     ScreenGui:Destroy() 
 end)
 
@@ -392,24 +617,32 @@ HeaderLine.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
 HeaderLine.BorderSizePixel = 0
 HeaderLine.Parent = MainFrame
 
--- Content Frame
-local ContentFrame = Instance.new("Frame")
-ContentFrame.Size = UDim2.new(1, -24, 0, 280)
-ContentFrame.Position = UDim2.new(0, 12, 0, 38)
-ContentFrame.BackgroundTransparency = 1
-ContentFrame.Parent = MainFrame
+-- Scrollable Content Frame (Shows Exactly 5 Items at a time, Scroll for rest!)
+local ScrollingContent = Instance.new("ScrollingFrame")
+ScrollingContent.Name = "ScrollingContent"
+ScrollingContent.Size = UDim2.new(1, -24, 0, 145)
+ScrollingContent.Position = UDim2.new(0, 12, 0, 38)
+ScrollingContent.BackgroundTransparency = 1
+ScrollingContent.BorderSizePixel = 0
+ScrollingContent.ScrollBarThickness = 3
+ScrollingContent.ScrollBarImageColor3 = Color3.fromRGB(70, 70, 85)
+ScrollingContent.CanvasSize = UDim2.new(0, 0, 0, 0)
+ScrollingContent.AutomaticCanvasSize = Enum.AutomaticSize.Y
+ScrollingContent.ScrollingDirection = Enum.ScrollingDirection.Y
+ScrollingContent.ClipsDescendants = true
+ScrollingContent.Parent = MainFrame
 
 local UIList = Instance.new("UIListLayout")
 UIList.SortOrder = Enum.SortOrder.LayoutOrder
 UIList.Padding = UDim.new(0, 4)
-UIList.Parent = ContentFrame
+UIList.Parent = ScrollingContent
 
 -- Helper function for Toggle Rows
 local function AddToggleRow(text, configKey, callback)
     local Row = Instance.new("Frame")
-    Row.Size = UDim2.new(1, 0, 0, 23)
+    Row.Size = UDim2.new(1, -6, 0, 23)
     Row.BackgroundTransparency = 1
-    Row.Parent = ContentFrame
+    Row.Parent = ScrollingContent
     
     local RowBtn = Instance.new("TextButton")
     RowBtn.Size = UDim2.new(1, 0, 1, 0)
@@ -463,7 +696,7 @@ local function AddToggleRow(text, configKey, callback)
     end)
 end
 
--- Add Main Toggle Rows
+-- Add All Features to the Compact Scrolling List
 AddToggleRow("Auto Steal Eggs", "AutoSteal")
 AddToggleRow("Instant Steal (0s Prompt)", "InstantPrompt")
 AddToggleRow("Auto Deposit Eggs", "AutoDeposit")
@@ -472,13 +705,17 @@ AddToggleRow("Auto Hatch Eggs", "AutoHatch")
 AddToggleRow("Auto Rebirth", "AutoRebirth")
 AddToggleRow("Auto Attack Boss", "AutoAttackBoss")
 AddToggleRow("Anime Egg ESP", "EggESP")
+AddToggleRow("Player ESP", "PlayerESP")
+AddToggleRow("Player Base ESP", "BaseESP")
+AddToggleRow("Boss ESP", "BossESP")
+AddToggleRow("Anti-Egg Drop (No Ragdoll)", "AntiRagdoll")
 AddToggleRow("Infinite Jump", "InfiniteJump")
 
 -- Integrated WalkSpeed Row with Pill Adjuster
 local SpeedRow = Instance.new("Frame")
-SpeedRow.Size = UDim2.new(1, 0, 0, 23)
+SpeedRow.Size = UDim2.new(1, -6, 0, 23)
 SpeedRow.BackgroundTransparency = 1
-SpeedRow.Parent = ContentFrame
+SpeedRow.Parent = ScrollingContent
 
 local SpeedToggleBtn = Instance.new("TextButton")
 SpeedToggleBtn.Size = UDim2.new(0.55, 0, 1, 0)
@@ -589,7 +826,7 @@ PlusBtn.MouseButton1Click:Connect(function()
     UpdateCharacterSpeed()
 end)
 
--- Footer
+-- Footer (Pinned at bottom, 36px)
 local Footer = Instance.new("Frame")
 Footer.Size = UDim2.new(1, 0, 0, 36)
 Footer.Position = UDim2.new(0, 0, 1, -38)
