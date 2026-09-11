@@ -44,6 +44,7 @@ end)
 local Toggles = {
     AutoStealRare = false,
     InstantPrompt = false,
+    AutoRebirth = false,
     AutoDeposit = false,
     AutoTrainJump = false,
     AutoCollectCash = false,
@@ -226,57 +227,12 @@ local function HasCarriedEgg()
     return false
 end
 
--- Rarity Scorer (Keywords + Sky Height Multiplier)
-local RarityKeywords = {
-    ["secret"] = 100000,
-    ["godly"] = 50000,
-    ["celestial"] = 40000,
-    ["divine"] = 35000,
-    ["void"] = 30000,
-    ["mythic"] = 20000,
-    ["astral"] = 15000,
-    ["titan"] = 12000,
-    ["legendary"] = 10000,
-    ["dragon"] = 7000,
-    ["epic"] = 4000,
-    ["rare"] = 2000,
-    ["golden"] = 1500,
-    ["diamond"] = 1200,
-    ["egg"] = 500
-}
-
-local function CalculateEggScore(obj, prompt)
-    local score = 0
-    local fullText = string.lower(obj.Name .. " " .. (prompt and (prompt.ActionText .. " " .. prompt.ObjectText) or ""))
-    
-    for _, tag in ipairs(obj:GetDescendants()) do
-        if tag:IsA("TextLabel") then
-            fullText = fullText .. " " .. string.lower(tag.Text)
-        end
-    end
-
-    for kw, val in pairs(RarityKeywords) do
-        if string.find(fullText, kw) then
-            score = score + val
-        end
-    end
-
-    -- Sky Height Multiplier (Higher floor = Rarest Egg in sky!)
-    if obj:IsA("BasePart") then
-        score = score + math.floor(obj.Position.Y * 3)
-    elseif obj:IsA("Model") and obj.PrimaryPart then
-        score = score + math.floor(obj.PrimaryPart.Position.Y * 3)
-    end
-
-    return score
-end
-
 local function GetLocationKey(pos)
     return math.floor(pos.X / 4) .. "_" .. math.floor(pos.Y / 4) .. "_" .. math.floor(pos.Z / 4)
 end
 
 -- ====================================================================
--- 1. ROBUST AUTO STEAL RARE EGG ENGINE (STAY-AND-GRAB WITH BASE RETURN)
+-- 1. FURTHEST RARE EGG STEAL ENGINE (MAX DISTANCE FROM BASE = RAREST EGG)
 -- ====================================================================
 
 task.spawn(function()
@@ -288,11 +244,12 @@ task.spawn(function()
                 if not hrp or not hum or hum.Health <= 0 then return end
 
                 local baseReturnCFrame = GetBaseDepositPosition()
+                local basePos = baseReturnCFrame and baseReturnCFrame.Position or hrp.Position
                 local now = os.clock()
                 local candidates = {}
                 local myBase = FindMyBase()
 
-                -- 1. Search for candidates with ProximityPrompt
+                -- 1. Search for egg candidates with ProximityPrompt across the entire map
                 for _, prompt in ipairs(Workspace:GetDescendants()) do
                     if prompt:IsA("ProximityPrompt") and prompt.Enabled then
                         local parent = prompt.Parent
@@ -310,51 +267,55 @@ task.spawn(function()
                             local isEgg = text:find("steal") or text:find("grab") or text:find("take") or text:find("egg") or text:find("claim") or text:find("hold") or text == ""
                             
                             if isEgg and not (myBase and targetPart:IsDescendantOf(myBase)) then
-                                local locKey = GetLocationKey(targetPart.Position)
-                                local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
-                                
-                                if not isCoolingDown then
-                                    local rScore = CalculateEggScore(targetPart, prompt)
-                                    table.insert(candidates, {
-                                        part = targetPart,
-                                        prompt = prompt,
-                                        score = rScore,
-                                        locKey = locKey
-                                    })
+                                local distFromBase = (targetPart.Position - basePos).Magnitude
+                                if distFromBase > 20 then
+                                    local locKey = GetLocationKey(targetPart.Position)
+                                    local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
+                                    
+                                    if not isCoolingDown then
+                                        table.insert(candidates, {
+                                            part = targetPart,
+                                            prompt = prompt,
+                                            distFromBase = distFromBase,
+                                            locKey = locKey
+                                        })
+                                    end
                                 end
                             end
                         end
                     end
                 end
 
-                -- 2. Fallback candidate search for egg models
+                -- 2. Fallback candidate search for egg models outside base
                 if #candidates == 0 then
                     for _, obj in ipairs(Workspace:GetDescendants()) do
                         local name = string.lower(obj.Name)
                         if (name:find("egg") or name:find("rare") or name:find("lucky")) and not name:find("gui") and not name:find("ui") then
                             local targetPart = obj:IsA("BasePart") and obj or (obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")))
                             if targetPart and not (myBase and targetPart:IsDescendantOf(myBase)) then
-                                local locKey = GetLocationKey(targetPart.Position)
-                                local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
-                                
-                                if not isCoolingDown then
-                                    local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
-                                    local rScore = CalculateEggScore(targetPart, prompt)
-                                    table.insert(candidates, {
-                                        part = targetPart,
-                                        prompt = prompt,
-                                        score = rScore,
-                                        locKey = locKey
-                                    })
+                                local distFromBase = (targetPart.Position - basePos).Magnitude
+                                if distFromBase > 20 then
+                                    local locKey = GetLocationKey(targetPart.Position)
+                                    local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
+                                    
+                                    if not isCoolingDown then
+                                        local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
+                                        table.insert(candidates, {
+                                            part = targetPart,
+                                            prompt = prompt,
+                                            distFromBase = distFromBase,
+                                            locKey = locKey
+                                        })
+                                    end
                                 end
                             end
                         end
                     end
                 end
 
-                -- Sort candidates by highest score (Rarest / Highest sky platform)
+                -- STRICT RULE: SORT BY MAXIMUM DISTANCE FROM BASE (FARTHEST EGG FIRST = ABSOLUTE RAREST EGG)
                 table.sort(candidates, function(a, b)
-                    return a.score > b.score
+                    return a.distFromBase > b.distFromBase
                 end)
 
                 if #candidates > 0 then
@@ -364,12 +325,12 @@ task.spawn(function()
                         local eggPrompt = best.prompt
                         local locKey = best.locKey
                         
-                        -- Set location cooldown to avoid spamming empty spots
+                        -- Set location cooldown to avoid spamming empty/on-cooldown spots
                         if locKey then
                             CooldownEggs[locKey] = os.clock() + 4.5
                         end
 
-                        -- Phase 1: Teleport Directly to Egg and Zero Velocity
+                        -- Phase 1: Teleport Directly to Furthest Rare Egg & Zero Velocity
                         hrp.Velocity = Vector3.zero
                         if hrp:FindFirstChild("AssemblyLinearVelocity") then
                             hrp.AssemblyLinearVelocity = Vector3.zero
@@ -472,7 +433,7 @@ task.spawn(function()
                             for _, p in ipairs(Workspace:GetDescendants()) do
                                 if p:IsA("ProximityPrompt") and p.Parent then
                                     local pPos = p.Parent:IsA("BasePart") and p.Parent.Position or nil
-                                    if pPos and (pPos - hrp.Position).Magnitude < 40 then
+                                    if pPos and (pPos - HumanoidRootPart.Position).Magnitude < 40 then
                                         local aText = string.lower(p.ActionText .. " " .. p.ObjectText .. " " .. p.Parent.Name)
                                         if aText:find("deposit") or aText:find("place") or aText:find("drop") or aText:find("store") or aText:find("nest") then
                                             InstantTriggerPrompt(p)
@@ -492,7 +453,76 @@ task.spawn(function()
 end)
 
 -- ====================================================================
--- 2. AUTO DEPOSIT EGGS
+-- 2. AUTO REBIRTH ENGINE (MULTI-METHOD REBIRTH SWEEPER)
+-- ====================================================================
+
+task.spawn(function()
+    while true do
+        if Toggles.AutoRebirth and isAlive() then
+            pcall(function()
+                local hrp = LocalPlayer.Character.HumanoidRootPart
+
+                -- 1. Rebirth Remotes Trigger
+                for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
+                    local n = string.lower(rem.Name)
+                    if n:find("rebirth") or n:find("prestige") or n:find("ascend") or n:find("rankup") or n:find("dorebirth") or n:find("buyrebirth") then
+                        if rem:IsA("RemoteEvent") then
+                            rem:FireServer()
+                            rem:FireServer(1)
+                            rem:FireServer(true)
+                        elseif rem:IsA("RemoteFunction") then
+                            rem:InvokeServer()
+                            rem:InvokeServer(1)
+                        end
+                    end
+                end
+
+                -- 2. Rebirth Proximity Prompts in Workspace
+                for _, prompt in ipairs(Workspace:GetDescendants()) do
+                    if prompt:IsA("ProximityPrompt") and prompt.Parent then
+                        local act = string.lower(prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Parent.Name)
+                        if act:find("rebirth") or act:find("prestige") or act:find("ascend") then
+                            local pPos = prompt.Parent:IsA("BasePart") and prompt.Parent.Position or nil
+                            if pPos and (pPos - hrp.Position).Magnitude < 80 then
+                                InstantTriggerPrompt(prompt)
+                            end
+                        end
+                    end
+                end
+
+                -- 3. Rebirth Touch Pads
+                for _, part in ipairs(Workspace:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        local n = string.lower(part.Name)
+                        if (n:find("rebirth") or n:find("prestige") or n:find("ascend")) and (part.Position - hrp.Position).Magnitude < 60 then
+                            InstantTouch(hrp, part)
+                        end
+                    end
+                end
+
+                -- 4. GUI Rebirth Buttons (PlayerGui Click Simulation)
+                local pgui = LocalPlayer:FindFirstChild("PlayerGui")
+                if pgui then
+                    for _, btn in ipairs(pgui:GetDescendants()) do
+                        if btn:IsA("TextButton") or btn:IsA("ImageButton") then
+                            local txt = string.lower(btn.Name .. " " .. (btn:IsA("TextButton") and btn.Text or ""))
+                            if (txt:find("rebirth") or txt:find("prestige")) and not txt:find("robux") and not txt:find("pass") and not txt:find("shop") then
+                                if getconnections then
+                                    for _, conn in ipairs(getconnections(btn.MouseButton1Click)) do conn:Fire() end
+                                    for _, conn in ipairs(getconnections(btn.Activated)) do conn:Fire() end
+                                end
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+        task.wait(0.8)
+    end
+end)
+
+-- ====================================================================
+-- 3. AUTO DEPOSIT EGGS
 -- ====================================================================
 
 task.spawn(function()
@@ -538,7 +568,7 @@ task.spawn(function()
 end)
 
 -- ====================================================================
--- 3. AUTO TRAIN JUMP
+-- 4. AUTO TRAIN JUMP
 -- ====================================================================
 
 task.spawn(function()
@@ -585,7 +615,7 @@ task.spawn(function()
 end)
 
 -- ====================================================================
--- 4. AUTO COLLECT CASH
+-- 5. AUTO COLLECT CASH
 -- ====================================================================
 
 task.spawn(function()
@@ -624,7 +654,7 @@ task.spawn(function()
 end)
 
 -- ====================================================================
--- 5. RARE EGG ESP
+-- 6. RARE EGG ESP (WITH DISTANCE FROM BASE)
 -- ====================================================================
 
 local function ClearESP()
@@ -637,10 +667,13 @@ end
 task.spawn(function()
     while true do
         if Toggles.EggESP then
+            local basePos = SavedBaseCFrame and SavedBaseCFrame.Position or (HumanoidRootPart and HumanoidRootPart.Position)
             for _, obj in ipairs(Workspace:GetDescendants()) do
                 if (string.find(string.lower(obj.Name), "egg") or string.find(string.lower(obj.Name), "nest")) and (obj:IsA("BasePart") or obj:IsA("Model")) and not obj:FindFirstChild("JunejoEggHighlight") then
                     local targetPart = obj:IsA("BasePart") and obj or (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart"))
                     if targetPart then
+                        local dist = basePos and math.floor((targetPart.Position - basePos).Magnitude) or 0
+
                         local hl = Instance.new("Highlight")
                         hl.Name = "JunejoEggHighlight"
                         hl.FillColor = Color3.fromRGB(255, 190, 0)
@@ -653,7 +686,7 @@ task.spawn(function()
                         local bb = Instance.new("BillboardGui")
                         bb.Name = "JunejoEggBillboard"
                         bb.Adornee = targetPart
-                        bb.Size = UDim2.new(0, 120, 0, 24)
+                        bb.Size = UDim2.new(0, 140, 0, 26)
                         bb.StudsOffset = Vector3.new(0, 2.5, 0)
                         bb.AlwaysOnTop = true
                         bb.Parent = targetPart
@@ -661,7 +694,7 @@ task.spawn(function()
                         local txt = Instance.new("TextLabel")
                         txt.Size = UDim2.new(1, 0, 1, 0)
                         txt.BackgroundTransparency = 1
-                        txt.Text = "🥚 " .. obj.Name
+                        txt.Text = "🥚 " .. obj.Name .. " [" .. dist .. "s]"
                         txt.TextColor3 = Color3.fromRGB(255, 220, 50)
                         txt.TextSize = 11
                         txt.Font = Enum.Font.GothamBold
@@ -875,7 +908,7 @@ local function AddActionRow(text, btnText, callback)
     end)
 end
 
--- Add Top 8 Main Features
+-- Add Top Features List
 AddToggleRow("Auto Steal Rare Egg", "AutoStealRare")
 AddToggleRow("Instant Steal (0s Prompt)", "InstantPrompt")
 AddActionRow("Save Base Position", "Set Base", function(btn)
@@ -891,6 +924,7 @@ AddActionRow("Save Base Position", "Set Base", function(btn)
         end
     end
 end)
+AddToggleRow("Auto Rebirth", "AutoRebirth")
 AddToggleRow("Auto Deposit Eggs", "AutoDeposit")
 AddToggleRow("Auto Train Jump", "AutoTrainJump")
 AddToggleRow("Auto Collect Cash", "AutoCollectCash")
