@@ -233,6 +233,90 @@ local function GetLocationKey(pos)
     return math.floor(pos.X / 4) .. "_" .. math.floor(pos.Y / 4) .. "_" .. math.floor(pos.Z / 4)
 end
 
+-- Find Absolute Furthest Rare Egg Candidate on Map
+local function FindFurthestRareEggCandidate(ignoreCooldown)
+    local baseReturnCFrame = GetBaseDepositPosition()
+    local basePos = baseReturnCFrame and baseReturnCFrame.Position or (HumanoidRootPart and HumanoidRootPart.Position)
+    local now = os.clock()
+    local candidates = {}
+    local myBase = FindMyBase()
+
+    -- 1. Search for candidates with ProximityPrompt
+    for _, prompt in ipairs(Workspace:GetDescendants()) do
+        if prompt:IsA("ProximityPrompt") and prompt.Enabled then
+            local parent = prompt.Parent
+            local targetPart = nil
+            if parent:IsA("BasePart") then
+                targetPart = parent
+            elseif parent:IsA("Model") then
+                targetPart = parent.PrimaryPart or parent:FindFirstChildWhichIsA("BasePart")
+            elseif parent:IsA("Attachment") then
+                targetPart = parent.Parent:IsA("BasePart") and parent.Parent or nil
+            end
+            
+            if targetPart then
+                local text = string.lower(prompt.ActionText .. " " .. prompt.ObjectText .. " " .. parent.Name)
+                local isEgg = text:find("steal") or text:find("grab") or text:find("take") or text:find("egg") or text:find("claim") or text:find("hold") or text == ""
+                
+                if isEgg and not (myBase and targetPart:IsDescendantOf(myBase)) then
+                    local distFromBase = (targetPart.Position - basePos).Magnitude
+                    if distFromBase > 20 then
+                        local locKey = GetLocationKey(targetPart.Position)
+                        local isCoolingDown = not ignoreCooldown and (CooldownEggs[locKey] and (now < CooldownEggs[locKey]))
+                        
+                        if not isCoolingDown then
+                            table.insert(candidates, {
+                                part = targetPart,
+                                prompt = prompt,
+                                distFromBase = distFromBase,
+                                locKey = locKey,
+                                name = parent.Name
+                            })
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    -- 2. Fallback candidate search for egg models
+    if #candidates == 0 then
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            local name = string.lower(obj.Name)
+            if (name:find("egg") or name:find("rare") or name:find("lucky")) and not name:find("gui") and not name:find("ui") then
+                local targetPart = obj:IsA("BasePart") and obj or (obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")))
+                if targetPart and not (myBase and targetPart:IsDescendantOf(myBase)) then
+                    local distFromBase = (targetPart.Position - basePos).Magnitude
+                    if distFromBase > 20 then
+                        local locKey = GetLocationKey(targetPart.Position)
+                        local isCoolingDown = not ignoreCooldown and (CooldownEggs[locKey] and (now < CooldownEggs[locKey]))
+                        
+                        if not isCoolingDown then
+                            local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
+                            table.insert(candidates, {
+                                part = targetPart,
+                                prompt = prompt,
+                                distFromBase = distFromBase,
+                                locKey = locKey,
+                                name = obj.Name
+                            })
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    table.sort(candidates, function(a, b)
+        return a.distFromBase > b.distFromBase
+    end)
+
+    if #candidates > 0 then
+        return candidates[1]
+    end
+    return nil
+end
+
 -- ====================================================================
 -- 1. FURTHEST RARE EGG STEAL ENGINE (MAX DISTANCE FROM BASE = RAREST EGG)
 -- ====================================================================
@@ -245,207 +329,123 @@ task.spawn(function()
                 local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
                 if not hrp or not hum or hum.Health <= 0 then return end
 
-                local baseReturnCFrame = GetBaseDepositPosition()
-                local basePos = baseReturnCFrame and baseReturnCFrame.Position or hrp.Position
-                local now = os.clock()
-                local candidates = {}
-                local myBase = FindMyBase()
+                local best = FindFurthestRareEggCandidate(false)
 
-                -- 1. Search for egg candidates with ProximityPrompt across the entire map
-                for _, prompt in ipairs(Workspace:GetDescendants()) do
-                    if prompt:IsA("ProximityPrompt") and prompt.Enabled then
-                        local parent = prompt.Parent
-                        local targetPart = nil
-                        if parent:IsA("BasePart") then
-                            targetPart = parent
-                        elseif parent:IsA("Model") then
-                            targetPart = parent.PrimaryPart or parent:FindFirstChildWhichIsA("BasePart")
-                        elseif parent:IsA("Attachment") then
-                            targetPart = parent.Parent:IsA("BasePart") and parent.Parent or nil
+                if best and best.part and best.part.Parent then
+                    local eggTarget = best.part
+                    local eggPrompt = best.prompt
+                    local locKey = best.locKey
+                    local baseReturnCFrame = GetBaseDepositPosition()
+                    
+                    if locKey then
+                        CooldownEggs[locKey] = os.clock() + 4.5
+                    end
+
+                    -- Phase 1: Teleport Directly to Furthest Rare Egg & Zero Velocity
+                    hrp.Velocity = Vector3.zero
+                    if hrp:FindFirstChild("AssemblyLinearVelocity") then
+                        hrp.AssemblyLinearVelocity = Vector3.zero
+                        hrp.AssemblyAngularVelocity = Vector3.zero
+                    end
+                    hrp.CFrame = eggTarget.CFrame * CFrame.new(0, 1.8, 0)
+
+                    -- Phase 2: Stay-and-Grab Execution Window (0.65s lock for full server replication)
+                    local grabStart = os.clock()
+                    while (os.clock() - grabStart < 0.65) and Toggles.AutoStealRare and isAlive() do
+                        if eggTarget and eggTarget.Parent then
+                            hrp.CFrame = eggTarget.CFrame * CFrame.new(0, 1.8, 0)
+                            hrp.Velocity = Vector3.zero
+                            if hrp:FindFirstChild("AssemblyLinearVelocity") then
+                                hrp.AssemblyLinearVelocity = Vector3.zero
+                            end
                         end
-                        
-                        if targetPart then
-                            local text = string.lower(prompt.ActionText .. " " .. prompt.ObjectText .. " " .. parent.Name)
-                            local isEgg = text:find("steal") or text:find("grab") or text:find("take") or text:find("egg") or text:find("claim") or text:find("hold") or text == ""
-                            
-                            if isEgg and not (myBase and targetPart:IsDescendantOf(myBase)) then
-                                local distFromBase = (targetPart.Position - basePos).Magnitude
-                                if distFromBase > 20 then
-                                    local locKey = GetLocationKey(targetPart.Position)
-                                    local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
-                                    
-                                    if not isCoolingDown then
-                                        table.insert(candidates, {
-                                            part = targetPart,
-                                            prompt = prompt,
-                                            distFromBase = distFromBase,
-                                            locKey = locKey
-                                        })
-                                    end
+
+                        if eggPrompt and eggPrompt.Parent then
+                            InstantTriggerPrompt(eggPrompt)
+                        end
+
+                        for _, p in ipairs(Workspace:GetDescendants()) do
+                            if p:IsA("ProximityPrompt") and p.Parent then
+                                local pPos = p.Parent:IsA("BasePart") and p.Parent.Position or nil
+                                if pPos and (pPos - hrp.Position).Magnitude < 25 then
+                                    InstantTriggerPrompt(p)
                                 end
                             end
                         end
-                    end
-                end
 
-                -- 2. Fallback candidate search for egg models outside base
-                if #candidates == 0 then
-                    for _, obj in ipairs(Workspace:GetDescendants()) do
-                        local name = string.lower(obj.Name)
-                        if (name:find("egg") or name:find("rare") or name:find("lucky")) and not name:find("gui") and not name:find("ui") then
-                            local targetPart = obj:IsA("BasePart") and obj or (obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")))
-                            if targetPart and not (myBase and targetPart:IsDescendantOf(myBase)) then
-                                local distFromBase = (targetPart.Position - basePos).Magnitude
-                                if distFromBase > 20 then
-                                    local locKey = GetLocationKey(targetPart.Position)
-                                    local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
-                                    
-                                    if not isCoolingDown then
-                                        local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
-                                        table.insert(candidates, {
-                                            part = targetPart,
-                                            prompt = prompt,
-                                            distFromBase = distFromBase,
-                                            locKey = locKey
-                                        })
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-
-                -- STRICT RULE: SORT BY MAXIMUM DISTANCE FROM BASE (FARTHEST EGG FIRST = ABSOLUTE RAREST EGG)
-                table.sort(candidates, function(a, b)
-                    return a.distFromBase > b.distFromBase
-                end)
-
-                if #candidates > 0 then
-                    local best = candidates[1]
-                    if best.part and best.part.Parent then
-                        local eggTarget = best.part
-                        local eggPrompt = best.prompt
-                        local locKey = best.locKey
-                        
-                        -- Set location cooldown to avoid spamming empty/on-cooldown spots
-                        if locKey then
-                            CooldownEggs[locKey] = os.clock() + 4.5
+                        if eggTarget and eggTarget.Parent then
+                            InstantTouch(hrp, eggTarget)
                         end
 
-                        -- Phase 1: Teleport Directly to Furthest Rare Egg & Zero Velocity
+                        if HasCarriedEgg() or (eggPrompt and not eggPrompt.Enabled) then
+                            break
+                        end
+
+                        task.wait(0.08)
+                    end
+
+                    task.wait(0.1)
+
+                    -- Phase 3: Teleport Back to Base & Multi-Method Deposit
+                    if baseReturnCFrame and isAlive() then
                         hrp.Velocity = Vector3.zero
                         if hrp:FindFirstChild("AssemblyLinearVelocity") then
                             hrp.AssemblyLinearVelocity = Vector3.zero
                             hrp.AssemblyAngularVelocity = Vector3.zero
                         end
-                        hrp.CFrame = eggTarget.CFrame * CFrame.new(0, 1.8, 0)
+                        hrp.CFrame = baseReturnCFrame
+                        task.wait(0.25)
 
-                        -- Phase 2: Stay-and-Grab Execution Window (0.65s lock for full server replication)
-                        local grabStart = os.clock()
-                        while (os.clock() - grabStart < 0.65) and Toggles.AutoStealRare and isAlive() do
-                            -- Keep player anchored right at the egg
-                            if eggTarget and eggTarget.Parent then
-                                hrp.CFrame = eggTarget.CFrame * CFrame.new(0, 1.8, 0)
-                                hrp.Velocity = Vector3.zero
-                                if hrp:FindFirstChild("AssemblyLinearVelocity") then
-                                    hrp.AssemblyLinearVelocity = Vector3.zero
+                        local myBaseAfter = FindMyBase()
+                        if myBaseAfter then
+                            for _, bPrompt in ipairs(myBaseAfter:GetDescendants()) do
+                                if bPrompt:IsA("ProximityPrompt") then
+                                    InstantTriggerPrompt(bPrompt)
                                 end
                             end
-
-                            -- Trigger primary prompt
-                            if eggPrompt and eggPrompt.Parent then
-                                InstantTriggerPrompt(eggPrompt)
+                            for _, part in ipairs(myBaseAfter:GetDescendants()) do
+                                if part:IsA("BasePart") then
+                                    local n = string.lower(part.Name)
+                                    if n:find("deposit") or n:find("nest") or n:find("collector") or n:find("stand") or n:find("egg") or n:find("drop") then
+                                        InstantTouch(hrp, part)
+                                    end
+                                end
                             end
+                        end
 
-                            -- Trigger all prompts within 25 studs
-                            for _, p in ipairs(Workspace:GetDescendants()) do
-                                if p:IsA("ProximityPrompt") and p.Parent then
-                                    local pPos = p.Parent:IsA("BasePart") and p.Parent.Position or nil
-                                    if pPos and (pPos - hrp.Position).Magnitude < 25 then
+                        local depositRemotes = {"Deposit", "DepositEgg", "StoreEgg", "PlaceEgg", "CollectEgg", "SellEgg", "DropEgg", "SecureEgg", "ClaimEgg"}
+                        for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
+                            if rem:IsA("RemoteEvent") or rem:IsA("RemoteFunction") then
+                                local rName = string.lower(rem.Name)
+                                for _, dName in ipairs(depositRemotes) do
+                                    if string.find(rName, string.lower(dName)) then
+                                        pcall(function()
+                                            if rem:IsA("RemoteEvent") then
+                                                rem:FireServer()
+                                                rem:FireServer(1)
+                                                rem:FireServer(true)
+                                            else
+                                                rem:InvokeServer()
+                                            end
+                                        end)
+                                    end
+                                end
+                            end
+                        end
+
+                        for _, p in ipairs(Workspace:GetDescendants()) do
+                            if p:IsA("ProximityPrompt") and p.Parent then
+                                local pPos = p.Parent:IsA("BasePart") and p.Parent.Position or nil
+                                if pPos and (pPos - HumanoidRootPart.Position).Magnitude < 40 then
+                                    local aText = string.lower(p.ActionText .. " " .. p.ObjectText .. " " .. p.Parent.Name)
+                                    if aText:find("deposit") or aText:find("place") or aText:find("drop") or aText:find("store") or aText:find("nest") then
                                         InstantTriggerPrompt(p)
                                     end
                                 end
                             end
-
-                            -- Touch egg fallback
-                            if eggTarget and eggTarget.Parent then
-                                InstantTouch(hrp, eggTarget)
-                            end
-
-                            -- If egg secured or prompt vanished, break early!
-                            if HasCarriedEgg() or (eggPrompt and not eggPrompt.Enabled) then
-                                break
-                            end
-
-                            task.wait(0.08)
                         end
 
-                        task.wait(0.1)
-
-                        -- Phase 3: Teleport Back to Base & Multi-Method Deposit
-                        if baseReturnCFrame and isAlive() then
-                            hrp.Velocity = Vector3.zero
-                            if hrp:FindFirstChild("AssemblyLinearVelocity") then
-                                hrp.AssemblyLinearVelocity = Vector3.zero
-                                hrp.AssemblyAngularVelocity = Vector3.zero
-                            end
-                            hrp.CFrame = baseReturnCFrame
-                            task.wait(0.25)
-
-                            -- Deposit via Base Prompts & Touch Pads
-                            local myBaseAfter = FindMyBase()
-                            if myBaseAfter then
-                                for _, bPrompt in ipairs(myBaseAfter:GetDescendants()) do
-                                    if bPrompt:IsA("ProximityPrompt") then
-                                        InstantTriggerPrompt(bPrompt)
-                                    end
-                                end
-                                for _, part in ipairs(myBaseAfter:GetDescendants()) do
-                                    if part:IsA("BasePart") then
-                                        local n = string.lower(part.Name)
-                                        if n:find("deposit") or n:find("nest") or n:find("collector") or n:find("stand") or n:find("egg") or n:find("drop") then
-                                            InstantTouch(hrp, part)
-                                        end
-                                    end
-                                end
-                            end
-
-                            -- Deposit via ReplicatedStorage Remotes
-                            local depositRemotes = {"Deposit", "DepositEgg", "StoreEgg", "PlaceEgg", "CollectEgg", "SellEgg", "DropEgg", "SecureEgg", "ClaimEgg"}
-                            for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
-                                if rem:IsA("RemoteEvent") or rem:IsA("RemoteFunction") then
-                                    local rName = string.lower(rem.Name)
-                                    for _, dName in ipairs(depositRemotes) do
-                                        if string.find(rName, string.lower(dName)) then
-                                            pcall(function()
-                                                if rem:IsA("RemoteEvent") then
-                                                    rem:FireServer()
-                                                    rem:FireServer(1)
-                                                    rem:FireServer(true)
-                                                else
-                                                    rem:InvokeServer()
-                                                end
-                                            end)
-                                        end
-                                    end
-                                end
-                            end
-
-                            -- Base Proximity Prompts nearby
-                            for _, p in ipairs(Workspace:GetDescendants()) do
-                                if p:IsA("ProximityPrompt") and p.Parent then
-                                    local pPos = p.Parent:IsA("BasePart") and p.Parent.Position or nil
-                                    if pPos and (pPos - HumanoidRootPart.Position).Magnitude < 40 then
-                                        local aText = string.lower(p.ActionText .. " " .. p.ObjectText .. " " .. p.Parent.Name)
-                                        if aText:find("deposit") or aText:find("place") or aText:find("drop") or aText:find("store") or aText:find("nest") then
-                                            InstantTriggerPrompt(p)
-                                        end
-                                    end
-                                end
-                            end
-
-                            task.wait(0.3)
-                        end
+                        task.wait(0.3)
                     end
                 end
             end)
@@ -571,7 +571,7 @@ task.spawn(function()
 end)
 
 -- ====================================================================
--- 4. RARE EGG ESP (GLOWING GOLD HIGHLIGHT + DISTANCE IN STUDS)
+-- 4. RARE EGG ESP (ONLY HIGHLIGHTS GENUINE RARE / HIGH-TIER EGGS)
 -- ====================================================================
 
 local function ClearEggESP()
@@ -581,43 +581,70 @@ local function ClearEggESP()
     ESPStorage.Eggs = {}
 end
 
+local RareKeywords = {
+    "secret", "godly", "celestial", "divine", "void", "mythic",
+    "astral", "titan", "legendary", "dragon", "epic", "rare",
+    "golden", "diamond", "rainbow", "huge", "special"
+}
+
+local function IsRareEgg(objName, distFromBase)
+    local lName = string.lower(objName)
+    for _, kw in ipairs(RareKeywords) do
+        if lName:find(kw) then
+            return true
+        end
+    end
+    -- If egg is beyond 180 studs from base, it is guaranteed to be a rare high-tier egg
+    if distFromBase and distFromBase >= 180 then
+        return true
+    end
+    return false
+end
+
 task.spawn(function()
     while true do
         if Toggles.RareEggESP then
             local basePos = SavedBaseCFrame and SavedBaseCFrame.Position or (HumanoidRootPart and HumanoidRootPart.Position)
+            local myBase = FindMyBase()
+
             for _, obj in ipairs(Workspace:GetDescendants()) do
                 if (string.find(string.lower(obj.Name), "egg") or string.find(string.lower(obj.Name), "nest")) and (obj:IsA("BasePart") or obj:IsA("Model")) and not obj:FindFirstChild("JunejoEggHighlight") then
-                    local targetPart = obj:IsA("BasePart") and obj or (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart"))
-                    if targetPart then
-                        local dist = basePos and math.floor((targetPart.Position - basePos).Magnitude) or 0
+                    if not (myBase and obj:IsDescendantOf(myBase)) then
+                        local targetPart = obj:IsA("BasePart") and obj or (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart"))
+                        if targetPart then
+                            local dist = basePos and math.floor((targetPart.Position - basePos).Magnitude) or 0
 
-                        local hl = Instance.new("Highlight")
-                        hl.Name = "JunejoEggHighlight"
-                        hl.FillColor = Color3.fromRGB(255, 215, 0)
-                        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-                        hl.FillTransparency = 0.35
-                        hl.Adornee = obj
-                        hl.Parent = obj
-                        table.insert(ESPStorage.Eggs, hl)
+                            -- STRICT FILTER: Only show ESP for genuine Rare Eggs!
+                            if IsRareEgg(obj.Name, dist) then
+                                local hl = Instance.new("Highlight")
+                                hl.Name = "JunejoEggHighlight"
+                                hl.FillColor = Color3.fromRGB(255, 215, 0)
+                                hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                                hl.FillTransparency = 0.35
+                                hl.Adornee = obj
+                                hl.Parent = obj
+                                table.insert(ESPStorage.Eggs, hl)
 
-                        local bb = Instance.new("BillboardGui")
-                        bb.Name = "JunejoEggBillboard"
-                        bb.Adornee = targetPart
-                        bb.Size = UDim2.new(0, 140, 0, 26)
-                        bb.StudsOffset = Vector3.new(0, 2.5, 0)
-                        bb.AlwaysOnTop = true
-                        bb.Parent = targetPart
+                                local bb = Instance.new("BillboardGui")
+                                bb.Name = "JunejoEggBillboard"
+                                bb.Adornee = targetPart
+                                bb.Size = UDim2.new(0, 140, 0, 26)
+                                bb.StudsOffset = Vector3.new(0, 2.5, 0)
+                                bb.AlwaysOnTop = true
+                                bb.Parent = targetPart
 
-                        local txt = Instance.new("TextLabel")
-                        txt.Size = UDim2.new(1, 0, 1, 0)
-                        txt.BackgroundTransparency = 1
-                        txt.Text = "🥚 " .. obj.Name .. " [" .. dist .. "s]"
-                        txt.TextColor3 = Color3.fromRGB(255, 220, 50)
-                        txt.TextSize = 11
-                        txt.Font = Enum.Font.GothamBold
-                        txt.Parent = bb
+                                local txt = Instance.new("TextLabel")
+                                txt.Size = UDim2.new(1, 0, 1, 0)
+                                txt.BackgroundTransparency = 1
+                                txt.Text = "💎 " .. obj.Name .. " [" .. dist .. "s]"
+                                txt.TextColor3 = Color3.fromRGB(255, 220, 50)
+                                txt.TextSize = 11
+                                txt.Font = Enum.Font.GothamBold
+                                txt.Parent = bb
 
-                        table.insert(ESPStorage.Eggs, bb)
+                                table.insert(ESPStorage.Eggs, bb)
+                            end
+                        end
                     end
                 end
             end
@@ -958,8 +985,44 @@ local function AddActionRow(text, btnText, callback)
     end)
 end
 
--- Add Streamlined Features List (Cleaned & Enhanced with ESP Suite)
+-- Add Top Features List
 AddToggleRow("Auto Steal Rare Egg", "AutoStealRare")
+AddActionRow("Teleport to Rare Egg", "Teleport", function(btn)
+    if isAlive() then
+        local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            local best = FindFurthestRareEggCandidate(true)
+            if best and best.part then
+                hrp.Velocity = Vector3.zero
+                if hrp:FindFirstChild("AssemblyLinearVelocity") then
+                    hrp.AssemblyLinearVelocity = Vector3.zero
+                    hrp.AssemblyAngularVelocity = Vector3.zero
+                end
+                hrp.CFrame = best.part.CFrame * CFrame.new(0, 2.8, 0)
+                if best.prompt then
+                    InstantTriggerPrompt(best.prompt)
+                end
+                if btn then
+                    btn.Text = "✓ Teleported!"
+                    btn.TextColor3 = Color3.fromRGB(80, 255, 120)
+                    task.delay(1.2, function()
+                        btn.Text = "Teleport"
+                        btn.TextColor3 = Color3.fromRGB(255, 220, 50)
+                    end)
+                end
+            else
+                if btn then
+                    btn.Text = "No Egg Found"
+                    btn.TextColor3 = Color3.fromRGB(255, 100, 100)
+                    task.delay(1.2, function()
+                        btn.Text = "Teleport"
+                        btn.TextColor3 = Color3.fromRGB(255, 220, 50)
+                    end)
+                end
+            end
+        end
+    end
+end)
 AddToggleRow("Instant Steal (0s Prompt)", "InstantPrompt")
 AddActionRow("Save Base Position", "Set Base", function(btn)
     if isAlive() then
