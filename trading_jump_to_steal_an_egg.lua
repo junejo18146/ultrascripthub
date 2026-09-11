@@ -56,7 +56,8 @@ local Toggles = {
 local CustomSpeedValue = 32
 local CooldownEggs = {}
 local ESPStorage = {
-    Eggs = {},
+    SingleRareEgg = nil,
+    SingleRareEggBillboard = nil,
     Players = {},
     Bases = {}
 }
@@ -233,15 +234,56 @@ local function GetLocationKey(pos)
     return math.floor(pos.X / 4) .. "_" .. math.floor(pos.Y / 4) .. "_" .. math.floor(pos.Z / 4)
 end
 
--- Find Absolute Furthest Rare Egg Candidate on Map
-local function FindFurthestRareEggCandidate(ignoreCooldown)
-    local baseReturnCFrame = GetBaseDepositPosition()
-    local basePos = baseReturnCFrame and baseReturnCFrame.Position or (HumanoidRootPart and HumanoidRootPart.Position)
+-- Keywords Rarity Scoring
+local RarityKeywords = {
+    ["secret"] = 50000,
+    ["godly"] = 35000,
+    ["celestial"] = 30000,
+    ["divine"] = 25000,
+    ["void"] = 20000,
+    ["mythic"] = 15000,
+    ["astral"] = 12000,
+    ["titan"] = 10000,
+    ["legendary"] = 8000,
+    ["dragon"] = 6000,
+    ["epic"] = 4000,
+    ["diamond"] = 3000,
+    ["golden"] = 2000,
+    ["rare"] = 1000
+}
+
+-- RARE EGG SCORER: Altitude (Y) + Distance from Spawn (0,0,0) + Keyword Tier
+local function CalculateRareEggScore(part, prompt)
+    if not part or not part:IsA("BasePart") then return 0 end
+    local pos = part.Position
+    
+    -- In Jump to Steal games, the rare eggs are at the highest jump altitudes!
+    local altitudeScore = pos.Y * 15
+    
+    -- 2D Distance from Origin/Spawn center
+    local horizontalDist = math.sqrt(pos.X * pos.X + pos.Z * pos.Z) * 2
+    
+    -- Keyword Bonus
+    local kwScore = 0
+    local text = string.lower(part.Name .. " " .. (part.Parent and part.Parent.Name or "") .. " " .. (prompt and (prompt.ActionText .. " " .. prompt.ObjectText) or ""))
+    for kw, val in pairs(RarityKeywords) do
+        if text:find(kw) then
+            kwScore = math.max(kwScore, val)
+        end
+    end
+
+    return altitudeScore + horizontalDist + kwScore
+end
+
+-- Master Finder: Returns the #1 Absolute Furthest / Highest Rare Egg on the Map
+local function FindSingleRarestEgg(ignoreCooldown)
     local now = os.clock()
     local candidates = {}
     local myBase = FindMyBase()
+    local baseDeposit = GetBaseDepositPosition()
+    local basePos = baseDeposit and baseDeposit.Position or Vector3.new(0, 0, 0)
 
-    -- 1. Search for candidates with ProximityPrompt
+    -- 1. Scan ProximityPrompts across Workspace
     for _, prompt in ipairs(Workspace:GetDescendants()) do
         if prompt:IsA("ProximityPrompt") and prompt.Enabled then
             local parent = prompt.Parent
@@ -259,56 +301,59 @@ local function FindFurthestRareEggCandidate(ignoreCooldown)
                 local isEgg = text:find("steal") or text:find("grab") or text:find("take") or text:find("egg") or text:find("claim") or text:find("hold") or text == ""
                 
                 if isEgg and not (myBase and targetPart:IsDescendantOf(myBase)) then
-                    local distFromBase = (targetPart.Position - basePos).Magnitude
-                    if distFromBase > 20 then
-                        local locKey = GetLocationKey(targetPart.Position)
-                        local isCoolingDown = not ignoreCooldown and (CooldownEggs[locKey] and (now < CooldownEggs[locKey]))
-                        
-                        if not isCoolingDown then
-                            table.insert(candidates, {
-                                part = targetPart,
-                                prompt = prompt,
-                                distFromBase = distFromBase,
-                                locKey = locKey,
-                                name = parent.Name
-                            })
-                        end
+                    local locKey = GetLocationKey(targetPart.Position)
+                    local isCoolingDown = not ignoreCooldown and (CooldownEggs[locKey] and (now < CooldownEggs[locKey]))
+                    
+                    if not isCoolingDown then
+                        local score = CalculateRareEggScore(targetPart, prompt)
+                        local dist = math.floor((targetPart.Position - basePos).Magnitude)
+                        table.insert(candidates, {
+                            part = targetPart,
+                            model = parent:IsA("Model") and parent or targetPart,
+                            prompt = prompt,
+                            score = score,
+                            dist = dist,
+                            locKey = locKey,
+                            name = parent.Name
+                        })
                     end
                 end
             end
         end
     end
 
-    -- 2. Fallback candidate search for egg models
+    -- 2. Fallback scan for egg models outside base
     if #candidates == 0 then
         for _, obj in ipairs(Workspace:GetDescendants()) do
             local name = string.lower(obj.Name)
             if (name:find("egg") or name:find("rare") or name:find("lucky")) and not name:find("gui") and not name:find("ui") then
                 local targetPart = obj:IsA("BasePart") and obj or (obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")))
                 if targetPart and not (myBase and targetPart:IsDescendantOf(myBase)) then
-                    local distFromBase = (targetPart.Position - basePos).Magnitude
-                    if distFromBase > 20 then
-                        local locKey = GetLocationKey(targetPart.Position)
-                        local isCoolingDown = not ignoreCooldown and (CooldownEggs[locKey] and (now < CooldownEggs[locKey]))
-                        
-                        if not isCoolingDown then
-                            local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
-                            table.insert(candidates, {
-                                part = targetPart,
-                                prompt = prompt,
-                                distFromBase = distFromBase,
-                                locKey = locKey,
-                                name = obj.Name
-                            })
-                        end
+                    local locKey = GetLocationKey(targetPart.Position)
+                    local isCoolingDown = not ignoreCooldown and (CooldownEggs[locKey] and (now < CooldownEggs[locKey]))
+                    
+                    if not isCoolingDown then
+                        local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
+                        local score = CalculateRareEggScore(targetPart, prompt)
+                        local dist = math.floor((targetPart.Position - basePos).Magnitude)
+                        table.insert(candidates, {
+                            part = targetPart,
+                            model = obj:IsA("Model") and obj or targetPart,
+                            prompt = prompt,
+                            score = score,
+                            dist = dist,
+                            locKey = locKey,
+                            name = obj.Name
+                        })
                     end
                 end
             end
         end
     end
 
+    -- STRICT SORT: HIGHEST SCORE / HIGHEST ALTITUDE / FURTHEST DISTANCE FIRST
     table.sort(candidates, function(a, b)
-        return a.distFromBase > b.distFromBase
+        return a.score > b.score
     end)
 
     if #candidates > 0 then
@@ -318,7 +363,7 @@ local function FindFurthestRareEggCandidate(ignoreCooldown)
 end
 
 -- ====================================================================
--- 1. FURTHEST RARE EGG STEAL ENGINE (MAX DISTANCE FROM BASE = RAREST EGG)
+-- 1. AUTO STEAL RARE EGG ENGINE (FOCUSES 100% ON THE #1 RAREST EGG)
 -- ====================================================================
 
 task.spawn(function()
@@ -329,7 +374,7 @@ task.spawn(function()
                 local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
                 if not hrp or not hum or hum.Health <= 0 then return end
 
-                local best = FindFurthestRareEggCandidate(false)
+                local best = FindSingleRarestEgg(false)
 
                 if best and best.part and best.part.Parent then
                     local eggTarget = best.part
@@ -341,19 +386,19 @@ task.spawn(function()
                         CooldownEggs[locKey] = os.clock() + 4.5
                     end
 
-                    -- Phase 1: Teleport Directly to Furthest Rare Egg & Zero Velocity
+                    -- Phase 1: Teleport Directly to Top Rare Egg & Zero Velocity
                     hrp.Velocity = Vector3.zero
                     if hrp:FindFirstChild("AssemblyLinearVelocity") then
                         hrp.AssemblyLinearVelocity = Vector3.zero
                         hrp.AssemblyAngularVelocity = Vector3.zero
                     end
-                    hrp.CFrame = eggTarget.CFrame * CFrame.new(0, 1.8, 0)
+                    hrp.CFrame = eggTarget.CFrame * CFrame.new(0, 2.2, 0)
 
                     -- Phase 2: Stay-and-Grab Execution Window (0.65s lock for full server replication)
                     local grabStart = os.clock()
                     while (os.clock() - grabStart < 0.65) and Toggles.AutoStealRare and isAlive() do
                         if eggTarget and eggTarget.Parent then
-                            hrp.CFrame = eggTarget.CFrame * CFrame.new(0, 1.8, 0)
+                            hrp.CFrame = eggTarget.CFrame * CFrame.new(0, 2.2, 0)
                             hrp.Velocity = Vector3.zero
                             if hrp:FindFirstChild("AssemblyLinearVelocity") then
                                 hrp.AssemblyLinearVelocity = Vector3.zero
@@ -571,87 +616,80 @@ task.spawn(function()
 end)
 
 -- ====================================================================
--- 4. RARE EGG ESP (ONLY HIGHLIGHTS GENUINE RARE / HIGH-TIER EGGS)
+-- 4. RARE EGG ESP (EXCLUSIVELY HIGHLIGHTS ONLY THE #1 RAREST EGG)
 -- ====================================================================
 
-local function ClearEggESP()
-    for _, item in ipairs(ESPStorage.Eggs) do
-        if item then pcall(function() item:Destroy() end) end
+local function ClearSingleRareEggESP()
+    if ESPStorage.SingleRareEgg then
+        pcall(function() ESPStorage.SingleRareEgg:Destroy() end)
+        ESPStorage.SingleRareEgg = nil
     end
-    ESPStorage.Eggs = {}
-end
-
-local RareKeywords = {
-    "secret", "godly", "celestial", "divine", "void", "mythic",
-    "astral", "titan", "legendary", "dragon", "epic", "rare",
-    "golden", "diamond", "rainbow", "huge", "special"
-}
-
-local function IsRareEgg(objName, distFromBase)
-    local lName = string.lower(objName)
-    for _, kw in ipairs(RareKeywords) do
-        if lName:find(kw) then
-            return true
-        end
+    if ESPStorage.SingleRareEggBillboard then
+        pcall(function() ESPStorage.SingleRareEggBillboard:Destroy() end)
+        ESPStorage.SingleRareEggBillboard = nil
     end
-    -- If egg is beyond 180 studs from base, it is guaranteed to be a rare high-tier egg
-    if distFromBase and distFromBase >= 180 then
-        return true
-    end
-    return false
 end
 
 task.spawn(function()
     while true do
-        if Toggles.RareEggESP then
-            local basePos = SavedBaseCFrame and SavedBaseCFrame.Position or (HumanoidRootPart and HumanoidRootPart.Position)
-            local myBase = FindMyBase()
+        if Toggles.RareEggESP and isAlive() then
+            pcall(function()
+                local best = FindSingleRarestEgg(true)
+                if best and best.part and best.part.Parent then
+                    local targetObj = best.model or best.part
+                    local targetPart = best.part
+                    local myHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                    local distToMe = myHrp and math.floor((targetPart.Position - myHrp.Position).Magnitude) or best.dist
 
-            for _, obj in ipairs(Workspace:GetDescendants()) do
-                if (string.find(string.lower(obj.Name), "egg") or string.find(string.lower(obj.Name), "nest")) and (obj:IsA("BasePart") or obj:IsA("Model")) and not obj:FindFirstChild("JunejoEggHighlight") then
-                    if not (myBase and obj:IsDescendantOf(myBase)) then
-                        local targetPart = obj:IsA("BasePart") and obj or (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart"))
-                        if targetPart then
-                            local dist = basePos and math.floor((targetPart.Position - basePos).Magnitude) or 0
+                    -- Ensure highlight exists on the #1 rarest egg
+                    if not ESPStorage.SingleRareEgg or ESPStorage.SingleRareEgg.Adornee ~= targetObj then
+                        ClearSingleRareEggESP()
 
-                            -- STRICT FILTER: Only show ESP for genuine Rare Eggs!
-                            if IsRareEgg(obj.Name, dist) then
-                                local hl = Instance.new("Highlight")
-                                hl.Name = "JunejoEggHighlight"
-                                hl.FillColor = Color3.fromRGB(255, 215, 0)
-                                hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-                                hl.FillTransparency = 0.35
-                                hl.Adornee = obj
-                                hl.Parent = obj
-                                table.insert(ESPStorage.Eggs, hl)
+                        local hl = Instance.new("Highlight")
+                        hl.Name = "JunejoSingleRareEggHighlight"
+                        hl.FillColor = Color3.fromRGB(255, 215, 0)
+                        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                        hl.FillTransparency = 0.25
+                        hl.OutlineTransparency = 0
+                        hl.Adornee = targetObj
+                        hl.Parent = targetObj
+                        ESPStorage.SingleRareEgg = hl
 
-                                local bb = Instance.new("BillboardGui")
-                                bb.Name = "JunejoEggBillboard"
-                                bb.Adornee = targetPart
-                                bb.Size = UDim2.new(0, 140, 0, 26)
-                                bb.StudsOffset = Vector3.new(0, 2.5, 0)
-                                bb.AlwaysOnTop = true
-                                bb.Parent = targetPart
+                        local bb = Instance.new("BillboardGui")
+                        bb.Name = "JunejoSingleRareEggBillboard"
+                        bb.Adornee = targetPart
+                        bb.Size = UDim2.new(0, 160, 0, 28)
+                        bb.StudsOffset = Vector3.new(0, 3.2, 0)
+                        bb.AlwaysOnTop = true
+                        bb.Parent = targetPart
 
-                                local txt = Instance.new("TextLabel")
-                                txt.Size = UDim2.new(1, 0, 1, 0)
-                                txt.BackgroundTransparency = 1
-                                txt.Text = "💎 " .. obj.Name .. " [" .. dist .. "s]"
-                                txt.TextColor3 = Color3.fromRGB(255, 220, 50)
-                                txt.TextSize = 11
-                                txt.Font = Enum.Font.GothamBold
-                                txt.Parent = bb
+                        local txt = Instance.new("TextLabel")
+                        txt.Name = "RareTag"
+                        txt.Size = UDim2.new(1, 0, 1, 0)
+                        txt.BackgroundTransparency = 1
+                        txt.Text = "👑 RAREST: " .. best.name .. " [" .. distToMe .. "s]"
+                        txt.TextColor3 = Color3.fromRGB(255, 220, 50)
+                        txt.TextStrokeTransparency = 0
+                        txt.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+                        txt.TextSize = 11
+                        txt.Font = Enum.Font.GothamBold
+                        txt.Parent = bb
 
-                                table.insert(ESPStorage.Eggs, bb)
-                            end
+                        ESPStorage.SingleRareEggBillboard = bb
+                    else
+                        -- Update real-time distance on the billboard
+                        if ESPStorage.SingleRareEggBillboard and ESPStorage.SingleRareEggBillboard:FindFirstChild("RareTag") then
+                            ESPStorage.SingleRareEggBillboard.RareTag.Text = "👑 RAREST: " .. best.name .. " [" .. distToMe .. "s]"
                         end
                     end
+                else
+                    ClearSingleRareEggESP()
                 end
-            end
+            end)
         else
-            ClearEggESP()
+            ClearSingleRareEggESP()
         end
-        task.wait(2.5)
+        task.wait(1.5)
     end
 end)
 
@@ -851,7 +889,7 @@ CloseButton.TextSize = 13
 CloseButton.Font = Enum.Font.GothamBold
 CloseButton.Parent = Header
 CloseButton.MouseButton1Click:Connect(function() 
-    ClearEggESP()
+    ClearSingleRareEggESP()
     ClearPlayerESP()
     ClearBaseESP()
     ScreenGui:Destroy() 
@@ -991,14 +1029,14 @@ AddActionRow("Teleport to Rare Egg", "Teleport", function(btn)
     if isAlive() then
         local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         if hrp then
-            local best = FindFurthestRareEggCandidate(true)
+            local best = FindSingleRarestEgg(true)
             if best and best.part then
                 hrp.Velocity = Vector3.zero
                 if hrp:FindFirstChild("AssemblyLinearVelocity") then
                     hrp.AssemblyLinearVelocity = Vector3.zero
                     hrp.AssemblyAngularVelocity = Vector3.zero
                 end
-                hrp.CFrame = best.part.CFrame * CFrame.new(0, 2.8, 0)
+                hrp.CFrame = best.part.CFrame * CFrame.new(0, 3.2, 0)
                 if best.prompt then
                     InstantTriggerPrompt(best.prompt)
                 end
@@ -1040,7 +1078,7 @@ end)
 AddToggleRow("Auto Rebirth", "AutoRebirth")
 AddToggleRow("Auto Train Jump", "AutoTrainJump")
 AddToggleRow("Rare Egg ESP (Gold)", "RareEggESP", function(state)
-    if not state then ClearEggESP() end
+    if not state then ClearSingleRareEggESP() end
 end)
 AddToggleRow("Player ESP & Radar", "PlayerESP", function(state)
     if not state then ClearPlayerESP() end
