@@ -45,10 +45,10 @@ local Toggles = {
     AutoStealRare = false,
     InstantPrompt = false,
     AutoRebirth = false,
-    AutoDeposit = false,
     AutoTrainJump = false,
-    AutoCollectCash = false,
-    EggESP = false,
+    RareEggESP = false,
+    PlayerESP = false,
+    BaseESP = false,
     WalkSpeedBoost = false,
     InfiniteJump = false
 }
@@ -56,7 +56,9 @@ local Toggles = {
 local CustomSpeedValue = 32
 local CooldownEggs = {}
 local ESPStorage = {
-    Eggs = {}
+    Eggs = {},
+    Players = {},
+    Bases = {}
 }
 
 -- Safe Alive Check
@@ -522,53 +524,7 @@ task.spawn(function()
 end)
 
 -- ====================================================================
--- 3. AUTO DEPOSIT EGGS
--- ====================================================================
-
-task.spawn(function()
-    while true do
-        if Toggles.AutoDeposit and isAlive() then
-            pcall(function()
-                local hrp = LocalPlayer.Character.HumanoidRootPart
-                local base = FindMyBase()
-                if base then
-                    for _, prompt in ipairs(base:GetDescendants()) do
-                        if prompt:IsA("ProximityPrompt") then
-                            InstantTriggerPrompt(prompt)
-                        end
-                    end
-                    for _, part in ipairs(base:GetDescendants()) do
-                        if part:IsA("BasePart") and (string.find(string.lower(part.Name), "deposit") or string.find(string.lower(part.Name), "nest") or string.find(string.lower(part.Name), "collector") or string.find(string.lower(part.Name), "stand")) then
-                            InstantTouch(hrp, part)
-                        end
-                    end
-                end
-
-                local depositRemotes = {"Deposit", "DepositEgg", "StoreEgg", "PlaceEgg", "CollectEgg", "SellEgg", "DropEgg", "SecureEgg"}
-                for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if rem:IsA("RemoteEvent") or rem:IsA("RemoteFunction") then
-                        local rName = string.lower(rem.Name)
-                        for _, dName in ipairs(depositRemotes) do
-                            if string.find(rName, string.lower(dName)) then
-                                if rem:IsA("RemoteEvent") then
-                                    rem:FireServer()
-                                    rem:FireServer(1)
-                                    rem:FireServer(true)
-                                else
-                                    rem:InvokeServer()
-                                end
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-        task.wait(0.8)
-    end
-end)
-
--- ====================================================================
--- 4. AUTO TRAIN JUMP
+-- 3. AUTO TRAIN JUMP
 -- ====================================================================
 
 task.spawn(function()
@@ -615,49 +571,10 @@ task.spawn(function()
 end)
 
 -- ====================================================================
--- 5. AUTO COLLECT CASH
+-- 4. RARE EGG ESP (GLOWING GOLD HIGHLIGHT + DISTANCE IN STUDS)
 -- ====================================================================
 
-task.spawn(function()
-    while true do
-        if Toggles.AutoCollectCash and isAlive() then
-            pcall(function()
-                local hrp = LocalPlayer.Character.HumanoidRootPart
-                for _, item in ipairs(Workspace:GetChildren()) do
-                    local iName = string.lower(item.Name)
-                    if string.find(iName, "coin") or string.find(iName, "cash") or string.find(iName, "money") or string.find(iName, "drop") or string.find(iName, "gem") or string.find(iName, "ring") then
-                        if item:IsA("BasePart") then
-                            item.CFrame = hrp.CFrame
-                            InstantTouch(hrp, item)
-                        elseif item:IsA("Model") then
-                            local prim = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
-                            if prim then
-                                prim.CFrame = hrp.CFrame
-                                InstantTouch(hrp, prim)
-                            end
-                        end
-                    end
-                end
-
-                local base = FindMyBase()
-                if base then
-                    for _, p in ipairs(base:GetDescendants()) do
-                        if p:IsA("BasePart") and (string.find(string.lower(p.Name), "cash") or string.find(string.lower(p.Name), "atm") or string.find(string.lower(p.Name), "collect")) then
-                            InstantTouch(hrp, p)
-                        end
-                    end
-                end
-            end)
-        end
-        task.wait(0.4)
-    end
-end)
-
--- ====================================================================
--- 6. RARE EGG ESP (WITH DISTANCE FROM BASE)
--- ====================================================================
-
-local function ClearESP()
+local function ClearEggESP()
     for _, item in ipairs(ESPStorage.Eggs) do
         if item then pcall(function() item:Destroy() end) end
     end
@@ -666,7 +583,7 @@ end
 
 task.spawn(function()
     while true do
-        if Toggles.EggESP then
+        if Toggles.RareEggESP then
             local basePos = SavedBaseCFrame and SavedBaseCFrame.Position or (HumanoidRootPart and HumanoidRootPart.Position)
             for _, obj in ipairs(Workspace:GetDescendants()) do
                 if (string.find(string.lower(obj.Name), "egg") or string.find(string.lower(obj.Name), "nest")) and (obj:IsA("BasePart") or obj:IsA("Model")) and not obj:FindFirstChild("JunejoEggHighlight") then
@@ -676,9 +593,9 @@ task.spawn(function()
 
                         local hl = Instance.new("Highlight")
                         hl.Name = "JunejoEggHighlight"
-                        hl.FillColor = Color3.fromRGB(255, 190, 0)
+                        hl.FillColor = Color3.fromRGB(255, 215, 0)
                         hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-                        hl.FillTransparency = 0.4
+                        hl.FillTransparency = 0.35
                         hl.Adornee = obj
                         hl.Parent = obj
                         table.insert(ESPStorage.Eggs, hl)
@@ -705,9 +622,140 @@ task.spawn(function()
                 end
             end
         else
-            ClearESP()
+            ClearEggESP()
         end
         task.wait(2.5)
+    end
+end)
+
+-- ====================================================================
+-- 5. PLAYER ESP & BASE DEFENSE RADAR (RED HIGHLIGHT + DISTANCE)
+-- ====================================================================
+
+local function ClearPlayerESP()
+    for _, item in ipairs(ESPStorage.Players) do
+        if item then pcall(function() item:Destroy() end) end
+    end
+    ESPStorage.Players = {}
+end
+
+task.spawn(function()
+    while true do
+        if Toggles.PlayerESP and isAlive() then
+            local myHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            for _, plr in ipairs(Players:GetPlayers()) do
+                if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                    local char = plr.Character
+                    local hrp = char.HumanoidRootPart
+
+                    if not char:FindFirstChild("JunejoPlrHighlight") then
+                        local hl = Instance.new("Highlight")
+                        hl.Name = "JunejoPlrHighlight"
+                        hl.FillColor = Color3.fromRGB(255, 60, 60)
+                        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                        hl.FillTransparency = 0.35
+                        hl.Adornee = char
+                        hl.Parent = char
+                        table.insert(ESPStorage.Players, hl)
+                    end
+
+                    if not hrp:FindFirstChild("JunejoPlrBillboard") then
+                        local bb = Instance.new("BillboardGui")
+                        bb.Name = "JunejoPlrBillboard"
+                        bb.Adornee = hrp
+                        bb.Size = UDim2.new(0, 150, 0, 26)
+                        bb.StudsOffset = Vector3.new(0, 3, 0)
+                        bb.AlwaysOnTop = true
+                        bb.Parent = hrp
+
+                        local txt = Instance.new("TextLabel")
+                        txt.Name = "PlrLabel"
+                        txt.Size = UDim2.new(1, 0, 1, 0)
+                        txt.BackgroundTransparency = 1
+                        txt.TextColor3 = Color3.fromRGB(255, 90, 90)
+                        txt.TextSize = 11
+                        txt.Font = Enum.Font.GothamBold
+                        txt.Parent = bb
+                        table.insert(ESPStorage.Players, bb)
+                    end
+
+                    local bb = hrp:FindFirstChild("JunejoPlrBillboard")
+                    if bb and bb:FindFirstChild("PlrLabel") and myHrp then
+                        local dist = math.floor((hrp.Position - myHrp.Position).Magnitude)
+                        bb.PlrLabel.Text = "👤 " .. plr.DisplayName .. " [" .. dist .. "s]"
+                    end
+                end
+            end
+        else
+            ClearPlayerESP()
+        end
+        task.wait(2)
+    end
+end)
+
+-- ====================================================================
+-- 6. PLAYER BASE ESP (CYAN HIGHLIGHT ON ALL ENEMY & OWN BASES)
+-- ====================================================================
+
+local function ClearBaseESP()
+    for _, item in ipairs(ESPStorage.Bases) do
+        if item then pcall(function() item:Destroy() end) end
+    end
+    ESPStorage.Bases = {}
+end
+
+task.spawn(function()
+    while true do
+        if Toggles.BaseESP then
+            local potentialFolders = {
+                Workspace:FindFirstChild("Bases"),
+                Workspace:FindFirstChild("Plots"),
+                Workspace:FindFirstChild("PlayerBases"),
+                Workspace:FindFirstChild("Islands"),
+                Workspace:FindFirstChild("Stands"),
+                Workspace:FindFirstChild("Tycoons")
+            }
+            for _, folder in ipairs(potentialFolders) do
+                if folder then
+                    for _, base in ipairs(folder:GetChildren()) do
+                        if (base:IsA("Model") or base:IsA("BasePart")) and not base:FindFirstChild("JunejoBaseHighlight") then
+                            local part = base:IsA("BasePart") and base or (base.PrimaryPart or base:FindFirstChildWhichIsA("BasePart"))
+                            if part then
+                                local hl = Instance.new("Highlight")
+                                hl.Name = "JunejoBaseHighlight"
+                                hl.FillColor = Color3.fromRGB(0, 200, 255)
+                                hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                                hl.FillTransparency = 0.45
+                                hl.Adornee = base
+                                hl.Parent = base
+                                table.insert(ESPStorage.Bases, hl)
+
+                                local bb = Instance.new("BillboardGui")
+                                bb.Name = "JunejoBaseBillboard"
+                                bb.Adornee = part
+                                bb.Size = UDim2.new(0, 140, 0, 24)
+                                bb.StudsOffset = Vector3.new(0, 3, 0)
+                                bb.AlwaysOnTop = true
+                                bb.Parent = part
+
+                                local txt = Instance.new("TextLabel")
+                                txt.Size = UDim2.new(1, 0, 1, 0)
+                                txt.BackgroundTransparency = 1
+                                txt.Text = "🏰 " .. base.Name .. " Base"
+                                txt.TextColor3 = Color3.fromRGB(80, 220, 255)
+                                txt.TextSize = 11
+                                txt.Font = Enum.Font.GothamBold
+                                txt.Parent = bb
+                                table.insert(ESPStorage.Bases, bb)
+                            end
+                        end
+                    end
+                end
+            end
+        else
+            ClearBaseESP()
+        end
+        task.wait(3)
     end
 end)
 
@@ -776,7 +824,9 @@ CloseButton.TextSize = 13
 CloseButton.Font = Enum.Font.GothamBold
 CloseButton.Parent = Header
 CloseButton.MouseButton1Click:Connect(function() 
-    ClearESP()
+    ClearEggESP()
+    ClearPlayerESP()
+    ClearBaseESP()
     ScreenGui:Destroy() 
 end)
 
@@ -908,7 +958,7 @@ local function AddActionRow(text, btnText, callback)
     end)
 end
 
--- Add Top Features List
+-- Add Streamlined Features List (Cleaned & Enhanced with ESP Suite)
 AddToggleRow("Auto Steal Rare Egg", "AutoStealRare")
 AddToggleRow("Instant Steal (0s Prompt)", "InstantPrompt")
 AddActionRow("Save Base Position", "Set Base", function(btn)
@@ -925,10 +975,16 @@ AddActionRow("Save Base Position", "Set Base", function(btn)
     end
 end)
 AddToggleRow("Auto Rebirth", "AutoRebirth")
-AddToggleRow("Auto Deposit Eggs", "AutoDeposit")
 AddToggleRow("Auto Train Jump", "AutoTrainJump")
-AddToggleRow("Auto Collect Cash", "AutoCollectCash")
-AddToggleRow("Rare Egg ESP", "EggESP")
+AddToggleRow("Rare Egg ESP (Gold)", "RareEggESP", function(state)
+    if not state then ClearEggESP() end
+end)
+AddToggleRow("Player ESP & Radar", "PlayerESP", function(state)
+    if not state then ClearPlayerESP() end
+end)
+AddToggleRow("Player Base ESP", "BaseESP", function(state)
+    if not state then ClearBaseESP() end
+end)
 AddToggleRow("Infinite Jump", "InfiniteJump")
 
 -- Integrated WalkSpeed Row with Pill Adjuster
