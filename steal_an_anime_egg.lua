@@ -1,5 +1,5 @@
 -- ====================================================================
--- ULTRA SCRIPT HUB - STEAL AN ANIME EGG (V2.0 COMPACT SCROLLING EDITION)
+-- ULTRA SCRIPT HUB - STEAL AN ANIME EGG (V3.0 ULTIMATE RARE EGG EDITION)
 -- Creator: Junejo (junejo18146)
 -- Target Game: Steal An Anime Egg (Place ID: 76377501906469)
 -- ====================================================================
@@ -24,10 +24,10 @@ LocalPlayer.CharacterAdded:Connect(function(newChar)
     HumanoidRootPart = newChar:WaitForChild("HumanoidRootPart")
 end)
 
--- Saved Base CFrame anchor
+-- Base Anchor Coordinates
 local SavedBaseCFrame = nil
 task.spawn(function()
-    task.wait(1)
+    task.wait(0.5)
     if HumanoidRootPart then
         SavedBaseCFrame = HumanoidRootPart.CFrame
     end
@@ -35,7 +35,7 @@ end)
 
 -- Feature Toggles
 local Toggles = {
-    AutoSteal = false,
+    AutoStealRare = false,
     InstantPrompt = false,
     AutoDeposit = false,
     AutoCollectCash = false,
@@ -65,7 +65,7 @@ LocalPlayer.Idled:Connect(function()
     VirtualUser:ClickButton2(Vector2.new())
 end)
 
--- Speed Enforcer Loop (Bypasses Game Anti-Cheat Overrides)
+-- Speed Enforcer Loop
 local function UpdateCharacterSpeed()
     if Humanoid then
         Humanoid.WalkSpeed = Toggles.WalkSpeedBoost and CustomSpeedValue or 16
@@ -90,11 +90,11 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
--- Instant Steal / Prompt Bypass (0s Hold)
+-- Instant Prompts (0s Hold)
 local function PatchPrompt(prompt)
     if prompt:IsA("ProximityPrompt") then
         prompt.HoldDuration = 0
-        prompt.MaxActivationDistance = 40
+        prompt.MaxActivationDistance = 50
         prompt.RequiresLineOfSight = false
     end
 end
@@ -107,20 +107,19 @@ end)
 
 task.spawn(function()
     while true do
-        if Toggles.InstantPrompt then
+        if Toggles.InstantPrompt or Toggles.AutoStealRare then
             for _, prompt in ipairs(Workspace:GetDescendants()) do
                 if prompt:IsA("ProximityPrompt") then
                     PatchPrompt(prompt)
                 end
             end
         end
-        task.wait(0.8)
+        task.wait(0.6)
     end
 end)
 
--- Robust Multi-Method Base Detector
+-- Multi-Method Base Detector
 local function FindMyBase()
-    -- 1. Check Plots/Bases Folders
     local potentialFolders = {
         Workspace:FindFirstChild("Bases"),
         Workspace:FindFirstChild("Plots"),
@@ -142,7 +141,6 @@ local function FindMyBase()
         end
     end
 
-    -- 2. Deep scan across Workspace
     for _, obj in ipairs(Workspace:GetChildren()) do
         if obj:IsA("Model") or obj:IsA("Folder") then
             local owner = obj:FindFirstChild("Owner")
@@ -170,62 +168,143 @@ local function GetBaseDepositPosition()
 end
 
 -- ====================================================================
--- AUTO FARM ENGINES
+-- RARE EGG SCORER & FINDER
 -- ====================================================================
 
--- 1. Auto Steal Eggs Loop
+local RarityKeywords = {
+    ["secret"] = 100000,
+    ["godly"] = 50000,
+    ["celestial"] = 40000,
+    ["divine"] = 35000,
+    ["void"] = 30000,
+    ["mythic"] = 20000,
+    ["astral"] = 15000,
+    ["titan"] = 12000,
+    ["legendary"] = 10000,
+    ["demon"] = 8000,
+    ["dragon"] = 7000,
+    ["epic"] = 4000,
+    ["rare"] = 2000,
+    ["anime"] = 1500,
+    ["egg"] = 500
+}
+
+local function CalculateEggRarityScore(obj, prompt)
+    local score = 0
+    local fullText = string.lower(obj.Name .. " " .. (prompt and (prompt.ActionText .. " " .. prompt.ObjectText) or ""))
+    
+    for _, tag in ipairs(obj:GetDescendants()) do
+        if tag:IsA("TextLabel") or tag:IsA("SurfaceGui") or tag:IsA("BillboardGui") then
+            if tag:IsA("TextLabel") then
+                fullText = fullText .. " " .. string.lower(tag.Text)
+            end
+        end
+    end
+
+    for kw, val in pairs(RarityKeywords) do
+        if string.find(fullText, kw) then
+            score = score + val
+        end
+    end
+
+    -- Distance from spawn adds score (furthest eggs = higher tier zone)
+    local basePos = GetBaseDepositPosition()
+    if basePos and obj:IsA("BasePart") then
+        local dist = (obj.Position - basePos.Position).Magnitude
+        score = score + math.floor(dist)
+    end
+
+    return score
+end
+
+-- ====================================================================
+-- 1. AUTO STEAL RARE EGG (GRAB & INSTANT BASE RETURN ENGINE)
+-- ====================================================================
+
 task.spawn(function()
     while true do
-        if Toggles.AutoSteal and HumanoidRootPart and Humanoid and Humanoid.Health > 0 then
+        if Toggles.AutoStealRare and HumanoidRootPart and Humanoid and Humanoid.Health > 0 then
             pcall(function()
-                local eggTargets = {}
-                
-                -- Collect all available stealable eggs in arena
+                local baseReturnCFrame = GetBaseDepositPosition()
+                local candidates = {}
+
+                -- Scan all available prompts & eggs
                 for _, prompt in ipairs(Workspace:GetDescendants()) do
                     if prompt:IsA("ProximityPrompt") and prompt.Enabled then
-                        local text = string.lower(prompt.ActionText .. " " .. prompt.ObjectText)
-                        local parentName = string.lower(prompt.Parent and prompt.Parent.Name or "")
-                        if string.find(text, "steal") or string.find(text, "grab") or string.find(text, "take") or string.find(text, "egg") or string.find(parentName, "egg") or string.find(parentName, "nest") then
-                            local part = prompt.Parent
-                            if part:IsA("BasePart") then
-                                table.insert(eggTargets, { part = part, prompt = prompt })
-                            elseif part:IsA("Model") and (part.PrimaryPart or part:FindFirstChildWhichIsA("BasePart")) then
-                                table.insert(eggTargets, { part = part.PrimaryPart or part:FindFirstChildWhichIsA("BasePart"), prompt = prompt })
+                        local parent = prompt.Parent
+                        local targetPart = nil
+                        if parent:IsA("BasePart") then
+                            targetPart = parent
+                        elseif parent:IsA("Model") then
+                            targetPart = parent.PrimaryPart or parent:FindFirstChildWhichIsA("BasePart")
+                        end
+
+                        if targetPart then
+                            local text = string.lower(prompt.ActionText .. " " .. prompt.ObjectText .. " " .. parent.Name)
+                            if string.find(text, "steal") or string.find(text, "grab") or string.find(text, "take") or string.find(text, "egg") or string.find(text, "anime") then
+                                -- Make sure it's not our own base nest
+                                local myBase = FindMyBase()
+                                if not (myBase and targetPart:IsDescendantOf(myBase)) then
+                                    local rScore = CalculateEggRarityScore(parent, prompt)
+                                    table.insert(candidates, {
+                                        part = targetPart,
+                                        prompt = prompt,
+                                        score = rScore
+                                    })
+                                end
                             end
                         end
                     end
                 end
 
-                if #eggTargets > 0 then
-                    for _, target in ipairs(eggTargets) do
-                        if not Toggles.AutoSteal then break end
-                        if target.part and target.part.Parent then
-                            -- Teleport directly to egg
-                            HumanoidRootPart.CFrame = target.part.CFrame * CFrame.new(0, 2, 0)
-                            task.wait(0.15)
-                            
-                            -- Multi-Method Prompt Trigger
-                            PatchPrompt(target.prompt)
-                            fireproximityprompt(target.prompt, 0)
-                            fireproximityprompt(target.prompt, 1)
-                            task.wait(0.2)
+                -- Sort candidates by highest score (Rarest First!)
+                table.sort(candidates, function(a, b)
+                    return a.score > b.score
+                end)
 
-                            -- Auto Teleport back to Base & secure
-                            local depositCFrame = GetBaseDepositPosition()
-                            if depositCFrame then
-                                HumanoidRootPart.CFrame = depositCFrame
-                                task.wait(0.3)
+                if #candidates > 0 then
+                    local best = candidates[1]
+                    if best.part and best.part.Parent then
+                        -- Step 1: Teleport directly to the Rare Egg
+                        HumanoidRootPart.Velocity = Vector3.zero
+                        HumanoidRootPart.CFrame = best.part.CFrame * CFrame.new(0, 2, 0)
+                        task.wait(0.12)
+
+                        -- Step 2: Instant 0s Prompt Steal Trigger
+                        PatchPrompt(best.prompt)
+                        fireproximityprompt(best.prompt, 0)
+                        fireproximityprompt(best.prompt, 1)
+                        task.wait(0.15)
+
+                        -- Step 3: INSTANT TELEPORT DIRECTLY BACK TO BASE
+                        if baseReturnCFrame then
+                            HumanoidRootPart.Velocity = Vector3.zero
+                            HumanoidRootPart.CFrame = baseReturnCFrame
+                            task.wait(0.35)
+                            
+                            -- Step 4: Secure / Deposit into Base Nest
+                            local myBase = FindMyBase()
+                            if myBase then
+                                for _, basePrompt in ipairs(myBase:GetDescendants()) do
+                                    if basePrompt:IsA("ProximityPrompt") then
+                                        PatchPrompt(basePrompt)
+                                        fireproximityprompt(basePrompt, 0)
+                                    end
+                                end
                             end
                         end
                     end
                 end
             end)
         end
-        task.wait(0.8)
+        task.wait(0.5)
     end
 end)
 
--- 2. Auto Deposit Eggs Loop
+-- ====================================================================
+-- 2. AUTO DEPOSIT EGGS ENGINE
+-- ====================================================================
+
 task.spawn(function()
     while true do
         if Toggles.AutoDeposit and HumanoidRootPart then
@@ -238,23 +317,27 @@ task.spawn(function()
                             fireproximityprompt(prompt, 0)
                         end
                     end
-                    -- Touch deposit pads
                     for _, part in ipairs(base:GetDescendants()) do
-                        if part:IsA("BasePart") and (string.find(string.lower(part.Name), "deposit") or string.find(string.lower(part.Name), "nest") or string.find(string.lower(part.Name), "collector")) then
+                        if part:IsA("BasePart") and (string.find(string.lower(part.Name), "deposit") or string.find(string.lower(part.Name), "nest") or string.find(string.lower(part.Name), "collector") or string.find(string.lower(part.Name), "stand")) then
                             firetouchinterest(HumanoidRootPart, part, 0)
                             firetouchinterest(HumanoidRootPart, part, 1)
                         end
                     end
                 end
 
-                -- Sweep Deposit Remotes
-                local depositRemotes = {"Deposit", "DepositEgg", "StoreEgg", "PlaceEgg", "CollectEgg", "SellEgg"}
-                for _, rName in ipairs(depositRemotes) do
-                    local rem = ReplicatedStorage:FindFirstChild(rName, true)
-                    if rem and rem:IsA("RemoteEvent") then
-                        rem:FireServer()
-                    elseif rem and rem:IsA("RemoteFunction") then
-                        rem:InvokeServer()
+                local depositRemotes = {"Deposit", "DepositEgg", "StoreEgg", "PlaceEgg", "CollectEgg", "SellEgg", "DropEgg", "SecureEgg"}
+                for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
+                    if rem:IsA("RemoteEvent") or rem:IsA("RemoteFunction") then
+                        local rName = string.lower(rem.Name)
+                        for _, dName in ipairs(depositRemotes) do
+                            if string.find(rName, string.lower(dName)) then
+                                if rem:IsA("RemoteEvent") then
+                                    rem:FireServer()
+                                else
+                                    rem:InvokeServer()
+                                end
+                            end
+                        end
                     end
                 end
             end)
@@ -263,12 +346,136 @@ task.spawn(function()
     end
 end)
 
--- 3. Auto Collect Cash Engine
+-- ====================================================================
+-- 3. AUTO HATCH EGGS (4-LAYER HATCHING ENGINE)
+-- ====================================================================
+
+task.spawn(function()
+    while true do
+        if Toggles.AutoHatch then
+            pcall(function()
+                -- Layer 1: Base Egg Nest Prompts & Touch
+                local myBase = FindMyBase()
+                if myBase then
+                    for _, prompt in ipairs(myBase:GetDescendants()) do
+                        if prompt:IsA("ProximityPrompt") then
+                            local txt = string.lower(prompt.ActionText .. " " .. prompt.ObjectText)
+                            if string.find(txt, "hatch") or string.find(txt, "open") or string.find(txt, "unlock") or string.find(txt, "crack") then
+                                PatchPrompt(prompt)
+                                fireproximityprompt(prompt, 0)
+                            end
+                        end
+                    end
+                end
+
+                -- Layer 2: Workspace Egg Stands / Hatch Pods
+                for _, prompt in ipairs(Workspace:GetDescendants()) do
+                    if prompt:IsA("ProximityPrompt") then
+                        local pText = string.lower(prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Parent.Name)
+                        if string.find(pText, "hatch") or string.find(pText, "open egg") or string.find(pText, "buy egg") or string.find(pText, "summon") then
+                            PatchPrompt(prompt)
+                            fireproximityprompt(prompt, 0)
+                        end
+                    end
+                end
+
+                -- Layer 3: Deep Scan ReplicatedStorage RemoteEvents & RemoteFunctions
+                for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
+                    if rem:IsA("RemoteEvent") or rem:IsA("RemoteFunction") then
+                        local rName = string.lower(rem.Name)
+                        if string.find(rName, "hatch") or string.find(rName, "openegg") or string.find(rName, "buyegg") or string.find(rName, "summon") or string.find(rName, "roll") or string.find(rName, "draw") then
+                            if rem:IsA("RemoteEvent") then
+                                rem:FireServer(1)
+                                rem:FireServer("Egg", 1)
+                                rem:FireServer("AnimeEgg", 1)
+                                rem:FireServer(true)
+                            elseif rem:IsA("RemoteFunction") then
+                                rem:InvokeServer(1)
+                            end
+                        end
+                    end
+                end
+
+                -- Layer 4: PlayerGui Auto Hatch Button Clicker
+                local pGui = LocalPlayer:FindFirstChild("PlayerGui")
+                if pGui then
+                    for _, btn in ipairs(pGui:GetDescendants()) do
+                        if (btn:IsA("TextButton") or btn:IsA("ImageButton")) and btn.Visible then
+                            local bText = string.lower(btn.Name .. " " .. (btn:IsA("TextLabel") and btn.Text or ""))
+                            if string.find(bText, "hatch") or string.find(bText, "buy1") or string.find(bText, "open1") then
+                                firesignal(btn.MouseButton1Click)
+                                firesignal(btn.Activated)
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+        task.wait(0.4)
+    end
+end)
+
+-- ====================================================================
+-- 4. AUTO REBIRTH (MULTI-LAYER REBIRTH ENGINE)
+-- ====================================================================
+
+task.spawn(function()
+    while true do
+        if Toggles.AutoRebirth then
+            pcall(function()
+                -- Layer 1: Deep Remote Scanner across ReplicatedStorage
+                for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
+                    if rem:IsA("RemoteEvent") or rem:IsA("RemoteFunction") then
+                        local rName = string.lower(rem.Name)
+                        if string.find(rName, "rebirth") or string.find(rName, "prestige") or string.find(rName, "ascend") or string.find(rName, "evolve") then
+                            if rem:IsA("RemoteEvent") then
+                                rem:FireServer()
+                                rem:FireServer(1)
+                                rem:FireServer(true)
+                            elseif rem:IsA("RemoteFunction") then
+                                rem:InvokeServer()
+                                rem:InvokeServer(1)
+                            end
+                        end
+                    end
+                end
+
+                -- Layer 2: Workspace Physical Rebirth Pads
+                for _, part in ipairs(Workspace:GetDescendants()) do
+                    if part:IsA("BasePart") and (string.find(string.lower(part.Name), "rebirth") or string.find(string.lower(part.Name), "prestige")) then
+                        firetouchinterest(HumanoidRootPart, part, 0)
+                        firetouchinterest(HumanoidRootPart, part, 1)
+                    end
+                end
+
+                -- Layer 3: PlayerGui Rebirth Buttons Clicker
+                local pGui = LocalPlayer:FindFirstChild("PlayerGui")
+                if pGui then
+                    for _, btn in ipairs(pGui:GetDescendants()) do
+                        if (btn:IsA("TextButton") or btn:IsA("ImageButton")) and btn.Visible then
+                            local bName = string.lower(btn.Name)
+                            local bText = btn:IsA("TextButton") and string.lower(btn.Text) or ""
+                            if string.find(bName, "rebirth") or string.find(bText, "rebirth") or string.find(bName, "prestige") then
+                                firesignal(btn.MouseButton1Click)
+                                firesignal(btn.Activated)
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+        task.wait(1.2)
+    end
+end)
+
+-- ====================================================================
+-- 5. AUTO COLLECT CASH ENGINE
+-- ====================================================================
+
 task.spawn(function()
     while true do
         if Toggles.AutoCollectCash and HumanoidRootPart then
             pcall(function()
-                -- Magnet pull dropped coins/cash in Workspace
                 for _, item in ipairs(Workspace:GetChildren()) do
                     local iName = string.lower(item.Name)
                     if string.find(iName, "coin") or string.find(iName, "cash") or string.find(iName, "money") or string.find(iName, "drop") or string.find(iName, "gem") or string.find(iName, "yen") then
@@ -287,7 +494,6 @@ task.spawn(function()
                     end
                 end
 
-                -- Base ATM / Collector Pad Magnet
                 local base = FindMyBase()
                 if base then
                     for _, p in ipairs(base:GetDescendants()) do
@@ -303,58 +509,17 @@ task.spawn(function()
     end
 end)
 
--- 4. Auto Hatch Eggs Engine
-task.spawn(function()
-    while true do
-        if Toggles.AutoHatch then
-            pcall(function()
-                local hatchRemotes = {"Hatch", "HatchEgg", "OpenEgg", "BuyEgg", "EggHatch", "Roll", "Summon", "Draw"}
-                for _, name in ipairs(hatchRemotes) do
-                    local rem = ReplicatedStorage:FindFirstChild(name, true)
-                    if rem and rem:IsA("RemoteEvent") then
-                        rem:FireServer(1)
-                        rem:FireServer("Egg", 1)
-                        rem:FireServer("AnimeEgg", 1)
-                    elseif rem and rem:IsA("RemoteFunction") then
-                        rem:InvokeServer(1)
-                    end
-                end
-            end)
-        end
-        task.wait(0.5)
-    end
-end)
+-- ====================================================================
+-- 6. AUTO ATTACK BOSS ENGINE
+-- ====================================================================
 
--- 5. Auto Rebirth Engine
-task.spawn(function()
-    while true do
-        if Toggles.AutoRebirth then
-            pcall(function()
-                local rebirthRemotes = {"Rebirth", "AutoRebirth", "BuyRebirth", "RebirthEvent", "Prestige", "Ascend"}
-                for _, name in ipairs(rebirthRemotes) do
-                    local rem = ReplicatedStorage:FindFirstChild(name, true)
-                    if rem and rem:IsA("RemoteEvent") then
-                        rem:FireServer(1)
-                        rem:FireServer()
-                    elseif rem and rem:IsA("RemoteFunction") then
-                        rem:InvokeServer(1)
-                        rem:InvokeServer()
-                    end
-                end
-            end)
-        end
-        task.wait(1.5)
-    end
-end)
-
--- 6. Auto Attack Boss Engine
 task.spawn(function()
     while true do
         if Toggles.AutoAttackBoss and HumanoidRootPart and Humanoid and Humanoid.Health > 0 then
             pcall(function()
                 local bossModel = nil
                 for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if obj:IsA("Humanoid") and obj.Parent ~= Character and (obj.MaxHealth >= 1000 or string.find(string.lower(obj.Parent.Name), "boss") or obj.Parent:FindFirstChild("bosshealth") or obj.Parent:FindFirstChild("bosshealthmax")) then
+                    if obj:IsA("Humanoid") and obj.Parent ~= Character and (obj.MaxHealth >= 1000 or string.find(string.lower(obj.Parent.Name), "boss") or obj.Parent:FindFirstChild("bosshealth")) then
                         bossModel = obj.Parent
                         break
                     end
@@ -363,10 +528,8 @@ task.spawn(function()
                 if bossModel then
                     local bossPart = bossModel:FindFirstChild("HumanoidRootPart") or bossModel:FindFirstChild("Head") or bossModel:FindFirstChildWhichIsA("BasePart")
                     if bossPart then
-                        -- Hover safely above boss
                         HumanoidRootPart.CFrame = bossPart.CFrame * CFrame.new(0, 10, 0)
                         
-                        -- Equip tool and attack
                         local tool = Character:FindFirstChildWhichIsA("Tool") or LocalPlayer.Backpack:FindFirstChildWhichIsA("Tool")
                         if tool then
                             if tool.Parent ~= Character then
@@ -375,11 +538,12 @@ task.spawn(function()
                             tool:Activate()
                         end
 
-                        local attackRemotes = {"Attack", "Hit", "DamageBoss", "BossHit", "Punch", "Slash", "Damage"}
-                        for _, rName in ipairs(attackRemotes) do
-                            local rem = ReplicatedStorage:FindFirstChild(rName, true)
-                            if rem and rem:IsA("RemoteEvent") then
-                                rem:FireServer(bossModel)
+                        for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
+                            if rem:IsA("RemoteEvent") then
+                                local rName = string.lower(rem.Name)
+                                if string.find(rName, "attack") or string.find(rName, "hit") or string.find(rName, "damage") or string.find(rName, "punch") or string.find(rName, "slash") then
+                                    rem:FireServer(bossModel)
+                                end
                             end
                         end
                     end
@@ -696,13 +860,59 @@ local function AddToggleRow(text, configKey, callback)
     end)
 end
 
--- Add All Features to the Compact Scrolling List
-AddToggleRow("Auto Steal Eggs", "AutoSteal")
+-- 1-Click Action Row Helper
+local function AddActionRow(text, btnText, callback)
+    local Row = Instance.new("Frame")
+    Row.Size = UDim2.new(1, -6, 0, 23)
+    Row.BackgroundTransparency = 1
+    Row.Parent = ScrollingContent
+
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(0.6, 0, 1, 0)
+    Label.BackgroundTransparency = 1
+    Label.Text = text
+    Label.TextColor3 = Color3.fromRGB(240, 240, 240)
+    Label.TextSize = 12
+    Label.Font = Enum.Font.GothamBold
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = Row
+
+    local ActionBtn = Instance.new("TextButton")
+    ActionBtn.Size = UDim2.new(0.38, 0, 1, 0)
+    ActionBtn.Position = UDim2.new(0.62, 0, 0, 0)
+    ActionBtn.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+    ActionBtn.Text = btnText
+    ActionBtn.TextColor3 = Color3.fromRGB(255, 220, 50)
+    ActionBtn.TextSize = 11
+    ActionBtn.Font = Enum.Font.GothamBold
+    ActionBtn.Parent = Row
+
+    local BtnCorner = Instance.new("UICorner")
+    BtnCorner.CornerRadius = UDim.new(0, 4)
+    BtnCorner.Parent = ActionBtn
+
+    local BtnStroke = Instance.new("UIStroke")
+    BtnStroke.Color = Color3.fromRGB(45, 45, 55)
+    BtnStroke.Thickness = 1
+    BtnStroke.Parent = ActionBtn
+
+    ActionBtn.MouseButton1Click:Connect(function()
+        if callback then callback() end
+    end)
+end
+
+-- Add Features
+AddToggleRow("Auto Steal Rare Egg", "AutoStealRare")
+AddActionRow("Save Base Position", "Set Base", function()
+    if HumanoidRootPart then
+        SavedBaseCFrame = HumanoidRootPart.CFrame
+    end
+end)
 AddToggleRow("Instant Steal (0s Prompt)", "InstantPrompt")
 AddToggleRow("Auto Deposit Eggs", "AutoDeposit")
-AddToggleRow("Auto Collect Cash", "AutoCollectCash")
 AddToggleRow("Auto Hatch Eggs", "AutoHatch")
 AddToggleRow("Auto Rebirth", "AutoRebirth")
+AddToggleRow("Auto Collect Cash", "AutoCollectCash")
 AddToggleRow("Auto Attack Boss", "AutoAttackBoss")
 AddToggleRow("Anime Egg ESP", "EggESP")
 AddToggleRow("Player ESP", "PlayerESP")
