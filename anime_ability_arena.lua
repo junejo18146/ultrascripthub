@@ -286,8 +286,18 @@ spawnTask(function()
 end)
 
 -- ====================================================
--- 4. AUTO LOW HP TARGET LOCK (YEN FARM)
+-- 4. AUTO LOW HP TARGET LOCK (TP & HIGHLIGHT ONLY, MANUAL FIGHT)
 -- ====================================================
+local targetHighlight = nil
+
+local function clearTargetHighlight()
+    if targetHighlight then
+        targetHighlight.Enabled = false
+        pcall(function() targetHighlight:Destroy() end)
+        targetHighlight = nil
+    end
+end
+
 spawnTask(function()
     while true do
         task.wait(0.12)
@@ -309,11 +319,28 @@ spawnTask(function()
                 end
 
                 if bestTarget and bestTarget.Character and bestTarget.Character:FindFirstChild("HumanoidRootPart") then
-                    local tRoot = bestTarget.Character.HumanoidRootPart
-                    myRoot.CFrame = tRoot.CFrame * CFrame.new(0, 0, 3)
-                    executeM1Attack()
+                    local tChar = bestTarget.Character
+                    local tRoot = tChar.HumanoidRootPart
+                    myRoot.CFrame = tRoot.CFrame * CFrame.new(0, 0, 3.5)
+
+                    if not targetHighlight or not targetHighlight.Parent or targetHighlight.Parent ~= tChar then
+                        clearTargetHighlight()
+                        targetHighlight = Instance.new("Highlight")
+                        targetHighlight.Name = "JunejoTargetHighlight"
+                        targetHighlight.FillColor = Color3.fromRGB(255, 215, 0)
+                        targetHighlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                        targetHighlight.FillTransparency = 0.25
+                        targetHighlight.OutlineTransparency = 0
+                        targetHighlight.Adornee = tChar
+                        targetHighlight.Parent = tChar
+                    end
+                    targetHighlight.Enabled = true
+                else
+                    clearTargetHighlight()
                 end
             end
+        else
+            clearTargetHighlight()
         end
     end
 end)
@@ -919,8 +946,12 @@ AddToggleRow("Fast Kill Aura", "KillAura")
 -- 3. Auto Ultimate (Awakening G-Mode)
 AddToggleRow("Auto Ultimate (Awakening)", "AutoAwakening")
 
--- 4. Auto Low HP Target Lock (Yen Farm)
-AddToggleRow("Auto Low HP Target Lock", "AutoFarmKills")
+-- 4. Auto Low HP Target Lock (TP & Highlight Only, Manual Fight)
+AddToggleRow("Auto Low HP Target Lock", "AutoFarmKills", function(enabled)
+    if not enabled then
+        clearTargetHighlight()
+    end
+end)
 
 -- 5. WalkSpeed Boost (Interactive Line Bar Slider)
 AddSliderRow("WalkSpeed Boost", "WalkSpeedBoost", "WalkSpeed", 16, 120, 55, function(val)
