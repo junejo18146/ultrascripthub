@@ -1,5 +1,5 @@
 -- ====================================================
--- JUNEJO ULTRA SCRIPT HUB - ANIME ABILITY ARENA (OFFICIAL V2)
+-- JUNEJO ULTRA SCRIPT HUB - ANIME ABILITY ARENA (OFFICIAL V2.2)
 -- Game: Anime Ability Arena (Roblox)
 -- Link: https://www.roblox.com/games/108567435288296/Anime-Ability-Arena
 -- Place ID: 108567435288296 / 105692919293481
@@ -103,7 +103,7 @@ local Settings = {
     PlayerESP = false,
     BillboardESP = false,
     AutoEscape = false,
-    EscapeThreshold = 25,
+    EscapeThreshold = 35,
     AntiAFK = true,
 }
 
@@ -120,21 +120,63 @@ local function isAlive()
     return root ~= nil and hum ~= nil and hum.Health > 0
 end
 
--- Safe Zone / Spawn Locator
+-- Track Initial Spawn Location as Safe Point
+local SavedSpawnCFrame = nil
+spawnTask(function()
+    task.wait(1.5)
+    local _, root = getPlayerChar()
+    if root then
+        SavedSpawnCFrame = root.CFrame
+    end
+end)
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+    task.wait(0.5)
+    local root = char:WaitForChild("HumanoidRootPart", 5)
+    if root then
+        SavedSpawnCFrame = root.CFrame
+    end
+end)
+
+-- Safe Zone / Spawn Locator & Safe Sky Platform Fallback
+local skyPlatform = nil
 local function GetSafeZoneCFrame()
+    -- 1. Look for SpawnLocation in Workspace
+    local spawnLoc = Workspace:FindFirstChildOfClass("SpawnLocation")
+    if spawnLoc then
+        return spawnLoc.CFrame + Vector3.new(0, 6, 0)
+    end
+
+    -- 2. Look for named spawn / lobby / safe parts
     for _, obj in ipairs(Workspace:GetDescendants()) do
         if obj:IsA("BasePart") then
             local n = obj.Name:lower()
-            if n:find("safezone") or n:find("lobby") or n:find("spawn") or n:find("hub") then
-                return obj.CFrame + Vector3.new(0, 5, 0)
+            if n == "spawn" or n:find("spawnlocation") or n:find("lobby") or n:find("safezone") or n:find("safe_zone") then
+                return obj.CFrame + Vector3.new(0, 6, 0)
             end
         end
     end
-    local spawnLoc = Workspace:FindFirstChildOfClass("SpawnLocation")
-    if spawnLoc then
-        return spawnLoc.CFrame + Vector3.new(0, 5, 0)
+
+    -- 3. Use captured initial spawn location
+    if SavedSpawnCFrame then
+        return SavedSpawnCFrame + Vector3.new(0, 6, 0)
     end
-    return CFrame.new(0, 50, 0)
+
+    -- 4. High Sky Safe Platform (Guaranteed safe escape where no enemies can reach)
+    local skyPos = Vector3.new(0, 350, 0)
+    if not skyPlatform or not skyPlatform.Parent then
+        skyPlatform = Instance.new("Part")
+        skyPlatform.Name = "JunejoSafePlatform"
+        skyPlatform.Size = Vector3.new(35, 2, 35)
+        skyPlatform.Position = skyPos - Vector3.new(0, 2, 0)
+        skyPlatform.Anchored = true
+        skyPlatform.CanCollide = true
+        skyPlatform.Transparency = 0.4
+        skyPlatform.Color = Color3.fromRGB(0, 255, 170)
+        skyPlatform.Material = Enum.Material.ForceField
+        pcall(function() skyPlatform.Parent = Workspace end)
+    end
+    return CFrame.new(skyPos)
 end
 
 -- ====================================================
@@ -332,7 +374,7 @@ spawnTask(function()
                         targetHighlight.FillTransparency = 0.25
                         targetHighlight.OutlineTransparency = 0
                         targetHighlight.Adornee = tChar
-                        targetHighlight.Parent = tChar
+                        pcall(function() targetHighlight.Parent = tChar end)
                     end
                     targetHighlight.Enabled = true
                 else
@@ -472,105 +514,125 @@ RunService.Heartbeat:Connect(handleInstantGetUp)
 RunService.Stepped:Connect(handleInstantGetUp)
 
 -- ====================================================
--- 9. PLAYER ESP HIGHLIGHTS (WALLHACKS)
+-- 9. PLAYER ESP HIGHLIGHTS (MULTI-LAYER CHAMS & 3D BOXES)
 -- ====================================================
-local espHighlights = {}
+local function updatePlayerESP()
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then
+            local char = p.Character
+            if char then
+                local root = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso")
+                
+                -- Layer 1: Native Glow Highlight
+                local hl = char:FindFirstChild("JunejoESP_HL")
+                if Settings.PlayerESP then
+                    if not hl then
+                        hl = Instance.new("Highlight")
+                        hl.Name = "JunejoESP_HL"
+                        hl.FillColor = Color3.fromRGB(255, 40, 40)
+                        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                        hl.FillTransparency = 0.45
+                        hl.OutlineTransparency = 0
+                        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                        hl.Adornee = char
+                        pcall(function() hl.Parent = char end)
+                    end
+                    hl.Enabled = true
 
-local function createESP(player)
-    if player == LocalPlayer then return end
-
-    local function setupChar(char)
-        if not char then return end
-        local root = char:WaitForChild("HumanoidRootPart", 5)
-        if not root then return end
-
-        local hl = Instance.new("Highlight")
-        hl.Name = "JunejoESP"
-        hl.FillColor = Color3.fromRGB(255, 45, 45)
-        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-        hl.FillTransparency = 0.5
-        hl.OutlineTransparency = 0.1
-        hl.Adornee = char
-        hl.Enabled = Settings.PlayerESP
-        hl.Parent = char
-        espHighlights[player] = hl
+                    -- Layer 2: 3D Box Handle Adornment (Guaranteed 100% visible on Mobile / Low-end GPUs)
+                    if root then
+                        local box = root:FindFirstChild("JunejoESP_Box")
+                        if not box then
+                            box = Instance.new("BoxHandleAdornment")
+                            box.Name = "JunejoESP_Box"
+                            box.Size = Vector3.new(4, 5.5, 2)
+                            box.Color3 = Color3.fromRGB(255, 40, 40)
+                            box.Transparency = 0.6
+                            box.AlwaysOnTop = true
+                            box.ZIndex = 10
+                            box.Adornee = root
+                            pcall(function() box.Parent = root end)
+                        end
+                        box.Visible = true
+                    end
+                else
+                    if hl then hl.Enabled = false end
+                    if root and root:FindFirstChild("JunejoESP_Box") then
+                        root.JunejoESP_Box.Visible = false
+                    end
+                end
+            end
+        end
     end
-
-    player.CharacterAdded:Connect(setupChar)
-    if player.Character then setupChar(player.Character) end
 end
 
-for _, p in ipairs(Players:GetPlayers()) do createESP(p) end
-Players.PlayerAdded:Connect(createESP)
-
-RunService.RenderStepped:Connect(function()
-    for _, hl in pairs(espHighlights) do
-        if hl then hl.Enabled = Settings.PlayerESP end
+RunService.Heartbeat:Connect(function()
+    if Settings.PlayerESP then
+        pcall(updatePlayerESP)
     end
 end)
 
 -- ====================================================
 -- 10. BILLBOARD NAME & DISTANCE ESP
 -- ====================================================
-local billboardESPs = {}
+local function updateBillboardESP()
+    local _, myRoot = getPlayerChar()
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then
+            local char = p.Character
+            if char then
+                local targetPart = char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart") or char.PrimaryPart
+                local hum = char:FindFirstChildOfClass("Humanoid")
 
-local function createBillboard(player)
-    if player == LocalPlayer then return end
+                if targetPart then
+                    local bb = char:FindFirstChild("JunejoNameESP")
+                    if Settings.BillboardESP then
+                        if not bb then
+                            bb = Instance.new("BillboardGui")
+                            bb.Name = "JunejoNameESP"
+                            bb.Size = UDim2.new(0, 160, 0, 32)
+                            bb.StudsOffset = Vector3.new(0, 2.8, 0)
+                            bb.AlwaysOnTop = true
+                            bb.ResetOnSpawn = false
+                            bb.Adornee = targetPart
+                            pcall(function() bb.Parent = char end)
 
-    local function setupBillboard(char)
-        if not char then return end
-        local head = char:WaitForChild("Head", 5)
-        if not head then return end
+                            local nameLabel = Instance.new("TextLabel")
+                            nameLabel.Name = "InfoLabel"
+                            nameLabel.Size = UDim2.new(1, 0, 1, 0)
+                            nameLabel.BackgroundTransparency = 1
+                            nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                            nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+                            nameLabel.TextStrokeTransparency = 0
+                            nameLabel.TextSize = 11
+                            nameLabel.Font = Enum.Font.GothamBold
+                            nameLabel.Parent = bb
+                        end
 
-        local bb = Instance.new("BillboardGui")
-        bb.Name = "JunejoNameESP"
-        bb.Adornee = head
-        bb.Size = UDim2.new(0, 140, 0, 30)
-        bb.StudsOffset = Vector3.new(0, 2.5, 0)
-        bb.AlwaysOnTop = true
-        bb.Enabled = Settings.BillboardESP
-        bb.Parent = head
-
-        local lbl = Instance.new("TextLabel")
-        lbl.Size = UDim2.new(1, 0, 1, 0)
-        lbl.BackgroundTransparency = 1
-        lbl.Text = player.DisplayName .. " [0m]"
-        lbl.TextColor3 = Color3.fromRGB(255, 255, 255)
-        lbl.TextStrokeTransparency = 0
-        lbl.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-        lbl.TextSize = 11
-        lbl.Font = Enum.Font.GothamBold
-        lbl.Parent = bb
-
-        billboardESPs[player] = { Gui = bb, Label = lbl, Head = head }
-    end
-
-    player.CharacterAdded:Connect(setupBillboard)
-    if player.Character then setupBillboard(player.Character) end
-end
-
-for _, p in ipairs(Players:GetPlayers()) do createBillboard(p) end
-Players.PlayerAdded:Connect(createBillboard)
-
-spawnTask(function()
-    while true do
-        task.wait(0.2)
-        if Settings.BillboardESP then
-            local _, myRoot = getPlayerChar()
-            if myRoot then
-                for p, data in pairs(billboardESPs) do
-                    if data.Gui and data.Label and data.Head and data.Head.Parent then
-                        data.Gui.Enabled = true
-                        local dist = math.floor((data.Head.Position - myRoot.Position).Magnitude)
-                        data.Label.Text = string.format("%s [%dm]", p.DisplayName, dist)
+                        bb.Enabled = true
+                        local infoLabel = bb:FindFirstChild("InfoLabel")
+                        if infoLabel then
+                            local dist = myRoot and math.floor((targetPart.Position - myRoot.Position).Magnitude) or 0
+                            local hp = hum and math.floor(hum.Health) or 100
+                            infoLabel.Text = string.format("%s\n[%d HP | %dm]", p.DisplayName, hp, dist)
+                            if hp < 35 then
+                                infoLabel.TextColor3 = Color3.fromRGB(255, 70, 70)
+                            else
+                                infoLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                            end
+                        end
+                    else
+                        if bb then bb.Enabled = false end
                     end
                 end
             end
-        else
-            for _, data in pairs(billboardESPs) do
-                if data.Gui then data.Gui.Enabled = false end
-            end
         end
+    end
+end
+
+RunService.Heartbeat:Connect(function()
+    if Settings.BillboardESP then
+        pcall(updateBillboardESP)
     end
 end)
 
@@ -580,16 +642,17 @@ end)
 local lastEscapeTime = 0
 spawnTask(function()
     while true do
-        task.wait(0.25)
+        task.wait(0.15)
         if Settings.AutoEscape and isAlive() then
             local _, root, hum = getPlayerChar()
             if hum and root and hum.MaxHealth > 0 then
                 local hpPercent = (hum.Health / hum.MaxHealth) * 100
-                if hpPercent <= Settings.EscapeThreshold and (tick() - lastEscapeTime > 8) then
+                if (hpPercent <= Settings.EscapeThreshold or hum.Health <= 35) and (tick() - lastEscapeTime > 4) then
                     lastEscapeTime = tick()
                     root.AssemblyLinearVelocity = Vector3.zero
+                    root.AssemblyAngularVelocity = Vector3.zero
                     root.CFrame = GetSafeZoneCFrame()
-                    notify("Auto Escape", "Low HP detected! Teleported to Safe Zone.", 3)
+                    notify("Safe Escape Triggered", string.format("Health low (%.0f%%)! Teleported to safety.", hpPercent), 3)
                 end
             end
         end
@@ -818,7 +881,7 @@ local function AddSliderRow(title, configKey, sliderKey, minVal, maxVal, default
     ValLabel.TextSize = 11
     ValLabel.Font = Enum.Font.GothamBold
     ValLabel.TextXAlignment = Enum.TextXAlignment.Right
-    ValLabel.Parent = TopRow
+    Label.Parent = TopRow
     
     local CheckBox = Instance.new("Frame")
     CheckBox.Size = UDim2.new(0, 18, 0, 18)
@@ -974,13 +1037,19 @@ AddToggleRow("Infinite Air Jump", "InfiniteJump")
 AddToggleRow("Instant Auto Get Up", "InstantGetUp")
 
 -- 9. Player ESP Highlights (Wallhacks)
-AddToggleRow("Player ESP Highlights", "PlayerESP")
+AddToggleRow("Player ESP Highlights", "PlayerESP", function(enabled)
+    pcall(updatePlayerESP)
+end)
 
 -- 10. Player Name & Distance ESP
-AddToggleRow("Player Name & Distance ESP", "BillboardESP")
+AddToggleRow("Player Name & Distance ESP", "BillboardESP", function(enabled)
+    pcall(updateBillboardESP)
+end)
 
 -- 11. Auto Safe Zone Escape (Low HP TP)
-AddToggleRow("Auto Safe Zone Escape", "AutoEscape")
+AddToggleRow("Auto Safe Zone Escape", "AutoEscape", function(enabled)
+    notify("Auto Safe Zone Escape", enabled and "Active: Will TP to safety when low HP (<35%)" or "Disabled", 2.5)
+end)
 
 -- ==========================================
 -- FOOTER (MANDATORY ULTRA SCRIPT HUB FOOTER)
@@ -1011,4 +1080,4 @@ FooterSub.TextSize = 9
 FooterSub.Font = Enum.Font.GothamMedium
 FooterSub.Parent = Footer
 
-print("Junejo Ultra Script Hub V2 loaded successfully for Anime Ability Arena!")
+print("Junejo Ultra Script Hub V2.2 loaded successfully for Anime Ability Arena!")
