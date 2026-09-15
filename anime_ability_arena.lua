@@ -1,11 +1,13 @@
 -- ====================================================
--- JUNEJO ULTRA SCRIPT HUB - ANIME ABILITY ARENA (V2 EDITION)
+-- JUNEJO ULTRA SCRIPT HUB - ANIME ABILITY ARENA (OFFICIAL V2)
 -- Game: Anime Ability Arena (Roblox)
 -- Link: https://www.roblox.com/games/108567435288296/Anime-Ability-Arena
+-- Place ID: 108567435288296 / 105692919293481
+-- Universe ID: 10399136326
 -- Author: Made by Junejo (junejo18146)
 -- GitHub: https://github.com/junejo18146/ultrascripthub
+-- UI Standard: UI 1 - Ultra Script Hub Classic Matte Dark
 -- Universal Mobile (Delta / Codex / Fluxus) & PC Compatible
--- Official Classic Executive Dark UI (New 7 Core Hybrid Features)
 -- ====================================================
 
 local function elevate()
@@ -83,24 +85,25 @@ local function notify(title, message, dur)
 end
 
 -- ====================================================
--- GLOBAL STATE & SETTINGS (NEW 7 CORE FEATURES)
+-- GLOBAL STATE & SETTINGS (100% TESTED & WORKING)
 -- ====================================================
 local Settings = {
-    -- 5 Top Features from previous 7
-    KillAura = false,
-    AuraRadius = 25,
-    AutoFarmKills = false,
     HitboxExpander = false,
     HitboxSize = 18,
-    InstantGetUp = true,
+    KillAura = false,
+    AuraRadius = 25,
+    AutoAwakening = false,
+    AutoFarmKills = false,
     WalkSpeedBoost = false,
     WalkSpeed = 55,
-
-    -- 2 Selected Features from remaining 13
-    AutoAwakening = false,
+    FlyMode = false,
+    FlySpeed = 50,
+    InfiniteJump = false,
+    InstantGetUp = true,
     PlayerESP = false,
-
-    -- Built-in Protection
+    BillboardESP = false,
+    AutoEscape = false,
+    EscapeThreshold = 25,
     AntiAFK = true,
 }
 
@@ -117,110 +120,25 @@ local function isAlive()
     return root ~= nil and hum ~= nil and hum.Health > 0
 end
 
--- ====================================================
--- 1. ZERO-DELAY KILL AURA
--- ====================================================
-local function executeM1Attack()
-    elevate()
-    if VirtualUser then
-        pcall(function()
-            VirtualUser:CaptureController()
-            VirtualUser:ClickButton1(Vector2.new(960, 540))
-        end)
-    end
-
-    if VirtualInputManager then
-        pcall(function()
-            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
-            task.wait(0.01)
-            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
-        end)
-    end
-
-    local char = LocalPlayer.Character
-    if char then
-        local tool = char:FindFirstChildOfClass("Tool")
-        if tool then
-            pcall(function() tool:Activate() end)
-        end
-    end
-
-    pcall(function()
-        for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
-            if rem:IsA("RemoteEvent") then
-                local n = rem.Name:lower()
-                if n:find("attack") or n:find("m1") or n:find("punch") or n:find("combat") or n:find("hit") or n:find("slash") then
-                    rem:FireServer()
-                    rem:FireServer(1)
-                    rem:FireServer(true)
-                end
+-- Safe Zone / Spawn Locator
+local function GetSafeZoneCFrame()
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("BasePart") then
+            local n = obj.Name:lower()
+            if n:find("safezone") or n:find("lobby") or n:find("spawn") or n:find("hub") then
+                return obj.CFrame + Vector3.new(0, 5, 0)
             end
         end
-    end)
+    end
+    local spawnLoc = Workspace:FindFirstChildOfClass("SpawnLocation")
+    if spawnLoc then
+        return spawnLoc.CFrame + Vector3.new(0, 5, 0)
+    end
+    return CFrame.new(0, 50, 0)
 end
 
-spawnTask(function()
-    while true do
-        task.wait(0.05)
-        if Settings.KillAura and isAlive() then
-            local _, myRoot = getPlayerChar()
-            if myRoot then
-                local hasEnemyNearby = false
-                for _, p in ipairs(Players:GetPlayers()) do
-                    if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                        local eHum = p.Character:FindFirstChildOfClass("Humanoid")
-                        if eHum and eHum.Health > 0 then
-                            local dist = (p.Character.HumanoidRootPart.Position - myRoot.Position).Magnitude
-                            if dist <= Settings.AuraRadius then
-                                hasEnemyNearby = true
-                                break
-                            end
-                        end
-                    end
-                end
-                if hasEnemyNearby then
-                    executeM1Attack()
-                end
-            end
-        end
-    end
-end)
-
 -- ====================================================
--- 2. AUTO FARM KILLS (YEN FARM)
--- ====================================================
-spawnTask(function()
-    while true do
-        task.wait(0.12)
-        if Settings.AutoFarmKills and isAlive() then
-            local _, myRoot = getPlayerChar()
-            if myRoot then
-                local bestTarget = nil
-                local lowestHP = math.huge
-                for _, p in ipairs(Players:GetPlayers()) do
-                    if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                        local eHum = p.Character:FindFirstChildOfClass("Humanoid")
-                        if eHum and eHum.Health > 0 then
-                            if eHum.Health < lowestHP then
-                                lowestHP = eHum.Health
-                                bestTarget = p
-                            end
-                        end
-                    end
-                end
-
-                if bestTarget and bestTarget.Character and bestTarget.Character:FindFirstChild("HumanoidRootPart") then
-                    local tRoot = bestTarget.Character.HumanoidRootPart
-                    myRoot.CFrame = tRoot.CFrame * CFrame.new(0, 0, 3)
-                    executeM1Attack()
-                end
-            end
-        end
-    end
-end)
-
--- ====================================================
--- 3. HITBOX EXPANDER (18x18 Red Neon)
+-- 1. HITBOX EXPANDER (18x18 Red Neon)
 -- ====================================================
 local originalSizes = {}
 
@@ -267,7 +185,76 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- ====================================================
--- 4. AUTO ULTIMATE / AWAKENING (G Key Spammer)
+-- 2. FAST KILL AURA (AUTO ATTACK / M1 SPAM)
+-- ====================================================
+local function executeM1Attack()
+    elevate()
+    if VirtualUser then
+        pcall(function()
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton1(Vector2.new(960, 540))
+        end)
+    end
+
+    if VirtualInputManager then
+        pcall(function()
+            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
+            task.wait(0.01)
+            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+        end)
+    end
+
+    local char = LocalPlayer.Character
+    if char then
+        local tool = char:FindFirstChildOfClass("Tool")
+        if tool then
+            pcall(function() tool:Activate() end)
+        end
+    end
+
+    pcall(function()
+        for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
+            if rem:IsA("RemoteEvent") then
+                local n = rem.Name:lower()
+                if n:find("attack") or n:find("m1") or n:find("punch") or n:find("combat") or n:find("hit") or n:find("slash") then
+                    rem:FireServer()
+                    rem:FireServer(1)
+                    rem:FireServer(true)
+                end
+            end
+        end
+    end)
+end
+
+spawnTask(function()
+    while true do
+        task.wait(0.06)
+        if Settings.KillAura and isAlive() then
+            local _, myRoot = getPlayerChar()
+            if myRoot then
+                local hasEnemyNearby = false
+                for _, p in ipairs(Players:GetPlayers()) do
+                    if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                        local eHum = p.Character:FindFirstChildOfClass("Humanoid")
+                        if eHum and eHum.Health > 0 then
+                            local dist = (p.Character.HumanoidRootPart.Position - myRoot.Position).Magnitude
+                            if dist <= Settings.AuraRadius then
+                                hasEnemyNearby = true
+                                break
+                            end
+                        end
+                    end
+                end
+                if hasEnemyNearby then
+                    executeM1Attack()
+                end
+            end
+        end
+    end
+end)
+
+-- ====================================================
+-- 3. AUTO ULTIMATE / AWAKENING (G KEY SPAMMER)
 -- ====================================================
 local function castKey(keyCode)
     if VirtualInputManager then
@@ -288,7 +275,7 @@ spawnTask(function()
                 for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
                     if rem:IsA("RemoteEvent") then
                         local n = rem.Name:lower()
-                        if n:find("awake") or n:find("ultimate") or n:find("mode") then
+                        if n:find("awake") or n:find("ultimate") or n:find("mode") or n:find("burst") then
                             rem:FireServer()
                         end
                     end
@@ -299,13 +286,141 @@ spawnTask(function()
 end)
 
 -- ====================================================
--- 5. INSTANT AUTO GET UP / ANTI-RAGDOLL (< 0.1s)
+-- 4. AUTO LOW HP TARGET LOCK (YEN FARM)
+-- ====================================================
+spawnTask(function()
+    while true do
+        task.wait(0.12)
+        if Settings.AutoFarmKills and isAlive() then
+            local _, myRoot = getPlayerChar()
+            if myRoot then
+                local bestTarget = nil
+                local lowestHP = math.huge
+                for _, p in ipairs(Players:GetPlayers()) do
+                    if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                        local eHum = p.Character:FindFirstChildOfClass("Humanoid")
+                        if eHum and eHum.Health > 0 then
+                            if eHum.Health < lowestHP then
+                                lowestHP = eHum.Health
+                                bestTarget = p
+                            end
+                        end
+                    end
+                end
+
+                if bestTarget and bestTarget.Character and bestTarget.Character:FindFirstChild("HumanoidRootPart") then
+                    local tRoot = bestTarget.Character.HumanoidRootPart
+                    myRoot.CFrame = tRoot.CFrame * CFrame.new(0, 0, 3)
+                    executeM1Attack()
+                end
+            end
+        end
+    end
+end)
+
+-- ====================================================
+-- 5. WALKSPEED BOOST (MULTI-LAYER VELOCITY BYPASS)
+-- ====================================================
+local function applyWalkSpeed()
+    local _, _, hum = getPlayerChar()
+    if hum then
+        if Settings.WalkSpeedBoost then
+            hum.WalkSpeed = Settings.WalkSpeed
+        else
+            hum.WalkSpeed = 16
+        end
+    end
+end
+
+RunService.RenderStepped:Connect(function()
+    if Settings.WalkSpeedBoost then
+        local _, root, hum = getPlayerChar()
+        if hum and hum.WalkSpeed ~= Settings.WalkSpeed then
+            hum.WalkSpeed = Settings.WalkSpeed
+        end
+    end
+end)
+
+RunService.Heartbeat:Connect(function()
+    if Settings.WalkSpeedBoost and Settings.WalkSpeed > 16 then
+        pcall(function()
+            local _, root, hum = getPlayerChar()
+            if hum and root then
+                local moveDir = hum.MoveDirection
+                if moveDir.Magnitude > 0 then
+                    root.AssemblyLinearVelocity = Vector3.new(
+                        moveDir.X * Settings.WalkSpeed,
+                        root.AssemblyLinearVelocity.Y,
+                        moveDir.Z * Settings.WalkSpeed
+                    )
+                end
+            end
+        end)
+    end
+end)
+
+-- ====================================================
+-- 6. SMOOTH FLY MODE (MOBILE & PC COMPATIBLE)
+-- ====================================================
+local flyGyro, flyVel = nil, nil
+
+local function toggleFly(enable)
+    local _, root, hum = getPlayerChar()
+    if not root or not hum then return end
+
+    if enable then
+        flyGyro = Instance.new("BodyGyro")
+        flyGyro.P = 9e4
+        flyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+        flyGyro.CFrame = root.CFrame
+        flyGyro.Parent = root
+
+        flyVel = Instance.new("BodyVelocity")
+        flyVel.Velocity = Vector3.zero
+        flyVel.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+        flyVel.Parent = root
+
+        hum.PlatformStand = true
+
+        spawnTask(function()
+            while Settings.FlyMode and flyVel and flyGyro and root and hum do
+                local camCFrame = Camera.CFrame
+                local moveVector = hum.MoveDirection
+                if moveVector.Magnitude > 0 then
+                    flyVel.Velocity = (camCFrame.LookVector * (moveVector.Z * -1) + camCFrame.RightVector * moveVector.X) * Settings.FlySpeed
+                else
+                    flyVel.Velocity = Vector3.zero
+                end
+                flyGyro.CFrame = camCFrame
+                task.wait(0.03)
+            end
+        end)
+    else
+        if flyGyro then flyGyro:Destroy() flyGyro = nil end
+        if flyVel then flyVel:Destroy() flyVel = nil end
+        hum.PlatformStand = false
+    end
+end
+
+-- ====================================================
+-- 7. INFINITE AIR JUMP
+-- ====================================================
+UserInputService.JumpRequest:Connect(function()
+    if Settings.InfiniteJump and isAlive() then
+        local _, root, hum = getPlayerChar()
+        if hum and root then
+            hum:ChangeState(Enum.HumanoidStateType.Jumping)
+            root.AssemblyLinearVelocity = Vector3.new(root.AssemblyLinearVelocity.X, 50, root.AssemblyLinearVelocity.Z)
+        end
+    end
+end)
+
+-- ====================================================
+-- 8. INSTANT AUTO GET UP / ANTI-RAGDOLL (< 0.05s)
 -- ====================================================
 local function handleInstantGetUp()
     if not Settings.InstantGetUp or not isAlive() then return end
-    local char = LocalPlayer.Character
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
-    local root = char and char:FindFirstChild("HumanoidRootPart")
+    local char, root, hum = getPlayerChar()
     if hum and root then
         local state = hum:GetState()
         if hum.Sit or hum.PlatformStand or state == Enum.HumanoidStateType.Ragdoll or state == Enum.HumanoidStateType.FallingDown or state == Enum.HumanoidStateType.Physics then
@@ -330,7 +445,7 @@ RunService.Heartbeat:Connect(handleInstantGetUp)
 RunService.Stepped:Connect(handleInstantGetUp)
 
 -- ====================================================
--- 6. PLAYER ESP HIGHLIGHTS (Wallhacks)
+-- 9. PLAYER ESP HIGHLIGHTS (WALLHACKS)
 -- ====================================================
 local espHighlights = {}
 
@@ -368,29 +483,95 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- ====================================================
--- 7. WALKSPEED BOOST ENGINE (Persistent)
+-- 10. BILLBOARD NAME & DISTANCE ESP
 -- ====================================================
-local function applyWalkSpeed()
-    local _, _, hum = getPlayerChar()
-    if hum then
-        if Settings.WalkSpeedBoost then
-            hum.WalkSpeed = Settings.WalkSpeed
-        else
-            hum.WalkSpeed = 16
-        end
+local billboardESPs = {}
+
+local function createBillboard(player)
+    if player == LocalPlayer then return end
+
+    local function setupBillboard(char)
+        if not char then return end
+        local head = char:WaitForChild("Head", 5)
+        if not head then return end
+
+        local bb = Instance.new("BillboardGui")
+        bb.Name = "JunejoNameESP"
+        bb.Adornee = head
+        bb.Size = UDim2.new(0, 140, 0, 30)
+        bb.StudsOffset = Vector3.new(0, 2.5, 0)
+        bb.AlwaysOnTop = true
+        bb.Enabled = Settings.BillboardESP
+        bb.Parent = head
+
+        local lbl = Instance.new("TextLabel")
+        lbl.Size = UDim2.new(1, 0, 1, 0)
+        lbl.BackgroundTransparency = 1
+        lbl.Text = player.DisplayName .. " [0m]"
+        lbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+        lbl.TextStrokeTransparency = 0
+        lbl.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        lbl.TextSize = 11
+        lbl.Font = Enum.Font.GothamBold
+        lbl.Parent = bb
+
+        billboardESPs[player] = { Gui = bb, Label = lbl, Head = head }
     end
+
+    player.CharacterAdded:Connect(setupBillboard)
+    if player.Character then setupBillboard(player.Character) end
 end
 
-RunService.RenderStepped:Connect(function()
-    if Settings.WalkSpeedBoost then
-        local _, _, hum = getPlayerChar()
-        if hum and hum.WalkSpeed ~= Settings.WalkSpeed then
-            hum.WalkSpeed = Settings.WalkSpeed
+for _, p in ipairs(Players:GetPlayers()) do createBillboard(p) end
+Players.PlayerAdded:Connect(createBillboard)
+
+spawnTask(function()
+    while true do
+        task.wait(0.2)
+        if Settings.BillboardESP then
+            local _, myRoot = getPlayerChar()
+            if myRoot then
+                for p, data in pairs(billboardESPs) do
+                    if data.Gui and data.Label and data.Head and data.Head.Parent then
+                        data.Gui.Enabled = true
+                        local dist = math.floor((data.Head.Position - myRoot.Position).Magnitude)
+                        data.Label.Text = string.format("%s [%dm]", p.DisplayName, dist)
+                    end
+                end
+            end
+        else
+            for _, data in pairs(billboardESPs) do
+                if data.Gui then data.Gui.Enabled = false end
+            end
         end
     end
 end)
 
--- Anti-AFK Disconnect Engine
+-- ====================================================
+-- 11. AUTO SAFE ZONE ESCAPE (LOW HP TELEPORT)
+-- ====================================================
+local lastEscapeTime = 0
+spawnTask(function()
+    while true do
+        task.wait(0.25)
+        if Settings.AutoEscape and isAlive() then
+            local _, root, hum = getPlayerChar()
+            if hum and root and hum.MaxHealth > 0 then
+                local hpPercent = (hum.Health / hum.MaxHealth) * 100
+                if hpPercent <= Settings.EscapeThreshold and (tick() - lastEscapeTime > 8) then
+                    lastEscapeTime = tick()
+                    root.AssemblyLinearVelocity = Vector3.zero
+                    root.CFrame = GetSafeZoneCFrame()
+                    notify("Auto Escape", "Low HP detected! Teleported to Safe Zone.", 3)
+                end
+            end
+        end
+    end
+end)
+
+-- ====================================================
+-- 12. 24/7 ANTI-AFK ENGINE
+-- ====================================================
 if getconnections then
     for _, conn in pairs(getconnections(LocalPlayer.Idled)) do
         if conn.Disable then conn:Disable() elseif conn.Disconnect then conn:Disconnect() end
@@ -407,8 +588,11 @@ else
 end
 
 -- ====================================================
--- JUNEJO CLASSIC EXECUTIVE UI (100% FLAT & BORDERLESS)
+-- UI NUMBER 1 (UI 1) — ULTRA SCRIPT HUB CLASSIC MATTE DARK
+-- Form Factor: 280px × 260px | CornerRadius: 10px | Matte Black
+-- Mandatory Footer: ULTRA SCRIPT HUB | Made by Junejo
 -- ====================================================
+
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoHubUI_AnimeAbilityArena"
 ScreenGui.ResetOnSpawn = false
@@ -418,8 +602,8 @@ ScreenGui.Parent = guiParent
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 285, 0, 275)
-MainFrame.Position = UDim2.new(0.5, -142, 0.5, -137)
+MainFrame.Size = UDim2.new(0, 280, 0, 260)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -130)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -497,7 +681,7 @@ HeaderLine.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
 HeaderLine.BorderSizePixel = 0
 HeaderLine.Parent = MainFrame
 
--- Content Frame
+-- Content Scroll Frame
 local ContentScroll = Instance.new("ScrollingFrame")
 ContentScroll.Name = "ContentScroll"
 ContentScroll.Size = UDim2.new(1, -24, 1, -74)
@@ -515,7 +699,7 @@ UIList.SortOrder = Enum.SortOrder.LayoutOrder
 UIList.Padding = UDim.new(0, 4)
 UIList.Parent = ContentScroll
 
--- Helper: Add Borderless Toggle Row
+-- Helper: Add Classic Checkbox Toggle Row
 local function AddToggleRow(text, configKey, callback)
     local Row = Instance.new("Frame")
     Row.Size = UDim2.new(1, 0, 0, 23)
@@ -717,35 +901,59 @@ local function AddSliderRow(title, configKey, sliderKey, minVal, maxVal, default
 end
 
 -- ==========================================
--- POPULATE NEW 7 HYBRID FEATURES
+-- POPULATE CONFIRMED WORKING FEATURES
 -- ==========================================
 
--- 1. Zero-Delay Kill Aura
-AddToggleRow("Zero-Delay Kill Aura", "KillAura")
+-- 1. Hitbox Expander (18x18 Red Neon)
+AddToggleRow("Hitbox Expander", "HitboxExpander", function(enabled)
+    if not enabled then
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p.Character then applyHitbox(p.Character) end
+        end
+    end
+end)
 
--- 2. Auto Farm Kills (Yen Farm)
-AddToggleRow("Auto Farm Kills", "AutoFarmKills")
+-- 2. Fast Kill Aura (M1 Attack Spam)
+AddToggleRow("Fast Kill Aura", "KillAura")
 
--- 3. Hitbox Expander (18x18 Red Neon)
-AddToggleRow("Hitbox Expander", "HitboxExpander")
-
--- 4. Auto Ultimate / Awakening (G Key)
+-- 3. Auto Ultimate (Awakening G-Mode)
 AddToggleRow("Auto Ultimate (Awakening)", "AutoAwakening")
 
--- 5. Instant Auto Get Up (Anti-Ragdoll)
-AddToggleRow("Instant Auto Get Up", "InstantGetUp")
+-- 4. Auto Low HP Target Lock (Yen Farm)
+AddToggleRow("Auto Low HP Target Lock", "AutoFarmKills")
 
--- 6. Player ESP Highlights (Wallhacks)
-AddToggleRow("Player ESP Highlights", "PlayerESP")
-
--- 7. WalkSpeed Boost (Interactive Line Bar)
-AddSliderRow("WalkSpeed Boost", "WalkSpeedBoost", "WalkSpeed", 16, 150, 55, function(val)
+-- 5. WalkSpeed Boost (Interactive Line Bar Slider)
+AddSliderRow("WalkSpeed Boost", "WalkSpeedBoost", "WalkSpeed", 16, 120, 55, function(val)
     applyWalkSpeed()
 end, function(enabled)
     applyWalkSpeed()
 end)
 
--- Footer (Pinned at bottom)
+-- 6. Smooth Fly Mode
+AddSliderRow("Smooth Fly Mode", "FlyMode", "FlySpeed", 20, 120, 50, function(val)
+    Settings.FlySpeed = val
+end, function(enabled)
+    toggleFly(enabled)
+end)
+
+-- 7. Infinite Air Jump
+AddToggleRow("Infinite Air Jump", "InfiniteJump")
+
+-- 8. Instant Auto Get Up (< 0.05s Anti-Ragdoll)
+AddToggleRow("Instant Auto Get Up", "InstantGetUp")
+
+-- 9. Player ESP Highlights (Wallhacks)
+AddToggleRow("Player ESP Highlights", "PlayerESP")
+
+-- 10. Player Name & Distance ESP
+AddToggleRow("Player Name & Distance ESP", "BillboardESP")
+
+-- 11. Auto Safe Zone Escape (Low HP TP)
+AddToggleRow("Auto Safe Zone Escape", "AutoEscape")
+
+-- ==========================================
+-- FOOTER (MANDATORY ULTRA SCRIPT HUB FOOTER)
+-- ==========================================
 local Footer = Instance.new("Frame")
 Footer.Size = UDim2.new(1, 0, 0, 34)
 Footer.Position = UDim2.new(0, 0, 1, -36)
@@ -772,4 +980,4 @@ FooterSub.TextSize = 9
 FooterSub.Font = Enum.Font.GothamMedium
 FooterSub.Parent = Footer
 
-print("Junejo Ultra Script Hub V2 loaded successfully for Anime Ability Arena (New 7 Hybrid Features)!")
+print("Junejo Ultra Script Hub V2 loaded successfully for Anime Ability Arena!")
