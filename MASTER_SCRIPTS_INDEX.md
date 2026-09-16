@@ -460,22 +460,27 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
 
 ---
 
-## 28. 99 Nights in the Forest
+## 28. 99 Nights in the Forest (V2.0 Compact Edition)
 - **Game Name**: 99 Nights in the Forest
-- **Developer**: Grandma's Favourite Games
 - **Raw Script Loadstring**:
   ```lua
   loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/nights_in_the_forest.lua"))()
   ```
 - **Key System Status**: Disabled (Direct Standalone Executable)
-- **Features Included**:
-  - Missing Children ESP (Cyan visual tracking & distance counter for lost kids)
-  - Items & Chests ESP (Gold visual highlight & distance counter for chests, scrap, food, tools)
-  - Campfire Teleport (Instant emergency base escape teleport)
-  - Fly Mode (Smooth 3D WASD & Mobile flight engine)
-  - Infinite Jump (Continuous multi-jump in air)
+- **Features Included (Top 10 Features)**:
+  - 1. Kill Aura (Auto Attack Mobs, Cultists & Wolves within 55 studs)
+  - 2. Auto Feed Campfire (Pulls logs, wood, coal & gas directly into campfire)
+  - 3. Teleport to Campfire (1-Click Safe Escape Action)
+  - 4. Bring Fuel (1-Click Action: Logs, Wood, Coal, Gas, Oil, Branches)
+  - 5. Bring Food (1-Click Action: Berries, Mushrooms, Soup, Corn, Meat, Apples)
+  - 6. Bring Meds (1-Click Action: Bandages, Medkits, Pills, Gauze)
+  - 7. Missing Children ESP (Neon Cyan highlight + Distance & Name Tag)
+  - 8. FullBright (Permanent Night Vision & 100k Fog Removal)
+  - 9. Monster & Entity ESP (Red highlight on The Deer, The Owl, Cultists, Wolves, Bears)
+  - 10. WalkSpeed Boost (Integrated Speed Row with - / + Pill Controller: 16 to 250)
+  - Infinite Jump (Continuous multi-jump bypass)
   - Anti-AFK Engine (Auto 20-minute idle disconnect protection)
-  - Official Classic Junejo Dark UI (Flat Borderless Rows Standard, 280x215px)
+- **UI Design**: Compact Junejo Dark UI (280x225px) with `ScrollingFrame` (Exactly 5 rows visible at a time, scrollable).
 
 ---
 
@@ -900,21 +905,23 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   - Official Classic Junejo Dark UI (Flat Borderless Standard, 280x280px)
 
 ## 47. +1 Long Arm Toy Escape!
-- **Game Name**: +1 Long Arm Toy Escape!
+- **Game Name**: +1 Long Arm Toy Escape! / +1 Long Arm Escape
 - **Raw Script Loadstring**:
   ```lua
   loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/long_arm_toy_escape.lua"))()
   ```
 - **Key System Status**: Disabled (Direct Standalone Executable)
-- **Features Included (7 Features)**:
-  - Auto Train Arms (Touch Overhead Pull-Up Bars, Fire Growth Remotes, Tools & Click Engine)
-  - Auto Rebirth (Automatic Prestige Engine with in-game Requirement Display)
+- **Features Included (8 Features)**:
+  - Auto Train Arms (Multi-Threaded Clicker + Tool Spammer + Remote Sweeper + Overhead Pull-Up Bars Touch)
+  - Auto Wins (100% Vibration-Free & Screen-Stable: Virtual Touch Interest + Trophy Sweeper + Remote Harvester)
+  - Auto Rebirth (Automatic Prestige Engine & Remote Invocations)
   - WalkSpeed Boost + Integrated Pill Controller (- / +: 16 to 300)
-  - Noclip Mode (Walk & Phase Through Walls & Doors)
-  - Infinite Jump (Continuous Airborne Jump Loop)
-  - Fly Mode (Smooth 3D Flight)
+  - Infinite Jump (Airborne Continuous Multi-Jump Engine with Mobile Hook)
+  - NoClip Mode (Walk & Phase Through Walls & Barriers)
+  - Fly Mode + Integrated Pill Controller (- / +: 20 to 250 with WASD & Mobile Joystick)
   - Anti-AFK Engine (Auto 20-minute idle disconnect protection)
-  - Official Classic Junejo Dark UI (Flat Borderless Standard, 280x250px)
+  - Official Classic Junejo Dark UI (Flat Borderless Standard, 280x265px)
+
 
 ## 48. Throw a Coin
 - **Game Name**: Throw a Coin
@@ -936,11 +943,345 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   - Anti-AFK Engine (Auto 20-minute idle disconnect protection)
   - Official Classic Junejo Dark UI (Flat Borderless Standard, 280x300px)
 
+---
+
+## 49. Anime Card Farm
+- **Game Name**: Anime Card Farm
+- **Target URL**: https://www.roblox.com/games/125039473548047/Anime-Card-Farm
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/anime_card_farm.lua"))()
+  ```
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included (10 Features)**:
+  - Auto Carry Cards / Boxes (ProximityPrompts, Physical Touch & Remotes Sweep)
+  - Auto Instant Sell Boxes (Hitbox Touch, Sell Prompts & Deposit Remotes)
+  - Auto Open / Roll Packs (Fast Pack Rolling & Remote Invocations)
+  - Auto Upgrade Plot Slots (Automatic Slot & Plot Expansion)
+  - Infinite Money (Permanent Multiplier & Visual Enforcer)
+  - WalkSpeed Boost + Integrated Pill Controller (- / +: 16 to 300)
+  - Jump Power Boost + Integrated Pill Controller (- / +: 50 to 300)
+  - Infinite Jump (Continuous Multi-Jump Engine)
+  - Fly Mode (Smooth 3D Flight with WASD/Space/Shift controls)
+  - Anti-AFK Engine (Auto 20-minute idle disconnect protection)
+  - Official Classic Junejo Dark UI (Flat Borderless Standard, 280x315px)
+
+---
+
+## 50. Build & Defend Raft
+- **Game Name**: Build & Defend Raft
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/build_and_defend_raft.lua"))()
+  ```
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included**:
+  - Teleport to Raft / Base
+  - Auto Redeem Codes & Daily Gifts
+  - Auto Enemy Detector (ESP / Glow Highlights)
+  - WalkSpeed Boost + Integrated Pill Controller (- / +)
+  - JumpPower Boost + Integrated Pill Controller (- / +)
+  - Official Classic Junejo Dark UI (Flat Borderless Standard, 280px)
+
+---
+
+## 51. Slap Battles
+- **Game Name**: Slap Battles 🥊
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/slap_battles.lua"))()
+  ```
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included**:
+  - Slap Aura (Safe 0.28s auto-slap with reach check)
+  - Smart Anti-Reverse (Ignores active reverse shields)
+  - Hitbox Extender / Reach
+  - Auto Glove Ability [E]
+  - Physical Anti-Void Platform (Y = -5)
+  - Anti-Ragdoll & Fast Recovery
+  - Anti-Fling Dampener
+  - Auto Slapple Collector (Slapple trees island)
+  - Tycoon Auto-Click
+  - Megarock AFK Helper (Stone mode farm)
+  - Player & Glove ESP (With reverse alert)
+  - WalkSpeed Boost with - / + Pill Controller
+  - JumpPower Boost with - / + Pill Controller
+  - Infinite Jump
+  - Teleports: Lobby, Main Arena, Slapple Island, Moai Island, Floating Plate, Cannon
+  - Anti-AFK & Rejoin Server
+  - Official Classic Junejo Dark UI (Flat Borderless Standard, 280px)
+
+---
+
+## 52. Jump To Steal SCP Monsters
+- **Game Name**: Jump To Steal SCP Monsters 👹
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/jump_to_steal_scp.lua"))()
+  ```
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included**:
+  - Instant Steal Highest SCP Monster (1-Click)
+  - Instant Steal OG Floor 8 SCP (1-Click)
+  - Auto Steal Loop (Smooth 2-teleport grab & deposit)
+  - Auto Collect Cash (Pads & Remotes Sweep)
+  - Auto Upgrade Jump & Capacity
+  - Auto Rebirth & Auto Open Lucky Blocks
+  - Anti-Guard Godmode (Bypasses guard damage)
+  - Monster ESP (Rarity Glowing Highlights)
+  - Guard ESP (Red Radar) & Player ESP
+  - WalkSpeed Boost + Control Bar Line
+  - Fly Mode (3D Flight) + Speed Control Bar Line
+  - Infinite Jump + Height Control Bar Line
+  - Teleport to Base (Plot)
+  - Anti-AFK
+  - Official Classic Junejo Dark UI (Flat Borderless Standard, 280px)
+
+---
+
+## 53. Steal a Chicken
+- **Game Name**: Steal a Chicken 🐔
+- **Place ID**: 76503495566299
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/steal_a_chicken.lua"))()
+  ```
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included**:
+  - Auto Steal Chickens (Highest Rarity Priority / Instant Steal & Base Drop)
+  - Interactive Target Zone Selector (`< [Zone Name] >` Pill: All Zones, Crystal, Cosmic, Abyss, Beach, Volcano, Snow, Desert, Jungle, Lake, Forest)
+  - ⚡ Teleport to Target Zone (1-Click Instant Action)
+  - Auto Collect Eggs (Base / Pen & UI Sweeper)
+  - Auto Sell Eggs (5-Layer Auto Sell Engine: Remotes + Prompts + Touch Pads + UI Dialogues)
+  - ⚡ Sell Eggs Now (1-Click Instant Action)
+  - Auto Train Speed (Base Treadmill Farm)
+  - Remove Guards (Safe Mode)
+  - Fly Mode (Smooth 3D Flight)
+  - WalkSpeed Boost with Integrated Pill Controller (- / +)
+  - No Clip & Infinite Jump
+  - ⚡ Teleport to My Base
+  - Anti-AFK Engine (Auto 20-minute idle disconnect protection)
+  - Official Classic Junejo Dark UI (Flat Borderless Standard, 280x330px)
+
+---
+
+## 54. Brookhaven RP
+- **Game Name**: Brookhaven 🏡 RP
+- **Place ID**: 4924922222
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/brookhaven_rp.lua"))()
+  ```
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included**:
+  - Smooth Fly (Fly Mode + Integrated - / + Fly Speed Pill: 10 to 250)
+  - WalkSpeed Boost (Integrated - / + Speed Pill: 16 to 250)
+  - JumpPower Boost (Integrated - / + Jump Pill: 50 to 300)
+  - Infinite Jump (Airborne Continuous Multi-Jump)
+  - Noclip (Pass Walls) (Stepped Collision Bypass)
+  - Anti-Sit Mode (Prevents Forced Sitting on Cars/Seats)
+  - Anti-Ragdoll / Stabilizer (Velocity Anti-Fling Protection)
+  - Ghost / Invisible Mode (Character Transparency 0.8)
+  - 💀 Reset Character (1-Click Respawn Action Button)
+  - Anti-AFK Engine (Auto 20-minute idle disconnect protection)
+  - Official Classic Junejo Dark UI (Flat Borderless Standard, 280x320px)
+
+---
+
+## 55. Grow Beanstalk to Steal An Egg (V4.0 - Infinite Cash Edition)
+- **Game Name**: Grow Beanstalk to Steal An Egg
+- **Place ID**: 87695656520229
+- **Universe ID**: 10737911048
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/grow_beanstalk_to_steal_an_egg.lua"))()
+  ```
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included**:
+  - Infinite Cash (+999B) (NEW: Rapid pet revenue, ATM/collector magnet & leaderstats cash locker)
+  - Auto Steal Egg (Continuous automated egg stealing & plot deposit loop)
+  - Auto Steal Rare Egg (Prioritizes highest tier & rarest eggs on beanstalk summit)
+  - Auto Steal Nearest Egg (Instant grab of closest egg in range)
+  - Fast Climb on Beanstalk (UPGRADED: Superfast smooth upward glide & summit reach)
+  - Infinite Long Beanstalk (6-Layer Beanstalk Growth & Skyward Stacker + Auto Cash Engine)
+  - Auto Unlock Treadmill (5-Layer Auto Unlock & Speed Trainer)
+  - Auto Upgrade Base (Auto buys base capacity, beanstalk growth and plot upgrades)
+  - Auto Hatch Egg (4-Layer plot prompt, touch pad, remotes & GUI clicker)
+  - Auto Rebirth (4-Layer remote sweeper, plot pads, prompts & UI confirmatory clicker)
+  - Auto Claim All Rewards (Claims daily rewards, playtime gifts, free chests & spins)
+  - WalkSpeed (Interactive Line Bar Slider: 16 to 300)
+  - Infinite Jump (Interactive Line Bar Slider for Jump Power: 50 to 300)
+  - Fly Mode (Interactive Line Bar Slider for Fly Speed: 20 to 250 with Mobile/PC 3D navigation)
+  - Anti-AFK Engine (Auto 20-minute idle disconnect protection)
+  - Official Classic Junejo Dark UI (Flat Borderless Rows & Interactive Line Bars Standard, 285x320px)
+
+---
+
+## 56. Anime Ability Arena
+- **Game Name**: Anime Ability Arena
+- **Place ID**: 108567435288296 / 105692919293481
+- **Universe ID**: 10399136326
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/anime_ability_arena.lua"))()
+  ```
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included**:
+  - Zero-Delay Kill Aura (Rapid M1 auto-attacks on all enemies within range)
+  - Auto Farm Kills (Auto teleports behind lowest HP target & combos for Yen)
+  - Hitbox Expander (18x18 Red Neon expanded target hitboxes)
+  - Instant Auto Get Up (< 0.1s instant recovery from knockdowns/trips)
+  - WalkSpeed Boost (Interactive Line Bar Slider: 16 to 150)
+  - Auto Ultimate / Awakening (Auto triggers G key & Awakening modes upon full meter)
+  - Player ESP Highlights (Full Red Neon Wallhack visual chams through walls)
+  - Anti-AFK Engine (Auto 20-minute idle disconnect protection)
+  - Official Classic Junejo Dark UI (Flat Borderless Standard, 285x275px)
+
+---
+
+## 57. Steal Fish Eggs
+- **Game Name**: Steal Fish Eggs
+- **Place ID**: 99183404085821
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/steal_fish_eggs.lua"))()
+  ```
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included**:
+  - 1. Auto Steal Best Egg (with interactive Area Selector Pill & Dropdown buttons for all 9 zones: All Zones, Coral Reef, Deep Ocean, Pearl Lagoon, Snowy Sea, Volcanic Sea, Jelly Ocean, Sunken Ruins, Atlantis)
+  - 2. Auto Steal Astral Eggs Only (Dedicated VIP God-tier Astral & Abyssal egg priority target mode)
+  - 3. Remove All Guards (Fishes) (Neutralizes & deletes all guard fishes, sharks, hazards, obstacles with continuous sweep & Heartbeat proximity shield)
+  - 4. Instant Teleport to All Biomes (Interactive Biome Teleport grid: Base Tank, Escape Line + 8 Biome Zones)
+  - 5. WalkSpeed Boost (Integrated Speed Row with - / + Pill Controller: 16 to 300)
+  - 6. Fly Mode (Smooth 3D flying with WASD / Mobile controls + Interactive Line Bar Slider: 20 to 200)
+  - 7. Rare Egg ESP (Highlights & Distance for non-basic eggs)
+  - Anti-AFK Engine (Auto 20-minute idle disconnect protection)
+  - Official Classic Junejo Dark UI (Flat Borderless Standard, 285x345px)
+
+---
+
+## 58. Steal An Anime Egg (V3.0 Ultimate Rare Egg Edition)
+- **Game Name**: Steal An Anime Egg
+- **Place ID**: 76377501906469
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/steal_an_anime_egg.lua"))()
+  ```
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included (16 Features)**:
+  - 1. Auto Steal Rare Egg (Calculates highest rarity/distance score, teleports to rare egg, grabs with 0s prompt & returns directly to base nest)
+  - 2. Save Base Position (1-Click Action Button to save exact base coordinates)
+  - 3. Instant Steal (0s Prompt) (Real-time 0s hold bypass on all game prompts)
+  - 4. Auto Deposit Eggs (Physical nest pad touch + Proximity + Remote sweeper)
+  - 5. Auto Hatch Eggs (4-Layer: Base nest prompts + Pods + Deep Remotes + GUI clicker)
+  - 6. Auto Rebirth (Multi-Layer: Deep ReplicatedStorage remotes + Rebirth pads + GUI clicker)
+  - 7. Auto Collect Cash (Global magnet + Base collector pad magnet)
+  - 8. Auto Attack Boss (Safe float + tool activate + combat remotes)
+  - 9. Anime Egg ESP (Yellow glowing highlight + Distance/Name tag)
+  - 10. Player ESP (Red glowing highlight + Distance/Name tag)
+  - 11. Player Base ESP (Blue glowing highlight on all bases)
+  - 12. Boss ESP (Purple glowing highlight on raid boss)
+  - 13. Anti-Egg Drop / Anti-Ragdoll (Prevents dropping eggs on hit/trip)
+  - 14. Infinite Jump (Airborne continuous multi-jump bypass)
+  - 15. WalkSpeed Boost (Integrated Speed Row with - / + Pill Controller: 16 to 300)
+  - 16. Anti-AFK Engine (Auto 20-minute idle disconnect protection)
+- **UI Design**: Compact Junejo Dark UI (280x225px) with `ScrollingFrame` (Exactly 5 rows visible at a time, scrollable).
+
+---
+
+## 59. Last Stop
+- **Game Name**: Last Stop 🚌
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/last_stop.lua"))()
+  ```
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included (8 Features)**:
+  - 1. Teleport To Bus (1-Click Safe Return Action)
+  - 2. Auto Loot [TP + Grab] (Instant CFrame teleport, 0s prompt fire & return)
+  - 3. Kill Aura (Auto Attack zombies/enemies within range)
+  - 4. Fullbright / Remove Fog (Toggle permanent night vision & fog removal)
+  - 5. WalkSpeed Boost (Integrated Speed Row with - / + Pill Controller: 16 to 250)
+  - 6. Infinite Jump (Continuous multi-jump bypass)
+  - 7. Anti-AFK Engine (Auto 20-minute idle disconnect protection)
+  - 8. Mouse Unlocker Engine (Integrated free cursor interaction)
+- **UI Design**: Compact Junejo Dark UI (280x225px) with `ScrollingFrame` (Exactly 5 rows visible at a time, scrollable).
+
+---
+
+## 60. Trading Jump To Steal An Egg
+- **Game Name**: Trading Jump To Steal An Egg
+- **Place ID**: 106383201135975
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/trading_jump_to_steal_an_egg.lua"))()
+  ```
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included**:
+  - 1. Auto Steal Rare Egg (Strictly targets the single #1 top floor/highest elevation sky egg, 0.65s server stay-and-grab lock, direct return to base & auto-deposit)
+  - 2. Teleport to Rare Egg (1-Click Action Button: instantly teleports character directly to the top floor/highest step rare egg on the map)
+  - 3. Instant Steal (0s Prompt) (Real-time 0s hold bypass on all game prompts)
+  - 4. Save Base Position (1-Click Action Button to save exact base coordinates)
+  - 5. Auto Rebirth (Automatic prestige & multiplier remote sweeper + touch pads + GUI buttons)
+  - 6. Auto Train Jump (+1 Jump power & tool activation + training pads auto touch)
+  - 7. Rare Egg ESP (Gold) (Exclusively highlights ONLY the single #1 top floor/highest step egg with glowing highlight + real-time elevation Y & distance billboard tag)
+  - 8. Player ESP & Radar (Red glowing highlights + Distance tags on all rival players)
+  - 9. Player Base ESP (Cyan glowing highlights + Owner Base tags on all bases/plots)
+  - 10. WalkSpeed Boost (Integrated Speed Row with - / + Pill Controller: 16 to 300)
+  - Infinite Jump (Airborne continuous multi-jump bypass)
+  - Anti-AFK Engine (Auto 20-minute idle disconnect protection)
+- **UI Design**: Compact Junejo Dark UI (280x225px) with `ScrollingFrame` (Exactly 5 rows visible at a time, scrollable).
+
+---
+
+## 61. Anime Ability Arena
+- **Game Name**: Anime Ability Arena
+- **Place ID**: 108567435288296 / 105692919293481
+- **Universe ID**: 10399136326
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/anime_ability_arena.lua"))()
+  ```
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included (All 100% Tested & Verified)**:
+  - 1. Hitbox Expander (18x18 Red Neon expanded target hitboxes for 100% hit rate)
+  - 2. Fast Kill Aura (Zero-delay rapid M1 punches on nearby enemies)
+  - 3. Auto Ultimate / Awakening (Auto triggers G Key & Awakening mode)
+  - 4. Auto Low HP Target Lock (Highlights lowest HP target in Gold & teleports behind them without attacking - for manual PvP)
+  - 5. WalkSpeed Boost (Interactive Line Bar Slider: 16 to 120 studs/s)
+  - 6. Smooth Fly Mode (Interactive Line Bar Slider: 20 to 120 studs/s)
+  - 7. Infinite Air Jump (Continuous multi-jump bypass)
+  - 8. Instant Auto Get Up (< 0.05s instant recovery from knockdowns/ragdoll)
+  - 9. Player ESP Highlights (Red Neon wallhack chams through walls)
+  - 10. Player Name & Distance ESP (Head Billboard with live meters)
+  - 11. Auto Safe Zone Escape (Low HP instant TP protection)
+  - 12. 24/7 Anti-AFK Disconnect Engine
+- **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (280x260px) with `ScrollingFrame` & Mandatory Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
+
+---
+
+## 62. Pull an Egg
+- **Game Name**: Pull an Egg
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/pull_an_egg.lua"))()
+  ```
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included (All 100% Tested & Verified)**:
+  - 1. Remove Guard (Instant removal / bypass of security guards & guard kill zones)
+  - 2. Auto Pull Egg (Automatic continuous egg pulling)
+  - 3. Auto Train / Auto Click (Auto workout with weights/tools & power clicker)
+  - 4. Auto Rebirth (Automatic rebirth progression)
+  - 5. Auto Hatch / Open Egg (Automatic egg opening & hatching)
+  - 6. Auto Equip Best Pets (Automatic best pet inventory equip)
+  - 7. Auto Claim Free Gifts (Automatic playtime rewards & daily rewards claim)
+  - 8. Teleport to Zones / Worlds (Instant zone & stage teleportation)
+  - 9. WalkSpeed Boost (+ / - Stepper Controller: 16 to 250)
+  - 10. Infinite Jump (Airborne continuous multi-jump bypass)
+  - 11. Noclip (Walk through walls and obstacles)
+  - 12. 24/7 Anti-AFK Disconnect Engine
+- **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (280x440px) with `ScrollingFrame` & Mandatory Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
+
 ====================================================
-Updated: September 7, 2026
+Updated: September 16, 2026
 ====================================================
-
-
-
-
-
