@@ -220,86 +220,46 @@ local function ShowNotification(title, message)
 end
 
 -- ====================================================
--- BASE / GOAL / DROP ZONE LOCATOR
+-- CLAIM AREA & EGG LOCATORS (MATCHING GAME CORE STRUCTURE)
 -- ====================================================
-local function GetPlayerBaseCFrame()
-    local baseCFrame = nil
+
+-- 1. Find Claim / Deposit Area (XPClaimArea / Base)
+local function GetClaimAreas()
+    local areas = {}
     pcall(function()
-        local myName = LocalPlayer.Name
-        local myUserId = LocalPlayer.UserId
-        
-        -- 1. Search for owned Plots/Bases/Nests in Workspace
-        for _, containerName in ipairs({"Plots", "Bases", "Houses", "Islands", "Nests", "Zones", "Spawns", "DropZones", "Delivery", "SafeZones"}) do
-            local container = Workspace:FindFirstChild(containerName)
-            if container then
-                for _, plot in ipairs(container:GetChildren()) do
-                    local isMine = false
-                    if string.find(string.lower(plot.Name), string.lower(myName)) then
-                        isMine = true
-                    end
-                    local ownerVal = plot:FindFirstChild("Owner") or plot:FindFirstChild("Player") or plot:FindFirstChild("UserId")
-                    if ownerVal then
-                        if ownerVal.Value == LocalPlayer or ownerVal.Value == myName or ownerVal.Value == myUserId then
-                            isMine = true
-                        end
-                    end
-                    if isMine then
-                        local dropPart = plot:FindFirstChild("Deposit") or plot:FindFirstChild("Drop") or plot:FindFirstChild("Pad") or plot:FindFirstChild("Nest") or plot:FindFirstChild("Collector") or plot:FindFirstChild("Spawn") or plot:FindFirstChild("SpawnLocation") or plot.PrimaryPart or plot:FindFirstChildOfClass("BasePart")
-                        if dropPart and dropPart:IsA("BasePart") then
-                            baseCFrame = dropPart.CFrame + Vector3.new(0, 3, 0)
-                            return
-                        elseif plot:IsA("Model") and plot.PrimaryPart then
-                            baseCFrame = plot.PrimaryPart.CFrame + Vector3.new(0, 3, 0)
-                            return
-                        end
-                    end
-                end
-            end
-        end
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
 
-        -- 2. Search anywhere in Workspace for a base named after player
-        for _, obj in ipairs(Workspace:GetChildren()) do
-            if obj:IsA("Model") or obj:IsA("Folder") then
-                local oName = string.lower(obj.Name)
-                if string.find(oName, "base") or string.find(oName, "plot") or string.find(oName, "island") or string.find(oName, "nest") then
-                    local owner = obj:FindFirstChild("Owner") or obj:FindFirstChild("Player")
-                    if (owner and (owner.Value == LocalPlayer or owner.Value == myName)) or string.find(oName, string.lower(myName)) then
-                        local part = obj:FindFirstChild("Drop") or obj:FindFirstChild("Deposit") or obj:FindFirstChild("Pad") or obj:FindFirstChild("Nest") or obj.PrimaryPart or obj:FindFirstChildOfClass("BasePart")
-                        if part and part:IsA("BasePart") then
-                            baseCFrame = part.CFrame + Vector3.new(0, 3, 0)
-                            return
-                        end
-                    end
-                end
-            end
-        end
-
-        -- 3. Check for SpawnLocations
         for _, obj in ipairs(Workspace:GetDescendants()) do
-            if obj:IsA("SpawnLocation") and obj.Enabled then
-                baseCFrame = obj.CFrame + Vector3.new(0, 3, 0)
-                return
-            end
-        end
+            local oName = string.lower(obj.Name)
+            if string.find(oName, "xpclaimarea") or string.find(oName, "claimarea") or string.find(oName, "deposit") or string.find(oName, "dropzone") or string.find(oName, "delivery") or string.find(oName, "base") or string.find(oName, "nest") then
+                local targetPart = nil
+                if obj:IsA("BasePart") then
+                    targetPart = obj
+                elseif obj:IsA("Model") and obj.PrimaryPart then
+                    targetPart = obj.PrimaryPart
+                elseif obj:IsA("Model") and obj:FindFirstChildOfClass("BasePart") then
+                    targetPart = obj:FindFirstChildOfClass("BasePart")
+                end
 
-        -- 4. Check for Safe Zone / Finish / Delivery parts
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            if obj:IsA("BasePart") then
-                local n = string.lower(obj.Name)
-                if string.find(n, "deposit") or string.find(n, "dropzone") or string.find(n, "delivery") or string.find(n, "finish") or string.find(n, "goal") or string.find(n, "safezone") then
-                    baseCFrame = obj.CFrame + Vector3.new(0, 3, 0)
-                    return
+                if targetPart then
+                    local dist = (targetPart.Position - hrp.Position).Magnitude
+                    table.insert(areas, {
+                        Object = obj,
+                        Part = targetPart,
+                        Distance = dist
+                    })
                 end
             end
         end
+
+        table.sort(areas, function(a, b) return a.Distance < b.Distance end)
     end)
-
-    return baseCFrame or SavedBaseCFrame or (isAlive() and LocalPlayer.Character.HumanoidRootPart.CFrame)
+    return areas
 end
 
--- ====================================================
--- EGG TARGET LOCATOR
--- ====================================================
+-- 2. Find Target Eggs (CarryAreaEgg / RareAreaEggHighlight / Eggs)
 local function GetTargetEggs()
     local eggs = {}
     pcall(function()
@@ -309,30 +269,33 @@ local function GetTargetEggs()
 
         for _, obj in ipairs(Workspace:GetDescendants()) do
             if obj ~= char and not obj:IsDescendantOf(char) then
+                local oName = string.lower(obj.Name)
+                local pName = obj.Parent and string.lower(obj.Parent.Name) or ""
+                
                 local isEgg = false
                 local targetPart = nil
                 local targetPrompt = nil
                 local targetCD = nil
 
-                local oName = string.lower(obj.Name)
-                local pName = obj.Parent and string.lower(obj.Parent.Name) or ""
-
-                -- Avoid player characters and NPCs
                 if not Players:GetPlayerFromCharacter(obj) and not string.find(pName, "character") and not string.find(pName, "player") then
-                    if obj:IsA("Model") then
-                        if (string.find(oName, "egg") or string.find(oName, "pull") or string.find(oName, "tether") or string.find(oName, "lucky") or string.find(oName, "brainrot")) and not string.find(oName, "hatch") and not string.find(oName, "shop") and not string.find(oName, "gui") then
+                    if string.find(oName, "carryareaegg") or string.find(oName, "areaegg") or string.find(oName, "rareegg") or string.find(oName, "highlight") then
+                        if obj:IsA("BasePart") then
+                            targetPart = obj
+                            isEgg = true
+                        elseif obj:IsA("Model") then
+                            targetPart = obj.PrimaryPart or obj:FindFirstChildOfClass("BasePart")
+                            isEgg = true
+                        end
+                    elseif obj:IsA("Model") then
+                        if (string.find(oName, "egg") or string.find(oName, "pull") or string.find(oName, "lucky") or string.find(oName, "brainrot")) and not string.find(oName, "hatch") and not string.find(oName, "shop") and not string.find(oName, "gui") then
                             targetPart = obj.PrimaryPart or obj:FindFirstChild("Handle") or obj:FindFirstChild("Egg") or obj:FindFirstChild("Main") or obj:FindFirstChildOfClass("BasePart")
                             if targetPart then
-                                targetPrompt = obj:FindFirstChildOfClass("ProximityPrompt", true)
-                                targetCD = obj:FindFirstChildOfClass("ClickDetector", true)
                                 isEgg = true
                             end
                         end
                     elseif obj:IsA("BasePart") and obj.Parent and not obj.Parent:IsA("Model") then
-                        if (string.find(oName, "egg") or string.find(oName, "pullegg") or string.find(oName, "tether")) and not string.find(oName, "hatch") and not string.find(oName, "shop") then
+                        if (string.find(oName, "egg") or string.find(oName, "pull") or string.find(oName, "tether")) and not string.find(oName, "hatch") and not string.find(oName, "shop") then
                             targetPart = obj
-                            targetPrompt = obj:FindFirstChildOfClass("ProximityPrompt")
-                            targetCD = obj:FindFirstChildOfClass("ClickDetector")
                             isEgg = true
                         end
                     elseif obj:IsA("ProximityPrompt") and obj.Enabled then
@@ -346,6 +309,12 @@ local function GetTargetEggs()
                     end
 
                     if isEgg and targetPart then
+                        if not targetPrompt then
+                            targetPrompt = obj:FindFirstChildOfClass("ProximityPrompt", true)
+                        end
+                        if not targetCD then
+                            targetCD = obj:FindFirstChildOfClass("ClickDetector", true)
+                        end
                         local dist = (targetPart.Position - hrp.Position).Magnitude
                         table.insert(eggs, {
                             Model = obj:IsA("Model") and obj or obj.Parent,
@@ -429,7 +398,7 @@ task.spawn(function()
 end)
 
 -- ====================================================
--- FEATURE 2: AUTO PULL EGG & BRING TO BASE ENGINE
+-- FEATURE 2: AUTO PULL EGG & DELIVER TO BASE (SEAMLESS REPEAT)
 -- ====================================================
 task.spawn(function()
     while true do
@@ -437,26 +406,22 @@ task.spawn(function()
             pcall(function()
                 local char = LocalPlayer.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                local hum = char and char:FindFirstChildOfClass("Humanoid")
-                if not hrp or not hum then return end
+                if not hrp then return end
 
-                local baseCFrame = GetPlayerBaseCFrame()
                 local eggList = GetTargetEggs()
+                local claimList = GetClaimAreas()
 
                 if #eggList > 0 then
-                    local target = eggList[1]
-                    local eggPart = target.Part
-                    local eggPrompt = target.Prompt
-                    local eggCD = target.ClickDetector
-                    local eggModel = target.Model
+                    local targetEgg = eggList[1]
+                    local eggPart = targetEgg.Part
+                    local eggPrompt = targetEgg.Prompt
+                    local eggCD = targetEgg.ClickDetector
 
-                    -- 1. Move/Teleport to Egg
-                    if (hrp.Position - eggPart.Position).Magnitude > 6 then
-                        hrp.CFrame = eggPart.CFrame + Vector3.new(0, 2, 0)
-                        task.wait(0.12)
-                    end
+                    -- 1. Teleport to Egg
+                    hrp.CFrame = eggPart.CFrame + Vector3.new(0, 1.5, 0)
+                    task.wait(0.08)
 
-                    -- 2. Equip Pull / Rope Tool
+                    -- 2. Equip and Activate Pull / Rope Tool
                     local tool = char:FindFirstChildOfClass("Tool")
                     if not tool and LocalPlayer:FindFirstChild("Backpack") then
                         for _, item in ipairs(LocalPlayer.Backpack:GetChildren()) do
@@ -469,81 +434,58 @@ task.spawn(function()
                     end
                     if tool then tool:Activate() end
 
-                    -- 3. Grab / Interact with the Egg
+                    -- 3. Grab / Touch Egg
+                    TriggerTouch(hrp, eggPart)
                     if eggPrompt and eggPrompt.Parent and eggPrompt.Enabled then
                         TriggerPrompt(eggPrompt)
                     end
                     if eggCD and eggCD.Parent and fireclickdetector then
                         fireclickdetector(eggCD)
                     end
-                    TriggerTouch(hrp, eggPart)
-
-                    -- 4. Fire Egg Pull specific Remotes (Safe - no spin wheel remotes)
-                    for _, rootService in ipairs({ReplicatedStorage, Workspace}) do
-                        for _, remote in ipairs(rootService:GetDescendants()) do
-                            if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
-                                local rName = string.lower(remote.Name)
-                                if (string.find(rName, "pull") or string.find(rName, "grab") or string.find(rName, "steal") or string.find(rName, "take")) and not string.find(rName, "spin") and not string.find(rName, "wheel") and not string.find(rName, "gift") and not string.find(rName, "shop") then
-                                    if remote:IsA("RemoteEvent") then
-                                        remote:FireServer(eggModel or eggPart)
-                                        remote:FireServer("Pull", eggModel or eggPart)
-                                        remote:FireServer(1)
-                                        remote:FireServer()
-                                    elseif remote:IsA("RemoteFunction") then
-                                        task.spawn(function()
-                                            pcall(function() remote:InvokeServer(eggModel or eggPart) end)
-                                            pcall(function() remote:InvokeServer("Pull") end)
-                                        end)
-                                    end
-                                end
-                            end
-                        end
-                    end
 
                     task.wait(0.15)
 
-                    -- 5. Pull & Transport Egg to Base
-                    if baseCFrame then
-                        hrp.CFrame = baseCFrame
-                        task.wait(0.2)
-                        
-                        -- Trigger deposit touch & prompt at base
-                        for _, obj in ipairs(Workspace:GetDescendants()) do
-                            if obj:IsA("BasePart") and (obj.Position - hrp.Position).Magnitude <= 15 then
-                                local n = string.lower(obj.Name)
-                                if string.find(n, "deposit") or string.find(n, "drop") or string.find(n, "pad") or string.find(n, "nest") or string.find(n, "collector") or string.find(n, "base") or string.find(n, "claim") then
-                                    TriggerTouch(hrp, obj)
-                                    local p = obj:FindFirstChildOfClass("ProximityPrompt")
-                                    if p then TriggerPrompt(p) end
-                                end
-                            end
-                        end
+                    -- 4. Teleport with Egg to Claim Area / Base
+                    local claimPart = nil
+                    if #claimList > 0 then
+                        claimPart = claimList[1].Part
+                    end
 
-                        if tool then tool:Activate() end
+                    if claimPart then
+                        hrp.CFrame = claimPart.CFrame + Vector3.new(0, 2, 0)
+                        task.wait(0.1)
+                        TriggerTouch(hrp, claimPart)
+                        TriggerTouch(eggPart, claimPart)
+                    elseif SavedBaseCFrame then
+                        hrp.CFrame = SavedBaseCFrame + Vector3.new(0, 2, 0)
                     end
+
+                    task.wait(0.15)
                 else
-                    -- Stand at base and pull / activate tool
-                    if baseCFrame and (hrp.Position - baseCFrame.Position).Magnitude > 10 then
-                        hrp.CFrame = baseCFrame
+                    -- Stand at claim / base and pull
+                    if #claimList > 0 then
+                        hrp.CFrame = claimList[1].Part.CFrame + Vector3.new(0, 2, 0)
                     end
-                    
                     local tool = char:FindFirstChildOfClass("Tool")
                     if tool then tool:Activate() end
                 end
             end)
         end
-        task.wait(0.25)
+        task.wait(0.15)
     end
 end)
 
 -- ====================================================
--- FEATURE 3: AUTO TRAIN / AUTO CLICK
+-- FEATURE 3: AUTO TRAIN / AUTO CLICK (TREADMILL & TOOL)
 -- ====================================================
 task.spawn(function()
     while true do
         if Toggles.AutoTrain and isAlive() then
             pcall(function()
                 local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                
+                -- Equip & activate tool
                 local tool = char:FindFirstChildOfClass("Tool")
                 if not tool and LocalPlayer:FindFirstChild("Backpack") then
                     for _, item in ipairs(LocalPlayer.Backpack:GetChildren()) do
@@ -554,17 +496,16 @@ task.spawn(function()
                         end
                     end
                 end
-
                 if tool then
                     tool:Activate()
                 end
 
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if remote:IsA("RemoteEvent") then
-                        local rName = string.lower(remote.Name)
-                        if (string.find(rName, "train") or string.find(rName, "strength") or string.find(rName, "power") or string.find(rName, "workout") or string.find(rName, "lift")) and not string.find(rName, "wheel") and not string.find(rName, "spin") then
-                            remote:FireServer()
-                            remote:FireServer(1)
+                -- Touch treadmill if nearby
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    local n = string.lower(obj.Name)
+                    if (string.find(n, "treadmill") or string.find(n, "mobonlystreadmillmodel")) and obj:IsA("BasePart") and hrp then
+                        if (obj.Position - hrp.Position).Magnitude <= 20 then
+                            TriggerTouch(hrp, obj)
                         end
                     end
                 end
@@ -760,7 +701,7 @@ local function teleportToZone()
         for _, obj in ipairs(Workspace:GetDescendants()) do
             if obj:IsA("BasePart") or obj:IsA("Model") then
                 local oName = string.lower(obj.Name)
-                if string.find(oName, "zone") or string.find(oName, "world") or string.find(oName, "eggarea") or string.find(oName, "stage") or string.find(oName, "safe") then
+                if string.find(oName, "zone") or string.find(oName, "world") or string.find(oName, "eggarea") or string.find(oName, "stage") or string.find(oName, "safe") or string.find(oName, "xpclaimarea") then
                     if obj:IsA("BasePart") then
                         targetCFrame = obj.CFrame + Vector3.new(0, 4, 0)
                     elseif obj:IsA("Model") and obj.PrimaryPart then
