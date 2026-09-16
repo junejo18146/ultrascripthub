@@ -85,6 +85,55 @@ else
     end)
 end
 
+-- Safe Button Clicker Utility (Fires all possible click events on Mobile & PC)
+local function TriggerGuiButton(btn)
+    if not btn or not btn:IsA("GuiButton") then return end
+    pcall(function()
+        if getconnections then
+            for _, c in ipairs(getconnections(btn.MouseButton1Click)) do c:Fire() end
+            for _, c in ipairs(getconnections(btn.MouseButton1Down)) do c:Fire() end
+            for _, c in ipairs(getconnections(btn.Activated)) do c:Fire() end
+        end
+        if firesignal then
+            firesignal(btn.MouseButton1Click)
+            firesignal(btn.MouseButton1Down)
+            firesignal(btn.Activated)
+        end
+    end)
+end
+
+-- Safe ProximityPrompt Trigger
+local function TriggerPrompt(prompt)
+    if not prompt or not prompt:IsA("ProximityPrompt") or not prompt.Enabled then return end
+    pcall(function()
+        prompt.HoldDuration = 0
+        prompt.RequiresLineOfSight = false
+        prompt.MaxActivationDistance = math.huge
+        if fireproximityprompt then
+            fireproximityprompt(prompt, 0)
+            fireproximityprompt(prompt, 1)
+            fireproximityprompt(prompt)
+        end
+        if prompt.InputHoldBegin and prompt.InputHoldEnd then
+            prompt:InputHoldBegin()
+            prompt:InputHoldEnd()
+        end
+    end)
+end
+
+-- Safe Touch Interest Trigger
+local function TriggerTouch(part, targetPart)
+    if not part or not targetPart then return end
+    pcall(function()
+        if firetouchinterest then
+            firetouchinterest(part, targetPart, 0)
+            firetouchinterest(part, targetPart, 1)
+            firetouchinterest(targetPart, part, 0)
+            firetouchinterest(targetPart, part, 1)
+        end
+    end)
+end
+
 -- Screen Notification Helper
 local function ShowNotification(title, message)
     pcall(function()
@@ -195,8 +244,7 @@ task.spawn(function()
                     if prompt:IsA("ProximityPrompt") and prompt.Enabled then
                         local pName = string.lower(prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Name .. " " .. (prompt.Parent and prompt.Parent.Name or ""))
                         if string.find(pName, "pull") or string.find(pName, "egg") or string.find(pName, "grab") or string.find(pName, "steal") or string.find(pName, "claim") or string.find(pName, "interact") then
-                            prompt.HoldDuration = 0
-                            fireproximityprompt(prompt)
+                            TriggerPrompt(prompt)
                         end
                     elseif prompt:IsA("ClickDetector") then
                         fireclickdetector(prompt)
@@ -255,20 +303,170 @@ task.spawn(function()
 end)
 
 -- ====================================================
--- FEATURE 4: AUTO REBIRTH
+-- FEATURE 4: AUTO REBIRTH (MULTI-LAYER GUARANTEED ENGINE)
 -- ====================================================
 task.spawn(function()
     while true do
         if Toggles.AutoRebirth and isAlive() then
             pcall(function()
+                -- Layer 1: PlayerGui Button Clicker (Scans all UI for Rebirth buttons)
+                local pgui = LocalPlayer:FindFirstChild("PlayerGui")
+                if pgui then
+                    for _, desc in ipairs(pgui:GetDescendants()) do
+                        if desc:IsA("GuiButton") then
+                            local bText = string.lower(desc.Text or "")
+                            local bName = string.lower(desc.Name or "")
+                            local pName = desc.Parent and string.lower(desc.Parent.Name or "") or ""
+                            if string.find(bText, "rebirth") or string.find(bName, "rebirth") or string.find(pName, "rebirth") or string.find(bText, "prestige") or string.find(bName, "prestige") then
+                                TriggerGuiButton(desc)
+                            end
+                            -- Auto confirm rebirth prompts
+                            if (string.find(pName, "rebirth") or string.find(pName, "confirm")) and (string.find(bText, "yes") or string.find(bText, "confirm") or string.find(bText, "buy")) then
+                                TriggerGuiButton(desc)
+                            end
+                        end
+                    end
+                end
+
+                -- Layer 2: Workspace Rebirth Pads & Prompts
+                local hrp = LocalPlayer.Character.HumanoidRootPart
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    local oName = string.lower(obj.Name)
+                    if string.find(oName, "rebirth") or string.find(oName, "prestige") then
+                        if obj:IsA("ProximityPrompt") then
+                            TriggerPrompt(obj)
+                        elseif obj:IsA("BasePart") and hrp then
+                            TriggerTouch(hrp, obj)
+                        end
+                    end
+                end
+
+                -- Layer 3: ReplicatedStorage Remotes
                 for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
                     if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
                         local rName = string.lower(remote.Name)
-                        if string.find(rName, "rebirth") or string.find(rName, "prestige") or string.find(rName, "ascend") then
+                        if string.find(rName, "rebirth") or string.find(rName, "prestige") or string.find(rName, "ascend") or string.find(rName, "rank") then
                             if remote:IsA("RemoteEvent") then
+                                remote:FireServer()
                                 remote:FireServer(1)
-                            else
-                                remote:InvokeServer(1)
+                                remote:FireServer("1")
+                                remote:FireServer(true)
+                                remote:FireServer({})
+                            elseif remote:IsA("RemoteFunction") then
+                                pcall(function() remote:InvokeServer() end)
+                                pcall(function() remote:InvokeServer(1) end)
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+        task.wait(1.2)
+    end
+end)
+
+-- ====================================================
+-- FEATURE 5: AUTO HATCH / OPEN EGG (DYNAMIC PROXIMITY & REMOTE ENGINE)
+-- ====================================================
+task.spawn(function()
+    while true do
+        if Toggles.AutoHatch and isAlive() then
+            pcall(function()
+                local hrp = LocalPlayer.Character.HumanoidRootPart
+
+                -- Layer 1: Trigger all nearby Egg ProximityPrompts / ClickDetectors / Touch
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    local n = string.lower(obj.Name)
+                    if string.find(n, "egg") or string.find(n, "hatch") or string.find(n, "shop") or string.find(n, "pedestal") or string.find(n, "stand") then
+                        if obj:IsA("ProximityPrompt") then
+                            TriggerPrompt(obj)
+                        elseif obj:IsA("ClickDetector") then
+                            fireclickdetector(obj)
+                        elseif obj:IsA("BasePart") and (obj.Position - hrp.Position).Magnitude <= 35 then
+                            TriggerTouch(hrp, obj)
+                        end
+                    end
+                end
+
+                -- Layer 2: PlayerGui Hatch Buttons (e.g. Open 1, Hatch, Buy)
+                local pgui = LocalPlayer:FindFirstChild("PlayerGui")
+                if pgui then
+                    for _, desc in ipairs(pgui:GetDescendants()) do
+                        if desc:IsA("GuiButton") then
+                            local bText = string.lower(desc.Text or "")
+                            local bName = string.lower(desc.Name or "")
+                            local pName = desc.Parent and string.lower(desc.Parent.Name or "") or ""
+                            if (string.find(pName, "egg") or string.find(pName, "hatch") or string.find(pName, "shop")) then
+                                if string.find(bText, "open") or string.find(bText, "hatch") or string.find(bText, "buy") or string.find(bText, "1") or string.find(bName, "open") or string.find(bName, "hatch") or string.find(bName, "buy") or string.find(bName, "single") then
+                                    TriggerGuiButton(desc)
+                                end
+                            end
+                        end
+                    end
+                end
+
+                -- Layer 3: RemoteEvents in ReplicatedStorage
+                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
+                    if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
+                        local rName = string.lower(remote.Name)
+                        if string.find(rName, "openegg") or string.find(rName, "hatchegg") or string.find(rName, "buyegg") or string.find(rName, "eggopen") or string.find(rName, "hatch") or string.find(rName, "egg") then
+                            if remote:IsA("RemoteEvent") then
+                                remote:FireServer("Egg1", 1)
+                                remote:FireServer("Egg1", "Single")
+                                remote:FireServer("Egg", 1)
+                                remote:FireServer(1)
+                                remote:FireServer("1")
+                                remote:FireServer(true)
+                                remote:FireServer()
+                            elseif remote:IsA("RemoteFunction") then
+                                pcall(function() remote:InvokeServer("Egg1", 1) end)
+                                pcall(function() remote:InvokeServer(1) end)
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+        task.wait(0.4)
+    end
+end)
+
+-- ====================================================
+-- FEATURE 6: AUTO EQUIP BEST PETS (GUI & REMOTE FULL SWEEPER)
+-- ====================================================
+task.spawn(function()
+    while true do
+        if Toggles.AutoEquipBest and isAlive() then
+            pcall(function()
+                -- Layer 1: PlayerGui Pet Inventory & Buttons
+                local pgui = LocalPlayer:FindFirstChild("PlayerGui")
+                if pgui then
+                    for _, desc in ipairs(pgui:GetDescendants()) do
+                        if desc:IsA("GuiButton") then
+                            local bText = string.lower(desc.Text or "")
+                            local bName = string.lower(desc.Name or "")
+                            local pName = desc.Parent and string.lower(desc.Parent.Name or "") or ""
+                            if string.find(bText, "best") or string.find(bName, "best") or string.find(bText, "equip best") or string.find(bName, "equipbest") or string.find(bText, "auto equip") or string.find(bName, "autoequip") or string.find(bText, "equip all") or string.find(bName, "equipall") then
+                                TriggerGuiButton(desc)
+                            end
+                        end
+                    end
+                end
+
+                -- Layer 2: ReplicatedStorage Remotes
+                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
+                    if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
+                        local rName = string.lower(remote.Name)
+                        if string.find(rName, "equipbest") or string.find(rName, "bestpet") or string.find(rName, "autoequip") or string.find(rName, "equippet") or string.find(rName, "equipall") or string.find(rName, "best") or string.find(rName, "pet") then
+                            if remote:IsA("RemoteEvent") then
+                                remote:FireServer()
+                                remote:FireServer("Best")
+                                remote:FireServer("All")
+                                remote:FireServer(true)
+                                remote:FireServer({})
+                            elseif remote:IsA("RemoteFunction") then
+                                pcall(function() remote:InvokeServer() end)
+                                pcall(function() remote:InvokeServer("Best") end)
                             end
                         end
                     end
@@ -280,61 +478,13 @@ task.spawn(function()
 end)
 
 -- ====================================================
--- FEATURE 5: AUTO HATCH / OPEN EGG
--- ====================================================
-task.spawn(function()
-    while true do
-        if Toggles.AutoHatch and isAlive() then
-            pcall(function()
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
-                        local rName = string.lower(remote.Name)
-                        if string.find(rName, "openegg") or string.find(rName, "hatchegg") or string.find(rName, "buyegg") or string.find(rName, "eggopen") then
-                            if remote:IsA("RemoteEvent") then
-                                remote:FireServer("Egg1", 1)
-                                remote:FireServer(1)
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-        task.wait(0.5)
-    end
-end)
-
--- ====================================================
--- FEATURE 6: AUTO EQUIP BEST PETS
--- ====================================================
-task.spawn(function()
-    while true do
-        if Toggles.AutoEquipBest and isAlive() then
-            pcall(function()
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
-                        local rName = string.lower(remote.Name)
-                        if string.find(rName, "equipbest") or string.find(rName, "bestpet") or string.find(rName, "autoequip") or string.find(rName, "equippet") then
-                            if remote:IsA("RemoteEvent") then
-                                remote:FireServer()
-                            else
-                                remote:InvokeServer()
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-        task.wait(3)
-    end
-end)
-
--- ====================================================
 -- FEATURE 7: AUTO CLAIM FREE GIFTS
 -- ====================================================
 task.spawn(function()
     while true do
         if Toggles.AutoClaimGifts and isAlive() then
             pcall(function()
+                -- Claim timed gifts 1-12 & daily rewards & spin wheel
                 for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
                     if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
                         local rName = string.lower(remote.Name)
@@ -344,7 +494,7 @@ task.spawn(function()
                                     remote:FireServer(i)
                                     remote:FireServer(tostring(i))
                                 else
-                                    remote:InvokeServer(i)
+                                    pcall(function() remote:InvokeServer(i) end)
                                 end
                             end
                         end
@@ -546,7 +696,7 @@ UIList.SortOrder = Enum.SortOrder.LayoutOrder
 UIList.Padding = UDim.new(0, 4)
 UIList.Parent = ContentScroll
 
--- Top Action Button (TELEPORT TO SAFE ZONE / ZONES)
+-- Top Action Button (TELEPORT TO SAFE ZONE)
 local ActionBtn = Instance.new("TextButton")
 ActionBtn.Name = "ActionBtn_Teleport"
 ActionBtn.Size = UDim2.new(1, 0, 0, 26)
@@ -654,22 +804,22 @@ end)
 
 -- 4. Auto Rebirth
 AddToggleRow("Auto Rebirth", "AutoRebirth", function(state)
-    ShowNotification("Auto Rebirth", state and "Auto Rebirth ON" or "Auto Rebirth OFF")
+    ShowNotification("Auto Rebirth", state and "Auto Rebirth Active!" or "Auto Rebirth Stopped")
 end)
 
 -- 5. Auto Hatch / Open Egg
 AddToggleRow("Auto Hatch / Open Egg", "AutoHatch", function(state)
-    ShowNotification("Auto Hatch", state and "Hatching Started!" or "Hatching Stopped")
+    ShowNotification("Auto Hatch", state and "Egg Hatching Active!" or "Hatching Stopped")
 end)
 
 -- 6. Auto Equip Best Pets
 AddToggleRow("Auto Equip Best Pets", "AutoEquipBest", function(state)
-    ShowNotification("Pets", state and "Auto Equip Best ON" or "Auto Equip Best OFF")
+    ShowNotification("Pets", state and "Auto Equip Best Active!" or "Auto Equip Stopped")
 end)
 
 -- 7. Auto Claim Free Gifts
 AddToggleRow("Auto Claim Free Gifts", "AutoClaimGifts", function(state)
-    ShowNotification("Gifts", state and "Auto Claim Gifts ON" or "Auto Claim Gifts OFF")
+    ShowNotification("Gifts", state and "Auto Claim Gifts Active!" or "Gifts Stopped")
 end)
 
 -- 8. WalkSpeed Integrated Row (with Checkbox + Stepper Pill as shown in screenshot)
