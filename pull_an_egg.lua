@@ -34,7 +34,6 @@ local Toggles = {
     AutoTrain = false,
     AutoRebirth = false,
     AutoHatch = false,
-    AutoEquipBest = false,
     AutoClaimGifts = false,
     WalkSpeedBoost = false,
     InfiniteJump = false,
@@ -98,6 +97,10 @@ local function TriggerGuiButton(btn)
             firesignal(btn.MouseButton1Click)
             firesignal(btn.MouseButton1Down)
             firesignal(btn.Activated)
+        end
+        if VirtualUser and btn.AbsoluteSize.X > 0 and btn.AbsoluteSize.Y > 0 then
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton1(btn.AbsolutePosition + btn.AbsoluteSize / 2)
         end
     end)
 end
@@ -303,13 +306,13 @@ task.spawn(function()
 end)
 
 -- ====================================================
--- FEATURE 4: AUTO REBIRTH (MULTI-LAYER GUARANTEED ENGINE)
+-- FEATURE 4: AUTO REBIRTH (SUPERCHARGED 4-LAYER ENGINE)
 -- ====================================================
 task.spawn(function()
     while true do
         if Toggles.AutoRebirth and isAlive() then
             pcall(function()
-                -- Layer 1: PlayerGui Button Clicker (Scans all UI for Rebirth buttons)
+                -- Layer 1: PlayerGui Button Sweeper (Click every Rebirth and Confirmation button)
                 local pgui = LocalPlayer:FindFirstChild("PlayerGui")
                 if pgui then
                     for _, desc in ipairs(pgui:GetDescendants()) do
@@ -317,51 +320,66 @@ task.spawn(function()
                             local bText = string.lower(desc.Text or "")
                             local bName = string.lower(desc.Name or "")
                             local pName = desc.Parent and string.lower(desc.Parent.Name or "") or ""
-                            if string.find(bText, "rebirth") or string.find(bName, "rebirth") or string.find(pName, "rebirth") or string.find(bText, "prestige") or string.find(bName, "prestige") then
+                            
+                            -- Main Rebirth Button Match
+                            if string.find(bText, "rebirth") or string.find(bName, "rebirth") or string.find(pName, "rebirth") or 
+                               string.find(bText, "prestige") or string.find(bName, "prestige") or string.find(pName, "prestige") or
+                               string.find(bText, "ascend") or string.find(bName, "ascend") or string.find(pName, "ascend") then
                                 TriggerGuiButton(desc)
                             end
-                            -- Auto confirm rebirth prompts
-                            if (string.find(pName, "rebirth") or string.find(pName, "confirm")) and (string.find(bText, "yes") or string.find(bText, "confirm") or string.find(bText, "buy")) then
-                                TriggerGuiButton(desc)
+
+                            -- Confirm Dialog Button Match (e.g. Yes / Confirm inside rebirth frames)
+                            if (string.find(pName, "rebirth") or string.find(pName, "confirm") or string.find(pName, "dialog") or string.find(pName, "popup")) then
+                                if string.find(bText, "yes") or string.find(bText, "confirm") or string.find(bText, "buy") or string.find(bText, "ok") or string.find(bText, "accept") or
+                                   string.find(bName, "yes") or string.find(bName, "confirm") or string.find(bName, "buy") or string.find(bName, "ok") then
+                                    TriggerGuiButton(desc)
+                                end
                             end
                         end
                     end
                 end
 
-                -- Layer 2: Workspace Rebirth Pads & Prompts
+                -- Layer 2: Workspace Rebirth Touch Pads & ProximityPrompts
                 local hrp = LocalPlayer.Character.HumanoidRootPart
                 for _, obj in ipairs(Workspace:GetDescendants()) do
                     local oName = string.lower(obj.Name)
-                    if string.find(oName, "rebirth") or string.find(oName, "prestige") then
+                    if string.find(oName, "rebirth") or string.find(oName, "prestige") or string.find(oName, "ascend") then
                         if obj:IsA("ProximityPrompt") then
                             TriggerPrompt(obj)
+                        elseif obj:IsA("ClickDetector") then
+                            fireclickdetector(obj)
                         elseif obj:IsA("BasePart") and hrp then
                             TriggerTouch(hrp, obj)
                         end
                     end
                 end
 
-                -- Layer 3: ReplicatedStorage Remotes
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
-                        local rName = string.lower(remote.Name)
-                        if string.find(rName, "rebirth") or string.find(rName, "prestige") or string.find(rName, "ascend") or string.find(rName, "rank") then
-                            if remote:IsA("RemoteEvent") then
-                                remote:FireServer()
-                                remote:FireServer(1)
-                                remote:FireServer("1")
-                                remote:FireServer(true)
-                                remote:FireServer({})
-                            elseif remote:IsA("RemoteFunction") then
-                                pcall(function() remote:InvokeServer() end)
-                                pcall(function() remote:InvokeServer(1) end)
+                -- Layer 3: RemoteEvents in ReplicatedStorage & Workspace & Players
+                for _, rootService in ipairs({ReplicatedStorage, Workspace, LocalPlayer}) do
+                    for _, remote in ipairs(rootService:GetDescendants()) do
+                        if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
+                            local rName = string.lower(remote.Name)
+                            if string.find(rName, "rebirth") or string.find(rName, "prestige") or string.find(rName, "ascend") or string.find(rName, "rank") or string.find(rName, "reset") then
+                                if remote:IsA("RemoteEvent") then
+                                    remote:FireServer()
+                                    remote:FireServer(1)
+                                    remote:FireServer("1")
+                                    remote:FireServer(true)
+                                    remote:FireServer({})
+                                    remote:FireServer("Rebirth")
+                                elseif remote:IsA("RemoteFunction") then
+                                    pcall(function() remote:InvokeServer() end)
+                                    pcall(function() remote:InvokeServer(1) end)
+                                    pcall(function() remote:InvokeServer("1") end)
+                                    pcall(function() remote:InvokeServer(true) end)
+                                end
                             end
                         end
                     end
                 end
             end)
         end
-        task.wait(1.2)
+        task.wait(1.0)
     end
 end)
 
@@ -432,59 +450,12 @@ task.spawn(function()
 end)
 
 -- ====================================================
--- FEATURE 6: AUTO EQUIP BEST PETS (GUI & REMOTE FULL SWEEPER)
--- ====================================================
-task.spawn(function()
-    while true do
-        if Toggles.AutoEquipBest and isAlive() then
-            pcall(function()
-                -- Layer 1: PlayerGui Pet Inventory & Buttons
-                local pgui = LocalPlayer:FindFirstChild("PlayerGui")
-                if pgui then
-                    for _, desc in ipairs(pgui:GetDescendants()) do
-                        if desc:IsA("GuiButton") then
-                            local bText = string.lower(desc.Text or "")
-                            local bName = string.lower(desc.Name or "")
-                            local pName = desc.Parent and string.lower(desc.Parent.Name or "") or ""
-                            if string.find(bText, "best") or string.find(bName, "best") or string.find(bText, "equip best") or string.find(bName, "equipbest") or string.find(bText, "auto equip") or string.find(bName, "autoequip") or string.find(bText, "equip all") or string.find(bName, "equipall") then
-                                TriggerGuiButton(desc)
-                            end
-                        end
-                    end
-                end
-
-                -- Layer 2: ReplicatedStorage Remotes
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
-                        local rName = string.lower(remote.Name)
-                        if string.find(rName, "equipbest") or string.find(rName, "bestpet") or string.find(rName, "autoequip") or string.find(rName, "equippet") or string.find(rName, "equipall") or string.find(rName, "best") or string.find(rName, "pet") then
-                            if remote:IsA("RemoteEvent") then
-                                remote:FireServer()
-                                remote:FireServer("Best")
-                                remote:FireServer("All")
-                                remote:FireServer(true)
-                                remote:FireServer({})
-                            elseif remote:IsA("RemoteFunction") then
-                                pcall(function() remote:InvokeServer() end)
-                                pcall(function() remote:InvokeServer("Best") end)
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-        task.wait(2)
-    end
-end)
-
--- ====================================================
--- FEATURE 7: AUTO CLAIM FREE GIFTS
+-- FEATURE 6: AUTO CLAIM FREE GIFTS
 -- ====================================================
 task.spawn(function()
     while true do
         if Toggles.AutoClaimGifts and isAlive() then
             pcall(function()
-                -- Claim timed gifts 1-12 & daily rewards & spin wheel
                 for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
                     if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
                         local rName = string.lower(remote.Name)
@@ -507,7 +478,7 @@ task.spawn(function()
 end)
 
 -- ====================================================
--- FEATURE 8: TELEPORT TO ZONES / SAFE ZONES
+-- FEATURE 7: TELEPORT TO ZONES / SAFE ZONES
 -- ====================================================
 local function teleportToZone()
     pcall(function()
@@ -540,7 +511,7 @@ local function teleportToZone()
 end
 
 -- ====================================================
--- FEATURE 9: WALKSPEED BOOST (+ / - CONTROLLER)
+-- FEATURE 8: WALKSPEED BOOST (+ / - CONTROLLER)
 -- ====================================================
 RunService.RenderStepped:Connect(function()
     if Toggles.WalkSpeedBoost and isAlive() then
@@ -552,7 +523,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- ====================================================
--- FEATURE 10: INFINITE JUMP
+-- FEATURE 9: INFINITE JUMP
 -- ====================================================
 UserInputService.JumpRequest:Connect(function()
     if Toggles.InfiniteJump and isAlive() then
@@ -566,7 +537,7 @@ UserInputService.JumpRequest:Connect(function()
 end)
 
 -- ====================================================
--- FEATURE 11: NOCLIP
+-- FEATURE 10: NOCLIP
 -- ====================================================
 RunService.Stepped:Connect(function()
     if Toggles.Noclip and isAlive() then
@@ -812,17 +783,12 @@ AddToggleRow("Auto Hatch / Open Egg", "AutoHatch", function(state)
     ShowNotification("Auto Hatch", state and "Egg Hatching Active!" or "Hatching Stopped")
 end)
 
--- 6. Auto Equip Best Pets
-AddToggleRow("Auto Equip Best Pets", "AutoEquipBest", function(state)
-    ShowNotification("Pets", state and "Auto Equip Best Active!" or "Auto Equip Stopped")
-end)
-
--- 7. Auto Claim Free Gifts
+-- 6. Auto Claim Free Gifts
 AddToggleRow("Auto Claim Free Gifts", "AutoClaimGifts", function(state)
     ShowNotification("Gifts", state and "Auto Claim Gifts Active!" or "Gifts Stopped")
 end)
 
--- 8. WalkSpeed Integrated Row (with Checkbox + Stepper Pill as shown in screenshot)
+-- 7. WalkSpeed Integrated Row (with Checkbox + Stepper Pill as shown in screenshot)
 local SpeedRow = Instance.new("Frame")
 SpeedRow.Size = UDim2.new(1, 0, 0, 24)
 SpeedRow.BackgroundTransparency = 1
@@ -939,10 +905,10 @@ PlusBtn.MouseButton1Click:Connect(function()
     UpdateCharacterSpeed()
 end)
 
--- 9. Infinite Jump
+-- 8. Infinite Jump
 AddToggleRow("Infinite Jump", "InfiniteJump")
 
--- 10. Noclip
+-- 9. Noclip
 AddToggleRow("Noclip", "Noclip", function(state)
     if not state and isAlive() then
         for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
