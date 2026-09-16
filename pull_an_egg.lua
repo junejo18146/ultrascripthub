@@ -4,7 +4,6 @@
 -- Author: Made by Junejo (junejo18146)
 -- GitHub: https://github.com/junejo18146/ultrascripthub
 -- Universal Mobile (Delta / Codex / Fluxus) & PC Compatible
--- UI Style: UI 1 (Classic Matte Dark)
 -- ====================================================
 
 local CoreGui = game:GetService("CoreGui")
@@ -43,8 +42,7 @@ local Toggles = {
     AntiAFK = true
 }
 
-local CustomSpeedValue = 35
-local RemovedGuardsCache = {}
+local CustomSpeedValue = 45
 
 -- Safe Alive & Character Helper
 local function isAlive()
@@ -53,6 +51,22 @@ local function isAlive()
     local hum = char:FindFirstChildOfClass("Humanoid")
     local hrp = char:FindFirstChild("HumanoidRootPart")
     return hum and hum.Health > 0 and hrp ~= nil
+end
+
+-- Speed Update Helper
+local function UpdateCharacterSpeed()
+    pcall(function()
+        if isAlive() then
+            local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if hum then
+                if Toggles.WalkSpeedBoost then
+                    hum.WalkSpeed = CustomSpeedValue
+                else
+                    hum.WalkSpeed = 16
+                end
+            end
+        end
+    end)
 end
 
 -- Anti-AFK System (Always active in background)
@@ -137,7 +151,6 @@ end
 -- ====================================================
 local function applyRemoveGuard()
     pcall(function()
-        -- Search and disable/remove Guard NPCs, Security models, and Kill bricks guarding eggs
         for _, obj in ipairs(Workspace:GetDescendants()) do
             if obj:IsA("Model") then
                 local name = string.lower(obj.Name)
@@ -174,22 +187,18 @@ task.spawn(function()
     while true do
         if Toggles.AutoPullEgg and isAlive() then
             pcall(function()
-                -- Interacting with proximity prompts / click detectors on Eggs
-                local foundPrompt = false
                 for _, prompt in ipairs(Workspace:GetDescendants()) do
                     if prompt:IsA("ProximityPrompt") and prompt.Enabled then
                         local pName = string.lower(prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Name .. " " .. (prompt.Parent and prompt.Parent.Name or ""))
                         if string.find(pName, "pull") or string.find(pName, "egg") or string.find(pName, "grab") or string.find(pName, "steal") or string.find(pName, "claim") or string.find(pName, "interact") then
                             prompt.HoldDuration = 0
                             fireproximityprompt(prompt)
-                            foundPrompt = true
                         end
                     elseif prompt:IsA("ClickDetector") then
                         fireclickdetector(prompt)
                     end
                 end
 
-                -- Also search for pull / egg remotes in ReplicatedStorage
                 for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
                     if remote:IsA("RemoteEvent") then
                         local rName = string.lower(remote.Name)
@@ -212,7 +221,6 @@ task.spawn(function()
         if Toggles.AutoTrain and isAlive() then
             pcall(function()
                 local char = LocalPlayer.Character
-                -- Auto equip and activate training weight / dumbbell tools
                 local tool = char:FindFirstChildOfClass("Tool")
                 if not tool and LocalPlayer:FindFirstChild("Backpack") then
                     for _, item in ipairs(LocalPlayer.Backpack:GetChildren()) do
@@ -228,7 +236,6 @@ task.spawn(function()
                     tool:Activate()
                 end
 
-                -- Fire training remotes
                 for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
                     if remote:IsA("RemoteEvent") then
                         local rName = string.lower(remote.Name)
@@ -324,7 +331,6 @@ task.spawn(function()
     while true do
         if Toggles.AutoClaimGifts and isAlive() then
             pcall(function()
-                -- Claim timed gifts 1-12 & daily rewards & spin wheel
                 for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
                     if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
                         local rName = string.lower(remote.Name)
@@ -354,7 +360,6 @@ local function teleportToZone()
         if not isAlive() then return end
         local hrp = LocalPlayer.Character.HumanoidRootPart
 
-        -- Scan Workspace for zones, egg pedestals, world spawns
         local targetCFrame = nil
         for _, obj in ipairs(Workspace:GetDescendants()) do
             if obj:IsA("BasePart") or obj:IsA("Model") then
@@ -374,7 +379,6 @@ local function teleportToZone()
             hrp.CFrame = targetCFrame
             ShowNotification("Teleport", "Teleported to Zone!")
         else
-            -- Default forward boost
             hrp.CFrame = hrp.CFrame + hrp.CFrame.LookVector * 50
             ShowNotification("Teleport", "Teleported forward!")
         end
@@ -430,501 +434,403 @@ RunService.Stepped:Connect(function()
 end)
 
 -- ====================================================
--- OFFICIAL JUNEJO UI 1 (ULTRA SCRIPT HUB CLASSIC MATTE DARK)
+-- OFFICIAL JUNEJO EXECUTIVE UI (100% SOLID MATTE BLACK #0F0F11)
 -- ====================================================
-local function BuildJunejoUI()
-    local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "JunejoHubUI_PullAnEgg"
-    ScreenGui.ResetOnSpawn = false
-    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "JunejoHubUI_PullAnEgg"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.DisplayOrder = 999999
 
-    -- Secure Parent Helper
-    if syn and syn.protect_gui then
-        syn.protect_gui(ScreenGui)
-        ScreenGui.Parent = CoreGui
-    elseif gethui then
-        ScreenGui.Parent = gethui()
-    else
-        ScreenGui.Parent = CoreGui:FindFirstChild("RobloxGui") or CoreGui or LocalPlayer:WaitForChild("PlayerGui")
+if syn and syn.protect_gui then
+    syn.protect_gui(ScreenGui)
+    ScreenGui.Parent = CoreGui
+elseif gethui then
+    ScreenGui.Parent = gethui()
+else
+    ScreenGui.Parent = CoreGui:FindFirstChild("RobloxGui") or CoreGui or LocalPlayer:WaitForChild("PlayerGui")
+end
+
+-- Main Container Frame (Solid 100% Opaque Matte Black #0F0F11)
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 280, 0, 285)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -142)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
+MainFrame.BackgroundTransparency = 0
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 10)
+MainCorner.Parent = MainFrame
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Color = Color3.fromRGB(35, 35, 42)
+MainStroke.Thickness = 1
+MainStroke.Parent = MainFrame
+
+-- Header Bar
+local Header = Instance.new("Frame")
+Header.Name = "Header"
+Header.Size = UDim2.new(1, 0, 0, 32)
+Header.BackgroundTransparency = 1
+Header.Parent = MainFrame
+
+-- Draggable Functionality
+local dragging, dragInput, dragStart, startPos
+Header.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
     end
+end)
 
-    -- Main Container Frame (UI 1 Standard: 280px width, Matte Dark)
-    local MainFrame = Instance.new("Frame")
-    MainFrame.Name = "MainFrame"
-    MainFrame.Size = UDim2.new(0, 280, 0, 440)
-    MainFrame.Position = UDim2.new(0.5, -140, 0.5, -220)
-    MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
-    MainFrame.BorderSizePixel = 0
-    MainFrame.Active = true
-    MainFrame.ClipsDescendants = true
-    MainFrame.Parent = ScreenGui
+Header.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
 
-    local MainCorner = Instance.new("UICorner")
-    MainCorner.CornerRadius = UDim.new(0, 10)
-    MainCorner.Parent = MainFrame
-
-    local MainStroke = Instance.new("UIStroke")
-    MainStroke.Color = Color3.fromRGB(35, 35, 42)
-    MainStroke.Thickness = 1
-    MainStroke.Parent = MainFrame
-
-    -- Smooth Dragging System (PC Mouse & Mobile Touch)
-    local dragging, dragInput, dragStart, startPos
-    local function updateDrag(input)
+UIS.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
         local delta = input.Position - dragStart
         MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
+end)
 
-    MainFrame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = MainFrame.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Name = "TitleLabel"
+TitleLabel.Size = UDim2.new(1, -40, 1, 0)
+TitleLabel.Position = UDim2.new(0, 12, 0, 0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "PULL AN EGG"
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.TextSize = 12
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Parent = Header
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Name = "CloseButton"
+CloseBtn.Size = UDim2.new(0, 24, 0, 24)
+CloseBtn.Position = UDim2.new(1, -28, 0, 4)
+CloseBtn.BackgroundTransparency = 1
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(160, 160, 160)
+CloseBtn.TextSize = 13
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.Parent = Header
+
+CloseBtn.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+-- Header Separation Line
+local HeaderLine = Instance.new("Frame")
+HeaderLine.Size = UDim2.new(1, -24, 0, 1)
+HeaderLine.Position = UDim2.new(0, 12, 0, 32)
+HeaderLine.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+HeaderLine.BackgroundTransparency = 0
+HeaderLine.BorderSizePixel = 0
+HeaderLine.Parent = MainFrame
+
+-- Scrollable Content Frame
+local ContentFrame = Instance.new("ScrollingFrame")
+ContentFrame.Name = "ContentFrame"
+ContentFrame.Size = UDim2.new(1, -16, 0, 205)
+ContentFrame.Position = UDim2.new(0, 10, 0, 38)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.BorderSizePixel = 0
+ContentFrame.ScrollBarThickness = 3
+ContentFrame.ScrollBarImageColor3 = Color3.fromRGB(65, 65, 80)
+ContentFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ContentFrame.ScrollingDirection = Enum.ScrollingDirection.Y
+ContentFrame.Parent = MainFrame
+
+local UIList = Instance.new("UIListLayout")
+UIList.SortOrder = Enum.SortOrder.LayoutOrder
+UIList.Padding = UDim.new(0, 4)
+UIList.Parent = ContentFrame
+
+-- Helper function: Strictly Flat & Borderless Toggle Row
+local function AddToggleRow(text, configKey, callback)
+    local Row = Instance.new("Frame")
+    Row.Size = UDim2.new(1, -6, 0, 24)
+    Row.BackgroundTransparency = 1
+    Row.Parent = ContentFrame
+    
+    local RowBtn = Instance.new("TextButton")
+    RowBtn.Size = UDim2.new(1, 0, 1, 0)
+    RowBtn.BackgroundTransparency = 1
+    RowBtn.Text = ""
+    RowBtn.ZIndex = 5
+    RowBtn.Parent = Row
+    
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(1, -28, 1, 0)
+    Label.BackgroundTransparency = 1
+    Label.Text = text
+    Label.TextColor3 = Color3.fromRGB(240, 240, 240)
+    Label.TextSize = 12
+    Label.Font = Enum.Font.GothamBold
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = Row
+    
+    local CheckBox = Instance.new("Frame")
+    CheckBox.Size = UDim2.new(0, 18, 0, 18)
+    CheckBox.Position = UDim2.new(1, -18, 0.5, -9)
+    CheckBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+    CheckBox.BackgroundTransparency = 0
+    CheckBox.BorderSizePixel = 0
+    CheckBox.Parent = Row
+    
+    local CheckCorner = Instance.new("UICorner")
+    CheckCorner.CornerRadius = UDim.new(0, 4)
+    CheckCorner.Parent = CheckBox
+    
+    local CheckStroke = Instance.new("UIStroke")
+    CheckStroke.Color = Color3.fromRGB(45, 45, 55)
+    CheckStroke.Thickness = 1.2
+    CheckStroke.Parent = CheckBox
+    
+    local CheckMark = Instance.new("Frame")
+    CheckMark.Size = UDim2.new(0, 10, 0, 10)
+    CheckMark.Position = UDim2.new(0.5, -5, 0.5, -5)
+    CheckMark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    CheckMark.BackgroundTransparency = Toggles[configKey] and 0 or 1
+    CheckMark.BorderSizePixel = 0
+    CheckMark.Parent = CheckBox
+    
+    local MarkCorner = Instance.new("UICorner")
+    MarkCorner.CornerRadius = UDim.new(0, 2)
+    MarkCorner.Parent = CheckMark
+    
+    local lastClick = 0
+    RowBtn.MouseButton1Click:Connect(function()
+        local now = os.clock()
+        if now - lastClick < 0.12 then return end
+        lastClick = now
+        Toggles[configKey] = not Toggles[configKey]
+        CheckMark.BackgroundTransparency = Toggles[configKey] and 0 or 1
+        if callback then callback(Toggles[configKey]) end
     end)
-
-    MainFrame.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInput = input
-        end
-    end)
-
-    UIS.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            updateDrag(input)
-        end
-    end)
-
-    -- Header Frame
-    local Header = Instance.new("Frame")
-    Header.Name = "Header"
-    Header.Size = UDim2.new(1, 0, 0, 42)
-    Header.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
-    Header.BorderSizePixel = 0
-    Header.Parent = MainFrame
-
-    local HeaderTitle = Instance.new("TextLabel")
-    HeaderTitle.Name = "Title"
-    HeaderTitle.Size = UDim2.new(1, -70, 0, 20)
-    HeaderTitle.Position = UDim2.new(0, 12, 0, 4)
-    HeaderTitle.BackgroundTransparency = 1
-    HeaderTitle.Text = "ULTRA SCRIPT HUB"
-    HeaderTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    HeaderTitle.TextSize = 13
-    HeaderTitle.Font = Enum.Font.GothamBold
-    HeaderTitle.TextXAlignment = Enum.TextXAlignment.Left
-    HeaderTitle.Parent = Header
-
-    local Subtitle = Instance.new("TextLabel")
-    Subtitle.Name = "Subtitle"
-    Subtitle.Size = UDim2.new(1, -70, 0, 14)
-    Subtitle.Position = UDim2.new(0, 12, 0, 23)
-    Subtitle.BackgroundTransparency = 1
-    Subtitle.Text = "Pull an Egg  •  Made by Junejo"
-    Subtitle.TextColor3 = Color3.fromRGB(136, 136, 153)
-    Subtitle.TextSize = 10
-    Subtitle.Font = Enum.Font.GothamMedium
-    Subtitle.TextXAlignment = Enum.TextXAlignment.Left
-    Subtitle.Parent = Header
-
-    -- Minimize Button
-    local MinBtn = Instance.new("TextButton")
-    MinBtn.Name = "MinBtn"
-    MinBtn.Size = UDim2.new(0, 22, 0, 22)
-    MinBtn.Position = UDim2.new(1, -50, 0, 10)
-    MinBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
-    MinBtn.Text = "-"
-    MinBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
-    MinBtn.TextSize = 13
-    MinBtn.Font = Enum.Font.GothamBold
-    MinBtn.BorderSizePixel = 0
-    MinBtn.Parent = Header
-
-    local MinCorner = Instance.new("UICorner")
-    MinCorner.CornerRadius = UDim.new(0, 5)
-    MinCorner.Parent = MinBtn
-
-    -- Close Button
-    local CloseBtn = Instance.new("TextButton")
-    CloseBtn.Name = "CloseBtn"
-    CloseBtn.Size = UDim2.new(0, 22, 0, 22)
-    CloseBtn.Position = UDim2.new(1, -26, 0, 10)
-    CloseBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
-    CloseBtn.Text = "×"
-    CloseBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
-    CloseBtn.TextSize = 14
-    CloseBtn.Font = Enum.Font.GothamBold
-    CloseBtn.BorderSizePixel = 0
-    CloseBtn.Parent = Header
-
-    local CloseCorner = Instance.new("UICorner")
-    CloseCorner.CornerRadius = UDim.new(0, 5)
-    CloseCorner.Parent = CloseBtn
-
-    local HeaderDivider = Instance.new("Frame")
-    HeaderDivider.Size = UDim2.new(1, 0, 0, 1)
-    HeaderDivider.Position = UDim2.new(0, 0, 1, -1)
-    HeaderDivider.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
-    HeaderDivider.BorderSizePixel = 0
-    HeaderDivider.Parent = Header
-
-    -- Scrollable Content Container for Toggles
-    local ScrollContainer = Instance.new("ScrollingFrame")
-    ScrollContainer.Name = "ScrollContainer"
-    ScrollContainer.Size = UDim2.new(1, 0, 1, -66)
-    ScrollContainer.Position = UDim2.new(0, 0, 0, 42)
-    ScrollContainer.BackgroundTransparency = 1
-    ScrollContainer.BorderSizePixel = 0
-    ScrollContainer.ScrollBarThickness = 2
-    ScrollContainer.ScrollBarImageColor3 = Color3.fromRGB(45, 45, 55)
-    ScrollContainer.CanvasSize = UDim2.new(0, 0, 0, 440)
-    ScrollContainer.Parent = MainFrame
-
-    local UIList = Instance.new("UIListLayout")
-    UIList.Padding = UDim.new(0, 2)
-    UIList.SortOrder = Enum.SortOrder.LayoutOrder
-    UIList.Parent = ScrollContainer
-
-    local UIPad = Instance.new("UIPadding")
-    UIPad.PaddingTop = UDim.new(0, 4)
-    UIPad.PaddingBottom = UDim.new(0, 4)
-    UIPad.PaddingLeft = UDim.new(0, 8)
-    UIPad.PaddingRight = UDim.new(0, 8)
-    UIPad.Parent = ScrollContainer
-
-    -- Mandatory Footer (Junejo UI 1 Standard)
-    local Footer = Instance.new("Frame")
-    Footer.Name = "Footer"
-    Footer.Size = UDim2.new(1, 0, 0, 24)
-    Footer.Position = UDim2.new(0, 0, 1, -24)
-    Footer.BackgroundColor3 = Color3.fromRGB(13, 13, 15)
-    Footer.BorderSizePixel = 0
-    Footer.Parent = MainFrame
-
-    local FooterDivider = Instance.new("Frame")
-    FooterDivider.Size = UDim2.new(1, 0, 0, 1)
-    FooterDivider.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
-    FooterDivider.BorderSizePixel = 0
-    FooterDivider.Parent = Footer
-
-    local FooterText = Instance.new("TextLabel")
-    FooterText.Size = UDim2.new(1, 0, 1, 0)
-    FooterText.BackgroundTransparency = 1
-    FooterText.Text = "ULTRA SCRIPT HUB  |  Made by Junejo"
-    FooterText.TextColor3 = Color3.fromRGB(110, 110, 125)
-    FooterText.TextSize = 9
-    FooterText.Font = Enum.Font.GothamMedium
-    FooterText.Parent = Footer
-
-    -- Toggle Creator Function (Classic Square Checkbox UI 1 Standard)
-    local function CreateToggleRow(order, labelText, toggleKey, onToggle)
-        local Row = Instance.new("Frame")
-        Row.Name = "Row_" .. toggleKey
-        Row.Size = UDim2.new(1, 0, 0, 30)
-        Row.BackgroundTransparency = 1
-        Row.LayoutOrder = order
-        Row.Parent = ScrollContainer
-
-        local Label = Instance.new("TextLabel")
-        Label.Size = UDim2.new(1, -34, 1, 0)
-        Label.Position = UDim2.new(0, 4, 0, 0)
-        Label.BackgroundTransparency = 1
-        Label.Text = labelText
-        Label.TextColor3 = Color3.fromRGB(220, 220, 230)
-        Label.TextSize = 11
-        Label.Font = Enum.Font.Gotham
-        Label.TextXAlignment = Enum.TextXAlignment.Left
-        Label.Parent = Row
-
-        local Box = Instance.new("TextButton")
-        Box.Name = "Box"
-        Box.Size = UDim2.new(0, 18, 0, 18)
-        Box.Position = UDim2.new(1, -22, 0.5, -9)
-        Box.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-        Box.BorderSizePixel = 0
-        Box.Text = ""
-        Box.AutoButtonColor = false
-        Box.Parent = Row
-
-        local BoxCorner = Instance.new("UICorner")
-        BoxCorner.CornerRadius = UDim.new(0, 4)
-        BoxCorner.Parent = Box
-
-        local BoxStroke = Instance.new("UIStroke")
-        BoxStroke.Color = Color3.fromRGB(45, 45, 55)
-        BoxStroke.Thickness = 1
-        BoxStroke.Parent = Box
-
-        local Checkmark = Instance.new("Frame")
-        Checkmark.Name = "Checkmark"
-        Checkmark.Size = UDim2.new(0, 10, 0, 10)
-        Checkmark.Position = UDim2.new(0.5, -5, 0.5, -5)
-        Checkmark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-        Checkmark.BorderSizePixel = 0
-        Checkmark.Visible = Toggles[toggleKey] or false
-        Checkmark.Parent = Box
-
-        local CheckCorner = Instance.new("UICorner")
-        CheckCorner.CornerRadius = UDim.new(0, 2)
-        CheckCorner.Parent = Checkmark
-
-        local function setChecked(val)
-            Toggles[toggleKey] = val
-            Checkmark.Visible = val
-            if val then
-                Box.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-                BoxStroke.Color = Color3.fromRGB(100, 100, 120)
-                Label.TextColor3 = Color3.fromRGB(255, 255, 255)
-            else
-                Box.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-                BoxStroke.Color = Color3.fromRGB(45, 45, 55)
-                Label.TextColor3 = Color3.fromRGB(220, 220, 230)
-            end
-            if onToggle then onToggle(val) end
-        end
-
-        Box.MouseButton1Click:Connect(function()
-            setChecked(not Toggles[toggleKey])
-        end)
-
-        return Row
-    end
-
-    -- Action Button Creator (for Instant Action like Teleport)
-    local function CreateActionButtonRow(order, labelText, btnText, onClick)
-        local Row = Instance.new("Frame")
-        Row.Name = "ActionRow_" .. order
-        Row.Size = UDim2.new(1, 0, 0, 30)
-        Row.BackgroundTransparency = 1
-        Row.LayoutOrder = order
-        Row.Parent = ScrollContainer
-
-        local Label = Instance.new("TextLabel")
-        Label.Size = UDim2.new(1, -74, 1, 0)
-        Label.Position = UDim2.new(0, 4, 0, 0)
-        Label.BackgroundTransparency = 1
-        Label.Text = labelText
-        Label.TextColor3 = Color3.fromRGB(220, 220, 230)
-        Label.TextSize = 11
-        Label.Font = Enum.Font.Gotham
-        Label.TextXAlignment = Enum.TextXAlignment.Left
-        Label.Parent = Row
-
-        local ActionBtn = Instance.new("TextButton")
-        ActionBtn.Size = UDim2.new(0, 60, 0, 20)
-        ActionBtn.Position = UDim2.new(1, -64, 0.5, -10)
-        ActionBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
-        ActionBtn.Text = btnText
-        ActionBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        ActionBtn.TextSize = 10
-        ActionBtn.Font = Enum.Font.GothamBold
-        ActionBtn.BorderSizePixel = 0
-        ActionBtn.Parent = Row
-
-        local BtnCorner = Instance.new("UICorner")
-        BtnCorner.CornerRadius = UDim.new(0, 4)
-        BtnCorner.Parent = ActionBtn
-
-        local BtnStroke = Instance.new("UIStroke")
-        BtnStroke.Color = Color3.fromRGB(55, 55, 68)
-        BtnStroke.Thickness = 1
-        BtnStroke.Parent = ActionBtn
-
-        ActionBtn.MouseButton1Click:Connect(function()
-            if onClick then onClick() end
-        end)
-
-        return Row
-    end
-
-    -- Speed Controller Creator (Integrated - / + Pill Stepper UI 1 Standard)
-    local function CreateSpeedControllerRow(order)
-        local Row = Instance.new("Frame")
-        Row.Name = "Row_SpeedController"
-        Row.Size = UDim2.new(1, 0, 0, 32)
-        Row.BackgroundTransparency = 1
-        Row.LayoutOrder = order
-        Row.Parent = ScrollContainer
-
-        local Label = Instance.new("TextLabel")
-        Label.Size = UDim2.new(0, 110, 1, 0)
-        Label.Position = UDim2.new(0, 4, 0, 0)
-        Label.BackgroundTransparency = 1
-        Label.Text = "WalkSpeed Boost"
-        Label.TextColor3 = Color3.fromRGB(220, 220, 230)
-        Label.TextSize = 11
-        Label.Font = Enum.Font.Gotham
-        Label.TextXAlignment = Enum.TextXAlignment.Left
-        Label.Parent = Row
-
-        -- Pill Container (105px x 22px, #1B1B20)
-        local Pill = Instance.new("Frame")
-        Pill.Name = "SpeedPill"
-        Pill.Size = UDim2.new(0, 105, 0, 22)
-        Pill.Position = UDim2.new(1, -109, 0.5, -11)
-        Pill.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-        Pill.BorderSizePixel = 0
-        Pill.Parent = Row
-
-        local PillCorner = Instance.new("UICorner")
-        PillCorner.CornerRadius = UDim.new(0, 6)
-        PillCorner.Parent = Pill
-
-        local PillStroke = Instance.new("UIStroke")
-        PillStroke.Color = Color3.fromRGB(45, 45, 55)
-        PillStroke.Thickness = 1
-        PillStroke.Parent = Pill
-
-        -- Minus Button
-        local MinusBtn = Instance.new("TextButton")
-        MinusBtn.Size = UDim2.new(0, 22, 1, 0)
-        MinusBtn.Position = UDim2.new(0, 0, 0, 0)
-        MinusBtn.BackgroundTransparency = 1
-        MinusBtn.Text = "-"
-        MinusBtn.TextColor3 = Color3.fromRGB(200, 200, 215)
-        MinusBtn.TextSize = 13
-        MinusBtn.Font = Enum.Font.GothamBold
-        MinusBtn.Parent = Pill
-
-        -- Value Display
-        local ValLabel = Instance.new("TextLabel")
-        ValLabel.Size = UDim2.new(1, -44, 1, 0)
-        ValLabel.Position = UDim2.new(0, 22, 0, 0)
-        ValLabel.BackgroundTransparency = 1
-        ValLabel.Text = tostring(CustomSpeedValue)
-        ValLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-        ValLabel.TextSize = 11
-        ValLabel.Font = Enum.Font.GothamBold
-        ValLabel.Parent = Pill
-
-        -- Plus Button
-        local PlusBtn = Instance.new("TextButton")
-        PlusBtn.Size = UDim2.new(0, 22, 1, 0)
-        PlusBtn.Position = UDim2.new(1, -22, 0, 0)
-        PlusBtn.BackgroundTransparency = 1
-        PlusBtn.Text = "+"
-        PlusBtn.TextColor3 = Color3.fromRGB(200, 200, 215)
-        PlusBtn.TextSize = 13
-        PlusBtn.Font = Enum.Font.GothamBold
-        PlusBtn.Parent = Pill
-
-        MinusBtn.MouseButton1Click:Connect(function()
-            CustomSpeedValue = math.max(16, CustomSpeedValue - 5)
-            ValLabel.Text = tostring(CustomSpeedValue)
-            if Toggles.WalkSpeedBoost and isAlive() then
-                LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = CustomSpeedValue
-            end
-        end)
-
-        PlusBtn.MouseButton1Click:Connect(function()
-            CustomSpeedValue = math.min(250, CustomSpeedValue + 5)
-            ValLabel.Text = tostring(CustomSpeedValue)
-            if Toggles.WalkSpeedBoost and isAlive() then
-                LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = CustomSpeedValue
-            end
-        end)
-
-        -- Quick Toggle on Pill click
-        ValLabel.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                Toggles.WalkSpeedBoost = not Toggles.WalkSpeedBoost
-                if Toggles.WalkSpeedBoost then
-                    PillStroke.Color = Color3.fromRGB(100, 100, 120)
-                    Pill.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-                    ShowNotification("Speed", "WalkSpeed Boost ON (" .. CustomSpeedValue .. ")")
-                else
-                    PillStroke.Color = Color3.fromRGB(45, 45, 55)
-                    Pill.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-                    if isAlive() then LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = 16 end
-                    ShowNotification("Speed", "WalkSpeed Reset to Normal")
-                end
-            end
-        end)
-
-        return Row
-    end
-
-    -- ====================================================
-    -- POPULATING THE 11 FEATURES IN UI
-    -- ====================================================
-    CreateToggleRow(1, "Remove Guard", "RemoveGuard", function(v)
-        if v then
-            applyRemoveGuard()
-            ShowNotification("Guard", "Security Guards Removed!")
-        end
-    end)
-
-    CreateToggleRow(2, "Auto Pull Egg", "AutoPullEgg", function(v)
-        ShowNotification("Auto Pull", v and "Auto Pull Enabled!" or "Auto Pull Disabled")
-    end)
-
-    CreateToggleRow(3, "Auto Train / Click", "AutoTrain", function(v)
-        ShowNotification("Auto Train", v and "Training Farm Started!" or "Training Stopped")
-    end)
-
-    CreateToggleRow(4, "Auto Rebirth", "AutoRebirth", function(v)
-        ShowNotification("Auto Rebirth", v and "Auto Rebirth ON" or "Auto Rebirth OFF")
-    end)
-
-    CreateToggleRow(5, "Auto Hatch / Open Egg", "AutoHatch", function(v)
-        ShowNotification("Auto Hatch", v and "Hatching Started!" or "Hatching Stopped")
-    end)
-
-    CreateToggleRow(6, "Auto Equip Best Pets", "AutoEquipBest", function(v)
-        ShowNotification("Pets", v and "Auto Equip Best ON" or "Auto Equip Best OFF")
-    end)
-
-    CreateToggleRow(7, "Auto Claim Free Gifts", "AutoClaimGifts", function(v)
-        ShowNotification("Gifts", v and "Auto Claim Gifts ON" or "Auto Claim Gifts OFF")
-    end)
-
-    CreateActionButtonRow(8, "Teleport to Zones", "TP Zone", function()
-        teleportToZone()
-    end)
-
-    CreateSpeedControllerRow(9)
-
-    CreateToggleRow(10, "Infinite Jump", "InfiniteJump", function(v)
-        ShowNotification("Inf Jump", v and "Infinite Jump Enabled!" or "Infinite Jump Disabled")
-    end)
-
-    CreateToggleRow(11, "Noclip", "Noclip", function(v)
-        ShowNotification("Noclip", v and "Noclip Enabled!" or "Noclip Disabled")
-        if not v and isAlive() then
-            for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
-                if part:IsA("BasePart") then part.CanCollide = true end
-            end
-        end
-    end)
-
-    -- Window Minimize / Toggle Logic
-    local isMinimized = false
-    MinBtn.MouseButton1Click:Connect(function()
-        isMinimized = not isMinimized
-        if isMinimized then
-            ScrollContainer.Visible = false
-            Footer.Visible = false
-            MainFrame.Size = UDim2.new(0, 280, 0, 42)
-            MinBtn.Text = "+"
-        else
-            ScrollContainer.Visible = true
-            Footer.Visible = true
-            MainFrame.Size = UDim2.new(0, 280, 0, 440)
-            MinBtn.Text = "-"
-        end
-    end)
-
-    CloseBtn.MouseButton1Click:Connect(function()
-        ScreenGui:Destroy()
-    end)
-
-    ShowNotification("Ultra Script Hub", "Pull an Egg Script Loaded!")
 end
 
--- Initialize UI
-BuildJunejoUI()
+-- ====================================================
+-- ADDING ALL 11 FEATURES
+-- ====================================================
+
+-- 1. Remove Guard
+AddToggleRow("Remove Guard", "RemoveGuard", function(state)
+    if state then
+        applyRemoveGuard()
+        ShowNotification("Guard", "Security Guards Removed!")
+    end
+end)
+
+-- 2. Auto Pull Egg
+AddToggleRow("Auto Pull Egg", "AutoPullEgg", function(state)
+    ShowNotification("Auto Pull", state and "Auto Pull Enabled!" or "Auto Pull Disabled")
+end)
+
+-- 3. Auto Train
+AddToggleRow("Auto Train / Click", "AutoTrain", function(state)
+    ShowNotification("Auto Train", state and "Training Farm Started!" or "Training Stopped")
+end)
+
+-- 4. Auto Rebirth
+AddToggleRow("Auto Rebirth", "AutoRebirth", function(state)
+    ShowNotification("Auto Rebirth", state and "Auto Rebirth ON" or "Auto Rebirth OFF")
+end)
+
+-- 5. Auto Hatch / Open Egg
+AddToggleRow("Auto Hatch / Open Egg", "AutoHatch", function(state)
+    ShowNotification("Auto Hatch", state and "Hatching Started!" or "Hatching Stopped")
+end)
+
+-- 6. Auto Equip Best Pets
+AddToggleRow("Auto Equip Best Pets", "AutoEquipBest", function(state)
+    ShowNotification("Pets", state and "Auto Equip Best ON" or "Auto Equip Best OFF")
+end)
+
+-- 7. Auto Claim Free Gifts
+AddToggleRow("Auto Claim Free Gifts", "AutoClaimGifts", function(state)
+    ShowNotification("Gifts", state and "Auto Claim Gifts ON" or "Auto Claim Gifts OFF")
+end)
+
+-- 8. Teleport to Zones
+AddToggleRow("Teleport to Zones", "TeleportZones", function(state)
+    if state then
+        teleportToZone()
+    end
+end)
+
+-- 9. Integrated WalkSpeed Row (Toggle + Stepper Pill)
+local SpeedRow = Instance.new("Frame")
+SpeedRow.Size = UDim2.new(1, -6, 0, 24)
+SpeedRow.BackgroundTransparency = 1
+SpeedRow.Parent = ContentFrame
+
+local SpeedToggleBtn = Instance.new("TextButton")
+SpeedToggleBtn.Size = UDim2.new(0.55, 0, 1, 0)
+SpeedToggleBtn.BackgroundTransparency = 1
+SpeedToggleBtn.Text = ""
+SpeedToggleBtn.ZIndex = 5
+SpeedToggleBtn.Parent = SpeedRow
+
+local SpeedLabel = Instance.new("TextLabel")
+SpeedLabel.Size = UDim2.new(1, -26, 1, 0)
+SpeedLabel.BackgroundTransparency = 1
+SpeedLabel.Text = "WalkSpeed"
+SpeedLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
+SpeedLabel.TextSize = 12
+SpeedLabel.Font = Enum.Font.GothamBold
+SpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
+SpeedLabel.Parent = SpeedToggleBtn
+
+local SpeedCheckBox = Instance.new("Frame")
+SpeedCheckBox.Size = UDim2.new(0, 18, 0, 18)
+SpeedCheckBox.Position = UDim2.new(1, -18, 0.5, -9)
+SpeedCheckBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+SpeedCheckBox.BackgroundTransparency = 0
+SpeedCheckBox.BorderSizePixel = 0
+SpeedCheckBox.Parent = SpeedToggleBtn
+
+local SpeedCheckCorner = Instance.new("UICorner")
+SpeedCheckCorner.CornerRadius = UDim.new(0, 4)
+SpeedCheckCorner.Parent = SpeedCheckBox
+
+local SpeedCheckStroke = Instance.new("UIStroke")
+SpeedCheckStroke.Color = Color3.fromRGB(45, 45, 55)
+SpeedCheckStroke.Thickness = 1.2
+SpeedCheckStroke.Parent = SpeedCheckBox
+
+local SpeedCheckMark = Instance.new("Frame")
+SpeedCheckMark.Size = UDim2.new(0, 10, 0, 10)
+SpeedCheckMark.Position = UDim2.new(0.5, -5, 0.5, -5)
+SpeedCheckMark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+SpeedCheckMark.BackgroundTransparency = Toggles.WalkSpeedBoost and 0 or 1
+SpeedCheckMark.BorderSizePixel = 0
+SpeedCheckMark.Parent = SpeedCheckBox
+
+local MarkCorner = Instance.new("UICorner")
+MarkCorner.CornerRadius = UDim.new(0, 2)
+MarkCorner.Parent = SpeedCheckMark
+
+SpeedToggleBtn.MouseButton1Click:Connect(function()
+    Toggles.WalkSpeedBoost = not Toggles.WalkSpeedBoost
+    SpeedCheckMark.BackgroundTransparency = Toggles.WalkSpeedBoost and 0 or 1
+    UpdateCharacterSpeed()
+end)
+
+local SpeedControlFrame = Instance.new("Frame")
+SpeedControlFrame.Size = UDim2.new(0.42, 0, 1, 0)
+SpeedControlFrame.Position = UDim2.new(0.58, 0, 0, 0)
+SpeedControlFrame.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+SpeedControlFrame.BackgroundTransparency = 0
+SpeedControlFrame.BorderSizePixel = 0
+SpeedControlFrame.Parent = SpeedRow
+
+local CtrlCorner = Instance.new("UICorner")
+CtrlCorner.CornerRadius = UDim.new(0, 4)
+CtrlCorner.Parent = SpeedControlFrame
+
+local CtrlStroke = Instance.new("UIStroke")
+CtrlStroke.Color = Color3.fromRGB(45, 45, 55)
+CtrlStroke.Thickness = 1
+CtrlStroke.Parent = SpeedControlFrame
+
+local MinusBtn = Instance.new("TextButton")
+MinusBtn.Size = UDim2.new(0, 22, 1, 0)
+MinusBtn.Position = UDim2.new(0, 0, 0, 0)
+MinusBtn.BackgroundTransparency = 1
+MinusBtn.Text = "-"
+MinusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
+MinusBtn.TextSize = 14
+MinusBtn.Font = Enum.Font.GothamBold
+MinusBtn.Parent = SpeedControlFrame
+
+local SpeedDisplay = Instance.new("TextLabel")
+SpeedDisplay.Size = UDim2.new(1, -44, 1, 0)
+SpeedDisplay.Position = UDim2.new(0, 22, 0, 0)
+SpeedDisplay.BackgroundTransparency = 1
+SpeedDisplay.Text = tostring(CustomSpeedValue)
+SpeedDisplay.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedDisplay.TextSize = 11
+SpeedDisplay.Font = Enum.Font.GothamBold
+SpeedDisplay.Parent = SpeedControlFrame
+
+local PlusBtn = Instance.new("TextButton")
+PlusBtn.Size = UDim2.new(0, 22, 1, 0)
+PlusBtn.Position = UDim2.new(1, -22, 0, 0)
+PlusBtn.BackgroundTransparency = 1
+PlusBtn.Text = "+"
+PlusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
+PlusBtn.TextSize = 14
+PlusBtn.Font = Enum.Font.GothamBold
+PlusBtn.Parent = SpeedControlFrame
+
+MinusBtn.MouseButton1Click:Connect(function()
+    CustomSpeedValue = math.max(16, CustomSpeedValue - 10)
+    SpeedDisplay.Text = tostring(CustomSpeedValue)
+    UpdateCharacterSpeed()
+end)
+
+PlusBtn.MouseButton1Click:Connect(function()
+    CustomSpeedValue = math.min(300, CustomSpeedValue + 10)
+    SpeedDisplay.Text = tostring(CustomSpeedValue)
+    UpdateCharacterSpeed()
+end)
+
+-- 10. Infinite Jump
+AddToggleRow("Infinite Jump", "InfiniteJump")
+
+-- 11. Noclip
+AddToggleRow("Noclip", "Noclip", function(state)
+    if not state and isAlive() then
+        for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = true end
+        end
+    end
+end)
+
+-- Footer Branding (Official Junejo Ultra Script Hub Footer)
+local Footer = Instance.new("Frame")
+Footer.Name = "Footer"
+Footer.Size = UDim2.new(1, 0, 0, 36)
+Footer.Position = UDim2.new(0, 0, 1, -38)
+Footer.BackgroundTransparency = 1
+Footer.Parent = MainFrame
+
+local FooterTitle = Instance.new("TextLabel")
+FooterTitle.Size = UDim2.new(1, 0, 0, 14)
+FooterTitle.Position = UDim2.new(0, 0, 0, 4)
+FooterTitle.BackgroundTransparency = 1
+FooterTitle.Text = "ULTRA SCRIPT HUB"
+FooterTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+FooterTitle.TextSize = 11
+FooterTitle.Font = Enum.Font.GothamBold
+FooterTitle.Parent = Footer
+
+local FooterSub = Instance.new("TextLabel")
+FooterSub.Size = UDim2.new(1, 0, 0, 12)
+FooterSub.Position = UDim2.new(0, 0, 0, 18)
+FooterSub.BackgroundTransparency = 1
+FooterSub.Text = "Made by Junejo"
+FooterSub.TextColor3 = Color3.fromRGB(136, 136, 153)
+FooterSub.TextSize = 9
+FooterSub.Font = Enum.Font.GothamMedium
+FooterSub.Parent = Footer
+
+ShowNotification("Ultra Script Hub", "Pull an Egg Script Loaded!")
