@@ -12,6 +12,8 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
+local VirtualInputManager = nil
+pcall(function() VirtualInputManager = game:GetService("VirtualInputManager") end)
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -119,6 +121,7 @@ local function TriggerPrompt(prompt)
         end
         if prompt.InputHoldBegin and prompt.InputHoldEnd then
             prompt:InputHoldBegin()
+            task.wait(0.02)
             prompt:InputHoldEnd()
         end
     end)
@@ -237,16 +240,47 @@ task.spawn(function()
 end)
 
 -- ====================================================
--- FEATURE 2: AUTO PULL EGG
+-- FEATURE 2: AUTO PULL EGG (ALL-IN-ONE ROBUST PULL ENGINE)
 -- ====================================================
 task.spawn(function()
     while true do
         if Toggles.AutoPullEgg and isAlive() then
             pcall(function()
+                local char = LocalPlayer.Character
+                local hrp = char.HumanoidRootPart
+
+                -- 1. Virtual Mouse/Touch Click Rapid Fire
+                if VirtualUser then
+                    VirtualUser:CaptureController()
+                    VirtualUser:ClickButton1(Vector2.new(500, 500))
+                end
+                if VirtualInputManager then
+                    pcall(function()
+                        VirtualInputManager:SendMouseButtonEvent(500, 500, 0, true, game, 1)
+                        VirtualInputManager:SendMouseButtonEvent(500, 500, 0, false, game, 1)
+                    end)
+                end
+
+                -- 2. Equip and Activate Pull Tools in Hand
+                local tool = char:FindFirstChildOfClass("Tool")
+                if not tool and LocalPlayer:FindFirstChild("Backpack") then
+                    for _, item in ipairs(LocalPlayer.Backpack:GetChildren()) do
+                        if item:IsA("Tool") then
+                            item.Parent = char
+                            tool = item
+                            break
+                        end
+                    end
+                end
+                if tool then
+                    tool:Activate()
+                end
+
+                -- 3. Trigger all Pull ProximityPrompts & ClickDetectors across Workspace
                 for _, prompt in ipairs(Workspace:GetDescendants()) do
                     if prompt:IsA("ProximityPrompt") and prompt.Enabled then
                         local pName = string.lower(prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Name .. " " .. (prompt.Parent and prompt.Parent.Name or ""))
-                        if string.find(pName, "pull") or string.find(pName, "egg") or string.find(pName, "grab") or string.find(pName, "steal") or string.find(pName, "claim") or string.find(pName, "interact") then
+                        if string.find(pName, "pull") or string.find(pName, "egg") or string.find(pName, "grab") or string.find(pName, "steal") or string.find(pName, "claim") or string.find(pName, "interact") or string.find(pName, "drag") or string.find(pName, "hold") then
                             TriggerPrompt(prompt)
                         end
                     elseif prompt:IsA("ClickDetector") then
@@ -254,17 +288,27 @@ task.spawn(function()
                     end
                 end
 
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if remote:IsA("RemoteEvent") then
-                        local rName = string.lower(remote.Name)
-                        if string.find(rName, "pull") or string.find(rName, "eggpall") or string.find(rName, "pulrevent") or string.find(rName, "clickegg") then
-                            remote:FireServer()
+                -- 4. Fire all Pull / Click / Tap Remotes in ReplicatedStorage & Workspace
+                for _, rootService in ipairs({ReplicatedStorage, Workspace}) do
+                    for _, remote in ipairs(rootService:GetDescendants()) do
+                        if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
+                            local rName = string.lower(remote.Name)
+                            if string.find(rName, "pull") or string.find(rName, "eggpall") or string.find(rName, "pulrevent") or string.find(rName, "clickegg") or string.find(rName, "tap") or string.find(rName, "click") or string.find(rName, "pullegg") then
+                                if remote:IsA("RemoteEvent") then
+                                    remote:FireServer()
+                                    remote:FireServer(1)
+                                    remote:FireServer(true)
+                                elseif remote:IsA("RemoteFunction") then
+                                    pcall(function() remote:InvokeServer() end)
+                                    pcall(function() remote:InvokeServer(1) end)
+                                end
+                            end
                         end
                     end
                 end
             end)
         end
-        task.wait(0.15)
+        task.wait(0.05)
     end
 end)
 
@@ -291,11 +335,17 @@ task.spawn(function()
                     tool:Activate()
                 end
 
+                if VirtualUser then
+                    VirtualUser:CaptureController()
+                    VirtualUser:ClickButton1(Vector2.new(400, 400))
+                end
+
                 for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
                     if remote:IsA("RemoteEvent") then
                         local rName = string.lower(remote.Name)
-                        if string.find(rName, "train") or string.find(rName, "click") or string.find(rName, "strength") or string.find(rName, "power") or string.find(rName, "workout") then
+                        if string.find(rName, "train") or string.find(rName, "click") or string.find(rName, "strength") or string.find(rName, "power") or string.find(rName, "workout") or string.find(rName, "lift") then
                             remote:FireServer()
+                            remote:FireServer(1)
                         end
                     end
                 end
@@ -312,7 +362,7 @@ task.spawn(function()
     while true do
         if Toggles.AutoRebirth and isAlive() then
             pcall(function()
-                -- Layer 1: PlayerGui Button Sweeper (Click every Rebirth and Confirmation button)
+                -- Layer 1: PlayerGui Button Sweeper
                 local pgui = LocalPlayer:FindFirstChild("PlayerGui")
                 if pgui then
                     for _, desc in ipairs(pgui:GetDescendants()) do
@@ -321,14 +371,12 @@ task.spawn(function()
                             local bName = string.lower(desc.Name or "")
                             local pName = desc.Parent and string.lower(desc.Parent.Name or "") or ""
                             
-                            -- Main Rebirth Button Match
                             if string.find(bText, "rebirth") or string.find(bName, "rebirth") or string.find(pName, "rebirth") or 
                                string.find(bText, "prestige") or string.find(bName, "prestige") or string.find(pName, "prestige") or
                                string.find(bText, "ascend") or string.find(bName, "ascend") or string.find(pName, "ascend") then
                                 TriggerGuiButton(desc)
                             end
 
-                            -- Confirm Dialog Button Match (e.g. Yes / Confirm inside rebirth frames)
                             if (string.find(pName, "rebirth") or string.find(pName, "confirm") or string.find(pName, "dialog") or string.find(pName, "popup")) then
                                 if string.find(bText, "yes") or string.find(bText, "confirm") or string.find(bText, "buy") or string.find(bText, "ok") or string.find(bText, "accept") or
                                    string.find(bName, "yes") or string.find(bName, "confirm") or string.find(bName, "buy") or string.find(bName, "ok") then
@@ -339,7 +387,7 @@ task.spawn(function()
                     end
                 end
 
-                -- Layer 2: Workspace Rebirth Touch Pads & ProximityPrompts
+                -- Layer 2: Workspace Rebirth Touch Pads & Prompts
                 local hrp = LocalPlayer.Character.HumanoidRootPart
                 for _, obj in ipairs(Workspace:GetDescendants()) do
                     local oName = string.lower(obj.Name)
