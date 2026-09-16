@@ -12,8 +12,6 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
-local VirtualInputManager = nil
-pcall(function() VirtualInputManager = game:GetService("VirtualInputManager") end)
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -44,6 +42,26 @@ local Toggles = {
 }
 
 local CustomSpeedValue = 50
+local SavedBaseCFrame = nil
+
+-- Record initial position on spawn as fallback base
+pcall(function()
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local hrp = char:WaitForChild("HumanoidRootPart", 5)
+    if hrp then
+        SavedBaseCFrame = hrp.CFrame
+    end
+end)
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+    task.wait(1)
+    pcall(function()
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not SavedBaseCFrame and hrp then
+            SavedBaseCFrame = hrp.CFrame
+        end
+    end)
+end)
 
 -- Safe Alive & Character Helper
 local function isAlive()
@@ -86,7 +104,7 @@ else
     end)
 end
 
--- Safe Button Clicker Utility (Fires all possible click events on Mobile & PC)
+-- Safe Button Clicker Utility
 local function TriggerGuiButton(btn)
     if not btn or not btn:IsA("GuiButton") then return end
     pcall(function()
@@ -99,10 +117,6 @@ local function TriggerGuiButton(btn)
             firesignal(btn.MouseButton1Click)
             firesignal(btn.MouseButton1Down)
             firesignal(btn.Activated)
-        end
-        if VirtualUser and btn.AbsoluteSize.X > 0 and btn.AbsoluteSize.Y > 0 then
-            VirtualUser:CaptureController()
-            VirtualUser:ClickButton1(btn.AbsolutePosition + btn.AbsoluteSize / 2)
         end
     end)
 end
@@ -206,81 +220,177 @@ local function ShowNotification(title, message)
 end
 
 -- ====================================================
--- CACHE ENGINE FOR HIGH-PERFORMANCE OBJECTS & REMOTES
+-- BASE / GOAL / DROP ZONE LOCATOR
 -- ====================================================
-local CachedPullRemotes = {}
-local CachedEggPrompts = {}
-local CachedEggDetectors = {}
-local CachedEggParts = {}
-local CachedRebirthRemotes = {}
-local CachedHatchRemotes = {}
-
-local function RefreshCache()
+local function GetPlayerBaseCFrame()
+    local baseCFrame = nil
     pcall(function()
-        -- Scan Remotes
-        local pullR = {}
-        local rebR = {}
-        local hatchR = {}
-        for _, rootService in ipairs({ReplicatedStorage, Workspace, LocalPlayer}) do
-            for _, obj in ipairs(rootService:GetDescendants()) do
-                if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
-                    local rName = string.lower(obj.Name)
-                    local pName = obj.Parent and string.lower(obj.Parent.Name) or ""
-                    
-                    if string.find(rName, "pull") or string.find(rName, "egg") or string.find(rName, "tap") or 
-                       string.find(rName, "click") or string.find(rName, "drag") or string.find(rName, "rope") or 
-                       string.find(rName, "tether") or string.find(rName, "power") or string.find(rName, "strength") or
-                       string.find(pName, "pull") or string.find(pName, "egg") or string.find(rName, "interact") or string.find(rName, "action") then
-                        table.insert(pullR, obj)
+        local myName = LocalPlayer.Name
+        local myUserId = LocalPlayer.UserId
+        
+        -- 1. Search for owned Plots/Bases/Nests in Workspace
+        for _, containerName in ipairs({"Plots", "Bases", "Houses", "Islands", "Nests", "Zones", "Spawns", "DropZones", "Delivery", "SafeZones"}) do
+            local container = Workspace:FindFirstChild(containerName)
+            if container then
+                for _, plot in ipairs(container:GetChildren()) do
+                    local isMine = false
+                    if string.find(string.lower(plot.Name), string.lower(myName)) then
+                        isMine = true
                     end
-
-                    if string.find(rName, "rebirth") or string.find(rName, "prestige") or string.find(rName, "ascend") or string.find(rName, "rank") or string.find(pName, "rebirth") then
-                        table.insert(rebR, obj)
+                    local ownerVal = plot:FindFirstChild("Owner") or plot:FindFirstChild("Player") or plot:FindFirstChild("UserId")
+                    if ownerVal then
+                        if ownerVal.Value == LocalPlayer or ownerVal.Value == myName or ownerVal.Value == myUserId then
+                            isMine = true
+                        end
                     end
-
-                    if string.find(rName, "hatch") or string.find(rName, "openegg") or string.find(rName, "buyegg") or string.find(rName, "eggopen") or string.find(pName, "egg") or string.find(pName, "hatch") then
-                        table.insert(hatchR, obj)
+                    if isMine then
+                        local dropPart = plot:FindFirstChild("Deposit") or plot:FindFirstChild("Drop") or plot:FindFirstChild("Pad") or plot:FindFirstChild("Nest") or plot:FindFirstChild("Collector") or plot:FindFirstChild("Spawn") or plot:FindFirstChild("SpawnLocation") or plot.PrimaryPart or plot:FindFirstChildOfClass("BasePart")
+                        if dropPart and dropPart:IsA("BasePart") then
+                            baseCFrame = dropPart.CFrame + Vector3.new(0, 3, 0)
+                            return
+                        elseif plot:IsA("Model") and plot.PrimaryPart then
+                            baseCFrame = plot.PrimaryPart.CFrame + Vector3.new(0, 3, 0)
+                            return
+                        end
                     end
                 end
             end
         end
-        CachedPullRemotes = pullR
-        CachedRebirthRemotes = rebR
-        CachedHatchRemotes = hatchR
 
-        -- Scan Workspace Interactables
-        local prompts = {}
-        local detectors = {}
-        local parts = {}
+        -- 2. Search anywhere in Workspace for a base named after player
+        for _, obj in ipairs(Workspace:GetChildren()) do
+            if obj:IsA("Model") or obj:IsA("Folder") then
+                local oName = string.lower(obj.Name)
+                if string.find(oName, "base") or string.find(oName, "plot") or string.find(oName, "island") or string.find(oName, "nest") then
+                    local owner = obj:FindFirstChild("Owner") or obj:FindFirstChild("Player")
+                    if (owner and (owner.Value == LocalPlayer or owner.Value == myName)) or string.find(oName, string.lower(myName)) then
+                        local part = obj:FindFirstChild("Drop") or obj:FindFirstChild("Deposit") or obj:FindFirstChild("Pad") or obj:FindFirstChild("Nest") or obj.PrimaryPart or obj:FindFirstChildOfClass("BasePart")
+                        if part and part:IsA("BasePart") then
+                            baseCFrame = part.CFrame + Vector3.new(0, 3, 0)
+                            return
+                        end
+                    end
+                end
+            end
+        end
+
+        -- 3. Check for SpawnLocations
         for _, obj in ipairs(Workspace:GetDescendants()) do
-            local oName = string.lower(obj.Name)
-            if obj:IsA("ProximityPrompt") then
-                local act = string.lower(obj.ActionText or "")
-                local objTxt = string.lower(obj.ObjectText or "")
-                if string.find(oName, "pull") or string.find(oName, "egg") or string.find(act, "pull") or string.find(act, "egg") or string.find(objTxt, "pull") or string.find(objTxt, "egg") or string.find(act, "tap") or string.find(act, "click") or string.find(act, "drag") or string.find(act, "grab") or string.find(act, "steal") or string.find(act, "open") or string.find(act, "hatch") then
-                    table.insert(prompts, obj)
-                end
-            elseif obj:IsA("ClickDetector") then
-                if string.find(oName, "pull") or string.find(oName, "egg") or (obj.Parent and (string.find(string.lower(obj.Parent.Name), "pull") or string.find(string.lower(obj.Parent.Name), "egg"))) then
-                    table.insert(detectors, obj)
-                end
-            elseif obj:IsA("BasePart") then
-                if string.find(oName, "egg") or string.find(oName, "pull") or string.find(oName, "rope") or string.find(oName, "tether") or string.find(oName, "handle") or string.find(oName, "stand") or string.find(oName, "pad") then
-                    table.insert(parts, obj)
+            if obj:IsA("SpawnLocation") and obj.Enabled then
+                baseCFrame = obj.CFrame + Vector3.new(0, 3, 0)
+                return
+            end
+        end
+
+        -- 4. Check for Safe Zone / Finish / Delivery parts
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if obj:IsA("BasePart") then
+                local n = string.lower(obj.Name)
+                if string.find(n, "deposit") or string.find(n, "dropzone") or string.find(n, "delivery") or string.find(n, "finish") or string.find(n, "goal") or string.find(n, "safezone") then
+                    baseCFrame = obj.CFrame + Vector3.new(0, 3, 0)
+                    return
                 end
             end
         end
-        CachedEggPrompts = prompts
-        CachedEggDetectors = detectors
-        CachedEggParts = parts
     end)
+
+    return baseCFrame or SavedBaseCFrame or (isAlive() and LocalPlayer.Character.HumanoidRootPart.CFrame)
 end
 
--- Refresh cache periodically
+-- ====================================================
+-- EGG TARGET LOCATOR
+-- ====================================================
+local function GetTargetEggs()
+    local eggs = {}
+    pcall(function()
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if obj ~= char and not obj:IsDescendantOf(char) then
+                local isEgg = false
+                local targetPart = nil
+                local targetPrompt = nil
+                local targetCD = nil
+
+                local oName = string.lower(obj.Name)
+                local pName = obj.Parent and string.lower(obj.Parent.Name) or ""
+
+                -- Avoid player characters and NPCs
+                if not Players:GetPlayerFromCharacter(obj) and not string.find(pName, "character") and not string.find(pName, "player") then
+                    if obj:IsA("Model") then
+                        if (string.find(oName, "egg") or string.find(oName, "pull") or string.find(oName, "tether") or string.find(oName, "lucky") or string.find(oName, "brainrot")) and not string.find(oName, "hatch") and not string.find(oName, "shop") and not string.find(oName, "gui") then
+                            targetPart = obj.PrimaryPart or obj:FindFirstChild("Handle") or obj:FindFirstChild("Egg") or obj:FindFirstChild("Main") or obj:FindFirstChildOfClass("BasePart")
+                            if targetPart then
+                                targetPrompt = obj:FindFirstChildOfClass("ProximityPrompt", true)
+                                targetCD = obj:FindFirstChildOfClass("ClickDetector", true)
+                                isEgg = true
+                            end
+                        end
+                    elseif obj:IsA("BasePart") and obj.Parent and not obj.Parent:IsA("Model") then
+                        if (string.find(oName, "egg") or string.find(oName, "pullegg") or string.find(oName, "tether")) and not string.find(oName, "hatch") and not string.find(oName, "shop") then
+                            targetPart = obj
+                            targetPrompt = obj:FindFirstChildOfClass("ProximityPrompt")
+                            targetCD = obj:FindFirstChildOfClass("ClickDetector")
+                            isEgg = true
+                        end
+                    elseif obj:IsA("ProximityPrompt") and obj.Enabled then
+                        local act = string.lower(obj.ActionText or "")
+                        local objT = string.lower(obj.ObjectText or "")
+                        if (string.find(act, "pull") or string.find(act, "steal") or string.find(act, "grab") or string.find(act, "take") or string.find(act, "carry") or string.find(objT, "egg") or string.find(act, "egg")) and not string.find(act, "hatch") and not string.find(act, "buy") and not string.find(act, "open") then
+                            targetPrompt = obj
+                            targetPart = obj.Parent:IsA("BasePart") and obj.Parent or (obj.Parent:IsA("Model") and (obj.Parent.PrimaryPart or obj.Parent:FindFirstChildOfClass("BasePart")))
+                            isEgg = true
+                        end
+                    end
+
+                    if isEgg and targetPart then
+                        local dist = (targetPart.Position - hrp.Position).Magnitude
+                        table.insert(eggs, {
+                            Model = obj:IsA("Model") and obj or obj.Parent,
+                            Part = targetPart,
+                            Prompt = targetPrompt,
+                            ClickDetector = targetCD,
+                            Distance = dist
+                        })
+                    end
+                end
+            end
+        end
+
+        table.sort(eggs, function(a, b) return a.Distance < b.Distance end)
+    end)
+    return eggs
+end
+
+-- ====================================================
+-- AUTO-CLOSE UNWANTED SPIN WHEEL / INTRUSIVE POPUPS
+-- ====================================================
 task.spawn(function()
     while true do
-        RefreshCache()
-        task.wait(3.0)
+        pcall(function()
+            local pgui = LocalPlayer:FindFirstChild("PlayerGui")
+            if pgui then
+                for _, gui in ipairs(pgui:GetChildren()) do
+                    if gui:IsA("ScreenGui") and gui.Enabled and gui.Name ~= "JunejoHubUI_PullAnEgg" then
+                        local gName = string.lower(gui.Name)
+                        if string.find(gName, "wheel") or string.find(gName, "spin") or string.find(gName, "roulette") then
+                            for _, btn in ipairs(gui:GetDescendants()) do
+                                if btn:IsA("GuiButton") then
+                                    local bName = string.lower(btn.Name)
+                                    local bText = string.lower(btn.Text or "")
+                                    if string.find(bName, "close") or string.find(bName, "exit") or string.find(bName, "x") or bText == "x" or string.find(bText, "close") then
+                                        TriggerGuiButton(btn)
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+        task.wait(1)
     end
 end)
 
@@ -319,146 +429,110 @@ task.spawn(function()
 end)
 
 -- ====================================================
--- FEATURE 2: AUTO PULL EGG (HYPER MULTI-LAYER ENGINE)
+-- FEATURE 2: AUTO PULL EGG & BRING TO BASE ENGINE
 -- ====================================================
-
--- Layer A: Virtual Input & Tool Activation & GUI Button Masher (0.02s)
 task.spawn(function()
     while true do
         if Toggles.AutoPullEgg and isAlive() then
             pcall(function()
                 local char = LocalPlayer.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                local hum = char and char:FindFirstChildOfClass("Humanoid")
+                if not hrp or not hum then return end
 
-                -- 1. Virtual Mouse/Touch Rapid Clicks at center of screen
-                local vp = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(800, 600)
-                local center = Vector2.new(vp.X / 2, vp.Y / 2)
-                
-                if VirtualUser then
-                    VirtualUser:CaptureController()
-                    VirtualUser:ClickButton1(center)
-                    VirtualUser:Button1Down(center)
-                    VirtualUser:Button1Up(center)
-                end
+                local baseCFrame = GetPlayerBaseCFrame()
+                local eggList = GetTargetEggs()
 
-                if VirtualInputManager then
-                    VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, true, game, 1)
-                    VirtualInputManager:SendMouseButtonEvent(center.X, center.Y, 0, false, game, 1)
-                end
+                if #eggList > 0 then
+                    local target = eggList[1]
+                    local eggPart = target.Part
+                    local eggPrompt = target.Prompt
+                    local eggCD = target.ClickDetector
+                    local eggModel = target.Model
 
-                -- 2. Equip and Activate Pull Tools
-                local tool = char:FindFirstChildOfClass("Tool")
-                if not tool and LocalPlayer:FindFirstChild("Backpack") then
-                    for _, item in ipairs(LocalPlayer.Backpack:GetChildren()) do
-                        if item:IsA("Tool") then
-                            item.Parent = char
-                            tool = item
-                            break
-                        end
+                    -- 1. Move/Teleport to Egg
+                    if (hrp.Position - eggPart.Position).Magnitude > 6 then
+                        hrp.CFrame = eggPart.CFrame + Vector3.new(0, 2, 0)
+                        task.wait(0.12)
                     end
-                end
-                if tool then
-                    tool:Activate()
-                end
 
-                -- 3. Click any On-Screen Pull / Tap / Click GUI Buttons in PlayerGui
-                local pgui = LocalPlayer:FindFirstChild("PlayerGui")
-                if pgui then
-                    for _, desc in ipairs(pgui:GetDescendants()) do
-                        if desc:IsA("GuiButton") and desc.Visible then
-                            local bText = string.lower(desc.Text or "")
-                            local bName = string.lower(desc.Name or "")
-                            local pName = desc.Parent and string.lower(desc.Parent.Name or "") or ""
-                            
-                            if string.find(bText, "pull") or string.find(bText, "tap") or string.find(bText, "click") or string.find(bText, "drag") or string.find(bText, "mash") or string.find(bText, "press") or string.find(bText, "power") or
-                               string.find(bName, "pull") or string.find(bName, "tap") or string.find(bName, "click") or string.find(bName, "action") or string.find(bName, "hit") or string.find(bName, "power") or
-                               string.find(pName, "pull") or string.find(pName, "egg") or string.find(pName, "tether") or string.find(pName, "click") then
-                                TriggerGuiButton(desc)
+                    -- 2. Equip Pull / Rope Tool
+                    local tool = char:FindFirstChildOfClass("Tool")
+                    if not tool and LocalPlayer:FindFirstChild("Backpack") then
+                        for _, item in ipairs(LocalPlayer.Backpack:GetChildren()) do
+                            if item:IsA("Tool") then
+                                item.Parent = char
+                                tool = item
+                                break
                             end
                         end
                     end
-                end
-            end)
-        end
-        task.wait(0.02)
-    end
-end)
+                    if tool then tool:Activate() end
 
--- Layer B: ProximityPrompts & ClickDetectors & Touches (0.05s)
-task.spawn(function()
-    while true do
-        if Toggles.AutoPullEgg and isAlive() then
-            pcall(function()
-                local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                
-                -- Trigger Prompts
-                for _, prompt in ipairs(CachedEggPrompts) do
-                    if prompt and prompt.Parent and prompt.Enabled then
-                        TriggerPrompt(prompt)
+                    -- 3. Grab / Interact with the Egg
+                    if eggPrompt and eggPrompt.Parent and eggPrompt.Enabled then
+                        TriggerPrompt(eggPrompt)
                     end
-                end
-
-                -- Trigger ClickDetectors
-                for _, cd in ipairs(CachedEggDetectors) do
-                    if cd and cd.Parent then
-                        if fireclickdetector then
-                            fireclickdetector(cd)
-                        end
+                    if eggCD and eggCD.Parent and fireclickdetector then
+                        fireclickdetector(eggCD)
                     end
-                end
+                    TriggerTouch(hrp, eggPart)
 
-                -- Touch interest
-                if hrp then
-                    for _, part in ipairs(CachedEggParts) do
-                        if part and part.Parent and (part.Position - hrp.Position).Magnitude <= 35 then
-                            TriggerTouch(hrp, part)
-                        end
-                    end
-                end
-            end)
-        end
-        task.wait(0.05)
-    end
-end)
-
--- Layer C: Direct Remote Events & Remote Functions Dispatcher (0.04s)
-task.spawn(function()
-    while true do
-        if Toggles.AutoPullEgg and isAlive() then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-
-                for _, remote in ipairs(CachedPullRemotes) do
-                    if remote and remote.Parent then
-                        if remote:IsA("RemoteEvent") then
-                            remote:FireServer()
-                            remote:FireServer(1)
-                            remote:FireServer(true)
-                            remote:FireServer("Pull")
-                            remote:FireServer("PullEgg")
-                            remote:FireServer("Click")
-                            remote:FireServer("Tap")
-                            remote:FireServer("Egg")
-                            remote:FireServer("Egg1")
-                            remote:FireServer(LocalPlayer)
-                            if hrp then
-                                remote:FireServer(hrp.Position)
+                    -- 4. Fire Egg Pull specific Remotes (Safe - no spin wheel remotes)
+                    for _, rootService in ipairs({ReplicatedStorage, Workspace}) do
+                        for _, remote in ipairs(rootService:GetDescendants()) do
+                            if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
+                                local rName = string.lower(remote.Name)
+                                if (string.find(rName, "pull") or string.find(rName, "grab") or string.find(rName, "steal") or string.find(rName, "take")) and not string.find(rName, "spin") and not string.find(rName, "wheel") and not string.find(rName, "gift") and not string.find(rName, "shop") then
+                                    if remote:IsA("RemoteEvent") then
+                                        remote:FireServer(eggModel or eggPart)
+                                        remote:FireServer("Pull", eggModel or eggPart)
+                                        remote:FireServer(1)
+                                        remote:FireServer()
+                                    elseif remote:IsA("RemoteFunction") then
+                                        task.spawn(function()
+                                            pcall(function() remote:InvokeServer(eggModel or eggPart) end)
+                                            pcall(function() remote:InvokeServer("Pull") end)
+                                        end)
+                                    end
+                                end
                             end
-                        elseif remote:IsA("RemoteFunction") then
-                            task.spawn(function()
-                                pcall(function() remote:InvokeServer() end)
-                                pcall(function() remote:InvokeServer(1) end)
-                                pcall(function() remote:InvokeServer(true) end)
-                                pcall(function() remote:InvokeServer("Pull") end)
-                                pcall(function() remote:InvokeServer("Egg") end)
-                            end)
                         end
                     end
+
+                    task.wait(0.15)
+
+                    -- 5. Pull & Transport Egg to Base
+                    if baseCFrame then
+                        hrp.CFrame = baseCFrame
+                        task.wait(0.2)
+                        
+                        -- Trigger deposit touch & prompt at base
+                        for _, obj in ipairs(Workspace:GetDescendants()) do
+                            if obj:IsA("BasePart") and (obj.Position - hrp.Position).Magnitude <= 15 then
+                                local n = string.lower(obj.Name)
+                                if string.find(n, "deposit") or string.find(n, "drop") or string.find(n, "pad") or string.find(n, "nest") or string.find(n, "collector") or string.find(n, "base") or string.find(n, "claim") then
+                                    TriggerTouch(hrp, obj)
+                                    local p = obj:FindFirstChildOfClass("ProximityPrompt")
+                                    if p then TriggerPrompt(p) end
+                                end
+                            end
+                        end
+
+                        if tool then tool:Activate() end
+                    end
+                else
+                    -- Stand at base and pull / activate tool
+                    if baseCFrame and (hrp.Position - baseCFrame.Position).Magnitude > 10 then
+                        hrp.CFrame = baseCFrame
+                    end
+                    
+                    local tool = char:FindFirstChildOfClass("Tool")
+                    if tool then tool:Activate() end
                 end
             end)
         end
-        task.wait(0.04)
+        task.wait(0.25)
     end
 end)
 
@@ -485,15 +559,10 @@ task.spawn(function()
                     tool:Activate()
                 end
 
-                if VirtualUser then
-                    VirtualUser:CaptureController()
-                    VirtualUser:ClickButton1(Vector2.new(400, 400))
-                end
-
-                for _, remote in ipairs(CachedPullRemotes) do
-                    if remote and remote:IsA("RemoteEvent") then
+                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
+                    if remote:IsA("RemoteEvent") then
                         local rName = string.lower(remote.Name)
-                        if string.find(rName, "train") or string.find(rName, "click") or string.find(rName, "strength") or string.find(rName, "power") or string.find(rName, "workout") or string.find(rName, "lift") then
+                        if (string.find(rName, "train") or string.find(rName, "strength") or string.find(rName, "power") or string.find(rName, "workout") or string.find(rName, "lift")) and not string.find(rName, "wheel") and not string.find(rName, "spin") then
                             remote:FireServer()
                             remote:FireServer(1)
                         end
@@ -501,7 +570,7 @@ task.spawn(function()
                 end
             end)
         end
-        task.wait(0.05)
+        task.wait(0.1)
     end
 end)
 
@@ -521,13 +590,13 @@ task.spawn(function()
                             local bName = string.lower(desc.Name or "")
                             local pName = desc.Parent and string.lower(desc.Parent.Name or "") or ""
                             
-                            if string.find(bText, "rebirth") or string.find(bName, "rebirth") or string.find(pName, "rebirth") or 
-                               string.find(bText, "prestige") or string.find(bName, "prestige") or string.find(pName, "prestige") or
-                               string.find(bText, "ascend") or string.find(bName, "ascend") or string.find(pName, "ascend") then
+                            if (string.find(bText, "rebirth") or string.find(bName, "rebirth") or string.find(pName, "rebirth") or 
+                                string.find(bText, "prestige") or string.find(bName, "prestige") or string.find(pName, "prestige") or
+                                string.find(bText, "ascend") or string.find(bName, "ascend") or string.find(pName, "ascend")) and not string.find(bName, "spin") and not string.find(bName, "wheel") then
                                 TriggerGuiButton(desc)
                             end
 
-                            if (string.find(pName, "rebirth") or string.find(pName, "confirm") or string.find(pName, "dialog") or string.find(pName, "popup")) then
+                            if (string.find(pName, "rebirth") or string.find(pName, "confirm") or string.find(pName, "dialog") or string.find(pName, "popup")) and not string.find(pName, "wheel") then
                                 if string.find(bText, "yes") or string.find(bText, "confirm") or string.find(bText, "buy") or string.find(bText, "ok") or string.find(bText, "accept") or
                                    string.find(bName, "yes") or string.find(bName, "confirm") or string.find(bName, "buy") or string.find(bName, "ok") then
                                     TriggerGuiButton(desc)
@@ -552,23 +621,26 @@ task.spawn(function()
                     end
                 end
 
-                -- Layer 3: RemoteEvents in ReplicatedStorage & Workspace & Players
-                for _, remote in ipairs(CachedRebirthRemotes) do
-                    if remote and remote.Parent then
-                        if remote:IsA("RemoteEvent") then
-                            remote:FireServer()
-                            remote:FireServer(1)
-                            remote:FireServer("1")
-                            remote:FireServer(true)
-                            remote:FireServer({})
-                            remote:FireServer("Rebirth")
-                        elseif remote:IsA("RemoteFunction") then
-                            task.spawn(function()
-                                pcall(function() remote:InvokeServer() end)
-                                pcall(function() remote:InvokeServer(1) end)
-                                pcall(function() remote:InvokeServer("1") end)
-                                pcall(function() remote:InvokeServer(true) end)
-                            end)
+                -- Layer 3: RemoteEvents in ReplicatedStorage
+                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
+                    if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
+                        local rName = string.lower(remote.Name)
+                        if (string.find(rName, "rebirth") or string.find(rName, "prestige") or string.find(rName, "ascend") or string.find(rName, "rank") or string.find(rName, "reset")) and not string.find(rName, "wheel") and not string.find(rName, "spin") then
+                            if remote:IsA("RemoteEvent") then
+                                remote:FireServer()
+                                remote:FireServer(1)
+                                remote:FireServer("1")
+                                remote:FireServer(true)
+                                remote:FireServer({})
+                                remote:FireServer("Rebirth")
+                            elseif remote:IsA("RemoteFunction") then
+                                task.spawn(function()
+                                    pcall(function() remote:InvokeServer() end)
+                                    pcall(function() remote:InvokeServer(1) end)
+                                    pcall(function() remote:InvokeServer("1") end)
+                                    pcall(function() remote:InvokeServer(true) end)
+                                end)
+                            end
                         end
                     end
                 end
@@ -588,25 +660,20 @@ task.spawn(function()
                 local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
 
                 -- Layer 1: Trigger all nearby Egg ProximityPrompts / ClickDetectors / Touch
-                for _, obj in ipairs(CachedEggPrompts) do
-                    if obj and obj.Parent and obj.Enabled then
-                        TriggerPrompt(obj)
-                    end
-                end
-                for _, obj in ipairs(CachedEggDetectors) do
-                    if obj and obj.Parent then
-                        fireclickdetector(obj)
-                    end
-                end
-                if hrp then
-                    for _, obj in ipairs(CachedEggParts) do
-                        if obj and obj.Parent and (obj.Position - hrp.Position).Magnitude <= 35 then
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    local n = string.lower(obj.Name)
+                    if (string.find(n, "hatch") or string.find(n, "eggstand") or string.find(n, "shop")) and not string.find(n, "wheel") and not string.find(n, "spin") then
+                        if obj:IsA("ProximityPrompt") then
+                            TriggerPrompt(obj)
+                        elseif obj:IsA("ClickDetector") then
+                            fireclickdetector(obj)
+                        elseif obj:IsA("BasePart") and hrp and (obj.Position - hrp.Position).Magnitude <= 35 then
                             TriggerTouch(hrp, obj)
                         end
                     end
                 end
 
-                -- Layer 2: PlayerGui Hatch Buttons (e.g. Open 1, Hatch, Buy)
+                -- Layer 2: PlayerGui Hatch Buttons
                 local pgui = LocalPlayer:FindFirstChild("PlayerGui")
                 if pgui then
                     for _, desc in ipairs(pgui:GetDescendants()) do
@@ -614,7 +681,7 @@ task.spawn(function()
                             local bText = string.lower(desc.Text or "")
                             local bName = string.lower(desc.Name or "")
                             local pName = desc.Parent and string.lower(desc.Parent.Name or "") or ""
-                            if (string.find(pName, "egg") or string.find(pName, "hatch") or string.find(pName, "shop")) then
+                            if (string.find(pName, "egg") or string.find(pName, "hatch") or string.find(pName, "shop")) and not string.find(pName, "wheel") and not string.find(pName, "spin") then
                                 if string.find(bText, "open") or string.find(bText, "hatch") or string.find(bText, "buy") or string.find(bText, "1") or string.find(bName, "open") or string.find(bName, "hatch") or string.find(bName, "buy") or string.find(bName, "single") then
                                     TriggerGuiButton(desc)
                                 end
@@ -624,21 +691,24 @@ task.spawn(function()
                 end
 
                 -- Layer 3: RemoteEvents in ReplicatedStorage
-                for _, remote in ipairs(CachedHatchRemotes) do
-                    if remote and remote.Parent then
-                        if remote:IsA("RemoteEvent") then
-                            remote:FireServer("Egg1", 1)
-                            remote:FireServer("Egg1", "Single")
-                            remote:FireServer("Egg", 1)
-                            remote:FireServer(1)
-                            remote:FireServer("1")
-                            remote:FireServer(true)
-                            remote:FireServer()
-                        elseif remote:IsA("RemoteFunction") then
-                            task.spawn(function()
-                                pcall(function() remote:InvokeServer("Egg1", 1) end)
-                                pcall(function() remote:InvokeServer(1) end)
-                            end)
+                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
+                    if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
+                        local rName = string.lower(remote.Name)
+                        if (string.find(rName, "openegg") or string.find(rName, "hatchegg") or string.find(rName, "buyegg") or string.find(rName, "eggopen") or string.find(rName, "hatch")) and not string.find(rName, "wheel") and not string.find(rName, "spin") then
+                            if remote:IsA("RemoteEvent") then
+                                remote:FireServer("Egg1", 1)
+                                remote:FireServer("Egg1", "Single")
+                                remote:FireServer("Egg", 1)
+                                remote:FireServer(1)
+                                remote:FireServer("1")
+                                remote:FireServer(true)
+                                remote:FireServer()
+                            elseif remote:IsA("RemoteFunction") then
+                                task.spawn(function()
+                                    pcall(function() remote:InvokeServer("Egg1", 1) end)
+                                    pcall(function() remote:InvokeServer(1) end)
+                                end)
+                            end
                         end
                     end
                 end
@@ -658,7 +728,7 @@ task.spawn(function()
                 for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
                     if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
                         local rName = string.lower(remote.Name)
-                        if string.find(rName, "gift") or string.find(rName, "daily") or string.find(rName, "reward") or string.find(rName, "spin") or string.find(rName, "wheel") or string.find(rName, "free") then
+                        if string.find(rName, "gift") or string.find(rName, "daily") or string.find(rName, "reward") or string.find(rName, "free") then
                             for i = 1, 12 do
                                 if remote:IsA("RemoteEvent") then
                                     remote:FireServer(i)
@@ -966,7 +1036,7 @@ end)
 
 -- 2. Auto Pull Egg
 AddToggleRow("Auto Pull Egg", "AutoPullEgg", function(state)
-    ShowNotification("Auto Pull", state and "Auto Pull Enabled!" or "Auto Pull Disabled")
+    ShowNotification("Auto Pull", state and "Auto Pull to Base Started!" or "Auto Pull Stopped")
 end)
 
 -- 3. Auto Train / Click
