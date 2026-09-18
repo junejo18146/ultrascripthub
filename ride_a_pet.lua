@@ -306,7 +306,7 @@ local function GetBasePosition()
 end
 
 -- =================================================================
--- SMART REMOTE ENGINE & PROXIMITY PROMPT TRIGGER
+-- SMART REMOTE ENGINE & PROXIMITY PROMPT / CLICKDETECTOR TRIGGER
 -- =================================================================
 
 -- Find all matching remotes in ReplicatedStorage dynamically
@@ -397,6 +397,22 @@ local function TriggerPrompt(prompt)
         end
     end)
 
+    return success
+end
+
+-- Universal ClickDetector Activator
+local function TriggerClickDetector(cd)
+    if not cd or not cd:IsA("ClickDetector") then return false end
+    local success = false
+    pcall(function()
+        cd.MaxActivationDistance = 99999
+    end)
+    if fireclickdetector then
+        pcall(function()
+            fireclickdetector(cd)
+            success = true
+        end)
+    end
     return success
 end
 
@@ -632,32 +648,65 @@ end
 local function GetMyNests()
     local myPlot = GetMyPlot()
     local nests = {}
+    local seen = {}
 
     if myPlot then
-        local nestsFolder = myPlot:FindFirstChild("Nests") 
-                         or myPlot:FindFirstChild("Incubators")
-                         or myPlot:FindFirstChild("NestFolder")
-        if nestsFolder then
-            for _, nest in ipairs(nestsFolder:GetChildren()) do
-                table.insert(nests, nest)
+        -- 1. Check known nest folders
+        local candidateFolders = {
+            myPlot:FindFirstChild("Nests"),
+            myPlot:FindFirstChild("Incubators"),
+            myPlot:FindFirstChild("NestFolder"),
+            myPlot:FindFirstChild("Eggs"),
+            myPlot:FindFirstChild("Structures"),
+            myPlot:FindFirstChild("Buildings"),
+            myPlot:FindFirstChild("Base")
+        }
+        for _, folder in ipairs(candidateFolders) do
+            if folder then
+                for _, child in ipairs(folder:GetChildren()) do
+                    if (child:IsA("Model") or child:IsA("BasePart")) and not seen[child] then
+                        seen[child] = true
+                        table.insert(nests, child)
+                    end
+                end
             end
-        else
-            for _, desc in ipairs(myPlot:GetDescendants()) do
-                if desc:IsA("Model") and (desc.Name:lower():find("nest") or desc.Name:lower():find("incubator")) then
+        end
+
+        -- 2. Search all descendants of myPlot for nest keywords
+        for _, desc in ipairs(myPlot:GetDescendants()) do
+            if (desc:IsA("Model") or desc:IsA("BasePart")) and not seen[desc] then
+                local name = desc.Name:lower()
+                if name:find("nest") or name:find("incubator") or name:find("eggslot") or name:find("slot") or name:find("hatch") then
+                    seen[desc] = true
                     table.insert(nests, desc)
+                end
+            end
+        end
+
+        -- 3. Any model in myPlot that contains a ProximityPrompt or ClickDetector
+        for _, prompt in ipairs(myPlot:GetDescendants()) do
+            if prompt:IsA("ProximityPrompt") or prompt:IsA("ClickDetector") then
+                local model = prompt:FindFirstAncestorOfClass("Model") or prompt.Parent
+                if model and not seen[model] and not (model == myPlot) then
+                    seen[model] = true
+                    table.insert(nests, model)
                 end
             end
         end
     end
 
-    -- Fallback: Search nearby base for nests
+    -- 4. Fallback: Search nearby base for nests
     if #nests == 0 and SavedBaseCFrame then
         pcall(function()
             for _, obj in ipairs(Workspace:GetDescendants()) do
-                if obj:IsA("Model") and (obj.Name:lower():find("nest") or obj.Name:lower():find("incubator")) then
-                    local primary = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
-                    if primary and (primary.Position - SavedBaseCFrame.Position).Magnitude < 100 then
-                        table.insert(nests, obj)
+                if (obj:IsA("Model") or obj:IsA("BasePart")) and not seen[obj] then
+                    local name = obj.Name:lower()
+                    if name:find("nest") or name:find("incubator") or name:find("eggslot") then
+                        local primary = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
+                        if primary and (primary.Position - SavedBaseCFrame.Position).Magnitude < 120 then
+                            seen[obj] = true
+                            table.insert(nests, obj)
+                        end
                     end
                 end
             end
@@ -796,6 +845,105 @@ local function GetBestStealEgg()
 end
 
 -- =================================================================
+-- UNIVERSAL HATCH & CRACK ENGINE (ALL PROMPTS, CLICKDETECTORS, REMOTES)
+-- =================================================================
+local function HatchNest(nest, shouldTeleport)
+    if not nest then return end
+    pcall(function()
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+
+        local nestPart = nest:FindFirstChild("Handle") 
+                      or nest:FindFirstChild("EggBase")
+                      or nest:FindFirstChild("Egg")
+                      or nest.PrimaryPart 
+                      or nest:FindFirstChildWhichIsA("BasePart", true)
+
+        -- If requested or needed, bring player close to nest so server passes distance validation
+        if shouldTeleport and nestPart then
+            SafeTeleport(nestPart.CFrame + Vector3.new(0, 2, 0))
+            task.wait(0.04)
+        end
+
+        -- 1. Trigger ALL ProximityPrompts inside nest & eggs inside nest
+        for _, prompt in ipairs(nest:GetDescendants()) do
+            if prompt:IsA("ProximityPrompt") then
+                TriggerPrompt(prompt)
+            end
+        end
+
+        -- 2. Trigger ALL ClickDetectors inside nest & eggs inside nest
+        for _, cd in ipairs(nest:GetDescendants()) do
+            if cd:IsA("ClickDetector") then
+                TriggerClickDetector(cd)
+            end
+        end
+
+        -- 3. Touch interest with nest & egg parts
+        if nestPart and firetouchinterest then
+            pcall(function()
+                firetouchinterest(hrp, nestPart, 0)
+                task.wait(0.01)
+                firetouchinterest(hrp, nestPart, 1)
+            end)
+        end
+        for _, childPart in ipairs(nest:GetDescendants()) do
+            if childPart:IsA("BasePart") and firetouchinterest then
+                pcall(function()
+                    firetouchinterest(hrp, childPart, 0)
+                    firetouchinterest(hrp, childPart, 1)
+                end)
+            end
+        end
+
+        -- 4. Check if there is an egg inside the nest
+        local eggInside = nest:FindFirstChild("Egg") 
+                       or nest:FindFirstChildWhichIsA("Model")
+                       or nest:FindFirstChild("PlacedEgg")
+
+        -- 5. Fire all candidate remotes with multiple argument patterns
+        local remoteKeywords = {"hatch", "crack", "openegg", "claimnest", "claimpet", "claim", "incubate", "open"}
+        
+        -- Pattern A: nest instance
+        FireAllCandidateRemotes(remoteKeywords, nest)
+        -- Pattern B: nest name
+        FireAllCandidateRemotes(remoteKeywords, nest.Name)
+        -- Pattern C: nest number
+        local num = tonumber(nest.Name:match("%d+"))
+        if num then
+            FireAllCandidateRemotes(remoteKeywords, num)
+        end
+        -- Pattern D: egg instance if present
+        if eggInside then
+            FireAllCandidateRemotes(remoteKeywords, eggInside)
+            FireAllCandidateRemotes(remoteKeywords, nest, eggInside)
+            FireAllCandidateRemotes(remoteKeywords, nest.Name, eggInside.Name)
+        end
+        -- Pattern E: no args
+        FireAllCandidateRemotes(remoteKeywords)
+
+        -- Direct Game Remotes
+        local hatchRemote = GetGameRemote("Hatch")
+        if hatchRemote then
+            hatchRemote:FireServer(nest)
+            hatchRemote:FireServer(nest.Name)
+            if eggInside then hatchRemote:FireServer(eggInside) end
+            if num then hatchRemote:FireServer(num) end
+            hatchRemote:FireServer()
+        end
+
+        local hatchEggRemote = GetGameRemote("HatchEgg")
+        if hatchEggRemote then
+            hatchEggRemote:FireServer(nest)
+            hatchEggRemote:FireServer(nest.Name)
+            if eggInside then hatchEggRemote:FireServer(eggInside) end
+            hatchEggRemote:FireServer()
+        end
+    end)
+end
+
+-- =================================================================
 -- CORE AUTOMATION SYSTEMS (FEATURES 1, 2, 3, 4, 5)
 -- =================================================================
 
@@ -825,10 +973,13 @@ local function ExecuteStealEgg()
         SafeTeleport(eggPart.CFrame + Vector3.new(0, 1.5, 0))
         task.wait(0.2)
 
-        -- Step 2: Trigger ProximityPrompts & Fire Remotes & Touch
+        -- Step 2: Trigger ProximityPrompts, ClickDetectors & Fire Remotes & Touch
         for _, prompt in ipairs(targetEgg:GetDescendants()) do
             if prompt:IsA("ProximityPrompt") then
                 TriggerPrompt(prompt)
+            end
+            if prompt:IsA("ClickDetector") then
+                TriggerClickDetector(prompt)
             end
         end
 
@@ -872,6 +1023,9 @@ local function ExecuteStealEgg()
                     if prompt:IsA("ProximityPrompt") then
                         TriggerPrompt(prompt)
                     end
+                    if prompt:IsA("ClickDetector") then
+                        TriggerClickDetector(prompt)
+                    end
                 end
 
                 FireAllCandidateRemotes({"place", "deposit", "put", "nest", "insert", "drop"}, nest, nest.Name, targetEgg)
@@ -890,9 +1044,7 @@ local function ExecuteStealEgg()
                 end
 
                 if Toggles.AutoHatch then
-                    FireAllCandidateRemotes({"hatch", "crack", "openegg", "claimnest", "claimpet"}, nest, nest.Name)
-                    local hatchRemote = GetGameRemote("Hatch")
-                    if hatchRemote then hatchRemote:FireServer(nest) end
+                    HatchNest(nest, false)
                 end
             end
         end
@@ -911,28 +1063,31 @@ task.spawn(function()
     end
 end)
 
--- 3: Auto Hatch Eggs Background Loop
+-- 3: Auto Hatch Eggs Background Loop (High-Frequency Multi-Layer Engine)
 task.spawn(function()
     while true do
-        task.wait(0.4)
+        task.wait(0.25)
         if Toggles.AutoHatch then
             pcall(function()
                 local nests = GetMyNests()
                 for _, nest in ipairs(nests) do
-                    -- Trigger prompts
-                    for _, prompt in ipairs(nest:GetDescendants()) do
+                    HatchNest(nest, false)
+                end
+
+                -- Direct scan of all prompts and click detectors on my plot
+                local myPlot = GetMyPlot()
+                if myPlot then
+                    for _, prompt in ipairs(myPlot:GetDescendants()) do
                         if prompt:IsA("ProximityPrompt") then
-                            TriggerPrompt(prompt)
+                            local act = (prompt.ActionText or ""):lower()
+                            local obj = (prompt.ObjectText or ""):lower()
+                            if act:find("hatch") or act:find("crack") or act:find("open") or act:find("claim") or act:find("incubate")
+                               or obj:find("hatch") or obj:find("crack") or obj:find("open") or obj:find("claim") or obj:find("incubate") or act == "" then
+                                TriggerPrompt(prompt)
+                            end
+                        elseif prompt:IsA("ClickDetector") then
+                            TriggerClickDetector(prompt)
                         end
-                    end
-
-                    -- Fire Remotes
-                    FireAllCandidateRemotes({"hatch", "crack", "openegg", "claimnest", "claimpet", "claim"}, nest, nest.Name, 1)
-
-                    local hatchRemote = GetGameRemote("Hatch")
-                    if hatchRemote then
-                        hatchRemote:FireServer(nest)
-                        hatchRemote:FireServer(nest.Name)
                     end
                 end
             end)
@@ -943,12 +1098,12 @@ end)
 -- 4: Auto Place Egg Background Loop
 task.spawn(function()
     while true do
-        task.wait(0.4)
+        task.wait(0.35)
         if Toggles.AutoPlace then
             pcall(function()
                 local nests = GetMyNests()
                 for _, nest in ipairs(nests) do
-                    -- Trigger place prompts
+                    -- Trigger place prompts & click detectors
                     for _, prompt in ipairs(nest:GetDescendants()) do
                         if prompt:IsA("ProximityPrompt") then
                             local act = (prompt.ActionText or ""):lower()
@@ -957,6 +1112,8 @@ task.spawn(function()
                                or obj:find("place") or obj:find("deposit") or obj:find("put") or obj:find("egg") or act == "" then
                                 TriggerPrompt(prompt)
                             end
+                        elseif prompt:IsA("ClickDetector") then
+                            TriggerClickDetector(prompt)
                         end
                     end
 
@@ -1406,7 +1563,16 @@ AddSelectorRow("Steal Zone", StealZoneOptions, function() return StealZoneIndex 
 end)
 
 -- 3. Auto Hatch Eggs
-AddToggleRow("Auto Hatch Eggs", "AutoHatch")
+AddToggleRow("Auto Hatch Eggs", "AutoHatch", function(state)
+    if state then
+        task.spawn(function()
+            local nests = GetMyNests()
+            for _, nest in ipairs(nests) do
+                HatchNest(nest, false)
+            end
+        end)
+    end
+end)
 
 -- 4. Auto Place Egg
 AddToggleRow("Auto Place Egg", "AutoPlace")
