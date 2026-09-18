@@ -1,6 +1,6 @@
 --[[
     ========================================================================
-    JUNEJO ULTRA SCRIPT HUB - JUMP FOR ANIMALS
+    JUNEJO ULTRA SCRIPT HUB - JUMP FOR ANIMALS (V4.0 - ADVANCED TELEPORT FIX)
     ========================================================================
     Author: Made by Junejo (junejo18146)
     Target Game: Jump for Animals (Roblox)
@@ -16,10 +16,10 @@
         2. Auto Wins (Auto claim finish lines / tower win platforms)
         3. Auto Open Animals (Automatic egg / animal hatcher)
         4. Auto Equip Best (Auto equips highest stat animals/pets)
-        5. Teleport to Rare Animals (1-Click Action Button)
-        6. Teleport to Mythic / Secret Animals (1-Click Action Button)
-        7. Teleport to Win Platform / End Tower (1-Click Action Button)
-        8. Teleport to Spawn / Safe Zone (1-Click Action Button)
+        5. Teleport to Rare Animals (1-Click Instant Action)
+        6. Teleport to Mythic / Secret Animals (1-Click Instant Action)
+        7. Teleport to Win Platform / End Tower (1-Click Instant Action)
+        8. Teleport to Spawn / Safe Zone (1-Click Instant Action)
         9. Rare Animals ESP (Neon Gold / Purple highlight + live distance tag)
         10. Players ESP (Neon Box highlight + player name & live distance tag)
         11. Win Zones ESP (Neon Emerald highlight on win platforms & finish lines)
@@ -71,23 +71,24 @@ local ESPObjects = {
 }
 
 -- Safe Base CFrame Initialization
-pcall(function()
-    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    local hrp = char:WaitForChild("HumanoidRootPart", 5)
-    if hrp then
-        SavedBaseCFrame = hrp.CFrame
-    end
-end)
+local function UpdateBaseLocation()
+    pcall(function()
+        local char = LocalPlayer.Character
+        local hrp = char and (char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso"))
+        if hrp then
+            SavedBaseCFrame = hrp.CFrame
+        end
+    end)
+end
+
+UpdateBaseLocation()
 
 LocalPlayer.CharacterAdded:Connect(function(char)
     task.wait(0.5)
-    local hrp = char:WaitForChild("HumanoidRootPart", 5)
-    if hrp and not SavedBaseCFrame then
-        SavedBaseCFrame = hrp.CFrame
-    end
+    UpdateBaseLocation()
 end)
 
--- Safe UI Container Resolver (Compatible with Mobile Delta, Codex, Fluxus, Arceus & PC)
+-- Safe UI Container Resolver
 local function GetSafeUIContainer()
     local container = nil
     pcall(function()
@@ -131,28 +132,75 @@ pcall(function()
 end)
 
 ------------------------------------------------------------------------
--- SMOOTH TELEPORT & INTERACTION HELPERS
+-- ULTRA-RELIABLE TELEPORT & PROMPT ENGINE
 ------------------------------------------------------------------------
 
-local function SafeTeleport(targetCFrame)
+local function SafeTeleport(target)
+    if not target then return false end
+    local targetCF = nil
+    
+    if typeof(target) == "CFrame" then
+        targetCF = target
+    elseif typeof(target) == "Vector3" then
+        targetCF = CFrame.new(target)
+    elseif typeof(target) == "Instance" then
+        if target:IsA("BasePart") then
+            targetCF = target.CFrame
+        elseif target:IsA("Model") then
+            pcall(function()
+                targetCF = target:GetPivot()
+            end)
+            if not targetCF then
+                local primary = target.PrimaryPart or target:FindFirstChildWhichIsA("BasePart")
+                if primary then targetCF = primary.CFrame end
+            end
+        end
+    end
+    
+    if not targetCF then return false end
+
+    local success = false
     pcall(function()
         local char = LocalPlayer.Character
         if not char then return end
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
+        local hrp = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
+        local hum = char:FindFirstChildWhichIsA("Humanoid")
+        
+        if hum and hum.SeatPart then
+            hum.Sit = false
+            task.wait(0.05)
+        end
 
-        if hrp:IsA("BasePart") then
+        local finalCF = targetCF + Vector3.new(0, 3.5, 0)
+
+        for _, p in ipairs(char:GetDescendants()) do
+            if p:IsA("BasePart") then
+                p.AssemblyLinearVelocity = Vector3.zero
+                p.AssemblyAngularVelocity = Vector3.zero
+            end
+        end
+
+        char:PivotTo(finalCF)
+        if hrp then
+            hrp.CFrame = finalCF
             hrp.AssemblyLinearVelocity = Vector3.zero
             hrp.AssemblyAngularVelocity = Vector3.zero
         end
 
-        hrp.CFrame = targetCFrame + Vector3.new(0, 1.5, 0)
+        -- Physics Stabilizer Loop (Bypasses Roblox client rubberband)
+        task.spawn(function()
+            for _ = 1, 4 do
+                RunService.RenderStepped:Wait()
+                if hrp then
+                    hrp.AssemblyLinearVelocity = Vector3.zero
+                    hrp.AssemblyAngularVelocity = Vector3.zero
+                end
+            end
+        end)
 
-        if hrp:IsA("BasePart") then
-            hrp.AssemblyLinearVelocity = Vector3.zero
-            hrp.AssemblyAngularVelocity = Vector3.zero
-        end
+        success = true
     end)
+    return success
 end
 
 local function SafeTriggerPrompt(prompt)
@@ -170,63 +218,131 @@ local function SafeTriggerPrompt(prompt)
 end
 
 ------------------------------------------------------------------------
--- OBJECT FINDERS & SCANNING ENGINES
+-- COMPREHENSIVE SCANNER FOR ANIMALS, EGGS, TOWERS & WINS
 ------------------------------------------------------------------------
 
--- Rarity Weights Calculation
-local function GetRarityScore(name, objText)
-    local combined = string.lower(name .. " " .. (objText or ""))
+local AnimalKeywords = {
+    "egg", "animal", "pet", "nest", "dog", "cat", "fox", "bear", "tiger", "lion",
+    "dragon", "demon", "capybara", "panda", "bunny", "wolf", "penguin", "chicken",
+    "shark", "elephant", "dino", "rex", "hydra", "phoenix", "griffin", "golem",
+    "pegasus", "unicorn", "beast", "creature", "monkey", "gorilla", "snake",
+    "secret", "mythic", "godly", "legendary", "epic", "rare", "tier", "spawn", "pod", "stand"
+}
+
+local WinKeywords = {
+    "win", "finish", "end", "trophy", "crown", "chest", "goal", "top", "portal",
+    "stage", "tower", "reward", "finishline", "zone", "island", "claim", "platform"
+}
+
+-- Calculate Rarity and Scoring
+local function CalculateRarity(obj, name, text)
+    local combined = string.lower(name .. " " .. (text or "") .. " " .. (obj.Parent and obj.Parent.Name or ""))
+    local score = 10
+
     if string.find(combined, "secret") or string.find(combined, "godly") or string.find(combined, "celestial") then
-        return 100
-    elseif string.find(combined, "mythic") or string.find(combined, "titan") or string.find(combined, "dragon") then
-        return 80
-    elseif string.find(combined, "legendary") or string.find(combined, "demon") or string.find(combined, "diamond") then
-        return 60
+        score = 100
+    elseif string.find(combined, "mythic") or string.find(combined, "titan") or string.find(combined, "dragon") or string.find(combined, "hydra") then
+        score = 85
+    elseif string.find(combined, "legendary") or string.find(combined, "demon") or string.find(combined, "diamond") or string.find(combined, "phoenix") then
+        score = 65
     elseif string.find(combined, "epic") or string.find(combined, "gold") or string.find(combined, "rare") then
-        return 40
+        score = 45
     elseif string.find(combined, "uncommon") or string.find(combined, "silver") then
-        return 20
-    else
-        return 10
+        score = 25
     end
+
+    -- Boost score by Y-position (higher animals are rarer)
+    pcall(function()
+        local pos = obj:IsA("BasePart") and obj.Position or (obj:IsA("Model") and (obj:GetPivot().Position))
+        if pos and pos.Y > 50 then
+            score = score + math.min(30, math.floor(pos.Y / 20))
+        end
+    end)
+
+    return score
 end
 
--- Find all Animals / Eggs
+-- Deep Scanner for all Animals & Eggs
 local function GetAllAnimalsAndEggs()
     local items = {}
+    local seenParts = {}
+
+    local function checkAndAdd(part, prompt, name, text)
+        if not part or seenParts[part] then return end
+        if LocalPlayer.Character and part:IsDescendantOf(LocalPlayer.Character) then return end
+        
+        -- Check if belonging to another player's character
+        for _, pl in ipairs(Players:GetPlayers()) do
+            if pl ~= LocalPlayer and pl.Character and part:IsDescendantOf(pl.Character) then
+                return
+            end
+        end
+
+        seenParts[part] = true
+        local score = CalculateRarity(part, name, text)
+        table.insert(items, {
+            Part = part,
+            Prompt = prompt,
+            Name = name,
+            Rarity = score,
+            CFrame = part.CFrame
+        })
+    end
+
     pcall(function()
+        -- 1. Scan ProximityPrompts across Workspace
+        for _, prompt in ipairs(Workspace:GetDescendants()) do
+            if prompt:IsA("ProximityPrompt") and prompt.Parent then
+                local parent = prompt.Parent
+                local pName = parent.Name
+                local pText = (prompt.ActionText or "") .. " " .. (prompt.ObjectText or "")
+                local part = parent:IsA("BasePart") and parent or (parent:IsA("Model") and (parent.PrimaryPart or parent:FindFirstChildWhichIsA("BasePart")))
+                if part then
+                    checkAndAdd(part, prompt, pName, pText)
+                end
+            end
+        end
+
+        -- 2. Scan Named Models & Folders (Animals, Pets, Eggs, Nests, Pods)
         for _, obj in ipairs(Workspace:GetDescendants()) do
-            if obj:IsA("ProximityPrompt") and obj.Parent then
-                local pName = string.lower(obj.Parent.Name)
-                local actText = string.lower(obj.ActionText or "")
-                local objText = string.lower(obj.ObjectText or "")
-                if string.find(pName, "egg") or string.find(pName, "animal") or string.find(pName, "pet") or
-                   string.find(actText, "steal") or string.find(actText, "grab") or string.find(actText, "take") or
-                   string.find(objText, "egg") or string.find(objText, "animal") or string.find(pName, "nest") then
-                    local part = obj.Parent:IsA("BasePart") and obj.Parent or (obj.Parent:IsA("Model") and (obj.Parent.PrimaryPart or obj.Parent:FindFirstChildWhichIsA("BasePart")))
-                    if part and (not LocalPlayer.Character or not part:IsDescendantOf(LocalPlayer.Character)) then
-                        local score = GetRarityScore(obj.Parent.Name, obj.ObjectText)
-                        table.insert(items, { Part = part, Prompt = obj, Name = obj.Parent.Name, Rarity = score })
+            if obj:IsA("Model") then
+                local mName = string.lower(obj.Name)
+                local isAnimalMatch = false
+                for _, kw in ipairs(AnimalKeywords) do
+                    if string.find(mName, kw) then
+                        isAnimalMatch = true
+                        break
                     end
                 end
-            elseif obj:IsA("Model") then
-                local mName = string.lower(obj.Name)
-                if (string.find(mName, "egg") or string.find(mName, "animal") or string.find(mName, "pet") or string.find(mName, "nest")) and
-                   (not LocalPlayer.Character or not obj:IsDescendantOf(LocalPlayer.Character)) then
+
+                if isAnimalMatch then
                     local part = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
                     local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
                     if part then
-                        local score = GetRarityScore(obj.Name, "")
-                        table.insert(items, { Part = part, Prompt = prompt, Name = obj.Name, Rarity = score })
+                        checkAndAdd(part, prompt, obj.Name, "")
+                    end
+                end
+            end
+        end
+
+        -- 3. Fallback: If no animals found, scan all models with ClickDetectors or TouchTransmitters
+        if #items == 0 then
+            for _, obj in ipairs(Workspace:GetDescendants()) do
+                if obj:IsA("ClickDetector") or obj:IsA("TouchTransmitter") then
+                    local parent = obj.Parent
+                    local part = parent:IsA("BasePart") and parent or (parent:IsA("Model") and (parent.PrimaryPart or parent:FindFirstChildWhichIsA("BasePart")))
+                    if part then
+                        checkAndAdd(part, nil, parent.Name, "")
                     end
                 end
             end
         end
     end)
+
     return items
 end
 
--- Find Best/Rarest Animal or Egg to Steal
+-- Find Best/Rarest Animal or Egg
 local function GetRarestAnimal()
     local all = GetAllAnimalsAndEggs()
     if #all == 0 then return nil end
@@ -236,10 +352,10 @@ local function GetRarestAnimal()
     local myPos = hrp and hrp.Position or Vector3.zero
     local basePos = SavedBaseCFrame and SavedBaseCFrame.Position or myPos
 
-    -- Filter out items too close to our own base
+    -- Filter out items too close to our base (deposit area)
     local valid = {}
     for _, item in ipairs(all) do
-        if (item.Part.Position - basePos).Magnitude > 25 then
+        if (item.Part.Position - basePos).Magnitude > 20 then
             table.insert(valid, item)
         end
     end
@@ -258,30 +374,94 @@ local function GetRarestAnimal()
     return all[1]
 end
 
--- Find Win Platforms / Finish Lines
+-- Deep Scanner for Win Zones & Top Towers
 local function GetAllWinZones()
     local zones = {}
+    local seen = {}
+
     pcall(function()
+        -- 1. Keyword search in Workspace
         for _, obj in ipairs(Workspace:GetDescendants()) do
             if obj:IsA("BasePart") or obj:IsA("Model") then
                 local name = string.lower(obj.Name)
-                if string.find(name, "win") or string.find(name, "finish") or string.find(name, "reward") or string.find(name, "trophy") or string.find(name, "end") then
-                    local part = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
-                    if part and (not LocalPlayer.Character or not part:IsDescendantOf(LocalPlayer.Character)) then
-                        table.insert(zones, part)
+                local isWin = false
+                for _, kw in ipairs(WinKeywords) do
+                    if string.find(name, kw) then
+                        isWin = true
+                        break
+                    end
+                end
+
+                if isWin then
+                    local part = obj:IsA("BasePart") and obj or (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart"))
+                    if part and not seen[part] then
+                        if not LocalPlayer.Character or not part:IsDescendantOf(LocalPlayer.Character) then
+                            seen[part] = true
+                            table.insert(zones, part)
+                        end
                     end
                 end
             end
         end
+
+        -- 2. Fallback: Find highest elevation platforms in Workspace (Tower top)
+        if #zones == 0 then
+            local highestParts = {}
+            for _, part in ipairs(Workspace:GetDescendants()) do
+                if part:IsA("BasePart") and part.CanCollide and part.Size.X >= 4 and part.Size.Z >= 4 then
+                    if not LocalPlayer.Character or not part:IsDescendantOf(LocalPlayer.Character) then
+                        table.insert(highestParts, part)
+                    end
+                end
+            end
+
+            table.sort(highestParts, function(a, b)
+                return a.Position.Y > b.Position.Y
+            end)
+
+            for i = 1, math.min(5, #highestParts) do
+                table.insert(zones, highestParts[i])
+            end
+        end
     end)
+
+    -- Sort zones by highest Y level (highest tower win zone first)
+    table.sort(zones, function(a, b)
+        return a.Position.Y > b.Position.Y
+    end)
+
     return zones
 end
 
+-- Safe Spawn Finder
+local function GetSpawnCFrame()
+    if SavedBaseCFrame then return SavedBaseCFrame end
+
+    local spawnPos = nil
+    pcall(function()
+        -- Search SpawnLocation
+        local spawns = {}
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if obj:IsA("SpawnLocation") then
+                table.insert(spawns, obj)
+            elseif obj:IsA("BasePart") and (string.find(string.lower(obj.Name), "spawn") or string.find(string.lower(obj.Name), "base") or string.find(string.lower(obj.Name), "lobby")) then
+                table.insert(spawns, obj)
+            end
+        end
+
+        if #spawns > 0 then
+            spawnPos = spawns[1].CFrame + Vector3.new(0, 3, 0)
+        end
+    end)
+
+    return spawnPos or CFrame.new(0, 10, 0)
+end
+
 ------------------------------------------------------------------------
--- BACKGROUND AUTOMATION LOOPS
+-- BACKGROUND AUTOMATION WORKERS
 ------------------------------------------------------------------------
 
--- 1. Auto Steal Rare Animals (Steal & return to base)
+-- 1. Auto Steal Rare Animals Loop
 local isStealing = false
 task.spawn(function()
     while true do
@@ -293,16 +473,15 @@ task.spawn(function()
                 if target and target.Part and hrp then
                     isStealing = true
 
-                    -- Ensure Base position is recorded
                     if not SavedBaseCFrame then
                         SavedBaseCFrame = hrp.CFrame
                     end
 
                     -- Step 1: Teleport to Rare Animal
                     SafeTeleport(target.Part.CFrame)
-                    task.wait(0.12)
+                    task.wait(0.15)
 
-                    -- Step 2: Grab / Interact
+                    -- Step 2: Grab / Prompt / Touch
                     if target.Prompt then
                         SafeTriggerPrompt(target.Prompt)
                     end
@@ -316,38 +495,37 @@ task.spawn(function()
                     for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
                         if remote:IsA("RemoteEvent") then
                             local rName = string.lower(remote.Name)
-                            if string.find(rName, "steal") or string.find(rName, "egg") or string.find(rName, "animal") or string.find(rName, "grab") or string.find(rName, "claim") then
+                            if string.find(rName, "steal") or string.find(rName, "egg") or string.find(rName, "animal") or string.find(rName, "grab") or string.find(rName, "claim") or string.find(rName, "take") then
                                 remote:FireServer(target.Name or "Animal")
                             end
                         end
                     end
 
-                    task.wait(0.15)
+                    task.wait(0.18)
 
                     -- Step 3: Return to Base Safe Zone
-                    if SavedBaseCFrame then
-                        SafeTeleport(SavedBaseCFrame)
-                        task.wait(0.15)
+                    local baseCF = GetSpawnCFrame()
+                    SafeTeleport(baseCF)
+                    task.wait(0.18)
 
-                        -- Step 4: Deposit prompt / remotes
-                        for _, prompt in ipairs(Workspace:GetDescendants()) do
-                            if prompt:IsA("ProximityPrompt") and prompt.Parent then
-                                local pPart = prompt.Parent:IsA("BasePart") and prompt.Parent or prompt.Parent:FindFirstChildWhichIsA("BasePart")
-                                if pPart and (pPart.Position - hrp.Position).Magnitude < 30 then
-                                    local pText = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Parent.Name):lower()
-                                    if string.find(pText, "place") or string.find(pText, "deposit") or string.find(pText, "drop") or string.find(pText, "hatch") or string.find(pText, "bank") then
-                                        SafeTriggerPrompt(prompt)
-                                    end
+                    -- Step 4: Deposit prompt & remotes
+                    for _, prompt in ipairs(Workspace:GetDescendants()) do
+                        if prompt:IsA("ProximityPrompt") and prompt.Parent then
+                            local pPart = prompt.Parent:IsA("BasePart") and prompt.Parent or prompt.Parent:FindFirstChildWhichIsA("BasePart")
+                            if pPart and (pPart.Position - hrp.Position).Magnitude < 35 then
+                                local pText = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Parent.Name):lower()
+                                if string.find(pText, "place") or string.find(pText, "deposit") or string.find(pText, "drop") or string.find(pText, "hatch") or string.find(pText, "bank") or string.find(pText, "save") then
+                                    SafeTriggerPrompt(prompt)
                                 end
                             end
                         end
+                    end
 
-                        for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                            if remote:IsA("RemoteEvent") then
-                                local rName = string.lower(remote.Name)
-                                if string.find(rName, "deposit") or string.find(rName, "deliver") or string.find(rName, "place") or string.find(rName, "hatch") or string.find(rName, "bank") then
-                                    remote:FireServer()
-                                end
+                    for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
+                        if remote:IsA("RemoteEvent") then
+                            local rName = string.lower(remote.Name)
+                            if string.find(rName, "deposit") or string.find(rName, "deliver") or string.find(rName, "place") or string.find(rName, "hatch") or string.find(rName, "bank") or string.find(rName, "save") then
+                                remote:FireServer()
                             end
                         end
                     end
@@ -355,7 +533,7 @@ task.spawn(function()
                     isStealing = false
                 end
             end)
-            task.wait(0.4)
+            task.wait(0.35)
         else
             isStealing = false
             task.wait(0.5)
@@ -375,13 +553,13 @@ task.spawn(function()
                     for _, zone in ipairs(zones) do
                         if not Toggles.AutoWins then break end
                         SafeTeleport(zone.CFrame)
-                        task.wait(0.1)
+                        task.wait(0.12)
                         if firetouchinterest then
                             firetouchinterest(hrp, zone, 0)
                             task.wait(0.01)
                             firetouchinterest(hrp, zone, 1)
                         end
-                        task.wait(0.2)
+                        task.wait(0.15)
                     end
                 end
 
@@ -389,13 +567,13 @@ task.spawn(function()
                 for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
                     if remote:IsA("RemoteEvent") then
                         local rName = string.lower(remote.Name)
-                        if string.find(rName, "win") or string.find(rName, "claim") or string.find(rName, "finish") or string.find(rName, "reward") then
+                        if string.find(rName, "win") or string.find(rName, "claim") or string.find(rName, "finish") or string.find(rName, "reward") or string.find(rName, "trophy") then
                             remote:FireServer()
                         end
                     end
                 end
             end)
-            task.wait(0.6)
+            task.wait(0.5)
         else
             task.wait(0.5)
         end
@@ -410,7 +588,7 @@ task.spawn(function()
                 for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
                     if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
                         local rName = string.lower(remote.Name)
-                        if string.find(rName, "hatch") or string.find(rName, "open") or string.find(rName, "buyegg") or string.find(rName, "buyanimal") then
+                        if string.find(rName, "hatch") or string.find(rName, "open") or string.find(rName, "buyegg") or string.find(rName, "buyanimal") or string.find(rName, "buy") then
                             if remote:IsA("RemoteEvent") then
                                 remote:FireServer(1, "Basic", "Auto")
                             end
@@ -418,14 +596,13 @@ task.spawn(function()
                     end
                 end
 
-                -- Trigger egg proximity prompts if nearby
                 local char = LocalPlayer.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
                 if hrp then
                     for _, prompt in ipairs(Workspace:GetDescendants()) do
                         if prompt:IsA("ProximityPrompt") and prompt.Parent then
                             local pPart = prompt.Parent:IsA("BasePart") and prompt.Parent or prompt.Parent:FindFirstChildWhichIsA("BasePart")
-                            if pPart and (pPart.Position - hrp.Position).Magnitude < 20 then
+                            if pPart and (pPart.Position - hrp.Position).Magnitude < 25 then
                                 local text = (prompt.ActionText .. " " .. prompt.ObjectText):lower()
                                 if string.find(text, "open") or string.find(text, "hatch") or string.find(text, "buy") then
                                     SafeTriggerPrompt(prompt)
@@ -442,7 +619,7 @@ task.spawn(function()
     end
 end)
 
--- 4. Auto Equip Best Animals Loop
+-- 4. Auto Equip Best Loop
 task.spawn(function()
     while true do
         if Toggles.AutoEquipBest then
@@ -450,7 +627,7 @@ task.spawn(function()
                 for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
                     if remote:IsA("RemoteEvent") then
                         local rName = string.lower(remote.Name)
-                        if string.find(rName, "equipbest") or string.find(rName, "equip_best") or string.find(rName, "autoequip") or (string.find(rName, "equip") and string.find(rName, "pet")) then
+                        if string.find(rName, "equipbest") or string.find(rName, "equip_best") or string.find(rName, "autoequip") or (string.find(rName, "equip") and (string.find(rName, "pet") or string.find(rName, "animal"))) then
                             remote:FireServer()
                         end
                     end
@@ -463,7 +640,7 @@ task.spawn(function()
     end
 end)
 
--- 5. Instant Proximity Prompts (0s Hold Sweeper)
+-- 5. Instant Proximity Prompts (0s Sweeper)
 task.spawn(function()
     while true do
         if Toggles.InstantPrompts then
@@ -471,7 +648,7 @@ task.spawn(function()
                 for _, prompt in ipairs(Workspace:GetDescendants()) do
                     if prompt:IsA("ProximityPrompt") then
                         prompt.HoldDuration = 0
-                        prompt.MaxActivationDistance = math.max(prompt.MaxActivationDistance, 25)
+                        prompt.MaxActivationDistance = math.max(prompt.MaxActivationDistance, 30)
                         prompt.RequiresLineOfSight = false
                     end
                 end
@@ -514,7 +691,7 @@ local function CreateESP(part, color, text, groupKey)
         local billboard = Instance.new("BillboardGui")
         billboard.Name = "JunejoESPText"
         billboard.Adornee = part
-        billboard.Size = UDim2.new(0, 120, 0, 24)
+        billboard.Size = UDim2.new(0, 130, 0, 24)
         billboard.StudsOffset = Vector3.new(0, 2.5, 0)
         billboard.AlwaysOnTop = true
         billboard.Parent = part
@@ -557,7 +734,7 @@ task.spawn(function()
             CleanESPGroup("RareAnimals")
         end
 
-        -- 2. Player ESP (Red / Orange)
+        -- 2. Player ESP (Red)
         if Toggles.PlayerESP then
             CleanESPGroup("Players")
             pcall(function()
@@ -648,7 +825,7 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
--- 24/7 Anti-AFK Engine (20-min Disconnect Shield)
+-- 24/7 Anti-AFK Engine
 LocalPlayer.Idled:Connect(function()
     if Toggles.AntiAFK and VirtualUser then
         pcall(function()
@@ -893,6 +1070,11 @@ AddActionRow("TP to Rare Animals", "TP RARE", function()
     local target = GetRarestAnimal()
     if target and target.Part then
         SafeTeleport(target.Part.CFrame)
+    else
+        local all = GetAllAnimalsAndEggs()
+        if #all > 0 then
+            SafeTeleport(all[1].Part.CFrame)
+        end
     end
 end)
 
@@ -901,7 +1083,7 @@ AddActionRow("TP to Mythic Animals", "TP GOD", function()
     local all = GetAllAnimalsAndEggs()
     local mythic = nil
     for _, item in ipairs(all) do
-        if item.Rarity >= 80 then
+        if item.Rarity >= 75 then
             mythic = item
             break
         end
@@ -910,7 +1092,11 @@ AddActionRow("TP to Mythic Animals", "TP GOD", function()
         SafeTeleport(mythic.Part.CFrame)
     else
         local target = GetRarestAnimal()
-        if target and target.Part then SafeTeleport(target.Part.CFrame) end
+        if target and target.Part then
+            SafeTeleport(target.Part.CFrame)
+        elseif #all > 0 then
+            SafeTeleport(all[#all].Part.CFrame)
+        end
     end
 end)
 
@@ -924,14 +1110,8 @@ end)
 
 -- 8. Teleport to Spawn / Safe Zone (1-Click)
 AddActionRow("Teleport to Spawn", "SPAWN", function()
-    if SavedBaseCFrame then
-        SafeTeleport(SavedBaseCFrame)
-    else
-        pcall(function()
-            local spawn = Workspace:FindFirstChildWhichIsA("SpawnLocation", true)
-            if spawn then SafeTeleport(spawn.CFrame + Vector3.new(0, 3, 0)) end
-        end)
-    end
+    local spawnCF = GetSpawnCFrame()
+    SafeTeleport(spawnCF)
 end)
 
 -- 9. Rare Animals ESP
