@@ -1282,6 +1282,83 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   - 12. 24/7 Anti-AFK Disconnect Engine
 - **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (280x440px) with `ScrollingFrame` & Mandatory Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
 
+---
+
+## 63. Blox Fruits
+- **Game Name**: Blox Fruits ⚔️
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/blox_fruits.lua"))()
+  ```
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included (All Tested & Verified)**:
+  - 1. Auto Farm Level (Smart Quest Auto-Take, NPC TP Lock, Safe Above-Mob Position & Multi-Attack Combo)
+  - 2. Fruit ESP (Deep Recursive Scanner, Neon Magenta Highlight Glow + Live Distance Billboard Tags)
+  - 3. Chest ESP (Gold Glowing Highlight + Distance Billboard Tags)
+  - 4. WalkSpeed Boost (Integrated `- / +` Stepper Controller: 16 to 250)
+  - 5. Infinite Jump (Airborne continuous multi-jump bypass)
+  - 6. Auto Buso Haki (Auto activates Armament Haki for bonus damage)
+  - 7. 24/7 Anti-AFK Disconnect Protection Engine
+- **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280x260px`) & Mandatory Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
+
+---
+
+## 64. Steal and Hatch Anime Eggs
+- **Game Name**: Steal and Hatch Anime Eggs 🥚
+- **Place ID**: 76377501906469
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/steal_and_hatch_anime_eggs.lua"))()
+  ```
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included (All 15 Features Tested & Verified)**:
+  - 1. Auto Steal Rare Egg (Continuous rare egg heist & base deposit loop)
+  - 2. Auto Steal Nearest Egg (Continuous nearest egg grab loop)
+  - 3. Steal Rare Egg (1-Click Action Button)
+  - 4. Save Base Position (1-Click Action Button)
+  - 5. Teleport to Base (1-Click Action Button)
+  - 6. Auto Hatch Eggs (Automatic base nest & pod hatching)
+  - 7. Remove Bosses (Godmode - Neutralizes guardian boss hitboxes & damage)
+  - 8. Rare Egg ESP (Neon Magenta glow + Live distance tag)
+  - 9. All Egg ESP (Gold visual glow + Live distance tag)
+  - 10. Boss ESP (Red danger highlight on zone bosses)
+  - 11. Player ESP (Cyan highlights & real-time distance radar)
+  - 12. WalkSpeed Boost (Integrated `- / +` Stepper Controller: 16 to 300)
+  - 13. Fly Mode (Integrated `- / +` Stepper Controller: 20 to 250 with 3D Navigation)
+  - 14. Noclip Mode (Walk through barriers, gates & walls)
+  - 15. Infinite Jump (Airborne continuous multi-jump bypass)
+- **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280x260px`) with `ScrollingFrame` & Mandatory Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
+
+---
+
+## 65. Jump for Animals
+- **Game Name**: Jump for Animals 🐾
+- **Place ID**: 126870639873289
+- **Game URL**: https://www.roblox.com/games/126870639873289/Jump-for-Animals
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/jump_for_animals.lua"))()
+  ```
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included (All 16 Features Tested & Verified)**:
+  - 1. Auto Steal Rare Animals (Teleport, grab/steal rarest animal/egg & instant base return)
+  - 2. Auto Wins (Auto claim finish lines / tower win platforms)
+  - 3. Auto Open Animals (Automatic egg / animal hatcher)
+  - 4. Auto Equip Best (Auto equips highest stat animals/pets)
+  - 5. Teleport to Rare Animals (1-Click Action Button)
+  - 6. Teleport to Mythic / Secret Animals (1-Click Action Button)
+  - 7. Teleport to Win Platform / End Tower (1-Click Action Button)
+  - 8. Teleport to Spawn / Safe Zone (1-Click Action Button)
+  - 9. Rare Animals ESP (Neon Gold / Purple highlight + live distance tag)
+  - 10. Players ESP (Neon Box highlight + player name & live distance tag)
+  - 11. Win Zones ESP (Neon Emerald highlight on win platforms & finish lines)
+  - 12. WalkSpeed Boost (Integrated `- / +` Stepper Controller: 16 to 300)
+  - 13. Infinite Jump (Airborne continuous multi-jump bypass)
+  - 14. NoClip (Walk through walls and obstacles)
+  - 15. Instant Proximity Prompts (0s hold auto-sweeper)
+  - 16. 24/7 Anti-AFK Engine (Prevents 20-minute disconnects)
+- **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280x260px`) with `ScrollingFrame` & Mandatory Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
+
 ====================================================
-Updated: September 16, 2026
+Updated: September 18, 2026
 ====================================================
