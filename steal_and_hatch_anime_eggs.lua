@@ -10,6 +10,7 @@ local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VirtualUser = game:GetService("VirtualUser")
+local VirtualInputManager = game:GetService("VirtualInputManager")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -22,7 +23,6 @@ _G.AutoStealNearestEgg = false
 _G.AutoHatchEggs = false
 _G.AutoTrainSpeed = false
 _G.AutoRebirth = false
-_G.AutoCollectCash = false
 _G.RemoveBosses = false
 _G.AntiEggDrop = false
 _G.RareEggESP = false
@@ -36,7 +36,7 @@ _G.FlySpeedValue = 70
 _G.NoclipActive = false
 _G.InfJumpActive = false
 
--- Base Anchor & Steal Controller
+-- Base Anchor & Steal Controller (STRICTLY PRESERVED)
 _G.SavedBaseCFrame = nil
 local isStealingActive = false
 local CooldownEggs = {}
@@ -157,7 +157,6 @@ CloseBtn.MouseButton1Click:Connect(function()
     _G.AutoHatchEggs = false
     _G.AutoTrainSpeed = false
     _G.AutoRebirth = false
-    _G.AutoCollectCash = false
     _G.RemoveBosses = false
     _G.AntiEggDrop = false
     _G.RareEggESP = false
@@ -188,7 +187,7 @@ Scroll.BackgroundTransparency = 1
 Scroll.BorderSizePixel = 0
 Scroll.ScrollBarThickness = 3
 Scroll.ScrollBarImageColor3 = Color3.fromRGB(45, 45, 55)
-Scroll.CanvasSize = UDim2.new(0, 0, 0, 600)
+Scroll.CanvasSize = UDim2.new(0, 0, 0, 580)
 Scroll.Parent = MainFrame
 
 local ContentLayout = Instance.new("UIListLayout")
@@ -560,7 +559,7 @@ local function GetLocationKey(pos)
 end
 
 -- =================================================================
--- ULTRA HIGH-PRECISION EGG SCANNERS
+-- ULTRA HIGH-PRECISION EGG SCANNERS (STRICTLY PRESERVED)
 -- =================================================================
 
 local function FindRarestEggTarget()
@@ -696,7 +695,7 @@ local function FindNearestEggTarget()
 end
 
 -- =================================================================
--- MASTER ZERO-DISTANCE HEIST PIPELINE
+-- MASTER ZERO-DISTANCE HEIST PIPELINE (STRICTLY PRESERVED)
 -- =================================================================
 
 local function ExecuteHeistPipeline(targetInfo)
@@ -725,7 +724,6 @@ local function ExecuteHeistPipeline(targetInfo)
         -- 2. STAY IN DIRECT CONTACT & EXECUTE GRAB (0.8s)
         local grabTime = tick()
         while tick() - grabTime < 0.8 and isAlive() do
-            -- Continuously lock character right at egg part coordinate
             setCharacterPosition(targetCFrame)
 
             if part then
@@ -795,7 +793,7 @@ local function ExecuteHeistPipeline(targetInfo)
 end
 
 -- =================================================================
--- REGISTER ALL 19 REQUESTED FEATURE ROWS
+-- REGISTER ALL 18 ACTIVE FEATURE ROWS
 -- =================================================================
 
 -- 1. Auto Steal Rare Egg
@@ -859,43 +857,38 @@ createToggleRow("AutoRebirthRow", "Auto Rebirth", _G.AutoRebirth, 8, function(st
     _G.AutoRebirth = state
 end)
 
--- 9. Auto Collect Cash
-createToggleRow("AutoCashRow", "Auto Collect Cash", _G.AutoCollectCash, 9, function(state)
-    _G.AutoCollectCash = state
-end)
-
--- 10. Remove Bosses (Godmode)
-createToggleRow("RemoveBossRow", "Remove Bosses (Godmode)", _G.RemoveBosses, 10, function(state)
+-- 9. Remove Bosses (Godmode)
+createToggleRow("RemoveBossRow", "Remove Bosses (Godmode)", _G.RemoveBosses, 9, function(state)
     _G.RemoveBosses = state
 end)
 
--- 11. Anti-Egg Drop
-createToggleRow("AntiDropRow", "Anti-Egg Drop", _G.AntiEggDrop, 11, function(state)
+-- 10. Anti-Egg Drop
+createToggleRow("AntiDropRow", "Anti-Egg Drop", _G.AntiEggDrop, 10, function(state)
     _G.AntiEggDrop = state
 end)
 
--- 12. Rare Egg ESP
-createToggleRow("RareESPRow", "Rare Egg ESP", _G.RareEggESP, 12, function(state)
+-- 11. Rare Egg ESP
+createToggleRow("RareESPRow", "Rare Egg ESP", _G.RareEggESP, 11, function(state)
     _G.RareEggESP = state
 end)
 
--- 13. All Egg ESP
-createToggleRow("AllEggESPRow", "All Egg ESP", _G.AllEggESP, 13, function(state)
+-- 12. All Egg ESP
+createToggleRow("AllEggESPRow", "All Egg ESP", _G.AllEggESP, 12, function(state)
     _G.AllEggESP = state
 end)
 
--- 14. Boss ESP
-createToggleRow("BossESPRow", "Boss ESP", _G.BossESP, 14, function(state)
+-- 13. Boss ESP
+createToggleRow("BossESPRow", "Boss ESP", _G.BossESP, 13, function(state)
     _G.BossESP = state
 end)
 
--- 15. Player ESP
-createToggleRow("PlayerESPRow", "Player ESP", _G.PlayerESP, 15, function(state)
+-- 14. Player ESP
+createToggleRow("PlayerESPRow", "Player ESP", _G.PlayerESP, 14, function(state)
     _G.PlayerESP = state
 end)
 
--- 16. WalkSpeed Boost
-createStepperRow("WalkSpeedRow", "WalkSpeed", "WalkSpeedActive", "WalkSpeedValue", 16, 300, 10, 60, 16, function(active, val)
+-- 15. WalkSpeed Boost
+createStepperRow("WalkSpeedRow", "WalkSpeed", "WalkSpeedActive", "WalkSpeedValue", 16, 300, 10, 60, 15, function(active, val)
     if not active then
         pcall(function()
             if isAlive() then
@@ -905,8 +898,8 @@ createStepperRow("WalkSpeedRow", "WalkSpeed", "WalkSpeedActive", "WalkSpeedValue
     end
 end)
 
--- 17. Fly Mode
-createStepperRow("FlyModeRow", "Fly Mode", "FlyActive", "FlySpeedValue", 20, 250, 10, 70, 17, function(active, val)
+-- 16. Fly Mode
+createStepperRow("FlyModeRow", "Fly Mode", "FlyActive", "FlySpeedValue", 20, 250, 10, 70, 16, function(active, val)
     if not active then
         pcall(function()
             if isAlive() then
@@ -918,13 +911,13 @@ createStepperRow("FlyModeRow", "Fly Mode", "FlyActive", "FlySpeedValue", 20, 250
     end
 end)
 
--- 18. Noclip Mode
-createToggleRow("NoclipRow", "Noclip Mode", _G.NoclipActive, 18, function(state)
+-- 17. Noclip Mode
+createToggleRow("NoclipRow", "Noclip Mode", _G.NoclipActive, 17, function(state)
     _G.NoclipActive = state
 end)
 
--- 19. Infinite Jump
-createToggleRow("InfJumpRow", "Infinite Jump", _G.InfJumpActive, 19, function(state)
+-- 18. Infinite Jump
+createToggleRow("InfJumpRow", "Infinite Jump", _G.InfJumpActive, 18, function(state)
     _G.InfJumpActive = state
 end)
 
@@ -966,7 +959,7 @@ CreatorTitle.Parent = Footer
 -- BACKGROUND AUTOMATION ENGINES
 -- =================================================================
 
--- 1. Auto Steal Rare Egg Loop
+-- 1. Auto Steal Rare Egg Loop (STRICTLY PRESERVED)
 task.spawn(function()
     while true do
         task.wait(0.4)
@@ -979,7 +972,7 @@ task.spawn(function()
     end
 end)
 
--- 2. Auto Steal Nearest Egg Loop
+-- 2. Auto Steal Nearest Egg Loop (STRICTLY PRESERVED)
 task.spawn(function()
     while true do
         task.wait(0.4)
@@ -992,67 +985,7 @@ task.spawn(function()
     end
 end)
 
--- 3. Supercharged 4-Layer Auto Collect Cash Engine
-task.spawn(function()
-    while true do
-        task.wait(0.3)
-        if _G.AutoCollectCash and isAlive() then
-            pcall(function()
-                local hrp = LocalPlayer.Character.HumanoidRootPart
-
-                -- Layer 1: Physical Touch on Cash & Collectors
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if obj:IsA("BasePart") then
-                        local nameLower = string.lower(obj.Name)
-                        if string.find(nameLower, "cash") or string.find(nameLower, "coin") or string.find(nameLower, "yen") or string.find(nameLower, "money") or string.find(nameLower, "income") or string.find(nameLower, "collector") or string.find(nameLower, "atm") or string.find(nameLower, "bank") or string.find(nameLower, "safe") or string.find(nameLower, "drop") then
-                            if (obj.Position - hrp.Position).Magnitude < 350 and firetouchinterest then
-                                InstantTouch(hrp, obj)
-                            end
-                        end
-                    end
-                end
-
-                -- Layer 2: Trigger ProximityPrompts on Collectors / Cash Stations
-                for _, prompt in ipairs(Workspace:GetDescendants()) do
-                    if prompt:IsA("ProximityPrompt") then
-                        local pName = string.lower(prompt.ActionText .. " " .. prompt.ObjectText .. " " .. (prompt.Parent and prompt.Parent.Name or ""))
-                        if string.find(pName, "collect") or string.find(pName, "claim") or string.find(pName, "cash") or string.find(pName, "coin") or string.find(pName, "money") or string.find(pName, "income") then
-                            TriggerEggPrompt(prompt)
-                        end
-                    end
-                end
-
-                -- Layer 3: Remote Sweeper for Currency Invocations
-                for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if rem:IsA("RemoteEvent") or rem:IsA("RemoteFunction") then
-                        local rName = string.lower(rem.Name)
-                        if string.find(rName, "collectcash") or string.find(rName, "claimcash") or string.find(rName, "collectincome") or string.find(rName, "claimincome") or string.find(rName, "collectmoney") or string.find(rName, "claimmoney") or string.find(rName, "collectall") or string.find(rName, "cash") or string.find(rName, "income") then
-                            if rem:IsA("RemoteEvent") then pcall(function() rem:FireServer() end) else pcall(function() rem:InvokeServer() end) end
-                        end
-                    end
-                end
-
-                -- Layer 4: PlayerGui Claim Buttons
-                if LocalPlayer:FindFirstChild("PlayerGui") then
-                    for _, btn in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
-                        if (btn:IsA("TextButton") or btn:IsA("ImageButton")) and btn.Visible then
-                            local bText = string.lower(btn.Name .. " " .. (btn:IsA("TextButton") and btn.Text or ""))
-                            if string.find(bText, "claim") or string.find(bText, "collect") then
-                                pcall(function()
-                                    for _, conn in ipairs(getconnections(btn.MouseButton1Click)) do
-                                        conn:Fire()
-                                    end
-                                end)
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- 4. Auto Hatch Eggs Engine
+-- 3. Auto Hatch Eggs Engine
 task.spawn(function()
     while true do
         task.wait(0.6)
@@ -1082,32 +1015,64 @@ task.spawn(function()
     end
 end)
 
--- 5. Auto Train Speed Engine
+-- 4. SUPERCHARGED 5-LAYER AUTO TRAIN SPEED ENGINE (FIXED & HIGH-SPEED)
 task.spawn(function()
     while true do
-        task.wait(0.4)
-        if _G.AutoTrainSpeed and isAlive() then
+        task.wait(0.15)
+        if _G.AutoTrainSpeed and isAlive() and not isStealingActive then
             pcall(function()
-                local hrp = LocalPlayer.Character.HumanoidRootPart
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                local backpack = LocalPlayer:FindFirstChild("Backpack")
 
-                for _, pad in ipairs(Workspace:GetDescendants()) do
-                    local nameLower = string.lower(pad.Name)
-                    if string.find(nameLower, "treadmill") or string.find(nameLower, "train") or string.find(nameLower, "speedpad") or string.find(nameLower, "track") then
-                        local part = pad:IsA("BasePart") and pad or pad:FindFirstChildWhichIsA("BasePart")
-                        if part and firetouchinterest then
-                            InstantTouch(hrp, part)
+                -- Layer 1: Auto Equip Any Training Tools (Weights, Dumbbells, Energy, Swords)
+                if backpack then
+                    for _, tool in ipairs(backpack:GetChildren()) do
+                        if tool:IsA("Tool") then
+                            char:FindFirstChildOfClass("Humanoid"):EquipTool(tool)
+                            break
                         end
                     end
                 end
 
-                local tool = LocalPlayer.Character:FindFirstChildOfClass("Tool")
-                if tool then tool:Activate() end
+                -- Layer 2: Tool Activate
+                local currentTool = char:FindFirstChildOfClass("Tool")
+                if currentTool then
+                    currentTool:Activate()
+                end
 
+                -- Layer 3: Virtual Click Tap Emulation
+                if VirtualInputManager then
+                    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
+                    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+                else
+                    VirtualUser:CaptureController()
+                    VirtualUser:Button1Down(Vector2.new(500, 500), Workspace.CurrentCamera.CFrame)
+                    VirtualUser:Button1Up(Vector2.new(500, 500), Workspace.CurrentCamera.CFrame)
+                end
+
+                -- Layer 4: Touch Treadmills / Training Pads
+                if hrp then
+                    for _, pad in ipairs(Workspace:GetDescendants()) do
+                        if pad:IsA("BasePart") then
+                            local n = string.lower(pad.Name)
+                            if string.find(n, "treadmill") or string.find(n, "speedpad") or string.find(n, "train") or string.find(n, "track") or string.find(n, "run") then
+                                if (pad.Position - hrp.Position).Magnitude < 60 and firetouchinterest then
+                                    InstantTouch(hrp, pad)
+                                end
+                            end
+                        end
+                    end
+                end
+
+                -- Layer 5: Deep Remote Sweeper for Speed/Training
                 for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
                     if rem:IsA("RemoteEvent") then
                         local rName = string.lower(rem.Name)
-                        if string.find(rName, "train") or string.find(rName, "speed") or string.find(rName, "workout") or string.find(rName, "click") then
+                        if string.find(rName, "train") or string.find(rName, "speed") or string.find(rName, "workout") or string.find(rName, "click") or string.find(rName, "tap") or string.find(rName, "addspeed") or string.find(rName, "step") then
                             pcall(function() rem:FireServer() end)
+                            pcall(function() rem:FireServer(1) end)
+                            pcall(function() rem:FireServer("Speed") end)
                         end
                     end
                 end
@@ -1116,17 +1081,57 @@ task.spawn(function()
     end
 end)
 
--- 6. Auto Rebirth Engine
+-- 5. SUPERCHARGED 4-LAYER AUTO REBIRTH ENGINE (FIXED & FULL-AUTO)
 task.spawn(function()
     while true do
-        task.wait(1.5)
-        if _G.AutoRebirth then
+        task.wait(1.0)
+        if _G.AutoRebirth and isAlive() then
             pcall(function()
+                -- Layer 1: ReplicatedStorage Remotes
                 for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
                     if rem:IsA("RemoteEvent") or rem:IsA("RemoteFunction") then
                         local rName = string.lower(rem.Name)
-                        if string.find(rName, "rebirth") or string.find(rName, "prestige") or string.find(rName, "ascend") then
-                            if rem:IsA("RemoteEvent") then pcall(function() rem:FireServer(1) end) else pcall(function() rem:InvokeServer(1) end) end
+                        if string.find(rName, "rebirth") or string.find(rName, "prestige") or string.find(rName, "ascend") or string.find(rName, "evolve") or string.find(rName, "dorebirth") or string.find(rName, "buyrebirth") then
+                            if rem:IsA("RemoteEvent") then
+                                pcall(function() rem:FireServer() end)
+                                pcall(function() rem:FireServer(1) end)
+                                pcall(function() rem:FireServer("Rebirth") end)
+                            else
+                                pcall(function() rem:InvokeServer() end)
+                                pcall(function() rem:InvokeServer(1) end)
+                            end
+                        end
+                    end
+                end
+
+                -- Layer 2: PlayerGui Rebirth Buttons & Modals
+                if LocalPlayer:FindFirstChild("PlayerGui") then
+                    for _, btn in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
+                        if (btn:IsA("TextButton") or btn:IsA("ImageButton")) and btn.Visible then
+                            local bText = string.lower(btn.Name .. " " .. (btn:IsA("TextButton") and btn.Text or ""))
+                            if string.find(bText, "rebirth") or string.find(bText, "prestige") or string.find(bText, "ascend") or string.find(bText, "yes") or string.find(bText, "confirm") then
+                                pcall(function()
+                                    for _, conn in ipairs(getconnections(btn.MouseButton1Click)) do
+                                        conn:Fire()
+                                    end
+                                end)
+                            end
+                        end
+                    end
+                end
+
+                -- Layer 3: Physical Rebirth Pads & ProximityPrompts
+                local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    for _, obj in ipairs(Workspace:GetDescendants()) do
+                        local nameLower = string.lower(obj.Name)
+                        if string.find(nameLower, "rebirth") or string.find(nameLower, "prestige") then
+                            if obj:IsA("BasePart") and (obj.Position - hrp.Position).Magnitude < 30 then
+                                InstantTouch(hrp, obj)
+                            end
+                            if obj:IsA("ProximityPrompt") then
+                                TriggerEggPrompt(obj)
+                            end
                         end
                     end
                 end
@@ -1135,7 +1140,7 @@ task.spawn(function()
     end
 end)
 
--- 7. Remove Bosses (Godmode) Engine
+-- 6. Remove Bosses (Godmode) Engine
 RunService.Stepped:Connect(function()
     if _G.RemoveBosses then
         pcall(function()
@@ -1159,7 +1164,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- 8. Anti-Egg Drop Protection
+-- 7. Anti-Egg Drop Protection
 task.spawn(function()
     local function applyAntiDrop(char)
         if not char then return end
@@ -1179,7 +1184,7 @@ task.spawn(function()
     LocalPlayer.CharacterAdded:Connect(applyAntiDrop)
 end)
 
--- 9. Movement Engines (WalkSpeed, Fly, Noclip, Infinite Jump)
+-- 8. Movement Engines (WalkSpeed, Fly, Noclip, Infinite Jump)
 RunService.RenderStepped:Connect(function(deltaTime)
     pcall(function()
         if not isAlive() then return end
@@ -1256,7 +1261,7 @@ UserInputService.JumpRequest:Connect(function()
 end)
 
 -- =================================================================
--- VISUALS & ESP ENGINES (Rare Egg, All Eggs, Boss, Player)
+-- ULTRA-STABLE ESP ENGINES (NO FLICKER, CONTINUOUS TRACKING)
 -- =================================================================
 
 local espHolder = Instance.new("Folder")
@@ -1265,133 +1270,166 @@ espHolder.Parent = ScreenGui
 
 task.spawn(function()
     while true do
-        task.wait(1.5)
+        task.wait(0.4)
         pcall(function()
-            espHolder:ClearAllChildren()
             local char = LocalPlayer.Character
             local rootPart = isAlive() and char.HumanoidRootPart or nil
 
-            -- 1. Rare Egg ESP & All Egg ESP
-            if _G.RareEggESP or _G.AllEggESP then
-                local rarestTarget = _G.RareEggESP and FindRarestEggTarget() or nil
-                local rarestPart = rarestTarget and rarestTarget.part or nil
+            if not _G.RareEggESP and not _G.AllEggESP and not _G.BossESP and not _G.PlayerESP then
+                espHolder:ClearAllChildren()
+            else
+                -- 1. Rare Egg ESP & All Egg ESP (Universal Model & Prompt Scanner)
+                if _G.RareEggESP or _G.AllEggESP then
+                    for _, obj in ipairs(Workspace:GetDescendants()) do
+                        if obj ~= char and (not obj.Parent or obj.Parent ~= char) then
+                            local nameLower = string.lower(obj.Name)
+                            local isEgg = false
+                            local targetPart = nil
+                            local displayName = obj.Name
 
-                for _, prompt in ipairs(Workspace:GetDescendants()) do
-                    if prompt:IsA("ProximityPrompt") then
-                        local pPart = prompt.Parent:IsA("BasePart") and prompt.Parent or (prompt.Parent:IsA("Model") and prompt.Parent:FindFirstChildWhichIsA("BasePart") or nil)
-                        if pPart and pPart ~= char and (not pPart.Parent or pPart.Parent ~= char) then
-                            local act = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. pPart.Name):lower()
-                            if act:find("steal") or act:find("take") or act:find("grab") or act:find("egg") or act == "" then
-                                local isRare = (pPart == rarestPart) or act:find("eternal") or act:find("divine") or act:find("mythic")
+                            if obj:IsA("Model") and (string.find(nameLower, "egg") or obj:FindFirstChildWhichIsA("ProximityPrompt")) and not string.find(nameLower, "spawner") and not string.find(nameLower, "hatch") and not string.find(nameLower, "nest") then
+                                isEgg = true
+                                targetPart = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
+                            elseif obj:IsA("BasePart") and string.find(nameLower, "egg") and not string.find(nameLower, "spawner") and not string.find(nameLower, "hatch") and not string.find(nameLower, "nest") then
+                                isEgg = true
+                                targetPart = obj
+                            end
+
+                            if isEgg and targetPart and targetPart.Transparency < 1 then
+                                local isRare = string.find(nameLower, "eternal") or string.find(nameLower, "divine") or string.find(nameLower, "secret") or string.find(nameLower, "mythic") or string.find(nameLower, "legendary") or string.find(nameLower, "rare")
 
                                 if (_G.RareEggESP and isRare) or _G.AllEggESP then
-                                    local dist = rootPart and math.floor((rootPart.Position - pPart.Position).Magnitude) or 0
+                                    local espTag = espHolder:FindFirstChild("ESP_Egg_" .. tostring(targetPart:GetDebugId(0)))
+                                    local dist = rootPart and math.floor((rootPart.Position - targetPart.Position).Magnitude) or 0
 
-                                    local bill = Instance.new("BillboardGui")
-                                    bill.Name = "EggESP"
-                                    bill.AlwaysOnTop = true
-                                    bill.Size = UDim2.new(0, 140, 0, 28)
-                                    bill.StudsOffset = Vector3.new(0, 2.5, 0)
-                                    bill.Adornee = pPart
-                                    bill.Parent = espHolder
+                                    if not espTag then
+                                        espTag = Instance.new("BillboardGui")
+                                        espTag.Name = "ESP_Egg_" .. tostring(targetPart:GetDebugId(0))
+                                        espTag.AlwaysOnTop = true
+                                        espTag.Size = UDim2.new(0, 150, 0, 28)
+                                        espTag.StudsOffset = Vector3.new(0, 2.5, 0)
+                                        espTag.Adornee = targetPart
+                                        espTag.Parent = espHolder
 
-                                    local label = Instance.new("TextLabel")
-                                    label.Size = UDim2.new(1, 0, 1, 0)
-                                    label.BackgroundTransparency = 1
-                                    label.Text = (isRare and "👑 [RARE] " or "🥚 ") .. (prompt.ObjectText ~= "" and prompt.ObjectText or pPart.Name) .. " [" .. tostring(dist) .. "m]"
-                                    label.TextColor3 = isRare and Color3.fromRGB(255, 50, 220) or Color3.fromRGB(255, 215, 0)
-                                    label.Font = Enum.Font.GothamBold
-                                    label.TextSize = 11
-                                    label.TextStrokeTransparency = 0.2
-                                    label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-                                    label.Parent = bill
+                                        local label = Instance.new("TextLabel")
+                                        label.Name = "Tag"
+                                        label.Size = UDim2.new(1, 0, 1, 0)
+                                        label.BackgroundTransparency = 1
+                                        label.TextColor3 = isRare and Color3.fromRGB(255, 50, 220) or Color3.fromRGB(255, 215, 0)
+                                        label.Font = Enum.Font.GothamBold
+                                        label.TextSize = 11
+                                        label.TextStrokeTransparency = 0.2
+                                        label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+                                        label.Parent = espTag
 
-                                    local hl = Instance.new("Highlight")
-                                    hl.FillColor = isRare and Color3.fromRGB(255, 50, 220) or Color3.fromRGB(255, 215, 0)
-                                    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-                                    hl.FillTransparency = 0.4
-                                    hl.Adornee = pPart.Parent:IsA("Model") and pPart.Parent or pPart
-                                    hl.Parent = espHolder
+                                        local hl = Instance.new("Highlight")
+                                        hl.Name = "Glow"
+                                        hl.FillColor = isRare and Color3.fromRGB(255, 50, 220) or Color3.fromRGB(255, 215, 0)
+                                        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                                        hl.FillTransparency = 0.45
+                                        hl.Adornee = obj
+                                        hl.Parent = espTag
+                                    end
+
+                                    if espTag:FindFirstChild("Tag") then
+                                        espTag.Tag.Text = (isRare and "👑 [RARE] " or "🥚 ") .. displayName .. " [" .. tostring(dist) .. "m]"
+                                    end
                                 end
                             end
                         end
                     end
                 end
-            end
 
-            -- 2. Boss ESP
-            if _G.BossESP then
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if obj:IsA("Model") and obj ~= char then
-                        local nameLower = string.lower(obj.Name)
-                        if string.find(nameLower, "boss") or string.find(nameLower, "guardian") or string.find(nameLower, "guard") then
-                            local part = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChildWhichIsA("BasePart")
-                            if part then
-                                local dist = rootPart and math.floor((rootPart.Position - part.Position).Magnitude) or 0
+                -- 2. Boss ESP (Guardian & Boss Wallhack)
+                if _G.BossESP then
+                    for _, obj in ipairs(Workspace:GetDescendants()) do
+                        if obj:IsA("Model") and obj ~= char and not Players:GetPlayerFromCharacter(obj) then
+                            local nameLower = string.lower(obj.Name)
+                            if string.find(nameLower, "boss") or string.find(nameLower, "guardian") or string.find(nameLower, "guard") or string.find(nameLower, "monster") then
+                                local targetPart = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChildWhichIsA("BasePart")
+                                if targetPart then
+                                    local espTag = espHolder:FindFirstChild("ESP_Boss_" .. tostring(obj:GetDebugId(0)))
+                                    local dist = rootPart and math.floor((rootPart.Position - targetPart.Position).Magnitude) or 0
 
-                                local bill = Instance.new("BillboardGui")
-                                bill.Name = "BossESP"
-                                bill.AlwaysOnTop = true
-                                bill.Size = UDim2.new(0, 140, 0, 28)
-                                bill.StudsOffset = Vector3.new(0, 3, 0)
-                                bill.Adornee = part
-                                bill.Parent = espHolder
+                                    if not espTag then
+                                        espTag = Instance.new("BillboardGui")
+                                        espTag.Name = "ESP_Boss_" .. tostring(obj:GetDebugId(0))
+                                        espTag.AlwaysOnTop = true
+                                        espTag.Size = UDim2.new(0, 140, 0, 28)
+                                        espTag.StudsOffset = Vector3.new(0, 3.5, 0)
+                                        espTag.Adornee = targetPart
+                                        espTag.Parent = espHolder
 
-                                local label = Instance.new("TextLabel")
-                                label.Size = UDim2.new(1, 0, 1, 0)
-                                label.BackgroundTransparency = 1
-                                label.Text = "👹 " .. obj.Name .. " [" .. tostring(dist) .. "m]"
-                                label.TextColor3 = Color3.fromRGB(255, 50, 50)
-                                label.Font = Enum.Font.GothamBold
-                                label.TextSize = 11
-                                label.TextStrokeTransparency = 0.2
-                                label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-                                label.Parent = bill
+                                        local label = Instance.new("TextLabel")
+                                        label.Name = "Tag"
+                                        label.Size = UDim2.new(1, 0, 1, 0)
+                                        label.BackgroundTransparency = 1
+                                        label.TextColor3 = Color3.fromRGB(255, 50, 50)
+                                        label.Font = Enum.Font.GothamBold
+                                        label.TextSize = 11
+                                        label.TextStrokeTransparency = 0.2
+                                        label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+                                        label.Parent = espTag
 
-                                local hl = Instance.new("Highlight")
-                                hl.FillColor = Color3.fromRGB(255, 30, 30)
-                                hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-                                hl.FillTransparency = 0.4
-                                hl.Adornee = obj
-                                hl.Parent = espHolder
+                                        local hl = Instance.new("Highlight")
+                                        hl.Name = "Glow"
+                                        hl.FillColor = Color3.fromRGB(255, 30, 30)
+                                        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                                        hl.FillTransparency = 0.4
+                                        hl.Adornee = obj
+                                        hl.Parent = espTag
+                                    end
+
+                                    if espTag:FindFirstChild("Tag") then
+                                        espTag.Tag.Text = "👹 " .. obj.Name .. " [" .. tostring(dist) .. "m]"
+                                    end
+                                end
                             end
                         end
                     end
                 end
-            end
 
-            -- 3. Player ESP
-            if _G.PlayerESP then
-                for _, p in ipairs(Players:GetPlayers()) do
-                    if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                        local pRoot = p.Character.HumanoidRootPart
-                        local dist = rootPart and math.floor((rootPart.Position - pRoot.Position).Magnitude) or 0
+                -- 3. Player ESP (Live Player Tracker)
+                if _G.PlayerESP then
+                    for _, p in ipairs(Players:GetPlayers()) do
+                        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                            local pRoot = p.Character.HumanoidRootPart
+                            local espTag = espHolder:FindFirstChild("ESP_Player_" .. tostring(p.UserId))
+                            local dist = rootPart and math.floor((rootPart.Position - pRoot.Position).Magnitude) or 0
 
-                        local bill = Instance.new("BillboardGui")
-                        bill.Name = "PlayerESP"
-                        bill.AlwaysOnTop = true
-                        bill.Size = UDim2.new(0, 120, 0, 28)
-                        bill.StudsOffset = Vector3.new(0, 3, 0)
-                        bill.Adornee = pRoot
-                        bill.Parent = espHolder
+                            if not espTag then
+                                espTag = Instance.new("BillboardGui")
+                                espTag.Name = "ESP_Player_" .. tostring(p.UserId)
+                                espTag.AlwaysOnTop = true
+                                espTag.Size = UDim2.new(0, 130, 0, 28)
+                                espTag.StudsOffset = Vector3.new(0, 3.2, 0)
+                                espTag.Adornee = pRoot
+                                espTag.Parent = espHolder
 
-                        local label = Instance.new("TextLabel")
-                        label.Size = UDim2.new(1, 0, 1, 0)
-                        label.BackgroundTransparency = 1
-                        label.Text = "👤 " .. p.DisplayName .. " [" .. tostring(dist) .. "m]"
-                        label.TextColor3 = Color3.fromRGB(0, 230, 255)
-                        label.Font = Enum.Font.GothamBold
-                        label.TextSize = 11
-                        label.TextStrokeTransparency = 0.2
-                        label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-                        label.Parent = bill
+                                local label = Instance.new("TextLabel")
+                                label.Name = "Tag"
+                                label.Size = UDim2.new(1, 0, 1, 0)
+                                label.BackgroundTransparency = 1
+                                label.TextColor3 = Color3.fromRGB(0, 230, 255)
+                                label.Font = Enum.Font.GothamBold
+                                label.TextSize = 11
+                                label.TextStrokeTransparency = 0.2
+                                label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+                                label.Parent = espTag
 
-                        local hl = Instance.new("Highlight")
-                        hl.FillColor = Color3.fromRGB(0, 230, 255)
-                        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-                        hl.FillTransparency = 0.5
-                        hl.Adornee = p.Character
-                        hl.Parent = espHolder
+                                local hl = Instance.new("Highlight")
+                                hl.Name = "Glow"
+                                hl.FillColor = Color3.fromRGB(0, 230, 255)
+                                hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                                hl.FillTransparency = 0.5
+                                hl.Adornee = p.Character
+                                hl.Parent = espTag
+                            end
+
+                            if espTag:FindFirstChild("Tag") then
+                                espTag.Tag.Text = "👤 " .. p.DisplayName .. " [" .. tostring(dist) .. "m]"
+                            end
+                        end
                     end
                 end
             end
@@ -1399,4 +1437,4 @@ task.spawn(function()
     end
 end)
 
-print("[ULTRA SCRIPT HUB] Steal & Hatch Anime Eggs Heist Engine Active!")
+print("[ULTRA SCRIPT HUB] Steal & Hatch Anime Eggs Master Hub Active!")
