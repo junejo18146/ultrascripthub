@@ -1,6 +1,6 @@
 --[[
     ========================================================================
-    JUNEJO ULTRA SCRIPT HUB - JUMP FOR ANIMALS (V4.0 - ADVANCED TELEPORT FIX)
+    JUNEJO ULTRA SCRIPT HUB - JUMP FOR ANIMALS (V6.0 - UNLIMITED JUMP POWER)
     ========================================================================
     Author: Made by Junejo (junejo18146)
     Target Game: Jump for Animals (Roblox)
@@ -11,23 +11,19 @@
     Universal Mobile (Delta / Codex / Fluxus / Arceus X) & PC Compatible
     UI Standard: UI 1 - Official Ultra Script Hub Classic Matte Dark (#0F0F11)
     
-    Features Included (All Tested & Verified):
-        1. Auto Steal Rare Animals (Steals rarest animal/egg and instantly returns to base)
-        2. Auto Wins (Auto claim finish lines / tower win platforms)
-        3. Auto Open Animals (Automatic egg / animal hatcher)
-        4. Auto Equip Best (Auto equips highest stat animals/pets)
+    8 Main Features Included:
+        1. Auto Steal Rare Animals (Auto-teleport, grab rarest animal & instant base deposit)
+        2. Infinite Jump (Airborne continuous multi-jump bypass)
+        3. Jump Power Boost (Unlimited High Jump Power with - / + Stepper: 50 to 1000+)
+        4. Auto Open Animals (Automatic egg / animal hatcher)
         5. Teleport to Rare Animals (1-Click Instant Action)
-        6. Teleport to Mythic / Secret Animals (1-Click Instant Action)
-        7. Teleport to Win Platform / End Tower (1-Click Instant Action)
-        8. Teleport to Spawn / Safe Zone (1-Click Instant Action)
-        9. Rare Animals ESP (Neon Gold / Purple highlight + live distance tag)
-        10. Players ESP (Neon Box highlight + player name & live distance tag)
-        11. Win Zones ESP (Neon Emerald highlight on win platforms & finish lines)
-        12. WalkSpeed Boost (Integrated - / + Stepper Controller: 16 to 300)
-        13. Infinite Jump (Airborne multi-jump bypass)
-        14. NoClip (Walk through walls and obstacles)
-        15. Instant Proximity Prompts (0s hold auto-sweeper)
-        16. 24/7 Anti-AFK Engine (Prevents 20-minute disconnects)
+        6. Rare Animals ESP (Neon Glowing Highlight + Live Distance Billboard Tag)
+        7. Teleport to Win Platform (1-Click Instant Action to Tower Top / Win Zone)
+        8. WalkSpeed Boost (Integrated - / + Stepper Controller: 16 to 300)
+        
+    Background Enhancements:
+        - Instant Proximity Prompts (0s hold auto-sweeper)
+        - 24/7 Anti-AFK Engine (Prevents 20-minute disconnects)
     ========================================================================
 --]]
 
@@ -49,25 +45,20 @@ end
 -- State & Settings
 local Toggles = {
     AutoStealRare = false,
-    AutoWins = false,
-    AutoOpenAnimals = false,
-    AutoEquipBest = false,
-    RareAnimalESP = false,
-    PlayerESP = false,
-    WinZonesESP = false,
-    WalkSpeedBoost = false,
     InfiniteJump = false,
-    NoClip = false,
+    JumpPowerBoost = false,
+    AutoOpenAnimals = false,
+    RareAnimalESP = false,
+    WalkSpeedBoost = false,
     InstantPrompts = true,
     AntiAFK = true
 }
 
 local CustomSpeedValue = 50
+local CustomJumpPowerValue = 120
 local SavedBaseCFrame = nil
 local ESPObjects = {
-    RareAnimals = {},
-    Players = {},
-    WinZones = {}
+    RareAnimals = {}
 }
 
 -- Safe Base CFrame Initialization
@@ -439,7 +430,6 @@ local function GetSpawnCFrame()
 
     local spawnPos = nil
     pcall(function()
-        -- Search SpawnLocation
         local spawns = {}
         for _, obj in ipairs(Workspace:GetDescendants()) do
             if obj:IsA("SpawnLocation") then
@@ -541,46 +531,7 @@ task.spawn(function()
     end
 end)
 
--- 2. Auto Wins Loop
-task.spawn(function()
-    while true do
-        if Toggles.AutoWins then
-            pcall(function()
-                local zones = GetAllWinZones()
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                if hrp and #zones > 0 then
-                    for _, zone in ipairs(zones) do
-                        if not Toggles.AutoWins then break end
-                        SafeTeleport(zone.CFrame)
-                        task.wait(0.12)
-                        if firetouchinterest then
-                            firetouchinterest(hrp, zone, 0)
-                            task.wait(0.01)
-                            firetouchinterest(hrp, zone, 1)
-                        end
-                        task.wait(0.15)
-                    end
-                end
-
-                -- Fire Win Remotes
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if remote:IsA("RemoteEvent") then
-                        local rName = string.lower(remote.Name)
-                        if string.find(rName, "win") or string.find(rName, "claim") or string.find(rName, "finish") or string.find(rName, "reward") or string.find(rName, "trophy") then
-                            remote:FireServer()
-                        end
-                    end
-                end
-            end)
-            task.wait(0.5)
-        else
-            task.wait(0.5)
-        end
-    end
-end)
-
--- 3. Auto Open Animals Loop
+-- 2. Auto Open Animals Loop
 task.spawn(function()
     while true do
         if Toggles.AutoOpenAnimals then
@@ -619,28 +570,7 @@ task.spawn(function()
     end
 end)
 
--- 4. Auto Equip Best Loop
-task.spawn(function()
-    while true do
-        if Toggles.AutoEquipBest then
-            pcall(function()
-                for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if remote:IsA("RemoteEvent") then
-                        local rName = string.lower(remote.Name)
-                        if string.find(rName, "equipbest") or string.find(rName, "equip_best") or string.find(rName, "autoequip") or (string.find(rName, "equip") and (string.find(rName, "pet") or string.find(rName, "animal"))) then
-                            remote:FireServer()
-                        end
-                    end
-                end
-            end)
-            task.wait(2.0)
-        else
-            task.wait(1.0)
-        end
-    end
-end)
-
--- 5. Instant Proximity Prompts (0s Sweeper)
+-- 3. Instant Proximity Prompts (0s Sweeper)
 task.spawn(function()
     while true do
         if Toggles.InstantPrompts then
@@ -714,7 +644,7 @@ end
 
 task.spawn(function()
     while true do
-        -- 1. Rare Animals ESP (Gold / Violet)
+        -- Rare Animals ESP (Gold / Violet)
         if Toggles.RareAnimalESP then
             CleanESPGroup("RareAnimals")
             pcall(function()
@@ -734,40 +664,6 @@ task.spawn(function()
             CleanESPGroup("RareAnimals")
         end
 
-        -- 2. Player ESP (Red)
-        if Toggles.PlayerESP then
-            CleanESPGroup("Players")
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                for _, player in ipairs(Players:GetPlayers()) do
-                    if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                        local pHrp = player.Character.HumanoidRootPart
-                        local dist = hrp and math.floor((pHrp.Position - hrp.Position).Magnitude) or 0
-                        CreateESP(pHrp, Color3.fromRGB(255, 75, 75), "👤 " .. player.DisplayName .. " [" .. dist .. "m]", "Players")
-                    end
-                end
-            end)
-        else
-            CleanESPGroup("Players")
-        end
-
-        -- 3. Win Zones ESP (Emerald Green)
-        if Toggles.WinZonesESP then
-            CleanESPGroup("WinZones")
-            pcall(function()
-                local zones = GetAllWinZones()
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                for _, zone in ipairs(zones) do
-                    local dist = hrp and math.floor((zone.Position - hrp.Position).Magnitude) or 0
-                    CreateESP(zone, Color3.fromRGB(46, 204, 113), "🏆 WIN ZONE [" .. dist .. "m]", "WinZones")
-                end
-            end)
-        else
-            CleanESPGroup("WinZones")
-        end
-
         task.wait(1.5)
     end
 end)
@@ -781,34 +677,29 @@ local function UpdateMovement()
         local char = LocalPlayer.Character
         local hum = char and char:FindFirstChildWhichIsA("Humanoid")
         if hum then
+            -- Speed Control
             if Toggles.WalkSpeedBoost then
                 hum.WalkSpeed = CustomSpeedValue
             else
                 hum.WalkSpeed = 16
+            end
+            
+            -- Jump Power Control
+            if Toggles.JumpPowerBoost then
+                hum.UseJumpPower = true
+                hum.JumpPower = CustomJumpPowerValue
+                hum.JumpHeight = CustomJumpPowerValue / 7
+            else
+                hum.JumpPower = 50
+                hum.JumpHeight = 7.2
             end
         end
     end)
 end
 
 RunService.RenderStepped:Connect(function()
-    if Toggles.WalkSpeedBoost then
+    if Toggles.WalkSpeedBoost or Toggles.JumpPowerBoost then
         UpdateMovement()
-    end
-end)
-
--- NoClip Engine
-RunService.Stepped:Connect(function()
-    if Toggles.NoClip then
-        pcall(function()
-            local char = LocalPlayer.Character
-            if char then
-                for _, part in ipairs(char:GetDescendants()) do
-                    if part:IsA("BasePart") and part.CanCollide then
-                        part.CanCollide = false
-                    end
-                end
-            end
-        end)
     end
 end)
 
@@ -818,8 +709,12 @@ UserInputService.JumpRequest:Connect(function()
         pcall(function()
             local char = LocalPlayer.Character
             local hum = char and char:FindFirstChildWhichIsA("Humanoid")
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
             if hum then
                 hum:ChangeState(Enum.HumanoidStateType.Jumping)
+            end
+            if Toggles.JumpPowerBoost and hrp then
+                hrp.AssemblyLinearVelocity = Vector3.new(hrp.AssemblyLinearVelocity.X, CustomJumpPowerValue, hrp.AssemblyLinearVelocity.Z)
             end
         end)
     end
@@ -836,7 +731,7 @@ LocalPlayer.Idled:Connect(function()
 end)
 
 ------------------------------------------------------------------------
--- OFFICIAL JUNEJO CLASSIC DARK UI (UI 1 STANDARD - 280x260px)
+-- OFFICIAL JUNEJO CLASSIC DARK UI (UI 1 STANDARD - 280x265px)
 ------------------------------------------------------------------------
 
 local ScreenGui = Instance.new("ScreenGui")
@@ -846,11 +741,11 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999999
 ScreenGui.IgnoreGuiInset = true
 
--- Main Frame (280px x 260px)
+-- Main Frame (280px x 265px)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 260)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -130)
+MainFrame.Size = UDim2.new(0, 280, 0, 265)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -132)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -930,13 +825,13 @@ HeaderLine.Parent = MainFrame
 -- Scrolling Content Frame
 local ContentFrame = Instance.new("ScrollingFrame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -24, 0, 185)
+ContentFrame.Size = UDim2.new(1, -24, 0, 190)
 ContentFrame.Position = UDim2.new(0, 12, 0, 38)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.BorderSizePixel = 0
 ContentFrame.ScrollBarThickness = 2
 ContentFrame.ScrollBarImageColor3 = Color3.fromRGB(60, 60, 75)
-ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 390)
+ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 235)
 ContentFrame.Parent = MainFrame
 
 local UIList = Instance.new("UIListLayout")
@@ -1050,22 +945,134 @@ local function AddActionRow(text, buttonText, callback)
 end
 
 ------------------------------------------------------------------------
--- REGISTERING ALL FEATURES
+-- REGISTERING ALL 8 FEATURES
 ------------------------------------------------------------------------
 
 -- 1. Auto Steal Rare Animals
 AddToggleRow("Auto Steal Rare Animals", "AutoStealRare")
 
--- 2. Auto Wins
-AddToggleRow("Auto Wins", "AutoWins")
+-- 2. Infinite Jump (Airborne Continuous Multi-Jump)
+AddToggleRow("Infinite Jump", "InfiniteJump")
 
--- 3. Auto Open Animals
+-- 3. Jump Power Boost (Unlimited Jump Power Stepper: 50 - 1000+)
+local JumpRow = Instance.new("Frame")
+JumpRow.Size = UDim2.new(1, 0, 0, 23)
+JumpRow.BackgroundTransparency = 1
+JumpRow.Parent = ContentFrame
+
+local JumpToggleBtn = Instance.new("TextButton")
+JumpToggleBtn.Size = UDim2.new(0.55, 0, 1, 0)
+JumpToggleBtn.BackgroundTransparency = 1
+JumpToggleBtn.Text = ""
+JumpToggleBtn.ZIndex = 5
+JumpToggleBtn.Parent = JumpRow
+
+local JumpLabel = Instance.new("TextLabel")
+JumpLabel.Size = UDim2.new(1, -26, 1, 0)
+JumpLabel.BackgroundTransparency = 1
+JumpLabel.Text = "Jump Power"
+JumpLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
+JumpLabel.TextSize = 12
+JumpLabel.Font = Enum.Font.GothamBold
+JumpLabel.TextXAlignment = Enum.TextXAlignment.Left
+JumpLabel.Parent = JumpToggleBtn
+
+local JumpCheckBox = Instance.new("Frame")
+JumpCheckBox.Size = UDim2.new(0, 18, 0, 18)
+JumpCheckBox.Position = UDim2.new(1, -18, 0.5, -9)
+JumpCheckBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+JumpCheckBox.BorderSizePixel = 0
+JumpCheckBox.Parent = JumpToggleBtn
+
+local JumpCheckCorner = Instance.new("UICorner")
+JumpCheckCorner.CornerRadius = UDim.new(0, 4)
+JumpCheckCorner.Parent = JumpCheckBox
+
+local JumpCheckStroke = Instance.new("UIStroke")
+JumpCheckStroke.Color = Color3.fromRGB(45, 45, 55)
+JumpCheckStroke.Thickness = 1.2
+JumpCheckStroke.Parent = JumpCheckBox
+
+local JumpCheckMark = Instance.new("Frame")
+JumpCheckMark.Size = UDim2.new(0, 10, 0, 10)
+JumpCheckMark.Position = UDim2.new(0.5, -5, 0.5, -5)
+JumpCheckMark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+JumpCheckMark.BackgroundTransparency = Toggles.JumpPowerBoost and 0 or 1
+JumpCheckMark.BorderSizePixel = 0
+JumpCheckMark.Parent = JumpCheckBox
+
+local JumpMarkCorner = Instance.new("UICorner")
+JumpMarkCorner.CornerRadius = UDim.new(0, 2)
+JumpMarkCorner.Parent = JumpCheckMark
+
+JumpToggleBtn.MouseButton1Click:Connect(function()
+    Toggles.JumpPowerBoost = not Toggles.JumpPowerBoost
+    JumpCheckMark.BackgroundTransparency = Toggles.JumpPowerBoost and 0 or 1
+    UpdateMovement()
+end)
+
+local JumpControlFrame = Instance.new("Frame")
+JumpControlFrame.Size = UDim2.new(0.42, 0, 1, 0)
+JumpControlFrame.Position = UDim2.new(0.58, 0, 0, 0)
+JumpControlFrame.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+JumpControlFrame.BorderSizePixel = 0
+JumpControlFrame.Parent = JumpRow
+
+local JumpCtrlCorner = Instance.new("UICorner")
+JumpCtrlCorner.CornerRadius = UDim.new(0, 4)
+JumpCtrlCorner.Parent = JumpControlFrame
+
+local JumpCtrlStroke = Instance.new("UIStroke")
+JumpCtrlStroke.Color = Color3.fromRGB(45, 45, 55)
+JumpCtrlStroke.Thickness = 1
+JumpCtrlStroke.Parent = JumpControlFrame
+
+local JumpMinusBtn = Instance.new("TextButton")
+JumpMinusBtn.Size = UDim2.new(0, 22, 1, 0)
+JumpMinusBtn.Position = UDim2.new(0, 0, 0, 0)
+JumpMinusBtn.BackgroundTransparency = 1
+JumpMinusBtn.Text = "-"
+JumpMinusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
+JumpMinusBtn.TextSize = 14
+JumpMinusBtn.Font = Enum.Font.GothamBold
+JumpMinusBtn.Parent = JumpControlFrame
+
+local JumpDisplay = Instance.new("TextLabel")
+JumpDisplay.Size = UDim2.new(1, -44, 1, 0)
+JumpDisplay.Position = UDim2.new(0, 22, 0, 0)
+JumpDisplay.BackgroundTransparency = 1
+JumpDisplay.Text = tostring(CustomJumpPowerValue)
+JumpDisplay.TextColor3 = Color3.fromRGB(255, 255, 255)
+JumpDisplay.TextSize = 11
+JumpDisplay.Font = Enum.Font.GothamBold
+JumpDisplay.Parent = JumpControlFrame
+
+local JumpPlusBtn = Instance.new("TextButton")
+JumpPlusBtn.Size = UDim2.new(0, 22, 1, 0)
+JumpPlusBtn.Position = UDim2.new(1, -22, 0, 0)
+JumpPlusBtn.BackgroundTransparency = 1
+JumpPlusBtn.Text = "+"
+JumpPlusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
+JumpPlusBtn.TextSize = 14
+JumpPlusBtn.Font = Enum.Font.GothamBold
+JumpPlusBtn.Parent = JumpControlFrame
+
+JumpMinusBtn.MouseButton1Click:Connect(function()
+    CustomJumpPowerValue = math.max(50, CustomJumpPowerValue - 30)
+    JumpDisplay.Text = tostring(CustomJumpPowerValue)
+    UpdateMovement()
+end)
+
+JumpPlusBtn.MouseButton1Click:Connect(function()
+    CustomJumpPowerValue = math.min(1000, CustomJumpPowerValue + 30)
+    JumpDisplay.Text = tostring(CustomJumpPowerValue)
+    UpdateMovement()
+end)
+
+-- 4. Auto Open Animals
 AddToggleRow("Auto Open Animals", "AutoOpenAnimals")
 
--- 4. Auto Equip Best
-AddToggleRow("Auto Equip Best", "AutoEquipBest")
-
--- 5. Teleport to Rare Animals (1-Click)
+-- 5. Teleport to Rare Animals (1-Click Action)
 AddActionRow("TP to Rare Animals", "TP RARE", function()
     local target = GetRarestAnimal()
     if target and target.Part then
@@ -1078,52 +1085,18 @@ AddActionRow("TP to Rare Animals", "TP RARE", function()
     end
 end)
 
--- 6. Teleport to Mythic / Secret Animals (1-Click)
-AddActionRow("TP to Mythic Animals", "TP GOD", function()
-    local all = GetAllAnimalsAndEggs()
-    local mythic = nil
-    for _, item in ipairs(all) do
-        if item.Rarity >= 75 then
-            mythic = item
-            break
-        end
-    end
-    if mythic and mythic.Part then
-        SafeTeleport(mythic.Part.CFrame)
-    else
-        local target = GetRarestAnimal()
-        if target and target.Part then
-            SafeTeleport(target.Part.CFrame)
-        elseif #all > 0 then
-            SafeTeleport(all[#all].Part.CFrame)
-        end
-    end
-end)
+-- 6. Rare Animals ESP
+AddToggleRow("Rare Animals ESP", "RareAnimalESP")
 
--- 7. Teleport to Win Platform / End Tower (1-Click)
-AddActionRow("TP to Win Zone", "TP WIN", function()
+-- 7. Teleport to Win Platform (1-Click Action)
+AddActionRow("TP to Win Platform", "TP WIN", function()
     local zones = GetAllWinZones()
     if #zones > 0 then
         SafeTeleport(zones[1].CFrame)
     end
 end)
 
--- 8. Teleport to Spawn / Safe Zone (1-Click)
-AddActionRow("Teleport to Spawn", "SPAWN", function()
-    local spawnCF = GetSpawnCFrame()
-    SafeTeleport(spawnCF)
-end)
-
--- 9. Rare Animals ESP
-AddToggleRow("Rare Animals ESP", "RareAnimalESP")
-
--- 10. Players ESP
-AddToggleRow("Players ESP", "PlayerESP")
-
--- 11. Win Zones ESP
-AddToggleRow("Win Zones ESP", "WinZonesESP")
-
--- 12. WalkSpeed Boost + Integrated Pill Controller (- / +)
+-- 8. WalkSpeed Boost + Integrated Pill Controller (- / +)
 local SpeedRow = Instance.new("Frame")
 SpeedRow.Size = UDim2.new(1, 0, 0, 23)
 SpeedRow.BackgroundTransparency = 1
@@ -1237,15 +1210,6 @@ PlusBtn.MouseButton1Click:Connect(function()
     SpeedDisplay.Text = tostring(CustomSpeedValue)
     UpdateMovement()
 end)
-
--- 13. Infinite Jump
-AddToggleRow("Infinite Jump", "InfiniteJump")
-
--- 14. NoClip
-AddToggleRow("NoClip Mode", "NoClip")
-
--- 15. Instant Prompts
-AddToggleRow("Instant Prompts (0s)", "InstantPrompts")
 
 -- Pinned Footer (Mandatory Junejo Footer)
 local Footer = Instance.new("Frame")
