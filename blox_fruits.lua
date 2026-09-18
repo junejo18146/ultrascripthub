@@ -1,5 +1,5 @@
 -- =================================================================
--- ULTRA SCRIPT HUB - OFFICIAL UI (CLASSIC MATTE DARK)
+-- ULTRA SCRIPT HUB - OFFICIAL UI (EXACT SCREENSHOT STANDARD)
 -- GAME: Blox Fruits
 -- AUTHOR: Made by Junejo
 -- =================================================================
@@ -13,14 +13,15 @@ local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
--- Global Feature State Flags
+-- Feature State Flags
 _G.AutoFarmLevel = false
-_G.WalkSpeedValue = 16
 _G.InfJumpActive = false
 _G.ChestESPActive = false
 _G.FruitESPActive = false
+_G.WalkSpeedActive = false
+_G.WalkSpeedValue = 50
 
--- Prevent duplicate UI
+-- Prevent Duplicate GUI
 local function cleanupOldUI()
     for _, name in ipairs({"UltraScriptHub_BloxFruits", "BloxFruitsUI_Badshah", "JunejoHubUI_BloxFruits"}) do
         pcall(function()
@@ -35,7 +36,7 @@ local function cleanupOldUI()
 end
 cleanupOldUI()
 
--- Safe GUI Parent Resolver
+-- Safe GUI Parent Resolver (Delta / PC Compatible)
 local function getSafeGui()
     if gethui then
         local success, res = pcall(gethui)
@@ -58,12 +59,14 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = getSafeGui()
 
--- Main Container (280x245 Dimension)
+-- =================================================================
+-- EXACT OFFICIAL UI FRAME (From Screenshot)
+-- =================================================================
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 245)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -122)
-MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17) -- Matte Black
+MainFrame.Size = UDim2.new(0, 275, 0, 270)
+MainFrame.Position = UDim2.new(0.5, -137, 0.5, -135)
+MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 15) -- Matte Dark Black
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Parent = ScreenGui
@@ -73,7 +76,7 @@ MainCorner.CornerRadius = UDim.new(0, 10)
 MainCorner.Parent = MainFrame
 
 local MainStroke = Instance.new("UIStroke")
-MainStroke.Color = Color3.fromRGB(35, 35, 42) -- Border
+MainStroke.Color = Color3.fromRGB(32, 32, 40)
 MainStroke.Thickness = 1
 MainStroke.Parent = MainFrame
 
@@ -103,50 +106,58 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Header Container (Game Name on Top + Ultra Script Hub Subtitle)
+-- Header Container
 local Header = Instance.new("Frame")
 Header.Name = "Header"
-Header.Size = UDim2.new(1, 0, 0, 42)
+Header.Size = UDim2.new(1, 0, 0, 36)
 Header.BackgroundTransparency = 1
 Header.Parent = MainFrame
 
-local GameTitle = Instance.new("TextLabel")
-GameTitle.Name = "GameTitle"
-GameTitle.Text = "BLOX FRUITS"
-GameTitle.Font = Enum.Font.GothamBold
-GameTitle.TextSize = 13
-GameTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-GameTitle.TextXAlignment = Enum.TextXAlignment.Left
-GameTitle.Position = UDim2.new(0, 14, 0, 6)
-GameTitle.Size = UDim2.new(0, 200, 0, 16)
-GameTitle.BackgroundTransparency = 1
-GameTitle.Parent = Header
+local Title = Instance.new("TextLabel")
+Title.Name = "Title"
+Title.Text = "BLOX FRUITS"
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 13
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Position = UDim2.new(0, 14, 0, 10)
+Title.Size = UDim2.new(1, -50, 0, 16)
+Title.BackgroundTransparency = 1
+Title.Parent = Header
 
-local HubSubtitle = Instance.new("TextLabel")
-HubSubtitle.Name = "HubSubtitle"
-HubSubtitle.Text = "ULTRA SCRIPT HUB"
-HubSubtitle.Font = Enum.Font.GothamBold
-HubSubtitle.TextSize = 9
-HubSubtitle.TextColor3 = Color3.fromRGB(160, 160, 175)
-HubSubtitle.TextXAlignment = Enum.TextXAlignment.Left
-HubSubtitle.Position = UDim2.new(0, 14, 0, 22)
-HubSubtitle.Size = UDim2.new(0, 200, 0, 12)
-HubSubtitle.BackgroundTransparency = 1
-HubSubtitle.Parent = Header
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Name = "CloseBtn"
+CloseBtn.Text = "✕"
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextSize = 14
+CloseBtn.TextColor3 = Color3.fromRGB(150, 150, 165)
+CloseBtn.Position = UDim2.new(1, -30, 0, 10)
+CloseBtn.Size = UDim2.new(0, 18, 0, 18)
+CloseBtn.BackgroundTransparency = 1
+CloseBtn.Parent = Header
+
+CloseBtn.MouseButton1Click:Connect(function()
+    _G.AutoFarmLevel = false
+    _G.InfJumpActive = false
+    _G.ChestESPActive = false
+    _G.FruitESPActive = false
+    _G.WalkSpeedActive = false
+    ScreenGui:Destroy()
+end)
 
 local Divider = Instance.new("Frame")
 Divider.Name = "Divider"
 Divider.Size = UDim2.new(1, -28, 0, 1)
 Divider.Position = UDim2.new(0, 14, 1, -1)
-Divider.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+Divider.BackgroundColor3 = Color3.fromRGB(32, 32, 40)
 Divider.BorderSizePixel = 0
 Divider.Parent = Header
 
 -- Content Container
 local Content = Instance.new("Frame")
 Content.Name = "Content"
-Content.Size = UDim2.new(1, -28, 0, 170)
-Content.Position = UDim2.new(0, 14, 0, 48)
+Content.Size = UDim2.new(1, -28, 0, 180)
+Content.Position = UDim2.new(0, 14, 0, 42)
 Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
@@ -155,113 +166,153 @@ ContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
 ContentLayout.Padding = UDim.new(0, 4)
 ContentLayout.Parent = Content
 
--- Helper: Create Fully-Clickable Mobile-Optimized Toggle Row
+-- =================================================================
+-- UI HELPERS (Exact Screenshot Toggles & Speed Row)
+-- =================================================================
+
+-- Standard Feature Toggle Row
 local function createToggleRow(name, text, defaultState, layoutOrder, onToggle)
     local state = defaultState or false
 
-    local rowBtn = Instance.new("TextButton")
-    rowBtn.Name = name
-    rowBtn.Size = UDim2.new(1, 0, 0, 28)
-    rowBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
-    rowBtn.BackgroundTransparency = 0.6
-    rowBtn.BorderSizePixel = 0
-    rowBtn.AutoButtonColor = false
-    rowBtn.Text = ""
-    rowBtn.LayoutOrder = layoutOrder
-    rowBtn.Parent = Content
-
-    local rowCorner = Instance.new("UICorner")
-    rowCorner.CornerRadius = UDim.new(0, 6)
-    rowCorner.Parent = rowBtn
+    local row = Instance.new("Frame")
+    row.Name = name
+    row.Size = UDim2.new(1, 0, 0, 28)
+    row.BackgroundTransparency = 1
+    row.LayoutOrder = layoutOrder
+    row.Parent = Content
 
     local label = Instance.new("TextLabel")
     label.Text = text
-    label.Font = Enum.Font.GothamMedium
+    label.Font = Enum.Font.GothamBold
     label.TextSize = 12
-    label.TextColor3 = Color3.fromRGB(225, 225, 235)
+    label.TextColor3 = Color3.fromRGB(240, 240, 245)
     label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Position = UDim2.new(0, 8, 0, 0)
-    label.Size = UDim2.new(1, -40, 1, 0)
+    label.Size = UDim2.new(1, -35, 1, 0)
     label.BackgroundTransparency = 1
-    label.Parent = rowBtn
+    label.Parent = row
 
-    local box = Instance.new("Frame")
-    box.Size = UDim2.new(0, 18, 0, 18)
-    box.Position = UDim2.new(1, -26, 0.5, -9)
-    box.BackgroundColor3 = state and Color3.fromRGB(45, 45, 60) or Color3.fromRGB(24, 24, 30)
+    local box = Instance.new("TextButton")
+    box.Size = UDim2.new(0, 20, 0, 20)
+    box.Position = UDim2.new(1, -20, 0.5, -10)
+    box.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
     box.BorderSizePixel = 0
-    box.Parent = rowBtn
+    box.Text = ""
+    box.AutoButtonColor = false
+    box.Parent = row
 
     local boxCorner = Instance.new("UICorner")
-    boxCorner.CornerRadius = UDim.new(0, 4)
+    boxCorner.CornerRadius = UDim.new(0, 5)
     boxCorner.Parent = box
 
     local boxStroke = Instance.new("UIStroke")
-    boxStroke.Color = state and Color3.fromRGB(90, 90, 120) or Color3.fromRGB(45, 45, 55)
+    boxStroke.Color = Color3.fromRGB(45, 45, 55)
     boxStroke.Thickness = 1
     boxStroke.Parent = box
 
     local check = Instance.new("Frame")
-    check.Size = UDim2.new(0, 10, 0, 10)
-    check.Position = UDim2.new(0.5, -5, 0.5, -5)
+    check.Size = UDim2.new(0, 12, 0, 12)
+    check.Position = UDim2.new(0.5, -6, 0.5, -6)
     check.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     check.BorderSizePixel = 0
     check.Visible = state
     check.Parent = box
 
     local checkCorner = Instance.new("UICorner")
-    checkCorner.CornerRadius = UDim.new(0, 2)
+    checkCorner.CornerRadius = UDim.new(0, 3)
     checkCorner.Parent = check
 
-    local function updateState(newState)
-        state = newState
+    local function updateToggle()
+        state = not state
         check.Visible = state
-        box.BackgroundColor3 = state and Color3.fromRGB(45, 45, 60) or Color3.fromRGB(24, 24, 30)
-        boxStroke.Color = state and Color3.fromRGB(120, 120, 160) or Color3.fromRGB(45, 45, 55)
         if onToggle then
             task.spawn(onToggle, state)
         end
     end
 
-    rowBtn.Activated:Connect(function()
-        updateState(not state)
-    end)
+    box.MouseButton1Click:Connect(updateToggle)
 
-    return rowBtn
+    -- Make entire row clickable
+    local rowClick = Instance.new("TextButton")
+    rowClick.Size = UDim2.new(1, -30, 1, 0)
+    rowClick.BackgroundTransparency = 1
+    rowClick.Text = ""
+    rowClick.Parent = row
+    rowClick.MouseButton1Click:Connect(updateToggle)
+
+    return row
 end
 
--- Helper: Mobile-Optimized Speed Controller Row (- / + Pill Stepper)
-local function createSpeedRow(name, text, minVal, maxVal, defaultVal, layoutOrder, onSpeedChange)
-    local current = defaultVal or 16
+-- WalkSpeed Row with Checkbox AND Stepper Pill (Exact Screenshot look)
+local function createWalkSpeedRow(layoutOrder)
+    local state = _G.WalkSpeedActive or false
+    local current = _G.WalkSpeedValue or 50
 
     local row = Instance.new("Frame")
-    row.Name = name
+    row.Name = "WalkSpeedRow"
     row.Size = UDim2.new(1, 0, 0, 28)
-    row.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
-    row.BackgroundTransparency = 0.6
-    row.BorderSizePixel = 0
+    row.BackgroundTransparency = 1
     row.LayoutOrder = layoutOrder
     row.Parent = Content
 
-    local rowCorner = Instance.new("UICorner")
-    rowCorner.CornerRadius = UDim.new(0, 6)
-    rowCorner.Parent = row
-
     local label = Instance.new("TextLabel")
-    label.Text = text
-    label.Font = Enum.Font.GothamMedium
+    label.Text = "WalkSpeed"
+    label.Font = Enum.Font.GothamBold
     label.TextSize = 12
-    label.TextColor3 = Color3.fromRGB(225, 225, 235)
+    label.TextColor3 = Color3.fromRGB(240, 240, 245)
     label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Position = UDim2.new(0, 8, 0, 0)
-    label.Size = UDim2.new(1, -125, 1, 0)
+    label.Size = UDim2.new(0, 85, 1, 0)
     label.BackgroundTransparency = 1
     label.Parent = row
 
+    -- WalkSpeed Toggle Checkbox
+    local box = Instance.new("TextButton")
+    box.Size = UDim2.new(0, 20, 0, 20)
+    box.Position = UDim2.new(0, 95, 0.5, -10)
+    box.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+    box.BorderSizePixel = 0
+    box.Text = ""
+    box.AutoButtonColor = false
+    box.Parent = row
+
+    local boxCorner = Instance.new("UICorner")
+    boxCorner.CornerRadius = UDim.new(0, 5)
+    boxCorner.Parent = box
+
+    local boxStroke = Instance.new("UIStroke")
+    boxStroke.Color = Color3.fromRGB(45, 45, 55)
+    boxStroke.Thickness = 1
+    boxStroke.Parent = box
+
+    local check = Instance.new("Frame")
+    check.Size = UDim2.new(0, 12, 0, 12)
+    check.Position = UDim2.new(0.5, -6, 0.5, -6)
+    check.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    check.BorderSizePixel = 0
+    check.Visible = state
+    check.Parent = box
+
+    local checkCorner = Instance.new("UICorner")
+    checkCorner.CornerRadius = UDim.new(0, 3)
+    checkCorner.Parent = check
+
+    box.MouseButton1Click:Connect(function()
+        state = not state
+        check.Visible = state
+        _G.WalkSpeedActive = state
+        if not state then
+            pcall(function()
+                if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+                    LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = 16
+                end
+            end)
+        end
+    end)
+
+    -- Stepper Pill Frame
     local pill = Instance.new("Frame")
-    pill.Size = UDim2.new(0, 110, 0, 22)
-    pill.Position = UDim2.new(1, -116, 0.5, -11)
-    pill.BackgroundColor3 = Color3.fromRGB(27, 27, 34)
+    pill.Size = UDim2.new(0, 110, 0, 24)
+    pill.Position = UDim2.new(1, -110, 0.5, -12)
+    pill.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
     pill.BorderSizePixel = 0
     pill.Parent = row
 
@@ -270,153 +321,139 @@ local function createSpeedRow(name, text, minVal, maxVal, defaultVal, layoutOrde
     pillCorner.Parent = pill
 
     local pillStroke = Instance.new("UIStroke")
-    pillStroke.Color = Color3.fromRGB(50, 50, 65)
+    pillStroke.Color = Color3.fromRGB(45, 45, 55)
     pillStroke.Thickness = 1
     pillStroke.Parent = pill
 
     local minus = Instance.new("TextButton")
-    minus.Size = UDim2.new(0, 30, 1, 0)
+    minus.Size = UDim2.new(0, 28, 1, 0)
     minus.Position = UDim2.new(0, 0, 0, 0)
-    minus.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-    minus.BorderSizePixel = 0
+    minus.BackgroundTransparency = 1
     minus.Text = "-"
     minus.Font = Enum.Font.GothamBold
     minus.TextSize = 14
-    minus.TextColor3 = Color3.fromRGB(255, 255, 255)
-    minus.AutoButtonColor = true
+    minus.TextColor3 = Color3.fromRGB(200, 200, 210)
     minus.Parent = pill
 
-    local minusCorner = Instance.new("UICorner")
-    minusCorner.CornerRadius = UDim.new(0, 4)
-    minusCorner.Parent = minus
-
     local valLabel = Instance.new("TextLabel")
-    valLabel.Size = UDim2.new(1, -60, 1, 0)
-    valLabel.Position = UDim2.new(0, 30, 0, 0)
+    valLabel.Size = UDim2.new(1, -56, 1, 0)
+    valLabel.Position = UDim2.new(0, 28, 0, 0)
     valLabel.BackgroundTransparency = 1
     valLabel.Text = tostring(current)
     valLabel.Font = Enum.Font.GothamBold
-    valLabel.TextSize = 11
+    valLabel.TextSize = 12
     valLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
     valLabel.Parent = pill
 
     local plus = Instance.new("TextButton")
-    plus.Size = UDim2.new(0, 30, 1, 0)
-    plus.Position = UDim2.new(1, -30, 0, 0)
-    plus.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-    plus.BorderSizePixel = 0
+    plus.Size = UDim2.new(0, 28, 1, 0)
+    plus.Position = UDim2.new(1, -28, 0, 0)
+    plus.BackgroundTransparency = 1
     plus.Text = "+"
     plus.Font = Enum.Font.GothamBold
     plus.TextSize = 14
-    plus.TextColor3 = Color3.fromRGB(255, 255, 255)
-    plus.AutoButtonColor = true
+    plus.TextColor3 = Color3.fromRGB(200, 200, 210)
     plus.Parent = pill
 
-    local plusCorner = Instance.new("UICorner")
-    plusCorner.CornerRadius = UDim.new(0, 4)
-    plusCorner.Parent = plus
-
-    local function changeSpeed(delta)
-        current = math.clamp(current + delta, minVal, maxVal)
+    minus.MouseButton1Click:Connect(function()
+        current = math.max(16, current - 5)
+        _G.WalkSpeedValue = current
         valLabel.Text = tostring(current)
-        if onSpeedChange then
-            task.spawn(onSpeedChange, current)
-        end
-    end
-
-    minus.Activated:Connect(function()
-        changeSpeed(-5)
     end)
 
-    plus.Activated:Connect(function()
-        changeSpeed(5)
+    plus.MouseButton1Click:Connect(function()
+        current = math.min(250, current + 5)
+        _G.WalkSpeedValue = current
+        valLabel.Text = tostring(current)
     end)
 end
 
--- ==========================================
--- REGISTER UI CONTROLS
--- ==========================================
+-- =================================================================
+-- REGISTER FEATURES TO UI
+-- =================================================================
 
 -- 1. Auto Farm Level
 createToggleRow("AutoFarmRow", "Auto Farm Level", _G.AutoFarmLevel, 1, function(state)
     _G.AutoFarmLevel = state
-    print("[Blox Fruits] Auto Farm Level set to:", state)
 end)
 
--- 2. Infinite Jump
-createToggleRow("InfJumpRow", "Infinite Jump", _G.InfJumpActive, 2, function(state)
-    _G.InfJumpActive = state
-    print("[Blox Fruits] Infinite Jump set to:", state)
-end)
-
--- 3. Chest ESP
-createToggleRow("ChestESPRow", "Chest ESP", _G.ChestESPActive, 3, function(state)
+-- 2. Chest ESP
+createToggleRow("ChestESPRow", "Chest ESP", _G.ChestESPActive, 2, function(state)
     _G.ChestESPActive = state
-    print("[Blox Fruits] Chest ESP set to:", state)
 end)
 
--- 4. Fruit ESP
-createToggleRow("FruitESPRow", "Fruit ESP", _G.FruitESPActive, 4, function(state)
+-- 3. Fruit ESP
+createToggleRow("FruitESPRow", "Fruit ESP", _G.FruitESPActive, 3, function(state)
     _G.FruitESPActive = state
-    print("[Blox Fruits] Fruit ESP set to:", state)
 end)
 
--- 5. WalkSpeed Pill Stepper Controller
-createSpeedRow("WalkSpeedRow", "WalkSpeed", 16, 250, _G.WalkSpeedValue, 5, function(val)
-    _G.WalkSpeedValue = val
-    pcall(function()
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-            LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = val
-        end
-    end)
+-- 4. WalkSpeed (With Toggle & Stepper Pill)
+createWalkSpeedRow(4)
+
+-- 5. Infinite Jump
+createToggleRow("InfJumpRow", "Infinite Jump", _G.InfJumpActive, 5, function(state)
+    _G.InfJumpActive = state
 end)
 
--- ==========================================
--- MANDATORY FOOTER (Made by Junejo)
--- ==========================================
+-- =================================================================
+-- MANDATORY FOOTER (Exact Screenshot Format)
+-- =================================================================
 local Footer = Instance.new("Frame")
 Footer.Name = "Footer"
-Footer.Size = UDim2.new(1, 0, 0, 20)
-Footer.Position = UDim2.new(0, 0, 1, -22)
+Footer.Size = UDim2.new(1, 0, 0, 32)
+Footer.Position = UDim2.new(0, 0, 1, -34)
 Footer.BackgroundTransparency = 1
 Footer.Parent = MainFrame
 
-local FooterText = Instance.new("TextLabel")
-FooterText.Text = "Made by Junejo"
-FooterText.Font = Enum.Font.GothamMedium
-FooterText.TextSize = 10
-FooterText.TextColor3 = Color3.fromRGB(136, 136, 153)
-FooterText.TextXAlignment = Enum.TextXAlignment.Center
-FooterText.Size = UDim2.new(1, 0, 1, 0)
-FooterText.BackgroundTransparency = 1
-FooterText.Parent = Footer
+local HubTitle = Instance.new("TextLabel")
+HubTitle.Name = "HubTitle"
+HubTitle.Text = "ULTRA SCRIPT HUB"
+HubTitle.Font = Enum.Font.GothamBold
+HubTitle.TextSize = 11
+HubTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+HubTitle.TextXAlignment = Enum.TextXAlignment.Center
+HubTitle.Position = UDim2.new(0, 0, 0, 0)
+HubTitle.Size = UDim2.new(1, 0, 0, 14)
+HubTitle.BackgroundTransparency = 1
+HubTitle.Parent = Footer
+
+local CreatorTitle = Instance.new("TextLabel")
+CreatorTitle.Name = "CreatorTitle"
+CreatorTitle.Text = "Made by Junejo"
+CreatorTitle.Font = Enum.Font.GothamMedium
+CreatorTitle.TextSize = 10
+CreatorTitle.TextColor3 = Color3.fromRGB(136, 136, 153)
+CreatorTitle.TextXAlignment = Enum.TextXAlignment.Center
+CreatorTitle.Position = UDim2.new(0, 0, 0, 14)
+CreatorTitle.Size = UDim2.new(1, 0, 0, 14)
+CreatorTitle.BackgroundTransparency = 1
+CreatorTitle.Parent = Footer
 
 -- =================================================================
 -- GAMEPLAY ENGINE & FEATURE IMPLEMENTATIONS (100% OPERATIONAL)
 -- =================================================================
 
--- 1. WalkSpeed Engine (Direct WalkSpeed + CFrame translation fallback)
+-- 1. WalkSpeed Engine (Active Check + CFrame & Humanoid Boost)
 RunService.RenderStepped:Connect(function(deltaTime)
     pcall(function()
-        local char = LocalPlayer.Character
-        if not char then return end
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if _G.WalkSpeedActive and _G.WalkSpeedValue and _G.WalkSpeedValue > 16 then
+            local char = LocalPlayer.Character
+            if not char then return end
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            local hrp = char:FindFirstChild("HumanoidRootPart")
 
-        if hum and hrp and _G.WalkSpeedValue and _G.WalkSpeedValue > 16 then
-            -- Set humanoid walkspeed
-            hum.WalkSpeed = _G.WalkSpeedValue
-            
-            -- Apply physics CFrame boost when moving
-            if hum.MoveDirection.Magnitude > 0 then
-                local boost = (_G.WalkSpeedValue - 16)
-                hrp.CFrame = hrp.CFrame + (hum.MoveDirection * (boost * deltaTime))
+            if hum and hrp then
+                hum.WalkSpeed = _G.WalkSpeedValue
+                if hum.MoveDirection.Magnitude > 0 then
+                    local boost = (_G.WalkSpeedValue - 16)
+                    hrp.CFrame = hrp.CFrame + (hum.MoveDirection * (boost * deltaTime))
+                end
             end
         end
     end)
 end)
 
--- 2. Infinite Jump (PC Keyboard + Mobile Touch Screen)
+-- 2. Infinite Jump (PC Keyboard + Mobile Touch)
 UserInputService.JumpRequest:Connect(function()
     if _G.InfJumpActive then
         pcall(function()
