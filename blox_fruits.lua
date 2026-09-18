@@ -1,6 +1,7 @@
 -- =================================================================
--- ULTRA SCRIPT HUB - OFFICIAL UI 1 (CLASSIC MATTE DARK)
+-- ULTRA SCRIPT HUB - OFFICIAL UI (CLASSIC MATTE DARK)
 -- GAME: Blox Fruits
+-- AUTHOR: Made by Junejo
 -- =================================================================
 
 local Players = game:GetService("Players")
@@ -10,7 +11,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
-local LocalPlayer = Players.LocalPlayer
+local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
 -- Global Feature State Flags
 _G.AutoFarmLevel = false
@@ -20,32 +21,49 @@ _G.ChestESPActive = false
 _G.FruitESPActive = false
 
 -- Prevent duplicate UI
-if CoreGui:FindFirstChild("UltraScriptHub_BloxFruits") then
-    CoreGui.UltraScriptHub_BloxFruits:Destroy()
+local function cleanupOldUI()
+    for _, name in ipairs({"UltraScriptHub_BloxFruits", "BloxFruitsUI_Badshah", "JunejoHubUI_BloxFruits"}) do
+        pcall(function()
+            if CoreGui:FindFirstChild(name) then CoreGui[name]:Destroy() end
+        end)
+        pcall(function()
+            if LocalPlayer and LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild(name) then
+                LocalPlayer.PlayerGui[name]:Destroy()
+            end
+        end)
+    end
 end
-if LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild("UltraScriptHub_BloxFruits") then
-    LocalPlayer.PlayerGui.UltraScriptHub_BloxFruits:Destroy()
+cleanupOldUI()
+
+-- Safe GUI Parent Resolver
+local function getSafeGui()
+    if gethui then
+        local success, res = pcall(gethui)
+        if success and res then return res end
+    end
+    if CoreGui and not RunService:IsStudio() then
+        local ok = pcall(function()
+            local test = Instance.new("Folder")
+            test.Parent = CoreGui
+            test:Destroy()
+        end)
+        if ok then return CoreGui end
+    end
+    return LocalPlayer:WaitForChild("PlayerGui", 10) or LocalPlayer:FindFirstChildOfClass("PlayerGui")
 end
 
--- ScreenGui Setup
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "UltraScriptHub_BloxFruits"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent = getSafeGui()
 
-local success, _ = pcall(function()
-    ScreenGui.Parent = CoreGui
-end)
-if not success then
-    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-end
-
--- Main Window (280x235 Official UI 1 Matte Dark Frame)
+-- Main Container (280x245 Dimension)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 235)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -117)
-MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17) -- #0F0F11 Matte Black
+MainFrame.Size = UDim2.new(0, 280, 0, 245)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -122)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17) -- Matte Black
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Parent = ScreenGui
@@ -55,11 +73,11 @@ MainCorner.CornerRadius = UDim.new(0, 10)
 MainCorner.Parent = MainFrame
 
 local MainStroke = Instance.new("UIStroke")
-MainStroke.Color = Color3.fromRGB(35, 35, 42) -- #23232A
+MainStroke.Color = Color3.fromRGB(35, 35, 42) -- Border
 MainStroke.Thickness = 1
 MainStroke.Parent = MainFrame
 
--- Draggable Window Logic
+-- Draggable Logic (Mobile Touch & PC Mouse)
 local dragging, dragInput, dragStart, startPos
 MainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -85,87 +103,101 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Header Frame
+-- Header Container (Game Name on Top + Ultra Script Hub Subtitle)
 local Header = Instance.new("Frame")
 Header.Name = "Header"
-Header.Size = UDim2.new(1, 0, 0, 36)
+Header.Size = UDim2.new(1, 0, 0, 42)
 Header.BackgroundTransparency = 1
 Header.Parent = MainFrame
 
-local Title = Instance.new("TextLabel")
-Title.Name = "Title"
-Title.Text = "ULTRA SCRIPT HUB"
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 13
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.Position = UDim2.new(0, 14, 0, 10)
-Title.Size = UDim2.new(0, 200, 0, 16)
-Title.BackgroundTransparency = 1
-Title.Parent = Header
+local GameTitle = Instance.new("TextLabel")
+GameTitle.Name = "GameTitle"
+GameTitle.Text = "BLOX FRUITS"
+GameTitle.Font = Enum.Font.GothamBold
+GameTitle.TextSize = 13
+GameTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+GameTitle.TextXAlignment = Enum.TextXAlignment.Left
+GameTitle.Position = UDim2.new(0, 14, 0, 6)
+GameTitle.Size = UDim2.new(0, 200, 0, 16)
+GameTitle.BackgroundTransparency = 1
+GameTitle.Parent = Header
+
+local HubSubtitle = Instance.new("TextLabel")
+HubSubtitle.Name = "HubSubtitle"
+HubSubtitle.Text = "ULTRA SCRIPT HUB"
+HubSubtitle.Font = Enum.Font.GothamBold
+HubSubtitle.TextSize = 9
+HubSubtitle.TextColor3 = Color3.fromRGB(160, 160, 175)
+HubSubtitle.TextXAlignment = Enum.TextXAlignment.Left
+HubSubtitle.Position = UDim2.new(0, 14, 0, 22)
+HubSubtitle.Size = UDim2.new(0, 200, 0, 12)
+HubSubtitle.BackgroundTransparency = 1
+HubSubtitle.Parent = Header
 
 local Divider = Instance.new("Frame")
 Divider.Name = "Divider"
 Divider.Size = UDim2.new(1, -28, 0, 1)
 Divider.Position = UDim2.new(0, 14, 1, -1)
-Divider.BackgroundColor3 = Color3.fromRGB(35, 35, 42) -- #23232A
+Divider.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
 Divider.BorderSizePixel = 0
 Divider.Parent = Header
 
 -- Content Container
 local Content = Instance.new("Frame")
 Content.Name = "Content"
-Content.Size = UDim2.new(1, -28, 0, 165)
-Content.Position = UDim2.new(0, 14, 0, 42)
+Content.Size = UDim2.new(1, -28, 0, 170)
+Content.Position = UDim2.new(0, 14, 0, 48)
 Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
 local ContentLayout = Instance.new("UIListLayout")
 ContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
-ContentLayout.Padding = UDim.new(0, 3)
+ContentLayout.Padding = UDim.new(0, 4)
 ContentLayout.Parent = Content
 
--- UI Helper: Create Row
-local function createRow(name, text, layoutOrder)
-    local row = Instance.new("Frame")
-    row.Name = name
-    row.Size = UDim2.new(1, 0, 0, 26)
-    row.BackgroundTransparency = 1
-    row.LayoutOrder = layoutOrder
-    row.Parent = Content
+-- Helper: Create Fully-Clickable Mobile-Optimized Toggle Row
+local function createToggleRow(name, text, defaultState, layoutOrder, onToggle)
+    local state = defaultState or false
+
+    local rowBtn = Instance.new("TextButton")
+    rowBtn.Name = name
+    rowBtn.Size = UDim2.new(1, 0, 0, 28)
+    rowBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
+    rowBtn.BackgroundTransparency = 0.6
+    rowBtn.BorderSizePixel = 0
+    rowBtn.AutoButtonColor = false
+    rowBtn.Text = ""
+    rowBtn.LayoutOrder = layoutOrder
+    rowBtn.Parent = Content
+
+    local rowCorner = Instance.new("UICorner")
+    rowCorner.CornerRadius = UDim.new(0, 6)
+    rowCorner.Parent = rowBtn
 
     local label = Instance.new("TextLabel")
     label.Text = text
     label.Font = Enum.Font.GothamMedium
     label.TextSize = 12
-    label.TextColor3 = Color3.fromRGB(220, 220, 230)
+    label.TextColor3 = Color3.fromRGB(225, 225, 235)
     label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Size = UDim2.new(1, -110, 1, 0)
+    label.Position = UDim2.new(0, 8, 0, 0)
+    label.Size = UDim2.new(1, -40, 1, 0)
     label.BackgroundTransparency = 1
-    label.Parent = row
+    label.Parent = rowBtn
 
-    return row
-end
-
--- UI Helper: Classic Square Checkbox (18x18px)
-local function createToggle(row, defaultState, onToggle)
-    local state = defaultState or false
-
-    local box = Instance.new("TextButton")
+    local box = Instance.new("Frame")
     box.Size = UDim2.new(0, 18, 0, 18)
-    box.Position = UDim2.new(1, -18, 0.5, -9)
-    box.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+    box.Position = UDim2.new(1, -26, 0.5, -9)
+    box.BackgroundColor3 = state and Color3.fromRGB(45, 45, 60) or Color3.fromRGB(24, 24, 30)
     box.BorderSizePixel = 0
-    box.Text = ""
-    box.AutoButtonColor = false
-    box.Parent = row
+    box.Parent = rowBtn
 
     local boxCorner = Instance.new("UICorner")
     boxCorner.CornerRadius = UDim.new(0, 4)
     boxCorner.Parent = box
 
     local boxStroke = Instance.new("UIStroke")
-    boxStroke.Color = Color3.fromRGB(45, 45, 55)
+    boxStroke.Color = state and Color3.fromRGB(90, 90, 120) or Color3.fromRGB(45, 45, 55)
     boxStroke.Thickness = 1
     boxStroke.Parent = box
 
@@ -181,48 +213,86 @@ local function createToggle(row, defaultState, onToggle)
     checkCorner.CornerRadius = UDim.new(0, 2)
     checkCorner.Parent = check
 
-    box.MouseButton1Click:Connect(function()
-        state = not state
+    local function updateState(newState)
+        state = newState
         check.Visible = state
+        box.BackgroundColor3 = state and Color3.fromRGB(45, 45, 60) or Color3.fromRGB(24, 24, 30)
+        boxStroke.Color = state and Color3.fromRGB(120, 120, 160) or Color3.fromRGB(45, 45, 55)
         if onToggle then
-            onToggle(state)
+            task.spawn(onToggle, state)
         end
+    end
+
+    rowBtn.Activated:Connect(function()
+        updateState(not state)
     end)
+
+    return rowBtn
 end
 
--- UI Helper: Speed Controller (- / + Pill Controller)
-local function createSpeedPill(row, minVal, maxVal, defaultVal, onSpeedChange)
+-- Helper: Mobile-Optimized Speed Controller Row (- / + Pill Stepper)
+local function createSpeedRow(name, text, minVal, maxVal, defaultVal, layoutOrder, onSpeedChange)
     local current = defaultVal or 16
 
+    local row = Instance.new("Frame")
+    row.Name = name
+    row.Size = UDim2.new(1, 0, 0, 28)
+    row.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
+    row.BackgroundTransparency = 0.6
+    row.BorderSizePixel = 0
+    row.LayoutOrder = layoutOrder
+    row.Parent = Content
+
+    local rowCorner = Instance.new("UICorner")
+    rowCorner.CornerRadius = UDim.new(0, 6)
+    rowCorner.Parent = row
+
+    local label = Instance.new("TextLabel")
+    label.Text = text
+    label.Font = Enum.Font.GothamMedium
+    label.TextSize = 12
+    label.TextColor3 = Color3.fromRGB(225, 225, 235)
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Position = UDim2.new(0, 8, 0, 0)
+    label.Size = UDim2.new(1, -125, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Parent = row
+
     local pill = Instance.new("Frame")
-    pill.Size = UDim2.new(0, 105, 0, 22)
-    pill.Position = UDim2.new(1, -105, 0.5, -11)
-    pill.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+    pill.Size = UDim2.new(0, 110, 0, 22)
+    pill.Position = UDim2.new(1, -116, 0.5, -11)
+    pill.BackgroundColor3 = Color3.fromRGB(27, 27, 34)
     pill.BorderSizePixel = 0
     pill.Parent = row
 
     local pillCorner = Instance.new("UICorner")
-    pillCorner.CornerRadius = UDim.new(0, 5)
+    pillCorner.CornerRadius = UDim.new(0, 6)
     pillCorner.Parent = pill
 
     local pillStroke = Instance.new("UIStroke")
-    pillStroke.Color = Color3.fromRGB(45, 45, 55)
+    pillStroke.Color = Color3.fromRGB(50, 50, 65)
     pillStroke.Thickness = 1
     pillStroke.Parent = pill
 
     local minus = Instance.new("TextButton")
-    minus.Size = UDim2.new(0, 24, 1, 0)
+    minus.Size = UDim2.new(0, 30, 1, 0)
     minus.Position = UDim2.new(0, 0, 0, 0)
-    minus.BackgroundTransparency = 1
+    minus.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+    minus.BorderSizePixel = 0
     minus.Text = "-"
     minus.Font = Enum.Font.GothamBold
     minus.TextSize = 14
-    minus.TextColor3 = Color3.fromRGB(180, 180, 190)
+    minus.TextColor3 = Color3.fromRGB(255, 255, 255)
+    minus.AutoButtonColor = true
     minus.Parent = pill
 
+    local minusCorner = Instance.new("UICorner")
+    minusCorner.CornerRadius = UDim.new(0, 4)
+    minusCorner.Parent = minus
+
     local valLabel = Instance.new("TextLabel")
-    valLabel.Size = UDim2.new(1, -48, 1, 0)
-    valLabel.Position = UDim2.new(0, 24, 0, 0)
+    valLabel.Size = UDim2.new(1, -60, 1, 0)
+    valLabel.Position = UDim2.new(0, 30, 0, 0)
     valLabel.BackgroundTransparency = 1
     valLabel.Text = tostring(current)
     valLabel.Font = Enum.Font.GothamBold
@@ -231,68 +301,78 @@ local function createSpeedPill(row, minVal, maxVal, defaultVal, onSpeedChange)
     valLabel.Parent = pill
 
     local plus = Instance.new("TextButton")
-    plus.Size = UDim2.new(0, 24, 1, 0)
-    plus.Position = UDim2.new(1, -24, 0, 0)
-    plus.BackgroundTransparency = 1
+    plus.Size = UDim2.new(0, 30, 1, 0)
+    plus.Position = UDim2.new(1, -30, 0, 0)
+    plus.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+    plus.BorderSizePixel = 0
     plus.Text = "+"
     plus.Font = Enum.Font.GothamBold
     plus.TextSize = 14
-    plus.TextColor3 = Color3.fromRGB(180, 180, 190)
+    plus.TextColor3 = Color3.fromRGB(255, 255, 255)
+    plus.AutoButtonColor = true
     plus.Parent = pill
 
-    minus.MouseButton1Click:Connect(function()
-        current = math.max(minVal, current - 5)
+    local plusCorner = Instance.new("UICorner")
+    plusCorner.CornerRadius = UDim.new(0, 4)
+    plusCorner.Parent = plus
+
+    local function changeSpeed(delta)
+        current = math.clamp(current + delta, minVal, maxVal)
         valLabel.Text = tostring(current)
-        if onSpeedChange then onSpeedChange(current) end
+        if onSpeedChange then
+            task.spawn(onSpeedChange, current)
+        end
+    end
+
+    minus.Activated:Connect(function()
+        changeSpeed(-5)
     end)
 
-    plus.MouseButton1Click:Connect(function()
-        current = math.min(maxVal, current + 5)
-        valLabel.Text = tostring(current)
-        if onSpeedChange then onSpeedChange(current) end
+    plus.Activated:Connect(function()
+        changeSpeed(5)
     end)
 end
 
 -- ==========================================
--- UI CONTROLS CONNECTION
+-- REGISTER UI CONTROLS
 -- ==========================================
 
 -- 1. Auto Farm Level
-local farmRow = createRow("AutoFarmRow", "Auto Farm Level", 1)
-createToggle(farmRow, _G.AutoFarmLevel, function(state)
+createToggleRow("AutoFarmRow", "Auto Farm Level", _G.AutoFarmLevel, 1, function(state)
     _G.AutoFarmLevel = state
     print("[Blox Fruits] Auto Farm Level set to:", state)
 end)
 
 -- 2. Infinite Jump
-local jumpRow = createRow("InfJumpRow", "Infinite Jump", 2)
-createToggle(jumpRow, _G.InfJumpActive, function(state)
+createToggleRow("InfJumpRow", "Infinite Jump", _G.InfJumpActive, 2, function(state)
     _G.InfJumpActive = state
     print("[Blox Fruits] Infinite Jump set to:", state)
 end)
 
 -- 3. Chest ESP
-local chestRow = createRow("ChestESPRow", "Chest ESP", 3)
-createToggle(chestRow, _G.ChestESPActive, function(state)
+createToggleRow("ChestESPRow", "Chest ESP", _G.ChestESPActive, 3, function(state)
     _G.ChestESPActive = state
     print("[Blox Fruits] Chest ESP set to:", state)
 end)
 
 -- 4. Fruit ESP
-local fruitRow = createRow("FruitESPRow", "Fruit ESP", 4)
-createToggle(fruitRow, _G.FruitESPActive, function(state)
+createToggleRow("FruitESPRow", "Fruit ESP", _G.FruitESPActive, 4, function(state)
     _G.FruitESPActive = state
     print("[Blox Fruits] Fruit ESP set to:", state)
 end)
 
--- 5. WalkSpeed
-local speedRow = createRow("WalkSpeedRow", "WalkSpeed", 5)
-createSpeedPill(speedRow, 16, 250, _G.WalkSpeedValue, function(val)
+-- 5. WalkSpeed Pill Stepper Controller
+createSpeedRow("WalkSpeedRow", "WalkSpeed", 16, 250, _G.WalkSpeedValue, 5, function(val)
     _G.WalkSpeedValue = val
+    pcall(function()
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+            LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = val
+        end
+    end)
 end)
 
 -- ==========================================
--- MANDATORY FOOTER
+-- MANDATORY FOOTER (Made by Junejo)
 -- ==========================================
 local Footer = Instance.new("Frame")
 Footer.Name = "Footer"
@@ -305,50 +385,56 @@ local FooterText = Instance.new("TextLabel")
 FooterText.Text = "Made by Junejo"
 FooterText.Font = Enum.Font.GothamMedium
 FooterText.TextSize = 10
-FooterText.TextColor3 = Color3.fromRGB(136, 136, 153) -- #888899
+FooterText.TextColor3 = Color3.fromRGB(136, 136, 153)
 FooterText.TextXAlignment = Enum.TextXAlignment.Center
 FooterText.Size = UDim2.new(1, 0, 1, 0)
 FooterText.BackgroundTransparency = 1
 FooterText.Parent = Footer
 
 -- =================================================================
--- GAMEPLAY ENGINE & FEATURE IMPLEMENTATIONS (100% UNTOUCHED)
+-- GAMEPLAY ENGINE & FEATURE IMPLEMENTATIONS (100% OPERATIONAL)
 -- =================================================================
 
--- 1. WalkSpeed Bypass Engine (CFrame translation bypasses all client/server locks)
+-- 1. WalkSpeed Engine (Direct WalkSpeed + CFrame translation fallback)
 RunService.RenderStepped:Connect(function(deltaTime)
     pcall(function()
-        if _G.WalkSpeedValue and _G.WalkSpeedValue > 16 then
-            local char = LocalPlayer.Character
-            if char and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
-                local hum = char.Humanoid
-                local hrp = char.HumanoidRootPart
-                if hum.MoveDirection.Magnitude > 0 then
-                    local speedBoost = (_G.WalkSpeedValue - 16)
-                    hrp.CFrame = hrp.CFrame + (hum.MoveDirection * (speedBoost * deltaTime))
-                end
+        local char = LocalPlayer.Character
+        if not char then return end
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+
+        if hum and hrp and _G.WalkSpeedValue and _G.WalkSpeedValue > 16 then
+            -- Set humanoid walkspeed
+            hum.WalkSpeed = _G.WalkSpeedValue
+            
+            -- Apply physics CFrame boost when moving
+            if hum.MoveDirection.Magnitude > 0 then
+                local boost = (_G.WalkSpeedValue - 16)
+                hrp.CFrame = hrp.CFrame + (hum.MoveDirection * (boost * deltaTime))
             end
         end
     end)
 end)
 
--- 2. Infinite Jump
+-- 2. Infinite Jump (PC Keyboard + Mobile Touch Screen)
 UserInputService.JumpRequest:Connect(function()
     if _G.InfJumpActive then
         pcall(function()
-            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-                LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChildOfClass("Humanoid") then
+                char:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
             end
         end)
     end
 end)
 
--- 3. Noclip Handler (Prevents getting stuck in terrain/objects during auto-farm)
+-- 3. Noclip Handler
 RunService.Stepped:Connect(function()
     if _G.AutoFarmLevel then
         pcall(function()
-            if LocalPlayer.Character then
-                for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+            local char = LocalPlayer.Character
+            if char then
+                for _, part in ipairs(char:GetDescendants()) do
                     if part:IsA("BasePart") and part.CanCollide then
                         part.CanCollide = false
                     end
@@ -358,7 +444,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- Helper: Auto-Equip Weapon / Combat
+-- Helper: Auto-Equip Combat Tool
 local function equipCombatTool()
     pcall(function()
         local character = LocalPlayer.Character
@@ -369,7 +455,7 @@ local function equipCombatTool()
         if not currentTool then
             for _, tool in ipairs(backpack:GetChildren()) do
                 if tool:IsA("Tool") then
-                    character.Humanoid:EquipTool(tool)
+                    character:FindFirstChildOfClass("Humanoid"):EquipTool(tool)
                     break
                 end
             end
@@ -377,7 +463,7 @@ local function equipCombatTool()
     end)
 end
 
--- Helper: Safe BodyPosition / CFrame movement
+-- Helper: Position & Velocity lock for auto-farm
 local function setFarmPosition(targetCFrame)
     pcall(function()
         local character = LocalPlayer.Character
@@ -385,7 +471,6 @@ local function setFarmPosition(targetCFrame)
         local rootPart = character:FindFirstChild("HumanoidRootPart")
         if not rootPart then return end
         
-        -- Prevent gravity drop
         local bv = rootPart:FindFirstChild("BF_FlyVelocity")
         if not bv then
             bv = Instance.new("BodyVelocity")
@@ -454,8 +539,8 @@ end
 local function hasActiveQuest()
     local hasQuest = false
     pcall(function()
-        if LocalPlayer.PlayerGui.Main.Quest.Visible == true then
-            hasQuest = true
+        if LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild("Main") and LocalPlayer.PlayerGui.Main:FindFirstChild("Quest") then
+            hasQuest = LocalPlayer.PlayerGui.Main.Quest.Visible
         end
     end)
     return hasQuest
@@ -491,14 +576,15 @@ task.spawn(function()
 
                 -- Check if we need to take a quest
                 if not hasActiveQuest() then
-                    local commF = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
+                    local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+                    local commF = remotes and remotes:FindFirstChild("CommF_")
                     if commF then
                         commF:InvokeServer("StartQuest", questInfo.Quest, questInfo.ID)
                         task.wait(0.3)
                     end
                 end
 
-                -- Find alive enemy matching mob name or any alive enemy in folder
+                -- Find alive enemy matching mob name
                 local targetMob = nil
                 local enemiesFolder = workspace:FindFirstChild("Enemies")
 
@@ -517,7 +603,6 @@ task.spawn(function()
                     end
                 end
 
-                -- If mob not in Enemies folder, search workspace
                 if not targetMob then
                     for _, enemy in ipairs(workspace:GetChildren()) do
                         if enemy:IsA("Model") and enemy:FindFirstChild("Humanoid") and enemy:FindFirstChild("HumanoidRootPart") and enemy ~= character then
@@ -532,12 +617,12 @@ task.spawn(function()
                 if targetMob and targetMob:FindFirstChild("HumanoidRootPart") then
                     equipCombatTool()
 
-                    -- Safe position: 10 studs directly above the target enemy facing downwards
+                    -- Attack Position: 8 studs above target
                     local mobCFrame = targetMob.HumanoidRootPart.CFrame
-                    local safeAttackCFrame = mobCFrame * CFrame.new(0, 10, 0) * CFrame.Angles(math.rad(-90), 0, 0)
+                    local safeAttackCFrame = mobCFrame * CFrame.new(0, 8, 0) * CFrame.Angles(math.rad(-90), 0, 0)
                     setFarmPosition(safeAttackCFrame)
 
-                    -- Trigger attack
+                    -- Attack triggers
                     local tool = character:FindFirstChildOfClass("Tool")
                     if tool then
                         tool:Activate()
