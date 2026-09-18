@@ -525,7 +525,7 @@ local function getBaseCFrame()
     return basePos
 end
 
-local function InstantTriggerPrompt(prompt)
+local function TriggerEggPrompt(prompt)
     if not prompt or not prompt.Parent then return end
     pcall(function()
         prompt.RequiresLineOfSight = false
@@ -563,7 +563,6 @@ end
 -- ULTRA HIGH-PRECISION EGG SCANNERS
 -- =================================================================
 
--- Find Rarest Egg on Map (Furthest from Base or Highest Tier)
 local function FindRarestEggTarget()
     local candidates = {}
     local now = os.clock()
@@ -575,19 +574,26 @@ local function FindRarestEggTarget()
         if prompt:IsA("ProximityPrompt") then
             local pPart = prompt.Parent
             local targetPos = nil
+            local actualPart = nil
 
             if pPart:IsA("BasePart") then
                 targetPos = pPart.CFrame
+                actualPart = pPart
             elseif pPart:IsA("Attachment") then
                 targetPos = pPart.WorldCFrame
+                actualPart = pPart.Parent:IsA("BasePart") and pPart.Parent or nil
             elseif pPart:IsA("Model") and pPart.PrimaryPart then
                 targetPos = pPart.PrimaryPart.CFrame
+                actualPart = pPart.PrimaryPart
             elseif pPart:IsA("Model") then
                 local bp = pPart:FindFirstChildWhichIsA("BasePart")
-                if bp then targetPos = bp.CFrame end
+                if bp then 
+                    targetPos = bp.CFrame
+                    actualPart = bp
+                end
             end
 
-            if targetPos and pPart ~= char and (not pPart.Parent or pPart.Parent ~= char) then
+            if targetPos and actualPart and actualPart ~= char and (not actualPart.Parent or actualPart.Parent ~= char) then
                 local locKey = GetLocationKey(targetPos.Position)
                 local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
 
@@ -609,57 +615,7 @@ local function FindRarestEggTarget()
                             table.insert(candidates, {
                                 targetCFrame = targetPos,
                                 prompt = prompt,
-                                part = pPart:IsA("BasePart") and pPart or pPart:FindFirstChildWhichIsA("BasePart"),
-                                locKey = locKey,
-                                score = score,
-                                distFromBase = distFromBase
-                            })
-                        end
-                    end
-                end
-            end
-        end
-    end
-
-    -- Fallback scan on physical parts
-    if #candidates == 0 then
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            local name = string.lower(obj.Name)
-            if string.find(name, "egg") and not string.find(name, "hatch") and not string.find(name, "nest") and not string.find(name, "spawner") and not string.find(name, "gui") then
-                local tCFrame = nil
-                local targetPart = nil
-
-                if obj:IsA("BasePart") then
-                    tCFrame = obj.CFrame
-                    targetPart = obj
-                elseif obj:IsA("Model") and obj.PrimaryPart then
-                    tCFrame = obj.PrimaryPart.CFrame
-                    targetPart = obj.PrimaryPart
-                elseif obj:IsA("Model") then
-                    local p = obj:FindFirstChildWhichIsA("BasePart")
-                    if p then
-                        tCFrame = p.CFrame
-                        targetPart = p
-                    end
-                end
-
-                if tCFrame and obj ~= char and (not obj.Parent or obj.Parent ~= char) then
-                    local locKey = GetLocationKey(tCFrame.Position)
-                    local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
-
-                    if not isCoolingDown then
-                        local distFromBase = (tCFrame.Position - basePos).Magnitude
-                        if distFromBase > 15 then
-                            local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
-                            local score = distFromBase
-                            if name:find("eternal") then score = score + 50000 end
-                            if name:find("divine") then score = score + 25000 end
-                            if name:find("secret") then score = score + 15000 end
-
-                            table.insert(candidates, {
-                                targetCFrame = tCFrame,
-                                prompt = prompt,
-                                part = targetPart,
+                                part = actualPart,
                                 locKey = locKey,
                                 score = score,
                                 distFromBase = distFromBase
@@ -680,7 +636,6 @@ local function FindRarestEggTarget()
     return candidates[1]
 end
 
--- Find Nearest Egg Target
 local function FindNearestEggTarget()
     if not isAlive() then return nil end
     local hrpPos = LocalPlayer.Character.HumanoidRootPart.Position
@@ -695,16 +650,26 @@ local function FindNearestEggTarget()
         if prompt:IsA("ProximityPrompt") then
             local pPart = prompt.Parent
             local targetPos = nil
+            local actualPart = nil
 
             if pPart:IsA("BasePart") then
                 targetPos = pPart.CFrame
+                actualPart = pPart
             elseif pPart:IsA("Attachment") then
                 targetPos = pPart.WorldCFrame
+                actualPart = pPart.Parent:IsA("BasePart") and pPart.Parent or nil
             elseif pPart:IsA("Model") and pPart.PrimaryPart then
                 targetPos = pPart.PrimaryPart.CFrame
+                actualPart = pPart.PrimaryPart
+            elseif pPart:IsA("Model") then
+                local bp = pPart:FindFirstChildWhichIsA("BasePart")
+                if bp then 
+                    targetPos = bp.CFrame
+                    actualPart = bp
+                end
             end
 
-            if targetPos and pPart ~= char and (not pPart.Parent or pPart.Parent ~= char) then
+            if targetPos and actualPart and actualPart ~= char and (not actualPart.Parent or actualPart.Parent ~= char) then
                 local locKey = GetLocationKey(targetPos.Position)
                 local isCoolingDown = CooldownEggs[locKey] and (now < CooldownEggs[locKey])
 
@@ -717,7 +682,7 @@ local function FindNearestEggTarget()
                             best = {
                                 targetCFrame = targetPos,
                                 prompt = prompt,
-                                part = pPart:IsA("BasePart") and pPart or pPart:FindFirstChildWhichIsA("BasePart"),
+                                part = actualPart,
                                 locKey = locKey
                             }
                         end
@@ -731,7 +696,7 @@ local function FindNearestEggTarget()
 end
 
 -- =================================================================
--- MASTER HEIST & RETURN TO BASE PIPELINE
+-- MASTER ZERO-DISTANCE HEIST PIPELINE
 -- =================================================================
 
 local function ExecuteHeistPipeline(targetInfo)
@@ -753,51 +718,32 @@ local function ExecuteHeistPipeline(targetInfo)
         local part = targetInfo.part
         local locKey = targetInfo.locKey
 
-        -- 1. TELEPORT DIRECTLY TO EGG
-        setCharacterPosition(targetCFrame * CFrame.new(0, 1.2, 0))
-        task.wait(0.15)
+        -- 1. TELEPORT DIRECTLY INSIDE / ON TOP OF EGG PART (Zero Distance)
+        setCharacterPosition(targetCFrame)
+        task.wait(0.2)
 
-        -- 2. STAY AND GRAB CONTINUOUSLY (0.75s)
+        -- 2. STAY IN DIRECT CONTACT & EXECUTE GRAB (0.8s)
         local grabTime = tick()
-        while tick() - grabTime < 0.75 and isAlive() do
-            setCharacterPosition(targetCFrame * CFrame.new(0, 1.0, 0))
+        while tick() - grabTime < 0.8 and isAlive() do
+            -- Continuously lock character right at egg part coordinate
+            setCharacterPosition(targetCFrame)
 
-            if prompt then
-                InstantTriggerPrompt(prompt)
-            end
             if part then
                 InstantTouch(hrp, part)
             end
-
-            -- Scan nearby prompts around egg location
-            for _, p in ipairs(Workspace:GetDescendants()) do
-                if p:IsA("ProximityPrompt") and p.Parent then
-                    local pPos = p.Parent:IsA("BasePart") and p.Parent.Position or nil
-                    if pPos and (pPos - targetCFrame.Position).Magnitude < 15 then
-                        InstantTriggerPrompt(p)
-                    end
-                end
+            if prompt then
+                TriggerEggPrompt(prompt)
             end
 
-            -- Fire steal / grab remotes
-            for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
-                if rem:IsA("RemoteEvent") then
-                    local rName = string.lower(rem.Name)
-                    if string.find(rName, "steal") or string.find(rName, "grab") or string.find(rName, "take") or string.find(rName, "pick") then
-                        pcall(function() rem:FireServer(part or prompt) end)
-                    end
-                end
-            end
-
-            task.wait(0.1)
+            task.wait(0.08)
         end
 
-        -- Mark egg cooldown so loop grabs next egg smoothly
+        -- Mark egg cooldown so subsequent calls target next egg
         if locKey then
             CooldownEggs[locKey] = os.clock() + 3.5
         end
 
-        -- 3. DIRECT RETURN TO BASE
+        -- 3. DIRECT RETURN TO SAVED BASE
         if baseCFrame and isAlive() then
             task.wait(0.1)
             setCharacterPosition(baseCFrame * CFrame.new(0, 2.5, 0))
@@ -813,7 +759,7 @@ local function ExecuteHeistPipeline(targetInfo)
                     if p:IsA("ProximityPrompt") and p.Parent then
                         local pPos = p.Parent:IsA("BasePart") and p.Parent.Position or nil
                         if pPos and (pPos - baseCFrame.Position).Magnitude < 45 then
-                            InstantTriggerPrompt(p)
+                            TriggerEggPrompt(p)
                         end
                     end
                 end
@@ -1071,7 +1017,7 @@ task.spawn(function()
                     if prompt:IsA("ProximityPrompt") then
                         local pName = string.lower(prompt.ActionText .. " " .. prompt.ObjectText .. " " .. (prompt.Parent and prompt.Parent.Name or ""))
                         if string.find(pName, "collect") or string.find(pName, "claim") or string.find(pName, "cash") or string.find(pName, "coin") or string.find(pName, "money") or string.find(pName, "income") then
-                            InstantTriggerPrompt(prompt)
+                            TriggerEggPrompt(prompt)
                         end
                     end
                 end
@@ -1117,7 +1063,7 @@ task.spawn(function()
                     if string.find(nameLower, "hatch") or string.find(nameLower, "nest") or string.find(nameLower, "egg") or string.find(nameLower, "pod") then
                         for _, prompt in ipairs(obj:GetDescendants()) do
                             if prompt:IsA("ProximityPrompt") then
-                                InstantTriggerPrompt(prompt)
+                                TriggerEggPrompt(prompt)
                             end
                         end
                     end
