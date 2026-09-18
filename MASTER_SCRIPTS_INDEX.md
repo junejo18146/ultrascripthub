@@ -1340,25 +1340,45 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/jump_for_animals.lua"))()
   ```
 - **Key System Status**: Disabled (Direct Standalone Executable)
-- **Features Included (All 16 Features Tested & Verified)**:
-  - 1. Auto Steal Rare Animals (Teleport, grab/steal rarest animal/egg & instant base return)
-  - 2. Auto Wins (Auto claim finish lines / tower win platforms)
-  - 3. Auto Open Animals (Automatic egg / animal hatcher)
-  - 4. Auto Equip Best (Auto equips highest stat animals/pets)
-  - 5. Teleport to Rare Animals (1-Click Action Button)
-  - 6. Teleport to Mythic / Secret Animals (1-Click Action Button)
-  - 7. Teleport to Win Platform / End Tower (1-Click Action Button)
-  - 8. Teleport to Spawn / Safe Zone (1-Click Action Button)
-  - 9. Rare Animals ESP (Neon Gold / Purple highlight + live distance tag)
-  - 10. Players ESP (Neon Box highlight + player name & live distance tag)
-  - 11. Win Zones ESP (Neon Emerald highlight on win platforms & finish lines)
-  - 12. WalkSpeed Boost (Integrated `- / +` Stepper Controller: 16 to 300)
-  - 13. Infinite Jump (Airborne continuous multi-jump bypass)
-  - 14. NoClip (Walk through walls and obstacles)
-  - 15. Instant Proximity Prompts (0s hold auto-sweeper)
-  - 16. 24/7 Anti-AFK Engine (Prevents 20-minute disconnects)
-- **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280x260px`) with `ScrollingFrame` & Mandatory Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
+- **Features Included (8 Features)**:
+  - 1. Auto Steal Rare Animals (Teleport, grab/steal rarest animal & instant base deposit)
+  - 2. Infinite Jump (Airborne continuous multi-jump bypass)
+  - 3. Jump Power Boost (Unlimited High Jump Power with `- / +` Stepper Controller: 50 to 1000+)
+  - 4. Auto Open Animals (Automatic egg / animal hatcher)
+  - 5. Teleport to Rare Animals (1-Click Action Button: TP RARE)
+  - 6. Rare Animals ESP (Neon Gold / Purple highlight + live distance tag)
+  - 7. Teleport to Win Platform (1-Click Action Button: TP WIN)
+  - 8. WalkSpeed Boost (Integrated `- / +` Stepper Controller: 16 to 300)
+  - Instant Proximity Prompts (0s hold auto-sweeper)
+  - 24/7 Anti-AFK Engine (Prevents 20-minute disconnects)
+- **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280x265px`) with `ScrollingFrame` & Mandatory Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
+
+## 66. Ride A Pet
+- **Game Name**: Ride A Pet 🐾
+- **Place ID**: 124216119978534
+- **Game URL**: https://www.roblox.com/games/124216119978534/Ride-A-Pet
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/ride_a_pet.lua"))()
+  ```
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included**:
+  - 1. Auto Steal (Best Egg / Selected Zone)
+  - 2. Steal Zone Selector (`< Zone >` Interactive Stepper Pill)
+  - 3. Auto Hatch Eggs (Automatic incubator & nest hatcher)
+  - 4. Auto Place Egg (Automatic egg placing into nests)
+  - 5. Auto Equip Best Pet (Mounts highest tier pet)
+  - 6. Rare Egg ESP (Highlights rarest map eggs with distance & excludes base eggs)
+  - 7. Teleport Zone Selector (`< Destination >` Interactive Stepper Pill)
+  - 8. Teleport To Zone (1-Click TP Action Button)
+  - 9. Teleport To My Base (1-Click Base Action Button)
+  - 10. WalkSpeed Boost (Integrated `- / +` Stepper Controller: 16 to 250)
+  - 11. Fly Mode (Integrated `- / +` Stepper Controller: 20 to 200)
+  - 12. NoClip Mode (Walk through fences, walls & barriers)
+  - 13. 24/7 Anti-AFK Engine (Prevents 20-minute disconnects)
+- **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280x265px`) with `ScrollingFrame` & Mandatory Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
 
 ====================================================
 Updated: September 18, 2026
 ====================================================
+
