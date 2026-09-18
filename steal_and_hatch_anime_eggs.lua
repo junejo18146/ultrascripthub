@@ -21,7 +21,6 @@ local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 _G.AutoStealRareEgg = false
 _G.AutoStealNearestEgg = false
 _G.AutoHatchEggs = false
-_G.AutoTrainSpeed = false
 _G.AutoRebirth = false
 _G.RemoveBosses = false
 _G.AntiEggDrop = false
@@ -155,7 +154,6 @@ CloseBtn.MouseButton1Click:Connect(function()
     _G.AutoStealRareEgg = false
     _G.AutoStealNearestEgg = false
     _G.AutoHatchEggs = false
-    _G.AutoTrainSpeed = false
     _G.AutoRebirth = false
     _G.RemoveBosses = false
     _G.AntiEggDrop = false
@@ -187,7 +185,7 @@ Scroll.BackgroundTransparency = 1
 Scroll.BorderSizePixel = 0
 Scroll.ScrollBarThickness = 3
 Scroll.ScrollBarImageColor3 = Color3.fromRGB(45, 45, 55)
-Scroll.CanvasSize = UDim2.new(0, 0, 0, 580)
+Scroll.CanvasSize = UDim2.new(0, 0, 0, 550)
 Scroll.Parent = MainFrame
 
 local ContentLayout = Instance.new("UIListLayout")
@@ -793,7 +791,7 @@ local function ExecuteHeistPipeline(targetInfo)
 end
 
 -- =================================================================
--- REGISTER ALL 18 ACTIVE FEATURE ROWS
+-- REGISTER ALL 17 ACTIVE FEATURE ROWS
 -- =================================================================
 
 -- 1. Auto Steal Rare Egg
@@ -847,48 +845,43 @@ createToggleRow("AutoHatchRow", "Auto Hatch Eggs", _G.AutoHatchEggs, 6, function
     _G.AutoHatchEggs = state
 end)
 
--- 7. Auto Train Speed
-createToggleRow("AutoTrainRow", "Auto Train Speed", _G.AutoTrainSpeed, 7, function(state)
-    _G.AutoTrainSpeed = state
-end)
-
--- 8. Auto Rebirth
-createToggleRow("AutoRebirthRow", "Auto Rebirth", _G.AutoRebirth, 8, function(state)
+-- 7. Auto Rebirth
+createToggleRow("AutoRebirthRow", "Auto Rebirth", _G.AutoRebirth, 7, function(state)
     _G.AutoRebirth = state
 end)
 
--- 9. Remove Bosses (Godmode)
-createToggleRow("RemoveBossRow", "Remove Bosses (Godmode)", _G.RemoveBosses, 9, function(state)
+-- 8. Remove Bosses (Godmode)
+createToggleRow("RemoveBossRow", "Remove Bosses (Godmode)", _G.RemoveBosses, 8, function(state)
     _G.RemoveBosses = state
 end)
 
--- 10. Anti-Egg Drop
-createToggleRow("AntiDropRow", "Anti-Egg Drop", _G.AntiEggDrop, 10, function(state)
+-- 9. Anti-Egg Drop
+createToggleRow("AntiDropRow", "Anti-Egg Drop", _G.AntiEggDrop, 9, function(state)
     _G.AntiEggDrop = state
 end)
 
--- 11. Rare Egg ESP
-createToggleRow("RareESPRow", "Rare Egg ESP", _G.RareEggESP, 11, function(state)
+-- 10. Rare Egg ESP
+createToggleRow("RareESPRow", "Rare Egg ESP", _G.RareEggESP, 10, function(state)
     _G.RareEggESP = state
 end)
 
--- 12. All Egg ESP
-createToggleRow("AllEggESPRow", "All Egg ESP", _G.AllEggESP, 12, function(state)
+-- 11. All Egg ESP
+createToggleRow("AllEggESPRow", "All Egg ESP", _G.AllEggESP, 11, function(state)
     _G.AllEggESP = state
 end)
 
--- 13. Boss ESP
-createToggleRow("BossESPRow", "Boss ESP", _G.BossESP, 13, function(state)
+-- 12. Boss ESP
+createToggleRow("BossESPRow", "Boss ESP", _G.BossESP, 12, function(state)
     _G.BossESP = state
 end)
 
--- 14. Player ESP
-createToggleRow("PlayerESPRow", "Player ESP", _G.PlayerESP, 14, function(state)
+-- 13. Player ESP
+createToggleRow("PlayerESPRow", "Player ESP", _G.PlayerESP, 13, function(state)
     _G.PlayerESP = state
 end)
 
--- 15. WalkSpeed Boost
-createStepperRow("WalkSpeedRow", "WalkSpeed", "WalkSpeedActive", "WalkSpeedValue", 16, 300, 10, 60, 15, function(active, val)
+-- 14. WalkSpeed Boost
+createStepperRow("WalkSpeedRow", "WalkSpeed", "WalkSpeedActive", "WalkSpeedValue", 16, 300, 10, 60, 14, function(active, val)
     if not active then
         pcall(function()
             if isAlive() then
@@ -898,8 +891,8 @@ createStepperRow("WalkSpeedRow", "WalkSpeed", "WalkSpeedActive", "WalkSpeedValue
     end
 end)
 
--- 16. Fly Mode
-createStepperRow("FlyModeRow", "Fly Mode", "FlyActive", "FlySpeedValue", 20, 250, 10, 70, 16, function(active, val)
+-- 15. Fly Mode
+createStepperRow("FlyModeRow", "Fly Mode", "FlyActive", "FlySpeedValue", 20, 250, 10, 70, 15, function(active, val)
     if not active then
         pcall(function()
             if isAlive() then
@@ -911,13 +904,13 @@ createStepperRow("FlyModeRow", "Fly Mode", "FlyActive", "FlySpeedValue", 20, 250
     end
 end)
 
--- 17. Noclip Mode
-createToggleRow("NoclipRow", "Noclip Mode", _G.NoclipActive, 17, function(state)
+-- 16. Noclip Mode
+createToggleRow("NoclipRow", "Noclip Mode", _G.NoclipActive, 16, function(state)
     _G.NoclipActive = state
 end)
 
--- 18. Infinite Jump
-createToggleRow("InfJumpRow", "Infinite Jump", _G.InfJumpActive, 18, function(state)
+-- 17. Infinite Jump
+createToggleRow("InfJumpRow", "Infinite Jump", _G.InfJumpActive, 17, function(state)
     _G.InfJumpActive = state
 end)
 
@@ -1015,112 +1008,47 @@ task.spawn(function()
     end
 end)
 
--- 4. SUPERCHARGED 5-LAYER AUTO TRAIN SPEED ENGINE (FIXED & HIGH-SPEED)
+-- 4. ULTRA ADVANCED AUTO REBIRTH ENGINE (DEEP SCANNER & ALL METHODS)
 task.spawn(function()
     while true do
-        task.wait(0.15)
-        if _G.AutoTrainSpeed and isAlive() and not isStealingActive then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                local backpack = LocalPlayer:FindFirstChild("Backpack")
-
-                -- Layer 1: Auto Equip Any Training Tools (Weights, Dumbbells, Energy, Swords)
-                if backpack then
-                    for _, tool in ipairs(backpack:GetChildren()) do
-                        if tool:IsA("Tool") then
-                            char:FindFirstChildOfClass("Humanoid"):EquipTool(tool)
-                            break
-                        end
-                    end
-                end
-
-                -- Layer 2: Tool Activate
-                local currentTool = char:FindFirstChildOfClass("Tool")
-                if currentTool then
-                    currentTool:Activate()
-                end
-
-                -- Layer 3: Virtual Click Tap Emulation
-                if VirtualInputManager then
-                    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
-                    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
-                else
-                    VirtualUser:CaptureController()
-                    VirtualUser:Button1Down(Vector2.new(500, 500), Workspace.CurrentCamera.CFrame)
-                    VirtualUser:Button1Up(Vector2.new(500, 500), Workspace.CurrentCamera.CFrame)
-                end
-
-                -- Layer 4: Touch Treadmills / Training Pads
-                if hrp then
-                    for _, pad in ipairs(Workspace:GetDescendants()) do
-                        if pad:IsA("BasePart") then
-                            local n = string.lower(pad.Name)
-                            if string.find(n, "treadmill") or string.find(n, "speedpad") or string.find(n, "train") or string.find(n, "track") or string.find(n, "run") then
-                                if (pad.Position - hrp.Position).Magnitude < 60 and firetouchinterest then
-                                    InstantTouch(hrp, pad)
-                                end
-                            end
-                        end
-                    end
-                end
-
-                -- Layer 5: Deep Remote Sweeper for Speed/Training
-                for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if rem:IsA("RemoteEvent") then
-                        local rName = string.lower(rem.Name)
-                        if string.find(rName, "train") or string.find(rName, "speed") or string.find(rName, "workout") or string.find(rName, "click") or string.find(rName, "tap") or string.find(rName, "addspeed") or string.find(rName, "step") then
-                            pcall(function() rem:FireServer() end)
-                            pcall(function() rem:FireServer(1) end)
-                            pcall(function() rem:FireServer("Speed") end)
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- 5. SUPERCHARGED 4-LAYER AUTO REBIRTH ENGINE (FIXED & FULL-AUTO)
-task.spawn(function()
-    while true do
-        task.wait(1.0)
+        task.wait(0.8)
         if _G.AutoRebirth and isAlive() then
             pcall(function()
-                -- Layer 1: ReplicatedStorage Remotes
+                -- Method 1: ReplicatedStorage Deep Remote Sweeper
                 for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
                     if rem:IsA("RemoteEvent") or rem:IsA("RemoteFunction") then
                         local rName = string.lower(rem.Name)
-                        if string.find(rName, "rebirth") or string.find(rName, "prestige") or string.find(rName, "ascend") or string.find(rName, "evolve") or string.find(rName, "dorebirth") or string.find(rName, "buyrebirth") then
+                        if string.find(rName, "rebirth") or string.find(rName, "prestige") or string.find(rName, "ascend") or string.find(rName, "evolve") or string.find(rName, "dorebirth") or string.find(rName, "buyrebirth") or string.find(rName, "rebirthevent") or string.find(rName, "requestrebirth") then
                             if rem:IsA("RemoteEvent") then
                                 pcall(function() rem:FireServer() end)
                                 pcall(function() rem:FireServer(1) end)
+                                pcall(function() rem:FireServer(true) end)
                                 pcall(function() rem:FireServer("Rebirth") end)
                             else
                                 pcall(function() rem:InvokeServer() end)
                                 pcall(function() rem:InvokeServer(1) end)
+                                pcall(function() rem:InvokeServer(true) end)
                             end
                         end
                     end
                 end
 
-                -- Layer 2: PlayerGui Rebirth Buttons & Modals
+                -- Method 2: PlayerGui UI Buttons & Confirmation Trigger
                 if LocalPlayer:FindFirstChild("PlayerGui") then
                     for _, btn in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
                         if (btn:IsA("TextButton") or btn:IsA("ImageButton")) and btn.Visible then
                             local bText = string.lower(btn.Name .. " " .. (btn:IsA("TextButton") and btn.Text or ""))
-                            if string.find(bText, "rebirth") or string.find(bText, "prestige") or string.find(bText, "ascend") or string.find(bText, "yes") or string.find(bText, "confirm") then
+                            if string.find(bText, "rebirth") or string.find(bText, "prestige") or string.find(bText, "ascend") or string.find(bText, "buy rebirth") then
                                 pcall(function()
-                                    for _, conn in ipairs(getconnections(btn.MouseButton1Click)) do
-                                        conn:Fire()
-                                    end
+                                    for _, conn in ipairs(getconnections(btn.MouseButton1Click)) do conn:Fire() end
+                                    for _, conn in ipairs(getconnections(btn.Activated)) do conn:Fire() end
                                 end)
                             end
                         end
                     end
                 end
 
-                -- Layer 3: Physical Rebirth Pads & ProximityPrompts
+                -- Method 3: Workspace Rebirth Pads & Prompts
                 local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
                 if hrp then
                     for _, obj in ipairs(Workspace:GetDescendants()) do
@@ -1140,7 +1068,7 @@ task.spawn(function()
     end
 end)
 
--- 6. Remove Bosses (Godmode) Engine
+-- 5. Remove Bosses (Godmode) Engine
 RunService.Stepped:Connect(function()
     if _G.RemoveBosses then
         pcall(function()
@@ -1164,7 +1092,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- 7. Anti-Egg Drop Protection
+-- 6. Anti-Egg Drop Protection
 task.spawn(function()
     local function applyAntiDrop(char)
         if not char then return end
@@ -1184,7 +1112,7 @@ task.spawn(function()
     LocalPlayer.CharacterAdded:Connect(applyAntiDrop)
 end)
 
--- 8. Movement Engines (WalkSpeed, Fly, Noclip, Infinite Jump)
+-- 7. Movement Engines (WalkSpeed, Fly, Noclip, Infinite Jump)
 RunService.RenderStepped:Connect(function(deltaTime)
     pcall(function()
         if not isAlive() then return end
