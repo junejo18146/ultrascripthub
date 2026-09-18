@@ -111,27 +111,35 @@ local TeleportZoneIndex = 1
 
 -- Egg Rarity Ranking (Higher score = Rarer Egg)
 local EggRarityRank = {
-    ["blackhole egg"] = 100,
-    ["ethereal egg"]  = 90,
-    ["diamond egg"]   = 80,
-    ["divine egg"]    = 75,
-    ["golden egg"]    = 70,
-    ["mythic egg"]    = 68,
-    ["flaming egg"]   = 65,
-    ["legendary egg"] = 62,
-    ["skull egg"]     = 60,
-    ["slime egg"]     = 55,
-    ["crystal egg"]   = 50,
-    ["glass egg"]     = 45,
-    ["flower egg"]    = 40,
-    ["slimy egg"]     = 38,
-    ["easter egg"]    = 35,
-    ["mushroom egg"]  = 30,
-    ["stone egg"]     = 25,
-    ["leaf egg"]      = 20,
-    ["cracked egg"]   = 15,
-    ["brown egg"]     = 10,
-    ["white egg"]     = 5
+    ["blackhole"] = 100,
+    ["ethereal"]  = 90,
+    ["diamond"]   = 80,
+    ["divine"]    = 75,
+    ["golden"]    = 70,
+    ["gold"]      = 70,
+    ["mythic"]    = 68,
+    ["flaming"]   = 65,
+    ["flame"]     = 65,
+    ["fire"]      = 65,
+    ["legendary"] = 62,
+    ["legend"]    = 62,
+    ["skull"]     = 60,
+    ["slime"]     = 55,
+    ["slimy"]     = 55,
+    ["crystal"]   = 50,
+    ["glass"]     = 45,
+    ["flower"]    = 40,
+    ["easter"]    = 35,
+    ["mushroom"]  = 30,
+    ["stone"]     = 25,
+    ["rock"]      = 25,
+    ["leaf"]      = 20,
+    ["wood"]      = 20,
+    ["cracked"]   = 15,
+    ["brown"]     = 10,
+    ["white"]     = 5,
+    ["basic"]     = 5,
+    ["common"]    = 5
 }
 
 -- Zone Options for Stealing Eggs
@@ -183,7 +191,159 @@ local TeleportZoneNames = {
     "My Base / Plot"
 }
 
--- Non-blocking Remote Resolver
+-- =================================================================
+-- BASE & PLOT DETECTION SYSTEM
+-- =================================================================
+local CachedMyPlot = nil
+local SavedBaseCFrame = nil
+
+-- Record initial position as fallback base location
+pcall(function()
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local hrp = char and (char:FindFirstChild("HumanoidRootPart") or char:WaitForChild("HumanoidRootPart", 3))
+    if hrp then
+        SavedBaseCFrame = hrp.CFrame
+    end
+end)
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+    task.wait(0.5)
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if hrp and not SavedBaseCFrame then
+        SavedBaseCFrame = hrp.CFrame
+    end
+end)
+
+local function GetMyPlot()
+    if CachedMyPlot and CachedMyPlot.Parent then
+        return CachedMyPlot
+    end
+
+    local candidatePlotFolders = {
+        Workspace:FindFirstChild("Plots"),
+        Workspace:FindFirstChild("PlayerPlots"),
+        Workspace:FindFirstChild("Bases"),
+        Workspace:FindFirstChild("Islands"),
+        Workspace:FindFirstChild("Houses")
+    }
+
+    for _, folder in ipairs(candidatePlotFolders) do
+        if folder then
+            for _, plot in ipairs(folder:GetChildren()) do
+                -- 1. Check Data.Owner / Data.Player
+                local data = plot:FindFirstChild("Data")
+                if data then
+                    local ownerVal = data:FindFirstChild("Owner") or data:FindFirstChild("Player")
+                    if ownerVal then
+                        if ownerVal.Value == LocalPlayer
+                           or (typeof(ownerVal.Value) == "Instance" and ownerVal.Value == LocalPlayer)
+                           or (typeof(ownerVal.Value) == "string" and (ownerVal.Value == LocalPlayer.Name or ownerVal.Value == tostring(LocalPlayer.UserId)))
+                           or (typeof(ownerVal.Value) == "number" and ownerVal.Value == LocalPlayer.UserId) then
+                            CachedMyPlot = plot
+                            return plot
+                        end
+                    end
+                end
+
+                -- 2. Check direct Owner / Player object
+                local ownerChild = plot:FindFirstChild("Owner") or plot:FindFirstChild("Player")
+                if ownerChild then
+                    if ownerChild.Value == LocalPlayer
+                       or (typeof(ownerChild.Value) == "Instance" and ownerChild.Value == LocalPlayer)
+                       or (typeof(ownerChild.Value) == "string" and (ownerChild.Value == LocalPlayer.Name or ownerChild.Value == tostring(LocalPlayer.UserId)))
+                       or (typeof(ownerChild.Value) == "number" and ownerChild.Value == LocalPlayer.UserId) then
+                        CachedMyPlot = plot
+                        return plot
+                    end
+                end
+
+                -- 3. Check Plot Attributes
+                local attrOwner = plot:GetAttribute("Owner") or plot:GetAttribute("Player") or plot:GetAttribute("UserId")
+                if attrOwner then
+                    if tostring(attrOwner) == LocalPlayer.Name or tostring(attrOwner) == tostring(LocalPlayer.UserId) then
+                        CachedMyPlot = plot
+                        return plot
+                    end
+                end
+
+                -- 4. Check Plot Name
+                if plot.Name == LocalPlayer.Name or plot.Name == tostring(LocalPlayer.UserId) then
+                    CachedMyPlot = plot
+                    return plot
+                end
+
+                -- 5. Check text labels or signs inside plot
+                for _, desc in ipairs(plot:GetDescendants()) do
+                    if desc:IsA("TextLabel") then
+                        local txt = desc.Text or ""
+                        if txt:find(LocalPlayer.Name) or txt:find(LocalPlayer.DisplayName) then
+                            CachedMyPlot = plot
+                            return plot
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return nil
+end
+
+local function GetBasePosition()
+    local myPlot = GetMyPlot()
+    if myPlot then
+        local bp = myPlot:FindFirstChild("Baseplate") or myPlot:FindFirstChild("Floor") or myPlot.PrimaryPart or myPlot:FindFirstChildWhichIsA("BasePart", true)
+        if bp then
+            return bp.CFrame + Vector3.new(0, 4, 0)
+        else
+            return myPlot:GetPivot() + Vector3.new(0, 4, 0)
+        end
+    end
+    if SavedBaseCFrame then
+        return SavedBaseCFrame
+    end
+    return nil
+end
+
+-- =================================================================
+-- SMART REMOTE ENGINE & PROXIMITY PROMPT TRIGGER
+-- =================================================================
+
+-- Find all matching remotes in ReplicatedStorage dynamically
+local function FindRemotes(keywords)
+    local found = {}
+    pcall(function()
+        for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
+            if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
+                local objName = obj.Name:lower()
+                for _, kw in ipairs(keywords) do
+                    if objName:find(kw:lower()) then
+                        table.insert(found, obj)
+                        break
+                    end
+                end
+            end
+        end
+    end)
+    return found
+end
+
+-- Fire all candidate remotes safely
+local function FireAllCandidateRemotes(keywords, ...)
+    local args = {...}
+    local remotes = FindRemotes(keywords)
+    for _, remote in ipairs(remotes) do
+        pcall(function()
+            if remote:IsA("RemoteEvent") then
+                remote:FireServer(unpack(args))
+            elseif remote:IsA("RemoteFunction") then
+                remote:InvokeServer(unpack(args))
+            end
+        end)
+    end
+end
+
+-- Direct named remote helper
 local function GetGameRemote(remoteName)
     local targetRemote = nil
     pcall(function()
@@ -202,57 +362,49 @@ local function GetGameRemote(remoteName)
     return targetRemote
 end
 
--- =================================================================
--- HELPER FUNCTIONS & MOUNT-AWARE TELEPORTATION
--- =================================================================
+-- Universal ProximityPrompt Activator
+local function TriggerPrompt(prompt)
+    if not prompt or not prompt:IsA("ProximityPrompt") then return false end
+    local success = false
+    pcall(function()
+        prompt.HoldDuration = 0
+        prompt.RequiresLineOfSight = false
+        prompt.MaxActivationDistance = 99999
+        prompt.Enabled = true
+    end)
 
--- Find player's assigned plot in Workspace.Plots
-local function GetMyPlot()
-    local plotsFolder = Workspace:FindFirstChild("Plots")
-    if plotsFolder then
-        for _, plot in ipairs(plotsFolder:GetChildren()) do
-            local data = plot:FindFirstChild("Data")
-            if data then
-                local ownerVal = data:FindFirstChild("Owner")
-                if ownerVal and (ownerVal.Value == LocalPlayer or (ownerVal.Value and ownerVal.Value.Name == LocalPlayer.Name)) then
-                    return plot
-                end
-            end
-        end
-    end
-    return nil
-end
-
--- Check if an egg is inside ANY player's base/nests
-local function IsEggInsideAnyBase(egg)
-    if not egg or not egg.Parent then return true end
-
-    local plotsFolder = Workspace:FindFirstChild("Plots")
-    if plotsFolder then
-        if egg:IsDescendantOf(plotsFolder) then
-            return true
-        end
-
-        local eggPart = egg:FindFirstChild("Handle") or egg:FindFirstChild("EggBase") or egg.PrimaryPart or egg:FindFirstChildOfClass("BasePart")
-        if eggPart then
-            for _, plot in ipairs(plotsFolder:GetChildren()) do
-                local baseplate = plot:FindFirstChild("Baseplate")
-                if baseplate and baseplate:IsA("BasePart") then
-                    local dist = (eggPart.Position - baseplate.Position).Magnitude
-                    local radius = math.max(baseplate.Size.X, baseplate.Size.Z) * 0.65
-                    if dist <= radius then
-                        return true
-                    end
-                end
-            end
-        end
+    -- Method 1: Executor Global fireproximityprompt
+    if fireproximityprompt then
+        pcall(function()
+            fireproximityprompt(prompt, 0)
+            success = true
+        end)
+        pcall(function()
+            fireproximityprompt(prompt, 1)
+        end)
+        pcall(function()
+            fireproximityprompt(prompt)
+        end)
     end
 
-    return false
+    -- Method 2: Virtual Input Hold
+    pcall(function()
+        if prompt.InputHoldBegin then
+            prompt:InputHoldBegin()
+            task.wait(0.04)
+            prompt:InputHoldEnd()
+            success = true
+        end
+    end)
+
+    return success
 end
 
--- Teleport player character and mount safely
+-- =================================================================
+-- SAFE MOUNT-AWARE TELEPORTATION
+-- =================================================================
 local function SafeTeleport(targetCFrame)
+    if not targetCFrame then return end
     pcall(function()
         local char = LocalPlayer.Character
         if not char then return end
@@ -280,7 +432,7 @@ local function SafeTeleport(targetCFrame)
 
         task.spawn(function()
             for _ = 1, 3 do
-                task.wait(0.04)
+                task.wait(0.03)
                 if hrp and hrp.Parent then
                     hrp.AssemblyLinearVelocity = Vector3.zero
                     char:PivotTo(targetCFrame)
@@ -297,14 +449,9 @@ local function TeleportToLocation(destName)
     if not char then return end
 
     if destName == "My Base / Plot" then
-        local myPlot = GetMyPlot()
-        if myPlot then
-            local bp = myPlot:FindFirstChild("Baseplate") or myPlot.PrimaryPart or myPlot:FindFirstChildWhichIsA("BasePart", true)
-            if bp then
-                SafeTeleport(bp.CFrame + Vector3.new(0, 5, 0))
-            else
-                SafeTeleport(myPlot:GetPivot() + Vector3.new(0, 5, 0))
-            end
+        local basePos = GetBasePosition()
+        if basePos then
+            SafeTeleport(basePos)
         else
             local tpRemote = GetGameRemote("TeleportToPlot")
             if tpRemote then tpRemote:FireServer() end
@@ -369,6 +516,10 @@ local function TeleportToLocation(destName)
         SafeTeleport(CFrame.new(fallbackPos))
     end
 end
+
+-- =================================================================
+-- UTILITIES & CHARACTER BOOSTS
+-- =================================================================
 
 -- Anti-AFK Engine
 LocalPlayer.Idled:Connect(function()
@@ -474,64 +625,181 @@ local function StartFly()
 end
 
 -- =================================================================
--- CORE AUTOMATION SYSTEMS
+-- NESTS & EGG COLLECTION HELPERS
 -- =================================================================
 
-local function GetBestStealEgg()
-    local renderedEggs = Workspace:FindFirstChild("RenderedEggs")
-    if not renderedEggs then return nil end
+-- Find all nests on player's plot or nearby base
+local function GetMyNests()
+    local myPlot = GetMyPlot()
+    local nests = {}
 
-    local eggs = renderedEggs:GetChildren()
-    if #eggs == 0 then return nil end
-
-    local selectedZone = StealZoneOptions[StealZoneIndex] or "Best Egg (Auto)"
-    local bestEgg = nil
-    local bestScore = -1
-
-    for _, egg in ipairs(eggs) do
-        if egg:IsA("Model") and not IsEggInsideAnyBase(egg) then
-            local eggName = egg.Name:lower()
-            local score = EggRarityRank[eggName] or 1
-
-            if selectedZone:find("Best Egg") then
-                if score > bestScore then
-                    bestScore = score
-                    bestEgg = egg
+    if myPlot then
+        local nestsFolder = myPlot:FindFirstChild("Nests") 
+                         or myPlot:FindFirstChild("Incubators")
+                         or myPlot:FindFirstChild("NestFolder")
+        if nestsFolder then
+            for _, nest in ipairs(nestsFolder:GetChildren()) do
+                table.insert(nests, nest)
+            end
+        else
+            for _, desc in ipairs(myPlot:GetDescendants()) do
+                if desc:IsA("Model") and (desc.Name:lower():find("nest") or desc.Name:lower():find("incubator")) then
+                    table.insert(nests, desc)
                 end
-            elseif selectedZone:find("Ethereal") then
-                if eggName:find("ethereal") or eggName:find("blackhole") then
-                    return egg
-                end
-            elseif selectedZone:find("Divine") or selectedZone:find("Diamond") then
-                if eggName:find("divine") or eggName:find("diamond") then
-                    return egg
-                end
-            elseif selectedZone:find("Mythic") or selectedZone:find("Golden") then
-                if eggName:find("mythic") or eggName:find("golden") then
-                    return egg
-                end
-            elseif selectedZone:find("Legend") or selectedZone:find("Flaming") then
-                if eggName:find("legend") or eggName:find("flaming") then
-                    return egg
-                end
-            elseif selectedZone:find("Epic") or selectedZone:find("Skull") or selectedZone:find("Slime") then
-                if eggName:find("epic") or eggName:find("skull") or eggName:find("slime") then
-                    return egg
-                end
-            elseif selectedZone:find("Rare") or selectedZone:find("Crystal") or selectedZone:find("Flower") then
-                if eggName:find("rare") or eggName:find("crystal") or eggName:find("flower") then
-                    return egg
-                end
-            else
-                return egg
             end
         end
     end
 
-    return bestEgg or eggs[1]
+    -- Fallback: Search nearby base for nests
+    if #nests == 0 and SavedBaseCFrame then
+        pcall(function()
+            for _, obj in ipairs(Workspace:GetDescendants()) do
+                if obj:IsA("Model") and (obj.Name:lower():find("nest") or obj.Name:lower():find("incubator")) then
+                    local primary = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
+                    if primary and (primary.Position - SavedBaseCFrame.Position).Magnitude < 100 then
+                        table.insert(nests, obj)
+                    end
+                end
+            end
+        end)
+    end
+
+    return nests
 end
 
--- Robust Egg Steal Routine
+-- Find all eggs on the map across all folders & workspace
+local function GetAllMapEggs()
+    local eggList = {}
+    local seen = {}
+
+    local candidateFolders = {
+        Workspace:FindFirstChild("RenderedEggs"),
+        Workspace:FindFirstChild("Eggs"),
+        Workspace:FindFirstChild("SpawnedEggs"),
+        Workspace:FindFirstChild("MapEggs"),
+        Workspace:FindFirstChild("EggSpawns"),
+        Workspace:FindFirstChild("Debris"),
+        Workspace:FindFirstChild("Spawns")
+    }
+
+    for _, folder in ipairs(candidateFolders) do
+        if folder then
+            for _, egg in ipairs(folder:GetChildren()) do
+                if (egg:IsA("Model") or egg:IsA("BasePart")) and not seen[egg] then
+                    seen[egg] = true
+                    table.insert(eggList, egg)
+                end
+            end
+        end
+    end
+
+    -- Scan Workspace direct children
+    pcall(function()
+        for _, obj in ipairs(Workspace:GetChildren()) do
+            if not seen[obj] and (obj:IsA("Model") or obj:IsA("BasePart")) then
+                local name = obj.Name:lower()
+                if name:find("egg") and not name:find("spawn") and not name:find("stall") and not name:find("tracker") and not name:find("gui") then
+                    seen[obj] = true
+                    table.insert(eggList, obj)
+                end
+            end
+        end
+    end)
+
+    -- Scan for ProximityPrompts with egg actions
+    pcall(function()
+        for _, prompt in ipairs(Workspace:GetDescendants()) do
+            if prompt:IsA("ProximityPrompt") then
+                local actText = (prompt.ActionText or ""):lower()
+                local objText = (prompt.ObjectText or ""):lower()
+                if actText:find("egg") or actText:find("pick") or actText:find("steal") or actText:find("grab") or actText:find("take")
+                   or objText:find("egg") then
+                    local model = prompt:FindFirstAncestorOfClass("Model") or prompt.Parent
+                    if model and not seen[model] then
+                        seen[model] = true
+                        table.insert(eggList, model)
+                    end
+                end
+            end
+        end
+    end)
+
+    return eggList
+end
+
+-- Calculate egg rarity score
+local function GetEggRarityScore(egg)
+    if not egg then return 0 end
+    local name = egg.Name:lower()
+    for rarityKey, score in pairs(EggRarityRank) do
+        if name:find(rarityKey) then
+            return score
+        end
+    end
+    return 1
+end
+
+-- Check if egg matches selected zone
+local function MatchesSelectedZone(egg, selectedZone)
+    if not egg then return false end
+    local name = egg.Name:lower()
+    
+    if selectedZone:find("Best Egg") then
+        return true
+    elseif selectedZone:find("Ethereal") then
+        return name:find("ethereal") or name:find("blackhole")
+    elseif selectedZone:find("Divine") or selectedZone:find("Diamond") then
+        return name:find("divine") or name:find("diamond")
+    elseif selectedZone:find("Mythic") or selectedZone:find("Golden") then
+        return name:find("mythic") or name:find("golden") or name:find("gold")
+    elseif selectedZone:find("Legend") or selectedZone:find("Flaming") then
+        return name:find("legend") or name:find("flaming") or name:find("fire")
+    elseif selectedZone:find("Epic") or selectedZone:find("Skull") then
+        return name:find("epic") or name:find("skull") or name:find("slime") or name:find("slimy")
+    elseif selectedZone:find("Rare") or selectedZone:find("Crystal") then
+        return name:find("rare") or name:find("crystal") or name:find("glass") or name:find("flower")
+    else
+        return true
+    end
+end
+
+-- Select the best target egg based on zone filter
+local function GetBestStealEgg()
+    local allEggs = GetAllMapEggs()
+    if #allEggs == 0 then return nil end
+
+    local selectedZone = StealZoneOptions[StealZoneIndex] or "Best Egg (Auto)"
+    local myPlot = GetMyPlot()
+    
+    local matchedEggs = {}
+    local validEggs = {}
+
+    for _, egg in ipairs(allEggs) do
+        -- Skip eggs inside player's own base
+        local inMyPlot = myPlot and egg:IsDescendantOf(myPlot)
+        if not inMyPlot then
+            table.insert(validEggs, egg)
+            if MatchesSelectedZone(egg, selectedZone) then
+                table.insert(matchedEggs, egg)
+            end
+        end
+    end
+
+    local pool = (#matchedEggs > 0) and matchedEggs or validEggs
+    if #pool == 0 then return nil end
+
+    table.sort(pool, function(a, b)
+        return GetEggRarityScore(a) > GetEggRarityScore(b)
+    end)
+
+    return pool[1]
+end
+
+-- =================================================================
+-- CORE AUTOMATION SYSTEMS (FEATURES 1, 2, 3, 4, 5)
+-- =================================================================
+
+-- 1 & 2: Robust Multi-Layer Auto Steal Egg Routine
 local isStealing = false
 local function ExecuteStealEgg()
     if isStealing then return end
@@ -543,98 +811,88 @@ local function ExecuteStealEgg()
         if not hrp then return end
 
         local targetEgg = GetBestStealEgg()
-        if not targetEgg or not targetEgg.Parent or IsEggInsideAnyBase(targetEgg) then
-            isStealing = false
-            return
-        end
+        if not targetEgg or not targetEgg.Parent then return end
 
         local eggPart = targetEgg:FindFirstChild("Handle") 
                      or targetEgg:FindFirstChild("EggBase") 
                      or targetEgg:FindFirstChild("Sphere.007") 
                      or targetEgg.PrimaryPart 
                      or targetEgg:FindFirstChildOfClass("BasePart")
-        if not eggPart then
-            isStealing = false
-            return
-        end
+                     or targetEgg:FindFirstChildWhichIsA("BasePart", true)
+        if not eggPart then return end
 
-        -- Step 1: Teleport onto the egg
+        -- Step 1: Teleport to Egg
         SafeTeleport(eggPart.CFrame + Vector3.new(0, 1.5, 0))
-        task.wait(0.25)
+        task.wait(0.2)
 
-        -- Step 2: Trigger ProximityPrompt ("Pickup")
+        -- Step 2: Trigger ProximityPrompts & Fire Remotes & Touch
         for _, prompt in ipairs(targetEgg:GetDescendants()) do
             if prompt:IsA("ProximityPrompt") then
-                pcall(function()
-                    prompt.HoldDuration = 0
-                    prompt.RequiresLineOfSight = false
-                    prompt.MaxActivationDistance = 99999
-                end)
-                if fireproximityprompt then
-                    fireproximityprompt(prompt, 0)
-                    task.wait(0.04)
-                    fireproximityprompt(prompt, 1)
-                    fireproximityprompt(prompt)
-                end
+                TriggerPrompt(prompt)
             end
         end
 
-        local pickupRemote = GetGameRemote("EggPickup")
-        if pickupRemote then
-            pickupRemote:FireServer(targetEgg)
-            pickupRemote:FireServer(targetEgg.Name)
-            pickupRemote:FireServer(eggPart)
+        FireAllCandidateRemotes({"pickup", "steal", "grab", "take", "collect", "egg"}, targetEgg, targetEgg.Name, eggPart, 1)
+
+        local directPickup = GetGameRemote("EggPickup")
+        if directPickup then
+            directPickup:FireServer(targetEgg)
+            directPickup:FireServer(targetEgg.Name)
+            directPickup:FireServer(eggPart)
         end
 
         if firetouchinterest and hrp and eggPart then
             firetouchinterest(hrp, eggPart, 0)
-            task.wait(0.04)
+            task.wait(0.02)
             firetouchinterest(hrp, eggPart, 1)
         end
 
-        task.wait(0.35)
+        task.wait(0.25)
 
-        -- Step 3: Bring Egg to Player Base
-        local myPlot = GetMyPlot()
-        if myPlot then
-            local bp = myPlot:FindFirstChild("Baseplate") or myPlot.PrimaryPart or myPlot:FindFirstChildWhichIsA("BasePart", true)
-            if bp then
-                SafeTeleport(bp.CFrame + Vector3.new(0, 4, 0))
-            else
-                SafeTeleport(myPlot:GetPivot() + Vector3.new(0, 4, 0))
-            end
+        -- Step 3: Teleport Back To Player Base
+        local basePos = GetBasePosition()
+        if basePos then
+            SafeTeleport(basePos)
         else
             local tpRemote = GetGameRemote("TeleportToPlot")
             if tpRemote then tpRemote:FireServer() end
         end
 
-        task.wait(0.35)
+        task.wait(0.25)
 
         -- Step 4: Deposit Egg onto Open Nest
-        if myPlot and myPlot:FindFirstChild("Nests") then
-            for _, nest in ipairs(myPlot.Nests:GetChildren()) do
-                local nestPart = nest:FindFirstChild("Handle") or nest:FindFirstChildWhichIsA("BasePart", true)
-                if nestPart then
-                    SafeTeleport(nestPart.CFrame + Vector3.new(0, 2.5, 0))
-                    task.wait(0.1)
+        local myNests = GetMyNests()
+        for _, nest in ipairs(myNests) do
+            local nestPart = nest:FindFirstChild("Handle") or nest.PrimaryPart or nest:FindFirstChildWhichIsA("BasePart", true)
+            if nestPart then
+                SafeTeleport(nestPart.CFrame + Vector3.new(0, 2.5, 0))
+                task.wait(0.08)
 
-                    local placeRemote = GetGameRemote("EggPlaced")
-                    if placeRemote then
-                        placeRemote:FireServer(nest)
-                        placeRemote:FireServer(nest.Name)
-                        placeRemote:FireServer()
+                for _, prompt in ipairs(nest:GetDescendants()) do
+                    if prompt:IsA("ProximityPrompt") then
+                        TriggerPrompt(prompt)
                     end
+                end
 
-                    if firetouchinterest and hrp then
-                        firetouchinterest(hrp, nestPart, 0)
-                        task.wait(0.03)
-                        firetouchinterest(hrp, nestPart, 1)
-                    end
+                FireAllCandidateRemotes({"place", "deposit", "put", "nest", "insert", "drop"}, nest, nest.Name, targetEgg)
 
-                    if Toggles.AutoHatch then
-                        local hatchRemote = GetGameRemote("Hatch")
-                        if hatchRemote then hatchRemote:FireServer(nest) end
-                    end
+                local placeRemote = GetGameRemote("EggPlaced")
+                if placeRemote then
+                    placeRemote:FireServer(nest)
+                    placeRemote:FireServer(nest.Name)
+                    placeRemote:FireServer()
+                end
+
+                if firetouchinterest and hrp then
+                    firetouchinterest(hrp, nestPart, 0)
+                    task.wait(0.02)
+                    firetouchinterest(hrp, nestPart, 1)
+                end
+
+                if Toggles.AutoHatch then
+                    FireAllCandidateRemotes({"hatch", "crack", "openegg", "claimnest", "claimpet"}, nest, nest.Name)
+                    local hatchRemote = GetGameRemote("Hatch")
+                    if hatchRemote then hatchRemote:FireServer(nest) end
                 end
             end
         end
@@ -643,55 +901,73 @@ local function ExecuteStealEgg()
     isStealing = false
 end
 
--- Auto Steal Loop
+-- Auto Steal Egg Background Loop
 task.spawn(function()
     while true do
-        task.wait(0.6)
+        task.wait(0.5)
         if Toggles.AutoSteal then
             ExecuteStealEgg()
         end
     end
 end)
 
--- Auto Hatch Eggs Loop
+-- 3: Auto Hatch Eggs Background Loop
 task.spawn(function()
     while true do
-        task.wait(0.5)
+        task.wait(0.4)
         if Toggles.AutoHatch then
             pcall(function()
-                local myPlot = GetMyPlot()
-                if myPlot and myPlot:FindFirstChild("Nests") then
-                    local hatchRemote = GetGameRemote("Hatch")
-                    for _, nest in ipairs(myPlot.Nests:GetChildren()) do
-                        if hatchRemote then
-                            hatchRemote:FireServer(nest)
+                local nests = GetMyNests()
+                for _, nest in ipairs(nests) do
+                    -- Trigger prompts
+                    for _, prompt in ipairs(nest:GetDescendants()) do
+                        if prompt:IsA("ProximityPrompt") then
+                            TriggerPrompt(prompt)
                         end
-                        for _, prompt in ipairs(nest:GetDescendants()) do
-                            if prompt:IsA("ProximityPrompt") and fireproximityprompt then
-                                fireproximityprompt(prompt, 0)
-                                fireproximityprompt(prompt)
+                    end
+
+                    -- Fire Remotes
+                    FireAllCandidateRemotes({"hatch", "crack", "openegg", "claimnest", "claimpet", "claim"}, nest, nest.Name, 1)
+
+                    local hatchRemote = GetGameRemote("Hatch")
+                    if hatchRemote then
+                        hatchRemote:FireServer(nest)
+                        hatchRemote:FireServer(nest.Name)
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- 4: Auto Place Egg Background Loop
+task.spawn(function()
+    while true do
+        task.wait(0.4)
+        if Toggles.AutoPlace then
+            pcall(function()
+                local nests = GetMyNests()
+                for _, nest in ipairs(nests) do
+                    -- Trigger place prompts
+                    for _, prompt in ipairs(nest:GetDescendants()) do
+                        if prompt:IsA("ProximityPrompt") then
+                            local act = (prompt.ActionText or ""):lower()
+                            local obj = (prompt.ObjectText or ""):lower()
+                            if act:find("place") or act:find("deposit") or act:find("put") or act:find("egg")
+                               or obj:find("place") or obj:find("deposit") or obj:find("put") or obj:find("egg") or act == "" then
+                                TriggerPrompt(prompt)
                             end
                         end
                     end
-                end
-            end)
-        end
-    end
-end)
 
--- Auto Place Egg Loop
-task.spawn(function()
-    while true do
-        task.wait(0.5)
-        if Toggles.AutoPlace then
-            pcall(function()
-                local myPlot = GetMyPlot()
-                if myPlot and myPlot:FindFirstChild("Nests") then
+                    -- Fire place remotes
+                    FireAllCandidateRemotes({"place", "deposit", "put", "eggplaced", "nest", "insert"}, nest, nest.Name, 1)
+
                     local placeRemote = GetGameRemote("EggPlaced")
-                    for _, nest in ipairs(myPlot.Nests:GetChildren()) do
-                        if placeRemote then
-                            placeRemote:FireServer(nest)
-                        end
+                    if placeRemote then
+                        placeRemote:FireServer(nest)
+                        placeRemote:FireServer(nest.Name)
+                        placeRemote:FireServer()
                     end
                 end
             end)
@@ -699,30 +975,35 @@ task.spawn(function()
     end
 end)
 
--- Auto Equip Best Pet Loop
+-- 5: Auto Equip Best Pet Loop
 task.spawn(function()
     while true do
-        task.wait(1.5)
+        task.wait(1.2)
         if Toggles.AutoEquipBest then
             pcall(function()
                 local myPlot = GetMyPlot()
-                local petsFolder = myPlot and myPlot:FindFirstChild("Pets")
+                local petsFolder = myPlot and (myPlot:FindFirstChild("Pets") or myPlot:FindFirstChild("MyPets"))
                 if petsFolder then
                     local pets = petsFolder:GetChildren()
                     if #pets > 0 then
                         local targetPet = pets[#pets]
+                        FireAllCandidateRemotes({"mount", "ride", "equip"}, targetPet, targetPet.Name)
                         local mountRemote = GetGameRemote("Mounting")
-                        if mountRemote and targetPet then
+                        if mountRemote then
                             mountRemote:FireServer(targetPet)
                         end
                     end
+                else
+                    FireAllCandidateRemotes({"equipbest", "mountbest", "bestpet"})
                 end
             end)
         end
     end
 end)
 
--- Rare Egg ESP (Excludes Base Eggs)
+-- =================================================================
+-- 6: RARE EGG ESP (HIGHLIGHTS RAREST MAP EGGS)
+-- =================================================================
 local espHighlights = {}
 local espBillboards = {}
 
@@ -739,62 +1020,68 @@ end
 
 task.spawn(function()
     while true do
-        task.wait(1.0)
+        task.wait(0.8)
         if Toggles.BestEggESP then
             pcall(function()
-                local renderedEggs = Workspace:FindFirstChild("RenderedEggs")
                 local char = LocalPlayer.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                local allEggs = GetAllMapEggs()
+                local myPlot = GetMyPlot()
 
-                if renderedEggs and hrp then
-                    for _, egg in ipairs(renderedEggs:GetChildren()) do
-                        if egg:IsA("Model") then
-                            if IsEggInsideAnyBase(egg) then
+                if hrp then
+                    for _, egg in ipairs(allEggs) do
+                        if egg:IsA("Model") or egg:IsA("BasePart") then
+                            local inMyPlot = myPlot and egg:IsDescendantOf(myPlot)
+                            if inMyPlot then
                                 if espHighlights[egg] then espHighlights[egg]:Destroy() espHighlights[egg] = nil end
                                 if espBillboards[egg] then espBillboards[egg]:Destroy() espBillboards[egg] = nil end
                             else
-                                local eggName = egg.Name:lower()
-                                local score = EggRarityRank[eggName] or 0
+                                local score = GetEggRarityScore(egg)
+                                local targetPart = egg:FindFirstChild("Handle") 
+                                                or egg:FindFirstChild("EggBase") 
+                                                or egg.PrimaryPart 
+                                                or egg:FindFirstChildOfClass("BasePart") 
+                                                or egg:FindFirstChildWhichIsA("BasePart", true)
 
-                                if score >= 25 or eggName:find("egg") then
-                                    local targetPart = egg:FindFirstChild("Handle") or egg:FindFirstChild("EggBase") or egg.PrimaryPart or egg:FindFirstChildOfClass("BasePart")
-                                    if targetPart and not espHighlights[egg] then
-                                        local hl = Instance.new("Highlight")
-                                        hl.Name = "JunejoEggESP"
-                                        hl.Adornee = egg
-                                        hl.FillColor = (score >= 80 and Color3.fromRGB(255, 60, 255)) or (score >= 50 and Color3.fromRGB(255, 215, 0)) or Color3.fromRGB(50, 220, 255)
-                                        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-                                        hl.FillTransparency = 0.35
-                                        hl.OutlineTransparency = 0
-                                        hl.Parent = egg
-                                        espHighlights[egg] = hl
+                                if targetPart and not espHighlights[egg] then
+                                    local hl = Instance.new("Highlight")
+                                    hl.Name = "JunejoEggESP"
+                                    hl.Adornee = egg
+                                    hl.FillColor = (score >= 80 and Color3.fromRGB(255, 60, 255)) 
+                                                or (score >= 50 and Color3.fromRGB(255, 215, 0)) 
+                                                or (score >= 30 and Color3.fromRGB(50, 220, 255))
+                                                or Color3.fromRGB(150, 255, 150)
+                                    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                                    hl.FillTransparency = 0.35
+                                    hl.OutlineTransparency = 0
+                                    hl.Parent = egg
+                                    espHighlights[egg] = hl
 
-                                        local bb = Instance.new("BillboardGui")
-                                        bb.Name = "JunejoTag"
-                                        bb.Adornee = targetPart
-                                        bb.Size = UDim2.new(0, 130, 0, 32)
-                                        bb.StudsOffset = Vector3.new(0, 2.5, 0)
-                                        bb.AlwaysOnTop = true
+                                    local bb = Instance.new("BillboardGui")
+                                    bb.Name = "JunejoTag"
+                                    bb.Adornee = targetPart
+                                    bb.Size = UDim2.new(0, 130, 0, 32)
+                                    bb.StudsOffset = Vector3.new(0, 2.5, 0)
+                                    bb.AlwaysOnTop = true
 
-                                        local lbl = Instance.new("TextLabel")
-                                        lbl.Size = UDim2.new(1, 0, 1, 0)
-                                        lbl.BackgroundTransparency = 1
-                                        lbl.Font = Enum.Font.GothamBold
-                                        lbl.TextSize = 10
-                                        lbl.TextColor3 = hl.FillColor
-                                        lbl.TextStrokeTransparency = 0.2
-                                        lbl.TextStrokeColor3 = Color3.fromRGB(15, 14, 22)
+                                    local lbl = Instance.new("TextLabel")
+                                    lbl.Size = UDim2.new(1, 0, 1, 0)
+                                    lbl.BackgroundTransparency = 1
+                                    lbl.Font = Enum.Font.GothamBold
+                                    lbl.TextSize = 10
+                                    lbl.TextColor3 = hl.FillColor
+                                    lbl.TextStrokeTransparency = 0.2
+                                    lbl.TextStrokeColor3 = Color3.fromRGB(15, 14, 22)
+                                    lbl.Text = egg.Name .. "\n[" .. math.floor((hrp.Position - targetPart.Position).Magnitude) .. "m]"
+                                    lbl.Parent = bb
+                                    bb.Parent = targetPart
+                                    espBillboards[egg] = bb
+                                end
+
+                                if espBillboards[egg] and targetPart then
+                                    local lbl = espBillboards[egg]:FindFirstChildOfClass("TextLabel")
+                                    if lbl then
                                         lbl.Text = egg.Name .. "\n[" .. math.floor((hrp.Position - targetPart.Position).Magnitude) .. "m]"
-                                        lbl.Parent = bb
-                                        bb.Parent = targetPart
-                                        espBillboards[egg] = bb
-                                    end
-
-                                    if espBillboards[egg] and targetPart then
-                                        local lbl = espBillboards[egg]:FindFirstChildOfClass("TextLabel")
-                                        if lbl then
-                                            lbl.Text = egg.Name .. "\n[" .. math.floor((hrp.Position - targetPart.Position).Magnitude) .. "m]"
-                                        end
                                     end
                                 end
                             end
@@ -908,7 +1195,7 @@ ContentFrame.BackgroundTransparency = 1
 ContentFrame.BorderSizePixel = 0
 ContentFrame.ScrollBarThickness = 2
 ContentFrame.ScrollBarImageColor3 = Color3.fromRGB(60, 60, 75)
-ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 320)
+ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 360)
 ContentFrame.Parent = MainFrame
 
 local UIList = Instance.new("UIListLayout")
