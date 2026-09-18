@@ -1,5 +1,5 @@
 -- =================================================================
--- ULTRA SCRIPT HUB - OFFICIAL UI (EXACT SCREENSHOT STANDARD)
+-- ULTRA SCRIPT HUB - OFFICIAL UI STANDARD (EXACT SCREENSHOT)
 -- GAME: Blox Fruits
 -- AUTHOR: Made by Junejo
 -- =================================================================
@@ -13,7 +13,7 @@ local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
--- Feature State Flags
+-- Feature States
 _G.AutoFarmLevel = false
 _G.InfJumpActive = false
 _G.ChestESPActive = false
@@ -21,22 +21,17 @@ _G.FruitESPActive = false
 _G.WalkSpeedActive = false
 _G.WalkSpeedValue = 50
 
--- Prevent Duplicate GUI
-local function cleanupOldUI()
+-- Cleanup Old UI Instances
+pcall(function()
     for _, name in ipairs({"UltraScriptHub_BloxFruits", "BloxFruitsUI_Badshah", "JunejoHubUI_BloxFruits"}) do
-        pcall(function()
-            if CoreGui:FindFirstChild(name) then CoreGui[name]:Destroy() end
-        end)
-        pcall(function()
-            if LocalPlayer and LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild(name) then
-                LocalPlayer.PlayerGui[name]:Destroy()
-            end
-        end)
+        if CoreGui:FindFirstChild(name) then CoreGui[name]:Destroy() end
+        if LocalPlayer and LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild(name) then
+            LocalPlayer.PlayerGui[name]:Destroy()
+        end
     end
-end
-cleanupOldUI()
+end)
 
--- Safe GUI Parent Resolver (Delta / PC Compatible)
+-- Safe GUI Parent Resolver
 local function getSafeGui()
     if gethui then
         local success, res = pcall(gethui)
@@ -60,13 +55,13 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = getSafeGui()
 
 -- =================================================================
--- EXACT OFFICIAL UI FRAME (From Screenshot)
+-- EXACT MAIN FRAME (As shown in screenshot)
 -- =================================================================
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 275, 0, 270)
-MainFrame.Position = UDim2.new(0.5, -137, 0.5, -135)
-MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 15) -- Matte Dark Black
+MainFrame.Size = UDim2.new(0, 280, 0, 260)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -130)
+MainFrame.BackgroundColor3 = Color3.fromRGB(13, 13, 16)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Parent = ScreenGui
@@ -76,11 +71,11 @@ MainCorner.CornerRadius = UDim.new(0, 10)
 MainCorner.Parent = MainFrame
 
 local MainStroke = Instance.new("UIStroke")
-MainStroke.Color = Color3.fromRGB(32, 32, 40)
+MainStroke.Color = Color3.fromRGB(30, 30, 38)
 MainStroke.Thickness = 1
 MainStroke.Parent = MainFrame
 
--- Draggable Logic (Mobile Touch & PC Mouse)
+-- Draggable Logic (PC Mouse & Mobile Touch)
 local dragging, dragInput, dragStart, startPos
 MainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -109,30 +104,30 @@ end)
 -- Header Container
 local Header = Instance.new("Frame")
 Header.Name = "Header"
-Header.Size = UDim2.new(1, 0, 0, 36)
+Header.Size = UDim2.new(1, 0, 0, 38)
 Header.BackgroundTransparency = 1
 Header.Parent = MainFrame
 
-local Title = Instance.new("TextLabel")
-Title.Name = "Title"
-Title.Text = "BLOX FRUITS"
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 13
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.Position = UDim2.new(0, 14, 0, 10)
-Title.Size = UDim2.new(1, -50, 0, 16)
-Title.BackgroundTransparency = 1
-Title.Parent = Header
+local GameTitle = Instance.new("TextLabel")
+GameTitle.Name = "GameTitle"
+GameTitle.Text = "BLOX FRUITS"
+GameTitle.Font = Enum.Font.GothamBold
+GameTitle.TextSize = 13
+GameTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+GameTitle.TextXAlignment = Enum.TextXAlignment.Left
+GameTitle.Position = UDim2.new(0, 14, 0, 11)
+GameTitle.Size = UDim2.new(1, -50, 0, 16)
+GameTitle.BackgroundTransparency = 1
+GameTitle.Parent = Header
 
 local CloseBtn = Instance.new("TextButton")
 CloseBtn.Name = "CloseBtn"
 CloseBtn.Text = "✕"
 CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.TextSize = 14
+CloseBtn.TextSize = 13
 CloseBtn.TextColor3 = Color3.fromRGB(150, 150, 165)
-CloseBtn.Position = UDim2.new(1, -30, 0, 10)
-CloseBtn.Size = UDim2.new(0, 18, 0, 18)
+CloseBtn.Position = UDim2.new(1, -30, 0, 11)
+CloseBtn.Size = UDim2.new(0, 16, 0, 16)
 CloseBtn.BackgroundTransparency = 1
 CloseBtn.Parent = Header
 
@@ -149,25 +144,25 @@ local Divider = Instance.new("Frame")
 Divider.Name = "Divider"
 Divider.Size = UDim2.new(1, -28, 0, 1)
 Divider.Position = UDim2.new(0, 14, 1, -1)
-Divider.BackgroundColor3 = Color3.fromRGB(32, 32, 40)
+Divider.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
 Divider.BorderSizePixel = 0
 Divider.Parent = Header
 
 -- Content Container
 local Content = Instance.new("Frame")
 Content.Name = "Content"
-Content.Size = UDim2.new(1, -28, 0, 180)
-Content.Position = UDim2.new(0, 14, 0, 42)
+Content.Size = UDim2.new(1, -28, 0, 165)
+Content.Position = UDim2.new(0, 14, 0, 46)
 Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
 local ContentLayout = Instance.new("UIListLayout")
 ContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
-ContentLayout.Padding = UDim.new(0, 4)
+ContentLayout.Padding = UDim.new(0, 5)
 ContentLayout.Parent = Content
 
 -- =================================================================
--- UI HELPERS (Exact Screenshot Toggles & Speed Row)
+-- UI COMPONENTS (Exact Screenshot Design)
 -- =================================================================
 
 -- Standard Feature Toggle Row
@@ -176,7 +171,7 @@ local function createToggleRow(name, text, defaultState, layoutOrder, onToggle)
 
     local row = Instance.new("Frame")
     row.Name = name
-    row.Size = UDim2.new(1, 0, 0, 28)
+    row.Size = UDim2.new(1, 0, 0, 26)
     row.BackgroundTransparency = 1
     row.LayoutOrder = layoutOrder
     row.Parent = Content
@@ -187,14 +182,14 @@ local function createToggleRow(name, text, defaultState, layoutOrder, onToggle)
     label.TextSize = 12
     label.TextColor3 = Color3.fromRGB(240, 240, 245)
     label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Size = UDim2.new(1, -35, 1, 0)
+    label.Size = UDim2.new(1, -30, 1, 0)
     label.BackgroundTransparency = 1
     label.Parent = row
 
     local box = Instance.new("TextButton")
     box.Size = UDim2.new(0, 20, 0, 20)
     box.Position = UDim2.new(1, -20, 0.5, -10)
-    box.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+    box.BackgroundColor3 = Color3.fromRGB(22, 22, 28)
     box.BorderSizePixel = 0
     box.Text = ""
     box.AutoButtonColor = false
@@ -221,7 +216,7 @@ local function createToggleRow(name, text, defaultState, layoutOrder, onToggle)
     checkCorner.CornerRadius = UDim.new(0, 3)
     checkCorner.Parent = check
 
-    local function updateToggle()
+    local function updateState()
         state = not state
         check.Visible = state
         if onToggle then
@@ -229,15 +224,14 @@ local function createToggleRow(name, text, defaultState, layoutOrder, onToggle)
         end
     end
 
-    box.MouseButton1Click:Connect(updateToggle)
+    box.MouseButton1Click:Connect(updateState)
 
-    -- Make entire row clickable
-    local rowClick = Instance.new("TextButton")
-    rowClick.Size = UDim2.new(1, -30, 1, 0)
-    rowClick.BackgroundTransparency = 1
-    rowClick.Text = ""
-    rowClick.Parent = row
-    rowClick.MouseButton1Click:Connect(updateToggle)
+    local rowBtn = Instance.new("TextButton")
+    rowBtn.Size = UDim2.new(1, -25, 1, 0)
+    rowBtn.BackgroundTransparency = 1
+    rowBtn.Text = ""
+    rowBtn.Parent = row
+    rowBtn.MouseButton1Click:Connect(updateState)
 
     return row
 end
@@ -249,7 +243,7 @@ local function createWalkSpeedRow(layoutOrder)
 
     local row = Instance.new("Frame")
     row.Name = "WalkSpeedRow"
-    row.Size = UDim2.new(1, 0, 0, 28)
+    row.Size = UDim2.new(1, 0, 0, 26)
     row.BackgroundTransparency = 1
     row.LayoutOrder = layoutOrder
     row.Parent = Content
@@ -267,8 +261,8 @@ local function createWalkSpeedRow(layoutOrder)
     -- WalkSpeed Toggle Checkbox
     local box = Instance.new("TextButton")
     box.Size = UDim2.new(0, 20, 0, 20)
-    box.Position = UDim2.new(0, 95, 0.5, -10)
-    box.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+    box.Position = UDim2.new(0, 100, 0.5, -10)
+    box.BackgroundColor3 = Color3.fromRGB(22, 22, 28)
     box.BorderSizePixel = 0
     box.Text = ""
     box.AutoButtonColor = false
@@ -310,9 +304,9 @@ local function createWalkSpeedRow(layoutOrder)
 
     -- Stepper Pill Frame
     local pill = Instance.new("Frame")
-    pill.Size = UDim2.new(0, 110, 0, 24)
-    pill.Position = UDim2.new(1, -110, 0.5, -12)
-    pill.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+    pill.Size = UDim2.new(0, 105, 0, 22)
+    pill.Position = UDim2.new(1, -105, 0.5, -11)
+    pill.BackgroundColor3 = Color3.fromRGB(22, 22, 28)
     pill.BorderSizePixel = 0
     pill.Parent = row
 
@@ -369,7 +363,7 @@ local function createWalkSpeedRow(layoutOrder)
 end
 
 -- =================================================================
--- REGISTER FEATURES TO UI
+-- REGISTER ROWS
 -- =================================================================
 
 -- 1. Auto Farm Level
@@ -387,7 +381,7 @@ createToggleRow("FruitESPRow", "Fruit ESP", _G.FruitESPActive, 3, function(state
     _G.FruitESPActive = state
 end)
 
--- 4. WalkSpeed (With Toggle & Stepper Pill)
+-- 4. WalkSpeed (With Middle Checkbox & Right Stepper Pill)
 createWalkSpeedRow(4)
 
 -- 5. Infinite Jump
@@ -430,10 +424,10 @@ CreatorTitle.BackgroundTransparency = 1
 CreatorTitle.Parent = Footer
 
 -- =================================================================
--- GAMEPLAY ENGINE & FEATURE IMPLEMENTATIONS (100% OPERATIONAL)
+-- GAMEPLAY ENGINE & FEATURE IMPLEMENTATIONS
 -- =================================================================
 
--- 1. WalkSpeed Engine (Active Check + CFrame & Humanoid Boost)
+-- 1. WalkSpeed Engine (Active checkbox enabled + Humanoid & CFrame Boost)
 RunService.RenderStepped:Connect(function(deltaTime)
     pcall(function()
         if _G.WalkSpeedActive and _G.WalkSpeedValue and _G.WalkSpeedValue > 16 then
@@ -453,7 +447,7 @@ RunService.RenderStepped:Connect(function(deltaTime)
     end)
 end)
 
--- 2. Infinite Jump (PC Keyboard + Mobile Touch)
+-- 2. Infinite Jump
 UserInputService.JumpRequest:Connect(function()
     if _G.InfJumpActive then
         pcall(function()
@@ -500,7 +494,7 @@ local function equipCombatTool()
     end)
 end
 
--- Helper: Position & Velocity lock for auto-farm
+-- Helper: Safe Position Lock
 local function setFarmPosition(targetCFrame)
     pcall(function()
         local character = LocalPlayer.Character
@@ -530,7 +524,7 @@ local function removeFarmVelocity()
     end)
 end
 
--- Quest Database for Blox Fruits Leveling
+-- Quest Database
 local QuestList = {
     { Min = 1, Max = 9, Quest = "BanditQuest1", ID = 1, Mob = "Bandit" },
     { Min = 10, Max = 14, Quest = "JungleQuest", ID = 1, Mob = "Monkey" },
@@ -592,7 +586,7 @@ local function getQuestDataForLevel(lvl)
     return QuestList[#QuestList]
 end
 
--- 4. Complete Auto Farm Level Engine
+-- 4. Complete Auto Farm Level Loop
 task.spawn(function()
     while true do
         task.wait(0.1)
@@ -611,7 +605,6 @@ task.spawn(function()
                 local myLevel = getPlayerLevel()
                 local questInfo = getQuestDataForLevel(myLevel)
 
-                -- Check if we need to take a quest
                 if not hasActiveQuest() then
                     local remotes = ReplicatedStorage:FindFirstChild("Remotes")
                     local commF = remotes and remotes:FindFirstChild("CommF_")
@@ -621,7 +614,6 @@ task.spawn(function()
                     end
                 end
 
-                -- Find alive enemy matching mob name
                 local targetMob = nil
                 local enemiesFolder = workspace:FindFirstChild("Enemies")
 
@@ -654,12 +646,10 @@ task.spawn(function()
                 if targetMob and targetMob:FindFirstChild("HumanoidRootPart") then
                     equipCombatTool()
 
-                    -- Attack Position: 8 studs above target
                     local mobCFrame = targetMob.HumanoidRootPart.CFrame
                     local safeAttackCFrame = mobCFrame * CFrame.new(0, 8, 0) * CFrame.Angles(math.rad(-90), 0, 0)
                     setFarmPosition(safeAttackCFrame)
 
-                    -- Attack triggers
                     local tool = character:FindFirstChildOfClass("Tool")
                     if tool then
                         tool:Activate()
