@@ -23,7 +23,6 @@ _G.AutoStealNearestEgg = false
 _G.AutoHatchEggs = false
 _G.AutoRebirth = false
 _G.RemoveBosses = false
-_G.AntiEggDrop = false
 _G.RareEggESP = false
 _G.AllEggESP = false
 _G.BossESP = false
@@ -156,7 +155,6 @@ CloseBtn.MouseButton1Click:Connect(function()
     _G.AutoHatchEggs = false
     _G.AutoRebirth = false
     _G.RemoveBosses = false
-    _G.AntiEggDrop = false
     _G.RareEggESP = false
     _G.AllEggESP = false
     _G.BossESP = false
@@ -855,33 +853,28 @@ createToggleRow("RemoveBossRow", "Remove Bosses (Godmode)", _G.RemoveBosses, 8, 
     _G.RemoveBosses = state
 end)
 
--- 9. Anti-Egg Drop
-createToggleRow("AntiDropRow", "Anti-Egg Drop", _G.AntiEggDrop, 9, function(state)
-    _G.AntiEggDrop = state
-end)
-
--- 10. Rare Egg ESP
-createToggleRow("RareESPRow", "Rare Egg ESP", _G.RareEggESP, 10, function(state)
+-- 9. Rare Egg ESP
+createToggleRow("RareESPRow", "Rare Egg ESP", _G.RareEggESP, 9, function(state)
     _G.RareEggESP = state
 end)
 
--- 11. All Egg ESP
-createToggleRow("AllEggESPRow", "All Egg ESP", _G.AllEggESP, 11, function(state)
+-- 10. All Egg ESP
+createToggleRow("AllEggESPRow", "All Egg ESP", _G.AllEggESP, 10, function(state)
     _G.AllEggESP = state
 end)
 
--- 12. Boss ESP
-createToggleRow("BossESPRow", "Boss ESP", _G.BossESP, 12, function(state)
+-- 11. Boss ESP
+createToggleRow("BossESPRow", "Boss ESP", _G.BossESP, 11, function(state)
     _G.BossESP = state
 end)
 
--- 13. Player ESP
-createToggleRow("PlayerESPRow", "Player ESP", _G.PlayerESP, 13, function(state)
+-- 12. Player ESP
+createToggleRow("PlayerESPRow", "Player ESP", _G.PlayerESP, 12, function(state)
     _G.PlayerESP = state
 end)
 
--- 14. WalkSpeed Boost
-createStepperRow("WalkSpeedRow", "WalkSpeed", "WalkSpeedActive", "WalkSpeedValue", 16, 300, 10, 60, 14, function(active, val)
+-- 13. WalkSpeed Boost
+createStepperRow("WalkSpeedRow", "WalkSpeed", "WalkSpeedActive", "WalkSpeedValue", 16, 300, 10, 60, 13, function(active, val)
     if not active then
         pcall(function()
             if isAlive() then
@@ -891,8 +884,8 @@ createStepperRow("WalkSpeedRow", "WalkSpeed", "WalkSpeedActive", "WalkSpeedValue
     end
 end)
 
--- 15. Fly Mode
-createStepperRow("FlyModeRow", "Fly Mode", "FlyActive", "FlySpeedValue", 20, 250, 10, 70, 15, function(active, val)
+-- 14. Fly Mode
+createStepperRow("FlyModeRow", "Fly Mode", "FlyActive", "FlySpeedValue", 20, 250, 10, 70, 14, function(active, val)
     if not active then
         pcall(function()
             if isAlive() then
@@ -904,13 +897,13 @@ createStepperRow("FlyModeRow", "Fly Mode", "FlyActive", "FlySpeedValue", 20, 250
     end
 end)
 
--- 16. Noclip Mode
-createToggleRow("NoclipRow", "Noclip Mode", _G.NoclipActive, 16, function(state)
+-- 15. Noclip Mode
+createToggleRow("NoclipRow", "Noclip Mode", _G.NoclipActive, 15, function(state)
     _G.NoclipActive = state
 end)
 
--- 17. Infinite Jump
-createToggleRow("InfJumpRow", "Infinite Jump", _G.InfJumpActive, 17, function(state)
+-- 16. Infinite Jump
+createToggleRow("InfJumpRow", "Infinite Jump", _G.InfJumpActive, 16, function(state)
     _G.InfJumpActive = state
 end)
 
@@ -1008,53 +1001,102 @@ task.spawn(function()
     end
 end)
 
--- 4. ULTRA ADVANCED AUTO REBIRTH ENGINE (DEEP SCANNER & ALL METHODS)
+-- 4. ULTRA ADVANCED AUTO REBIRTH ENGINE (DEEP SCANNER, VIRTUAL INPUT & ALL METHODS)
 task.spawn(function()
     while true do
-        task.wait(0.8)
+        task.wait(0.5)
         if _G.AutoRebirth and isAlive() then
             pcall(function()
                 -- Method 1: ReplicatedStorage Deep Remote Sweeper
                 for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
                     if rem:IsA("RemoteEvent") or rem:IsA("RemoteFunction") then
                         local rName = string.lower(rem.Name)
-                        if string.find(rName, "rebirth") or string.find(rName, "prestige") or string.find(rName, "ascend") or string.find(rName, "evolve") or string.find(rName, "dorebirth") or string.find(rName, "buyrebirth") or string.find(rName, "rebirthevent") or string.find(rName, "requestrebirth") then
+                        local pName = rem.Parent and string.lower(rem.Parent.Name) or ""
+                        if string.find(rName, "rebirth") or string.find(rName, "prestige") or string.find(rName, "ascend") 
+                           or string.find(rName, "evolve") or string.find(rName, "dorebirth") or string.find(rName, "buyrebirth") 
+                           or string.find(rName, "rebirthevent") or string.find(rName, "requestrebirth") or string.find(rName, "claimrebirth")
+                           or string.find(pName, "rebirth") or string.find(pName, "prestige") then
+                            
                             if rem:IsA("RemoteEvent") then
                                 pcall(function() rem:FireServer() end)
                                 pcall(function() rem:FireServer(1) end)
                                 pcall(function() rem:FireServer(true) end)
                                 pcall(function() rem:FireServer("Rebirth") end)
+                                pcall(function() rem:FireServer("Rebirth", 1) end)
                             else
                                 pcall(function() rem:InvokeServer() end)
                                 pcall(function() rem:InvokeServer(1) end)
                                 pcall(function() rem:InvokeServer(true) end)
+                                pcall(function() rem:InvokeServer("Rebirth") end)
                             end
                         end
                     end
                 end
 
-                -- Method 2: PlayerGui UI Buttons & Confirmation Trigger
+                -- Method 2: Knit / Package Service Remotes
+                pcall(function()
+                    local knit = ReplicatedStorage:FindFirstChild("Packages") or ReplicatedStorage:FindFirstChild("Knit")
+                    if knit then
+                        for _, child in ipairs(knit:GetDescendants()) do
+                            if (child:IsA("RemoteEvent") or child:IsA("RemoteFunction")) and string.find(string.lower(child.Name), "rebirth") then
+                                if child:IsA("RemoteEvent") then
+                                    pcall(function() child:FireServer() end)
+                                    pcall(function() child:FireServer(1) end)
+                                else
+                                    pcall(function() child:InvokeServer() end)
+                                    pcall(function() child:InvokeServer(1) end)
+                                end
+                            end
+                        end
+                    end
+                end)
+
+                -- Method 3: PlayerGui UI Buttons, Dialogs & Hardware Click Emulation
                 if LocalPlayer:FindFirstChild("PlayerGui") then
                     for _, btn in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
                         if (btn:IsA("TextButton") or btn:IsA("ImageButton")) and btn.Visible then
                             local bText = string.lower(btn.Name .. " " .. (btn:IsA("TextButton") and btn.Text or ""))
-                            if string.find(bText, "rebirth") or string.find(bText, "prestige") or string.find(bText, "ascend") or string.find(bText, "buy rebirth") then
+                            local parentText = btn.Parent and string.lower(btn.Parent.Name) or ""
+                            
+                            local isRebirthButton = string.find(bText, "rebirth") or string.find(bText, "prestige") 
+                                or string.find(bText, "ascend") or string.find(bText, "buy rebirth")
+                                or ((string.find(parentText, "rebirth") or string.find(parentText, "prestige") or string.find(parentText, "dialog") or string.find(parentText, "confirm")) 
+                                    and (string.find(bText, "yes") or string.find(bText, "confirm") or string.find(bText, "buy") or string.find(bText, "ok") or string.find(bText, "rebirth") or bText == ""))
+
+                            if isRebirthButton then
                                 pcall(function()
-                                    for _, conn in ipairs(getconnections(btn.MouseButton1Click)) do conn:Fire() end
-                                    for _, conn in ipairs(getconnections(btn.Activated)) do conn:Fire() end
+                                    if getconnections then
+                                        for _, conn in ipairs(getconnections(btn.MouseButton1Click)) do conn:Fire() end
+                                        for _, conn in ipairs(getconnections(btn.MouseButton1Down)) do conn:Fire() end
+                                        for _, conn in ipairs(getconnections(btn.Activated)) do conn:Fire() end
+                                    end
+                                    if firesignal then
+                                        firesignal(btn.MouseButton1Click)
+                                        firesignal(btn.Activated)
+                                    end
+                                end)
+
+                                pcall(function()
+                                    if VirtualInputManager and btn.AbsolutePosition and btn.AbsoluteSize then
+                                        local posX = btn.AbsolutePosition.X + btn.AbsoluteSize.X / 2
+                                        local posY = btn.AbsolutePosition.Y + btn.AbsoluteSize.Y / 2
+                                        VirtualInputManager:SendMouseButtonEvent(posX, posY, 0, true, game, 1)
+                                        task.wait(0.02)
+                                        VirtualInputManager:SendMouseButtonEvent(posX, posY, 0, false, game, 1)
+                                    end
                                 end)
                             end
                         end
                     end
                 end
 
-                -- Method 3: Workspace Rebirth Pads & Prompts
+                -- Method 4: Workspace Rebirth Pads & Prompts
                 local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
                 if hrp then
                     for _, obj in ipairs(Workspace:GetDescendants()) do
                         local nameLower = string.lower(obj.Name)
                         if string.find(nameLower, "rebirth") or string.find(nameLower, "prestige") then
-                            if obj:IsA("BasePart") and (obj.Position - hrp.Position).Magnitude < 30 then
+                            if obj:IsA("BasePart") and (obj.Position - hrp.Position).Magnitude < 40 then
                                 InstantTouch(hrp, obj)
                             end
                             if obj:IsA("ProximityPrompt") then
@@ -1090,26 +1132,6 @@ RunService.Stepped:Connect(function()
             end
         end)
     end
-end)
-
--- 6. Anti-Egg Drop Protection
-task.spawn(function()
-    local function applyAntiDrop(char)
-        if not char then return end
-        local hum = char:WaitForChild("Humanoid", 5)
-        if hum then
-            hum.StateChanged:Connect(function(oldState, newState)
-                if _G.AntiEggDrop then
-                    if newState == Enum.HumanoidStateType.Ragdoll or newState == Enum.HumanoidStateType.FallingDown or newState == Enum.HumanoidStateType.PlatformStanding then
-                        hum:ChangeState(Enum.HumanoidStateType.GettingUp)
-                    end
-                end
-            end)
-        end
-    end
-
-    if LocalPlayer.Character then applyAntiDrop(LocalPlayer.Character) end
-    LocalPlayer.CharacterAdded:Connect(applyAntiDrop)
 end)
 
 -- 7. Movement Engines (WalkSpeed, Fly, Noclip, Infinite Jump)
