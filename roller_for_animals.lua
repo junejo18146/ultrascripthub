@@ -1,6 +1,6 @@
 --[[
     ========================================================================
-    JUNEJO ULTRA SCRIPT HUB - ROLLER FOR ANIMALS
+    JUNEJO ULTRA SCRIPT HUB - ROLLER FOR ANIMALS (V2.0 SUPERCHARGED)
     ========================================================================
     Author: Made by Junejo (junejo18146)
     Target Game: Roller for Animals 🛼🐾 (Roblox Place: 88910662712492)
@@ -9,13 +9,13 @@
     Universal Mobile (Delta / Codex / Fluxus / Arceus X) & PC Compatible
     UI Standard: Official Ultra Script Hub Classic Matte Dark (1:1 Exact Screenshot Standard)
     
-    Features Included:
-        1. Auto Collect Rare Animals (Autonomous Rare-First Roll, Grab & Deposit Engine)
-        2. Auto Sell Animals (5-Layer Auto Sell & Pen Deposit Engine)
-        3. Teleport To Rarest Animal (Full-Width Action Button)
-        4. Select Base Position (Full-Width Action Button)
-        5. Teleport To Base (Full-Width Action Button)
-        6. Auto Rebirth (Automatic Multi-Layer Prestige & Rebirth Engine)
+    Upgraded Features:
+        1. Auto Collect Rare Animals (Ultra Rare-First Loop: TP to Rare -> 0s Grab/Roll -> Return to Base -> Instant Deposit)
+        2. Auto Sell Animals (5-Layer Base Pen Deposit & Sell Sweeper)
+        3. Teleport To Rarest Animal (1-Click Action: Scans map for furthest & highest tier animal/egg -> Instant Direct TP)
+        4. Set Base Position (1-Click Action: Anchors custom base location)
+        5. Teleport To Base (1-Click Action: Instant Safe Base Return)
+        6. Smart Auto Rebirth (Smart Requirement Inspector: Reads Cash/Animals/UI requirements, displays missing requirement toasts, auto-rebirths on goal)
         7. Auto Hatch Pets (Automatic Egg Stands, Incubators & Remote Pet Opener)
         8. Rare Animals ESP (Neon Magenta Highlight + Live Billboard Distance Tag)
         9. Player ESP (Neon Red Player Highlight + Live Distance Tag)
@@ -110,16 +110,18 @@ local CustomSpeedValue = 50
 local FlySpeed = 60
 local ESPObjects = {}
 local PlayerESPObjects = {}
+local LastRebirthNotifyTime = 0
 
 -- =================================================================
 -- NOTIFICATION SYSTEM
 -- =================================================================
-local function ShowNotification(title, text)
+local function ShowNotification(title, text, duration)
+    duration = duration or 3
     pcall(function()
         StarterGui:SetCore("SendNotification", {
             Title = title or "Ultra Script Hub",
             Text = text or "",
-            Duration = 2.5
+            Duration = duration
         })
     end)
 end
@@ -167,6 +169,7 @@ local function FindMyBaseCFrame()
     local myName = LocalPlayer.Name
     local myDisplayName = LocalPlayer.DisplayName
     
+    -- 1. Scan Tycoons / Plots / Bases / Pens / Barns
     local baseContainers = {
         Workspace:FindFirstChild("Bases"),
         Workspace:FindFirstChild("Plots"),
@@ -176,6 +179,7 @@ local function FindMyBaseCFrame()
         Workspace:FindFirstChild("Tycoons"),
         Workspace:FindFirstChild("Map") and Workspace.Map:FindFirstChild("Bases"),
         Workspace:FindFirstChild("Map") and Workspace.Map:FindFirstChild("Plots"),
+        Workspace:FindFirstChild("Map") and Workspace.Map:FindFirstChild("Pens"),
         Workspace
     }
     
@@ -193,7 +197,7 @@ local function FindMyBaseCFrame()
                 end)
                 
                 if isOwner then
-                    local primary = obj.PrimaryPart or obj:FindFirstChild("Spawn") or obj:FindFirstChild("BasePlate") or obj:FindFirstChild("Floor") or obj:FindFirstChild("Pen") or obj:FindFirstChildWhichIsA("BasePart")
+                    local primary = obj.PrimaryPart or obj:FindFirstChild("Spawn") or obj:FindFirstChild("BasePlate") or obj:FindFirstChild("Floor") or obj:FindFirstChild("Pen") or obj:FindFirstChild("Deposit") or obj:FindFirstChildWhichIsA("BasePart")
                     if primary then
                         return primary.CFrame + Vector3.new(0, 4, 0)
                     end
@@ -202,6 +206,7 @@ local function FindMyBaseCFrame()
         end
     end
     
+    -- 2. Fallback to SpawnLocation
     for _, desc in ipairs(Workspace:GetDescendants()) do
         if desc:IsA("SpawnLocation") then
             return desc.CFrame + Vector3.new(0, 4, 0)
@@ -212,76 +217,115 @@ local function FindMyBaseCFrame()
 end
 
 -- =================================================================
--- ANIMAL SCANNER & RARITY SCORER
+-- SUPERCHARGED ANIMAL / EGG SCANNER & RARITY SCORER
 -- =================================================================
-local function CalculateRarityScore(obj)
-    local score = 1
-    local name = obj.Name:lower()
+local function CalculateRarityScore(obj, part)
+    local score = 10
+    local name = string.lower(obj.Name)
+    local parentName = obj.Parent and string.lower(obj.Parent.Name) or ""
     
-    if name:find("secret") or name:find("mythic") or name:find("divine") or name:find("celestial") or name:find("god") then
-        score = 1000
-    elseif name:find("legendary") or name:find("omega") or name:find("diamond") then
-        score = 500
-    elseif name:find("epic") or name:find("golden") or name:find("giant") then
-        score = 250
-    elseif name:find("rare") or name:find("rainbow") then
-        score = 100
-    elseif name:find("uncommon") or name:find("silver") then
-        score = 50
+    -- 1. Keyword Rarity Weighting
+    if name:find("secret") or name:find("mythic") or name:find("god") or name:find("celestial") or name:find("divine") then
+        score = 50000
+    elseif name:find("legendary") or name:find("omega") or name:find("diamond") or name:find("shadow") then
+        score = 25000
+    elseif name:find("epic") or name:find("golden") or name:find("giant") or name:find("galaxy") then
+        score = 10000
+    elseif name:find("rare") or name:find("rainbow") or name:find("magma") or name:find("fire") then
+        score = 5000
+    elseif name:find("uncommon") or name:find("silver") or name:find("frost") then
+        score = 2000
     end
     
+    -- 2. Attributes & Values Weighting
     pcall(function()
         if obj:GetAttribute("Rarity") then
-            local r = tostring(obj:GetAttribute("Rarity")):lower()
-            if r:find("secret") or r:find("mythic") then score = math.max(score, 1000)
-            elseif r:find("legendary") then score = math.max(score, 500)
-            elseif r:find("epic") then score = math.max(score, 250)
-            elseif r:find("rare") then score = math.max(score, 100) end
+            local r = string.lower(tostring(obj:GetAttribute("Rarity")))
+            if r:find("secret") or r:find("mythic") then score = math.max(score, 50000)
+            elseif r:find("legendary") then score = math.max(score, 25000)
+            elseif r:find("epic") then score = math.max(score, 10000)
+            elseif r:find("rare") then score = math.max(score, 5000) end
         end
         if obj:GetAttribute("Tier") then
-            score = score + (tonumber(obj:GetAttribute("Tier")) or 0) * 50
+            score = score + (tonumber(obj:GetAttribute("Tier")) or 0) * 1000
+        end
+        if obj:GetAttribute("Level") then
+            score = score + (tonumber(obj:GetAttribute("Level")) or 0) * 500
+        end
+        if obj:GetAttribute("Value") or obj:GetAttribute("Price") then
+            score = score + (tonumber(obj:GetAttribute("Value") or obj:GetAttribute("Price")) or 0)
         end
     end)
+    
+    -- 3. BillboardGui Text Inspector (Extracts Rarity or Value Tags)
+    pcall(function()
+        for _, desc in ipairs(obj:GetDescendants()) do
+            if desc:IsA("TextLabel") then
+                local txt = string.lower(desc.Text)
+                if txt:find("secret") or txt:find("mythic") then score = math.max(score, 50000)
+                elseif txt:find("legendary") then score = math.max(score, 25000)
+                elseif txt:find("epic") then score = math.max(score, 10000)
+                elseif txt:find("rare") then score = math.max(score, 5000) end
+            end
+        end
+    end)
+    
+    -- 4. Distance / Elevation Bonus (Furthest animals on track / highest zones are highest tier)
+    if part then
+        local baseCF = FindMyBaseCFrame()
+        local dist = (part.Position - baseCF.Position).Magnitude
+        score = score + (dist * 1.5) -- Further items get naturally higher priority
+    end
     
     return score
 end
 
 local function GetSpawnedAnimals()
     local list = {}
-    local animalContainers = {
-        Workspace:FindFirstChild("Animals"),
-        Workspace:FindFirstChild("SpawnedAnimals"),
-        Workspace:FindFirstChild("Map") and Workspace.Map:FindFirstChild("Animals"),
-        Workspace:FindFirstChild("AnimalFolder"),
-        Workspace:FindFirstChild("Spawned"),
-        Workspace:FindFirstChild("Debris"),
-        Workspace
-    }
+    local myChar = LocalPlayer.Character
+    local baseCF = FindMyBaseCFrame()
     
     local scanned = {}
-    for _, container in ipairs(animalContainers) do
-        if container then
-            for _, item in ipairs(container:GetChildren()) do
-                if not scanned[item] and item ~= LocalPlayer.Character then
-                    scanned[item] = true
-                    local isAnimal = false
-                    local name = item.Name:lower()
-                    
-                    if item:GetAttribute("Animal") or item:GetAttribute("Rarity") or item:GetAttribute("Tier") then
-                        isAnimal = true
-                    elseif name:find("animal") or name:find("cat") or name:find("dog") or name:find("dragon") or name:find("lion") or name:find("tiger") or name:find("elephant") or name:find("bear") or name:find("penguin") or name:find("monkey") or name:find("dino") or name:find("pet") then
-                        isAnimal = true
-                    elseif item:FindFirstChildWhichIsA("ProximityPrompt") and not item:IsA("Player") then
-                        isAnimal = true
+    
+    -- Search everywhere in Workspace
+    for _, item in ipairs(Workspace:GetDescendants()) do
+        if item:IsA("Model") or item:IsA("BasePart") then
+            if not scanned[item] and not item:IsDescendantOf(myChar) then
+                local isCandidate = false
+                local name = string.lower(item.Name)
+                local parentName = item.Parent and string.lower(item.Parent.Name) or ""
+                
+                -- Check if inside Base / Pen (Ignore already deposited animals)
+                local isAtMyBase = false
+                pcall(function()
+                    local pos = item:IsA("BasePart") and item.Position or (item.PrimaryPart and item.PrimaryPart.Position)
+                    if pos and (pos - baseCF.Position).Magnitude < 25 then
+                        isAtMyBase = true
+                    end
+                end)
+                
+                if not isAtMyBase then
+                    -- Identification heuristic
+                    if item:GetAttribute("Animal") or item:GetAttribute("Rarity") or item:GetAttribute("Tier") or item:GetAttribute("Egg") then
+                        isCandidate = true
+                    elseif name:find("animal") or name:find("egg") or name:find("pet") or name:find("roller") or name:find("target") or
+                           name:find("cat") or name:find("dog") or name:find("dragon") or name:find("bear") or name:find("lion") or
+                           name:find("tiger") or name:find("penguin") or name:find("dino") or name:find("monkey") or name:find("duck") or
+                           parentName:find("animal") or parentName:find("egg") or parentName:find("spawn") or parentName:find("debris") then
+                        isCandidate = true
+                    elseif item:FindFirstChildWhichIsA("ProximityPrompt") and not item:FindFirstChildOfClass("Humanoid") then
+                        isCandidate = true
                     end
                     
-                    if isAnimal then
+                    if isCandidate then
+                        scanned[item] = true
                         local part = item:IsA("BasePart") and item or (item:IsA("Model") and (item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")))
-                        if part then
+                        if part and part.Transparency < 0.95 then
+                            local rarity = CalculateRarityScore(item, part)
                             table.insert(list, {
                                 Object = item,
                                 Part = part,
-                                Rarity = CalculateRarityScore(item),
+                                Rarity = rarity,
                                 Name = item.Name
                             })
                         end
@@ -299,7 +343,7 @@ local function GetSpawnedAnimals()
 end
 
 -- =================================================================
--- FEATURE 1 & 2: AUTO COLLECT RARE ANIMALS & SELL ANIMALS
+-- FEATURE 1: AUTO COLLECT RARE ANIMALS (PERFECT RECTIFIED PIPELINE)
 -- =================================================================
 task.spawn(function()
     while true do
@@ -307,13 +351,17 @@ task.spawn(function()
             pcall(function()
                 local animals = GetSpawnedAnimals()
                 if #animals > 0 then
-                    local target = animals[1]
+                    local target = animals[1] -- The absolute rarest / furthest animal
                     if target and target.Part and target.Part.Parent then
                         local root = GetRoot()
-                        if root then
-                            SafeTeleport(target.Part.CFrame + Vector3.new(0, 2, 0))
-                            task.wait(0.15)
+                        local char = LocalPlayer.Character
+                        
+                        if root and char then
+                            -- Step 1: Instant Teleport to Rare Animal / Egg
+                            SafeTeleport(target.Part.CFrame + Vector3.new(0, 1.5, 0))
+                            task.wait(0.12)
                             
+                            -- Step 2: 0s Proximity Prompt Fire
                             for _, prompt in ipairs(target.Object:GetDescendants()) do
                                 if prompt:IsA("ProximityPrompt") then
                                     prompt.HoldDuration = 0
@@ -321,45 +369,67 @@ task.spawn(function()
                                 end
                             end
                             
+                            -- Step 3: Physical Touch / Roll Simulation
                             if firetouchinterest and target.Part and root then
                                 firetouchinterest(root, target.Part, 0)
-                                task.wait(0.05)
+                                task.wait(0.04)
                                 firetouchinterest(root, target.Part, 1)
                             end
                             
+                            -- Step 4: Equip & Activate Tool (Roller / Carpet)
+                            local tool = char:FindFirstChildOfClass("Tool")
+                            if not tool and LocalPlayer:FindFirstChild("Backpack") then
+                                for _, t in ipairs(LocalPlayer.Backpack:GetChildren()) do
+                                    if t:IsA("Tool") then
+                                        t.Parent = char
+                                        tool = t
+                                        break
+                                    end
+                                end
+                            end
+                            if tool then
+                                tool:Activate()
+                            end
+                            
+                            -- Step 5: Network Grab Remotes Sweep
                             for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
                                 if rem:IsA("RemoteEvent") or rem:IsA("UnreliableRemoteEvent") then
-                                    local rname = rem.Name:lower()
-                                    if rname:find("collect") or rname:find("grab") or rname:find("roll") or rname:find("pickup") then
+                                    local rname = string.lower(rem.Name)
+                                    if rname:find("collect") or rname:find("grab") or rname:find("roll") or rname:find("pickup") or rname:find("steal") or rname:find("interact") then
                                         pcall(function() rem:FireServer(target.Object) end)
                                         pcall(function() rem:FireServer(target.Part) end)
+                                        pcall(function() rem:FireServer(target.Name) end)
+                                        pcall(function() rem:FireServer() end)
                                     end
                                 end
                             end
                             
                             task.wait(0.2)
                             
-                            if Toggles.AutoSell then
-                                local baseCFrame = FindMyBaseCFrame()
-                                SafeTeleport(baseCFrame)
-                                task.wait(0.2)
-                                
-                                for _, desc in ipairs(Workspace:GetDescendants()) do
-                                    if desc:IsA("ProximityPrompt") and (desc.ObjectText:lower():find("sell") or desc.ActionText:lower():find("sell") or desc.ActionText:lower():find("deposit")) then
+                            -- Step 6: DIRECT RETURN TO BASE & DEPOSIT
+                            local baseCF = FindMyBaseCFrame()
+                            SafeTeleport(baseCF)
+                            task.wait(0.15)
+                            
+                            -- Step 7: Trigger Base Sell / Deposit Pads & Prompts
+                            for _, desc in ipairs(Workspace:GetDescendants()) do
+                                if desc:IsA("ProximityPrompt") then
+                                    local txt = string.lower(desc.ObjectText .. " " .. desc.ActionText .. " " .. desc.Parent.Name)
+                                    if txt:find("sell") or txt:find("deposit") or txt:find("pen") or txt:find("drop") or txt:find("claim") then
                                         desc.HoldDuration = 0
                                         fireproximityprompt(desc)
                                     end
                                 end
-                                
-                                for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
-                                    if rem:IsA("RemoteEvent") or rem:IsA("RemoteFunction") then
-                                        local rname = rem.Name:lower()
-                                        if rname:find("sell") or rname:find("deposit") or rname:find("claimcash") or rname:find("cashout") then
-                                            pcall(function()
-                                                if rem:IsA("RemoteEvent") then rem:FireServer()
-                                                else rem:InvokeServer() end
-                                            end)
-                                        end
+                            end
+                            
+                            for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
+                                if rem:IsA("RemoteEvent") or rem:IsA("RemoteFunction") then
+                                    local rname = string.lower(rem.Name)
+                                    if rname:find("sell") or rname:find("deposit") or rname:find("claimcash") or rname:find("drop") or rname:find("cashout") then
+                                        pcall(function()
+                                            if rem:IsA("RemoteEvent") then rem:FireServer()
+                                            else rem:InvokeServer() end
+                                        end)
                                     end
                                 end
                             end
@@ -368,7 +438,7 @@ task.spawn(function()
                 end
             end)
         end
-        task.wait(0.3)
+        task.wait(0.25)
     end
 end)
 
@@ -377,15 +447,15 @@ task.spawn(function()
     while true do
         if Toggles.AutoSell and not Toggles.AutoCollectRare and isAlive() then
             pcall(function()
-                local baseCFrame = FindMyBaseCFrame()
+                local baseCF = FindMyBaseCFrame()
                 local root = GetRoot()
-                if root and (root.Position - baseCFrame.Position).Magnitude > 30 then
-                    SafeTeleport(baseCFrame)
+                if root and (root.Position - baseCF.Position).Magnitude > 30 then
+                    SafeTeleport(baseCF)
                 end
                 
                 for _, desc in ipairs(Workspace:GetDescendants()) do
                     if desc:IsA("ProximityPrompt") then
-                        local text = (desc.ObjectText .. " " .. desc.ActionText):lower()
+                        local text = string.lower(desc.ObjectText .. " " .. desc.ActionText)
                         if text:find("sell") or text:find("deposit") or text:find("pen") or text:find("drop") then
                             desc.HoldDuration = 0
                             fireproximityprompt(desc)
@@ -395,7 +465,7 @@ task.spawn(function()
                 
                 for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
                     if rem:IsA("RemoteEvent") or rem:IsA("RemoteFunction") then
-                        local rname = rem.Name:lower()
+                        local rname = string.lower(rem.Name)
                         if rname:find("sell") or rname:find("deposit") or rname:find("claimcash") then
                             pcall(function()
                                 if rem:IsA("RemoteEvent") then rem:FireServer()
@@ -411,36 +481,172 @@ task.spawn(function()
 end)
 
 -- =================================================================
--- FEATURE 6: AUTO REBIRTH
+-- FEATURE 3: TELEPORT TO RAREST ANIMAL (1-CLICK ACTION)
 -- =================================================================
+local function TeleportToRarestAnimal()
+    local animals = GetSpawnedAnimals()
+    if #animals > 0 then
+        local target = animals[1]
+        if target and target.Part then
+            SafeTeleport(target.Part.CFrame + Vector3.new(0, 3, 0))
+            ShowNotification("Teleport Success", "Teleported to: " .. target.Name .. " (Score: " .. math.floor(target.Rarity) .. ")", 3)
+        else
+            ShowNotification("Teleport Error", "Target part not found!", 2)
+        end
+    else
+        ShowNotification("Teleport Failed", "No rare animals / eggs detected currently!", 3)
+    end
+end
+
+-- =================================================================
+-- FEATURE 6: SMART AUTO REBIRTH (REQUIREMENT INSPECTOR & SCREEN TOAST NOTIFIER)
+-- =================================================================
+local function ParseNumericString(str)
+    if not str then return 0 end
+    local clean = str:gsub("[,%$]", ""):lower()
+    local num, suffix = clean:match("([%d%.]+)%s*([kmbt]?)")
+    if num then
+        local val = tonumber(num) or 0
+        if suffix == "k" then val = val * 1e3
+        elseif suffix == "m" then val = val * 1e6
+        elseif suffix == "b" then val = val * 1e9
+        elseif suffix == "t" then val = val * 1e12 end
+        return val
+    end
+    return tonumber(clean:match("%d+")) or 0
+end
+
+local function InspectRebirthRequirement()
+    local myCash = 0
+    local myAnimals = 0
+    local myRebirths = 0
+    
+    -- 1. Read Player Leaderstats
+    if LocalPlayer:FindFirstChild("leaderstats") then
+        for _, stat in ipairs(LocalPlayer.leaderstats:GetChildren()) do
+            local sname = string.lower(stat.Name)
+            if sname:find("cash") or sname:find("money") or sname:find("coin") or sname:find("gold") then
+                myCash = tonumber(stat.Value) or ParseNumericString(tostring(stat.Value))
+            elseif sname:find("animal") or sname:find("pet") or sname:find("roll") or sname:find("score") then
+                myAnimals = tonumber(stat.Value) or ParseNumericString(tostring(stat.Value))
+            elseif sname:find("rebirth") or sname:find("prestige") then
+                myRebirths = tonumber(stat.Value) or ParseNumericString(tostring(stat.Value))
+            end
+        end
+    end
+    
+    -- 2. Inspect PlayerGui for Rebirth Requirement Text
+    local reqText = nil
+    local reqCost = nil
+    
+    if LocalPlayer:FindFirstChild("PlayerGui") then
+        for _, desc in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
+            if desc:IsA("TextLabel") or desc:IsA("TextButton") then
+                local txt = string.lower(desc.Text)
+                local pname = desc.Parent and string.lower(desc.Parent.Name) or ""
+                
+                if (pname:find("rebirth") or desc.Name:lower():find("rebirth") or txt:find("rebirth")) and (txt:find("cost") or txt:find("need") or txt:find("req") or txt:find("$") or txt:find("price")) then
+                    reqText = desc.Text
+                    reqCost = ParseNumericString(desc.Text)
+                    break
+                end
+            end
+        end
+    end
+    
+    return {
+        MyCash = myCash,
+        MyAnimals = myAnimals,
+        MyRebirths = myRebirths,
+        ReqText = reqText,
+        ReqCost = reqCost
+    }
+end
+
 task.spawn(function()
     while true do
         if Toggles.AutoRebirth and isAlive() then
             pcall(function()
-                for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if rem:IsA("RemoteEvent") or rem:IsA("RemoteFunction") then
-                        local name = rem.Name:lower()
-                        if name:find("rebirth") or name:find("prestige") or name:find("ascend") then
-                            pcall(function()
-                                if rem:IsA("RemoteEvent") then rem:FireServer()
-                                else rem:InvokeServer() end
-                            end)
-                        end
+                local data = InspectRebirthRequirement()
+                local canRebirth = true
+                local missingReason = nil
+                
+                -- Check if Cost Requirement known
+                if data.ReqCost and data.ReqCost > 0 then
+                    if data.MyCash < data.ReqCost then
+                        canRebirth = false
+                        local diff = data.ReqCost - data.MyCash
+                        missingReason = string.format("Need $%s more Cash (Cost: %s)", tostring(math.floor(diff)), tostring(data.ReqCost))
                     end
                 end
                 
-                if LocalPlayer:FindFirstChild("PlayerGui") then
-                    for _, btn in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
-                        if btn:IsA("TextButton") or btn:IsA("ImageButton") then
-                            local btext = (btn.Name .. " " .. (btn:IsA("TextButton") and btn.Text or "")):lower()
-                            if btext:find("rebirth") or btext:find("prestige") then
+                if canRebirth then
+                    -- Execute Rebirth
+                    local fired = false
+                    
+                    -- Fire ReplicatedStorage Remotes
+                    for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
+                        if rem:IsA("RemoteEvent") or rem:IsA("RemoteFunction") then
+                            local name = string.lower(rem.Name)
+                            if name:find("rebirth") or name:find("prestige") or name:find("ascend") then
+                                fired = true
                                 pcall(function()
-                                    for _, conn in ipairs(getconnections(btn.MouseButton1Click or btn.Activated)) do
-                                        conn:Fire()
+                                    if rem:IsA("RemoteEvent") then
+                                        rem:FireServer()
+                                        rem:FireServer(1)
+                                        rem:FireServer("1")
+                                        rem:FireServer(true)
+                                    else
+                                        rem:InvokeServer()
+                                        rem:InvokeServer(1)
                                     end
                                 end)
                             end
                         end
+                    end
+                    
+                    -- Trigger Rebirth GUI Buttons
+                    if LocalPlayer:FindFirstChild("PlayerGui") then
+                        for _, btn in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
+                            if btn:IsA("TextButton") or btn:IsA("ImageButton") then
+                                local btext = string.lower(btn.Name .. " " .. (btn:IsA("TextButton") and btn.Text or ""))
+                                if btext:find("rebirth") or btext:find("prestige") then
+                                    fired = true
+                                    pcall(function()
+                                        for _, conn in ipairs(getconnections(btn.MouseButton1Click or btn.Activated)) do
+                                            conn:Fire()
+                                        end
+                                    end)
+                                end
+                            end
+                        end
+                    end
+                    
+                    -- Trigger Physical Rebirth Pads
+                    local hrp = GetRoot()
+                    for _, obj in ipairs(Workspace:GetDescendants()) do
+                        local oName = string.lower(obj.Name)
+                        if oName:find("rebirth") then
+                            if obj:IsA("ProximityPrompt") then
+                                obj.HoldDuration = 0
+                                fireproximityprompt(obj)
+                            elseif obj:IsA("BasePart") and hrp and firetouchinterest then
+                                firetouchinterest(hrp, obj, 0)
+                                task.wait(0.04)
+                                firetouchinterest(hrp, obj, 1)
+                            end
+                        end
+                    end
+                    
+                    if fired and (tick() - LastRebirthNotifyTime > 5) then
+                        LastRebirthNotifyTime = tick()
+                        ShowNotification("Auto Rebirth", "✅ Rebirth Triggered! Multiplier Upgraded!", 3)
+                    end
+                else
+                    -- Display Requirement Toast on screen if not fulfilled
+                    if tick() - LastRebirthNotifyTime > 4 then
+                        LastRebirthNotifyTime = tick()
+                        ShowNotification("Rebirth Requirement", "⏳ " .. (missingReason or "Requirements not met yet!"), 3.5)
                     end
                 end
             end)
@@ -458,7 +664,7 @@ task.spawn(function()
             pcall(function()
                 for _, desc in ipairs(Workspace:GetDescendants()) do
                     if desc:IsA("ProximityPrompt") then
-                        local txt = (desc.ObjectText .. " " .. desc.ActionText .. " " .. desc.Parent.Name):lower()
+                        local txt = string.lower(desc.ObjectText .. " " .. desc.ActionText .. " " .. desc.Parent.Name)
                         if txt:find("egg") or txt:find("hatch") or txt:find("open") or txt:find("pet") then
                             desc.HoldDuration = 0
                             fireproximityprompt(desc)
@@ -468,7 +674,7 @@ task.spawn(function()
                 
                 for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
                     if rem:IsA("RemoteEvent") or rem:IsA("RemoteFunction") then
-                        local rname = rem.Name:lower()
+                        local rname = string.lower(rem.Name)
                         if rname:find("hatch") or rname:find("openegg") or rname:find("buyegg") or rname:find("petroll") then
                             pcall(function()
                                 if rem:IsA("RemoteEvent") then
@@ -512,14 +718,14 @@ task.spawn(function()
                 local currentGuids = {}
                 
                 for _, animal in ipairs(animals) do
-                    if animal.Rarity >= 50 and animal.Part and animal.Part.Parent then
+                    if animal.Rarity >= 100 and animal.Part and animal.Part.Parent then
                         local key = animal.Object
                         currentGuids[key] = true
                         
                         if not ESPObjects[key] then
                             local hl = Instance.new("Highlight")
                             hl.Name = "JunejoRareESP"
-                            hl.FillColor = animal.Rarity >= 500 and Color3.fromRGB(255, 0, 255) or Color3.fromRGB(255, 200, 0)
+                            hl.FillColor = animal.Rarity >= 5000 and Color3.fromRGB(255, 0, 255) or Color3.fromRGB(255, 200, 0)
                             hl.OutlineColor = Color3.fromRGB(255, 255, 255)
                             hl.FillTransparency = 0.35
                             hl.OutlineTransparency = 0.1
@@ -538,7 +744,7 @@ task.spawn(function()
                             label.BackgroundTransparency = 1
                             label.Font = Enum.Font.GothamBold
                             label.TextSize = 13
-                            label.TextColor3 = animal.Rarity >= 500 and Color3.fromRGB(255, 100, 255) or Color3.fromRGB(255, 220, 50)
+                            label.TextColor3 = animal.Rarity >= 5000 and Color3.fromRGB(255, 100, 255) or Color3.fromRGB(255, 220, 50)
                             label.TextStrokeTransparency = 0.2
                             label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
                             label.Text = animal.Name .. " [RARE]"
@@ -1001,16 +1207,7 @@ end
 
 -- 1. Full-Width Action Button: TELEPORT TO RARE ANIMAL
 AddActionButton("TELEPORT TO RARE ANIMAL", function()
-    local animals = GetSpawnedAnimals()
-    if #animals > 0 then
-        local target = animals[1]
-        if target and target.Part then
-            SafeTeleport(target.Part.CFrame + Vector3.new(0, 3, 0))
-            ShowNotification("Teleport", "Teleported to " .. target.Name)
-        end
-    else
-        ShowNotification("Teleport", "No rare animals detected!")
-    end
+    TeleportToRarestAnimal()
 end)
 
 -- 2. Full-Width Action Button: SET BASE POSITION
@@ -1018,7 +1215,7 @@ AddActionButton("SET BASE POSITION", function()
     local root = GetRoot()
     if root then
         CustomBasePos = root.CFrame
-        ShowNotification("Base Position", "Custom Base position saved!")
+        ShowNotification("Base Position Saved", "📍 Current location anchored as Base!", 3)
     end
 end)
 
@@ -1026,37 +1223,37 @@ end)
 AddActionButton("TELEPORT TO BASE", function()
     local baseCF = FindMyBaseCFrame()
     SafeTeleport(baseCF)
-    ShowNotification("Base", "Returned to Base!")
+    ShowNotification("Base Teleport", "🏠 Teleported back to Base safely!", 2.5)
 end)
 
 -- 4. Auto Collect Rare Animals
 AddToggleRow("Auto Collect Rare Animals", "AutoCollectRare", function(state)
-    ShowNotification("Auto Collect", state and "Rolling Rare Animals!" or "Auto Collect Stopped")
+    ShowNotification("Auto Collect Rare", state and "🌟 Seeking Rarest Animals & Auto-Depositing!" or "Auto Collect Stopped")
 end)
 
 -- 5. Auto Sell Animals
 AddToggleRow("Auto Sell Animals", "AutoSell", function(state)
-    ShowNotification("Auto Sell", state and "Auto Sell Animals Active!" or "Auto Sell Stopped")
+    ShowNotification("Auto Sell Animals", state and "💰 Auto Depositing & Selling at Pen!" or "Auto Sell Stopped")
 end)
 
 -- 6. Auto Rebirth
 AddToggleRow("Auto Rebirth", "AutoRebirth", function(state)
-    ShowNotification("Auto Rebirth", state and "Auto Rebirth Active!" or "Auto Rebirth Stopped")
+    ShowNotification("Auto Rebirth", state and "⚡ Smart Requirement Inspector Active!" or "Auto Rebirth Stopped")
 end)
 
 -- 7. Auto Hatch Pets
 AddToggleRow("Auto Hatch Pets", "AutoHatch", function(state)
-    ShowNotification("Auto Hatch", state and "Pet Hatching Active!" or "Hatching Stopped")
+    ShowNotification("Auto Hatch Pets", state and "🐣 Pet / Egg Opener Active!" or "Hatching Stopped")
 end)
 
 -- 8. Rare Animals ESP
 AddToggleRow("Rare Animals ESP", "RareESP", function(state)
-    ShowNotification("Rare ESP", state and "Rare Animals Highlighted!" or "Rare ESP Disabled")
+    ShowNotification("Rare Animals ESP", state and "✨ Rare Animals Glowing Highlight Active!" or "Rare ESP Disabled")
 end)
 
 -- 9. Player ESP
 AddToggleRow("Player ESP", "PlayerESP", function(state)
-    ShowNotification("Player ESP", state and "Player Wallhack Active!" or "Player ESP Disabled")
+    ShowNotification("Player ESP", state and "👤 Player Wallhack Active!" or "Player ESP Disabled")
 end)
 
 -- 10. WalkSpeed Integrated Row (with Checkbox + Stepper Pill as shown in screenshot)
