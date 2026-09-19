@@ -1406,6 +1406,40 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   - 14. 24/7 Anti-AFK Engine (Prevents 20-minute idle disconnects)
 - **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280x265px`) with `ScrollingFrame` & Mandatory Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
 
+---
+
+## 68. Clean all the leaves!
+- **Game Name**: Clean all the leaves! 🍃
+- **Place ID**: 92637789841354
+- **Game URL**: https://www.roblox.com/games/92637789841354/Clean-all-the-leaves
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/clean_all_the_leaves.lua"))()
+  ```
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included (20 Tested & Verified Features)**:
+  - 1. Auto Collect Leaves (Targeted Auto-Nav & Collect, Auto-stops when bag is full)
+  - 2. Clean All Leaves Loop (Brings & stacks all leaves on map into a neat pile)
+  - 3. Leaf Magnet Aura (Pulls nearby leaves directly to character)
+  - 4. Auto Click Tool (Continuously activates rake, blower, vacuum or mower)
+  - 5. Expand Bag Capacity (Boosts bag capacity to 99,999)
+  - 6. Dump All Leaves (1-Click Action: Instantly empties bag into nearest dumpster)
+  - 7. Teleport to Dump Can (1-Click Action: Warps in front of dumpster)
+  - 8. Clean 100% Zone / 1% Finisher (1-Click Action: Sweeps hidden stray leaves)
+  - 9. Collect Duck Bot Parts (1-Click Action: Sweeps all 3 secret vacuum pieces)
+  - 10. Teleport: House Yard / Spawn (1-Click Action Button)
+  - 11. Teleport: Rooftop / Vents (1-Click Action Button)
+  - 12. Teleport: Basement Chamber (1-Click Action Button)
+  - 13. Leaves ESP (Bright Cyan Highlights & Distance Tags)
+  - 14. FullBright & Clear Vision (Permanent night vision & fog removal)
+  - 15. WalkSpeed Boost (Integrated Checkbox + [ - 50 + ] Stepper Pill)
+  - 16. Fly Mode (Smooth 3D WASD & Mobile Touch Flight Engine)
+  - 17. Infinite Jump (Airborne continuous multi-jump bypass)
+  - 18. Player NoClip (Phase through walls, fences & doors)
+  - 19. Fast Proximity Prompts (0s hold auto-sweeper)
+  - 20. 24/7 Anti-AFK Disconnect Engine
+- **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280x260px`) with `ScrollingFrame` & Mandatory Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
+
 ====================================================
 Updated: September 19, 2026
 ====================================================
