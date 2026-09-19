@@ -1141,7 +1141,7 @@ local function CreateActionRow(title, btnText, callback)
     end)
 end
 
--- 3. WalkSpeed - / + Stepper Controller Row Factory
+-- 3. WalkSpeed - / + Stepper Controller Row Factory (Exact Screenshot Match)
 local function CreateSpeedStepperRow(name, defaultSpeed, minSpeed, maxSpeed, step, callback)
     RowOrder = RowOrder + 1
     
@@ -1152,9 +1152,8 @@ local function CreateSpeedStepperRow(name, defaultSpeed, minSpeed, maxSpeed, ste
     Row.LayoutOrder = RowOrder
     Row.Parent = Content
     
-    -- Checkbox to Toggle
     local Title = Instance.new("TextLabel")
-    Title.Size = UDim2.new(1, -115, 1, 0)
+    Title.Size = UDim2.new(1, -150, 1, 0)
     Title.Position = UDim2.new(0, 6, 0, 0)
     Title.BackgroundTransparency = 1
     Title.Font = Enum.Font.GothamMedium
@@ -1163,6 +1162,36 @@ local function CreateSpeedStepperRow(name, defaultSpeed, minSpeed, maxSpeed, ste
     Title.TextXAlignment = Enum.TextXAlignment.Left
     Title.Text = name
     Title.Parent = Row
+    
+    -- Square Checkbox Toggle (Right side left of pill)
+    local CheckBox = Instance.new("TextButton")
+    CheckBox.Size = UDim2.new(0, 18, 0, 18)
+    CheckBox.Position = UDim2.new(1, -135, 0.5, -9)
+    CheckBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+    CheckBox.BorderSizePixel = 0
+    CheckBox.Text = ""
+    CheckBox.Parent = Row
+    
+    local CheckCorner = Instance.new("UICorner")
+    CheckCorner.CornerRadius = UDim.new(0, 4)
+    CheckCorner.Parent = CheckBox
+    
+    local CheckStroke = Instance.new("UIStroke")
+    CheckStroke.Color = Color3.fromRGB(45, 45, 55)
+    CheckStroke.Thickness = 1
+    CheckStroke.Parent = CheckBox
+    
+    local CheckMark = Instance.new("Frame")
+    CheckMark.Size = UDim2.new(0, 10, 0, 10)
+    CheckMark.Position = UDim2.new(0.5, -5, 0.5, -5)
+    CheckMark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    CheckMark.BorderSizePixel = 0
+    CheckMark.Visible = false
+    CheckMark.Parent = CheckBox
+    
+    local MarkCorner = Instance.new("UICorner")
+    MarkCorner.CornerRadius = UDim.new(0, 2)
+    MarkCorner.Parent = CheckMark
     
     -- Pill Stepper Container (105x22px)
     local StepperPill = Instance.new("Frame")
@@ -1191,7 +1220,7 @@ local function CreateSpeedStepperRow(name, defaultSpeed, minSpeed, maxSpeed, ste
     MinusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
     MinusBtn.Parent = StepperPill
     
-    local ValLabel = Instance.new("TextButton")
+    local ValLabel = Instance.new("TextLabel")
     ValLabel.Size = UDim2.new(1, -48, 1, 0)
     ValLabel.Position = UDim2.new(0, 24, 0, 0)
     ValLabel.BackgroundTransparency = 1
@@ -1216,12 +1245,13 @@ local function CreateSpeedStepperRow(name, defaultSpeed, minSpeed, maxSpeed, ste
     
     local function UpdateDisplay()
         ValLabel.Text = tostring(speedVal)
+        CheckMark.Visible = speedActive
         if speedActive then
-            StepperPill.BackgroundColor3 = Color3.fromRGB(35, 75, 150)
-            PillStroke.Color = Color3.fromRGB(58, 134, 255)
+            CheckBox.BackgroundColor3 = Color3.fromRGB(58, 134, 255)
+            CheckStroke.Color = Color3.fromRGB(58, 134, 255)
         else
-            StepperPill.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-            PillStroke.Color = Color3.fromRGB(45, 45, 55)
+            CheckBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+            CheckStroke.Color = Color3.fromRGB(45, 45, 55)
         end
         callback(speedVal, speedActive)
     end
@@ -1236,7 +1266,7 @@ local function CreateSpeedStepperRow(name, defaultSpeed, minSpeed, maxSpeed, ste
         UpdateDisplay()
     end)
     
-    ValLabel.MouseButton1Click:Connect(function()
+    CheckBox.MouseButton1Click:Connect(function()
         speedActive = not speedActive
         UpdateDisplay()
     end)
