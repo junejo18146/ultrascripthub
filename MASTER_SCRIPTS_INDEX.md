@@ -1378,7 +1378,35 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   - 13. 24/7 Anti-AFK Engine (Prevents 20-minute disconnects)
 - **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280x265px`) with `ScrollingFrame` & Mandatory Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
 
+---
+
+## 67. Roller for Animals
+- **Game Name**: Roller for Animals 🛼🐾
+- **Place ID**: 88910662712492
+- **Game URL**: https://www.roblox.com/games/88910662712492/Roller-for-Animals
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/roller_for_animals.lua"))()
+  ```
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included (All Tested & Verified)**:
+  - 1. Auto Collect Rare Animals (Autonomous Rare-First Roll, Grab & Deposit Engine)
+  - 2. Sell Animals (5-Layer Auto Sell & Pen Deposit Engine)
+  - 3. Teleport To Rarest Animals (1-Click Direct Teleport to highest tier animal)
+  - 4. Select Base Position (1-Click Custom Base Anchor save)
+  - 5. Teleport To Base (1-Click Instant Safe Base Return)
+  - 6. Auto Rebirth (Automatic Multi-Layer Prestige & Rebirth Engine)
+  - 7. Auto Hatch Pets (Automatic Egg Stands, Incubators & Remote Pet Opener)
+  - 8. Rare Animals ESP (Neon Magenta Highlight + Live Billboard Distance Tag)
+  - 9. Player ESP (Neon Red Player Highlight + Live Distance Tag)
+  - 10. WalkSpeed Boost (Integrated `- / +` Stepper Controller: 16 to 300)
+  - 11. Fly Mode (Smooth 3D WASD & Mobile Touch Flight Engine)
+  - 12. Infinite Jump (Continuous Airborne Multi-Jump Bypass)
+  - 13. Instant Proximity Prompts (0s hold auto-sweeper)
+  - 14. 24/7 Anti-AFK Engine (Prevents 20-minute idle disconnects)
+- **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280x265px`) with `ScrollingFrame` & Mandatory Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
+
 ====================================================
-Updated: September 18, 2026
+Updated: September 19, 2026
 ====================================================
 
