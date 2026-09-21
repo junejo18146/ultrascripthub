@@ -1,12 +1,15 @@
 --[[
-    JUNEJO ULTRA SCRIPT HUB - SLAYERS 2 (V2.5 5-ROW SCROLLING EDITION)
+    JUNEJO ULTRA SCRIPT HUB - SLAYERS 2 (V3.0 ROCK-SOLID STABILITY EDITION)
     Target Game: Slayers 2 (Roblox)
     Author: Made by Junejo (junejo18146)
     Repository: junejo18146/ultrascripthub
     Theme: Official UI 1 - Classic Matte Dark (#0F0F11)
     Status: Unlocked Direct Standalone Execution (Key System Disabled)
-    Layout: 5 Features Visible on Main Screen + Smooth Scrollable Slider
-    New Features: Instant Auto Get Up, Hitbox Expander, Teleport to Low HP Player
+    Fixes:
+      - 100% Anti-Vibration & Anti-Shake (Upright hovering, zero physics fight)
+      - Zero Screen Freeze on Mobile / Delta (Removed input-blocking CaptureController)
+      - Smart Target Lock (No 10x/sec Workspace scans; holds target until killed)
+      - Smooth 5-Row Main Screen Standard with Scrollable Slider
 --]]
 
 local CoreGui = game:GetService("CoreGui")
@@ -62,13 +65,14 @@ local Toggles = {
 local CustomSpeedValue = 50
 local SafePlatform = nil
 
--- ESP Storage
+-- Target & ESP Storage
+local CurrentFarmTarget = nil
 local ActiveMobESP = {}
 local ActivePlayerESP = {}
 local ActiveTrainerESP = {}
 local OriginalHitboxSizes = {}
 
--- Pre-Cached Remotes Storage (Prevents freezing & lag)
+-- Pre-Cached Remotes Storage (Prevents freezing & network spam)
 local CachedCombatRemotes = {}
 local CachedQuestRemotes = {}
 
@@ -103,7 +107,6 @@ end)
 pcall(function()
     LocalPlayer.Idled:Connect(function()
         if Toggles.AntiAFK then
-            VirtualUser:CaptureController()
             VirtualUser:ClickButton2(Vector2.new(0, 0))
         end
     end)
@@ -120,8 +123,8 @@ local function ShowToast(title, message)
 
         local Toast = Instance.new("Frame")
         Toast.Name = "JunejoToast"
-        Toast.Size = UDim2.new(0, 240, 0, 38)
-        Toast.Position = UDim2.new(0.5, -120, 0.08, 0)
+        Toast.Size = UDim2.new(0, 230, 0, 36)
+        Toast.Position = UDim2.new(0.5, -115, 0.08, 0)
         Toast.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
         Toast.BorderSizePixel = 0
         Toast.ZIndex = 9999
@@ -137,7 +140,7 @@ local function ShowToast(title, message)
         ToastStroke.Parent = Toast
 
         local TitleLbl = Instance.new("TextLabel")
-        TitleLbl.Size = UDim2.new(1, -12, 0, 16)
+        TitleLbl.Size = UDim2.new(1, -12, 0, 15)
         TitleLbl.Position = UDim2.new(0, 8, 0, 3)
         TitleLbl.BackgroundTransparency = 1
         TitleLbl.Text = title
@@ -149,8 +152,8 @@ local function ShowToast(title, message)
         TitleLbl.Parent = Toast
 
         local MsgLbl = Instance.new("TextLabel")
-        MsgLbl.Size = UDim2.new(1, -12, 0, 16)
-        MsgLbl.Position = UDim2.new(0, 8, 0, 18)
+        MsgLbl.Size = UDim2.new(1, -12, 0, 15)
+        MsgLbl.Position = UDim2.new(0, 8, 0, 17)
         MsgLbl.BackgroundTransparency = 1
         MsgLbl.Text = message
         MsgLbl.TextColor3 = Color3.fromRGB(220, 220, 230)
@@ -160,7 +163,7 @@ local function ShowToast(title, message)
         MsgLbl.ZIndex = 10000
         MsgLbl.Parent = Toast
 
-        task.delay(2.5, function()
+        task.delay(2.2, function()
             if Toast and Toast.Parent then
                 local tween = TweenService:Create(Toast, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1})
                 tween:Play()
@@ -175,12 +178,12 @@ local function ShowToast(title, message)
 end
 
 -- ====================================================
--- CORE FUNCTIONALITIES & ENGINES
+-- CORE FUNCTIONALITIES & ENGINES (ROCK-SOLID STABILITY)
 -- ====================================================
 
--- 1. Instant Auto Get Up / Anti-Ragdoll Engine
-pcall(function()
-    local function HandleCharacter(char)
+-- 1. Instant Auto Get Up / Anti-Ragdoll (Event-driven, 0% CPU overhead)
+local function SetupInstantGetUp(char)
+    pcall(function()
         local hum = char:WaitForChild("Humanoid", 5)
         if not hum then return end
 
@@ -197,50 +200,19 @@ pcall(function()
                 end
             end
         end)
-    end
 
-    if LocalPlayer.Character then
-        HandleCharacter(LocalPlayer.Character)
-    end
-    LocalPlayer.CharacterAdded:Connect(HandleCharacter)
-end)
+        char.DescendantAdded:Connect(function(obj)
+            if Toggles.InstantGetUp and obj:IsA("BallSocketConstraint") then
+                obj.Enabled = false
+            end
+        end)
+    end)
+end
 
--- Instant Get Up Continuous Loop (Catch-all for ragdoll states & knockdowns)
-task.spawn(function()
-    while true do
-        task.wait(0.04)
-        if Toggles.InstantGetUp and isAlive() then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hum = char and char:FindFirstChildOfClass("Humanoid")
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                if hum and hrp then
-                    local state = hum:GetState()
-                    if state == Enum.HumanoidStateType.Ragdoll or 
-                       state == Enum.HumanoidStateType.FallingDown or 
-                       state == Enum.HumanoidStateType.PlatformStanding or 
-                       state == Enum.HumanoidStateType.Physics or 
-                       hum.PlatformStand or 
-                       hum.Sit then
-                        hum.PlatformStand = false
-                        hum.Sit = false
-                        hum:ChangeState(Enum.HumanoidStateType.GettingUp)
-                        hum:ChangeState(Enum.HumanoidStateType.Running)
-                        hrp.AssemblyLinearVelocity = Vector3.new(hrp.AssemblyLinearVelocity.X, 0, hrp.AssemblyLinearVelocity.Z)
-                    end
-                    -- Disable ragdoll ball socket constraints if any are created
-                    for _, obj in ipairs(char:GetDescendants()) do
-                        if obj:IsA("BallSocketConstraint") then
-                            obj.Enabled = false
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
+if LocalPlayer.Character then SetupInstantGetUp(LocalPlayer.Character) end
+LocalPlayer.CharacterAdded:Connect(SetupInstantGetUp)
 
--- 2. Fast Enemy Scanner Helper
+-- 2. Fast & Safe Enemy Scanner (Only scans folders, avoids workspace lag)
 local function GetAliveEnemies()
     local enemies = {}
     pcall(function()
@@ -278,7 +250,7 @@ local function GetAliveEnemies()
     return enemies
 end
 
--- 3. Hitbox Expander Engine (Demons + Rival Players)
+-- 3. Hitbox Expander Engine (Smooth, Massless, CanCollide = false)
 local function UpdateHitboxExpander()
     pcall(function()
         if not Toggles.HitboxExpander then
@@ -294,7 +266,6 @@ local function UpdateHitboxExpander()
         end
 
         local targets = GetAliveEnemies()
-        -- Add rival players
         for _, plr in ipairs(Players:GetPlayers()) do
             if plr ~= LocalPlayer and plr.Character then
                 local hum = plr.Character:FindFirstChildOfClass("Humanoid")
@@ -316,6 +287,7 @@ local function UpdateHitboxExpander()
                 part.Material = Enum.Material.Neon
                 part.Color = Color3.fromRGB(255, 40, 40)
                 part.CanCollide = false
+                part.Massless = true
             end
         end
     end)
@@ -323,7 +295,7 @@ end
 
 task.spawn(function()
     while true do
-        task.wait(0.5)
+        task.wait(1.0)
         if Toggles.HitboxExpander then
             UpdateHitboxExpander()
         end
@@ -357,7 +329,7 @@ local function TeleportToLowHealthPlayer()
             local targetHrp = lowestPlayer.Character.HumanoidRootPart
             myHrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, 3)
             myHrp.AssemblyLinearVelocity = Vector3.zero
-            ShowToast("TP Low HP", "Warped behind " .. lowestPlayer.DisplayName .. " [HP: " .. math.floor(lowestHealth) .. "]")
+            ShowToast("TP Low HP", "Warped to " .. lowestPlayer.DisplayName .. " [HP: " .. math.floor(lowestHealth) .. "]")
         else
             ShowToast("Notice", "No low HP players found!")
         end
@@ -414,18 +386,13 @@ local function AutoEquipWeapon()
     end)
 end
 
--- Instant Attack Executor
+-- Safe Attack Executor (DOES NOT INTERCEPT TOUCH OR HANG SCREEN)
 local function ExecuteAttack(targetRoot)
     pcall(function()
         if not isAlive() then return end
         AutoEquipWeapon()
 
-        if targetRoot and targetRoot:IsA("BasePart") and not Toggles.HitboxExpander then
-            targetRoot.Size = Vector3.new(18, 18, 18)
-            targetRoot.CanCollide = false
-            targetRoot.Transparency = 0.85
-        end
-
+        -- 1. Activate Weapon Tool
         local char = LocalPlayer.Character
         for _, tool in ipairs(char:GetChildren()) do
             if tool:IsA("Tool") then
@@ -433,38 +400,24 @@ local function ExecuteAttack(targetRoot)
             end
         end
 
-        pcall(function()
-            if mouse1click then
-                mouse1click()
-            else
-                VirtualUser:CaptureController()
-                VirtualUser:Button1Down(Vector2.new(0, 0))
-                task.wait(0.01)
-                VirtualUser:Button1Up(Vector2.new(0, 0))
-            end
-        end)
-
+        -- 2. Fire Cached Combat Remotes in a safe, non-flooding manner
         for _, remote in ipairs(CachedCombatRemotes) do
             pcall(function()
                 if remote:IsA("RemoteEvent") then
                     remote:FireServer()
-                    remote:FireServer(1)
-                    remote:FireServer("Light")
                     if targetRoot and targetRoot.Parent then
                         remote:FireServer(targetRoot.Parent)
                     end
-                elseif remote:IsA("RemoteFunction") then
-                    remote:InvokeServer()
                 end
             end)
         end
     end)
 end
 
--- Fast Auto Attack Loop
+-- Fast Auto Attack Loop (Clean 0.18s rate-limit)
 task.spawn(function()
     while true do
-        task.wait(0.12)
+        task.wait(0.18)
         if Toggles.FastAutoAttack and isAlive() then
             ExecuteAttack(nil)
         end
@@ -474,7 +427,7 @@ end)
 -- Kill Aura Loop (35 Studs Reach)
 task.spawn(function()
     while true do
-        task.wait(0.15)
+        task.wait(0.2)
         if Toggles.KillAura and isAlive() then
             pcall(function()
                 local myPos = LocalPlayer.Character.HumanoidRootPart.Position
@@ -491,36 +444,64 @@ task.spawn(function()
     end
 end)
 
--- Auto Farm Mobs Loop
+-- 4. Auto Farm Mobs Loop (VIBRATION-FREE, UPRIGHT HOVER, ZERO SHAKE)
 task.spawn(function()
     while true do
-        task.wait(0.1)
+        task.wait(0.12)
         if Toggles.AutoFarmMobs and isAlive() then
             pcall(function()
                 local hrp = LocalPlayer.Character.HumanoidRootPart
-                local enemies = GetAliveEnemies()
-                
-                local closest = nil
-                local shortestDist = math.huge
-                for _, enemy in ipairs(enemies) do
-                    local d = (enemy.RootPart.Position - hrp.Position).Magnitude
-                    if d < shortestDist then
-                        shortestDist = d
-                        closest = enemy
+                local char = LocalPlayer.Character
+
+                -- Verify current target is still valid and alive
+                if not CurrentFarmTarget or 
+                   not CurrentFarmTarget.Model.Parent or 
+                   CurrentFarmTarget.Humanoid.Health <= 0 or 
+                   not CurrentFarmTarget.RootPart.Parent then
+                    
+                    -- Find new closest target
+                    local enemies = GetAliveEnemies()
+                    local closest = nil
+                    local shortestDist = math.huge
+                    for _, enemy in ipairs(enemies) do
+                        local d = (enemy.RootPart.Position - hrp.Position).Magnitude
+                        if d < shortestDist then
+                            shortestDist = d
+                            closest = enemy
+                        end
                     end
+                    CurrentFarmTarget = closest
                 end
 
-                if closest and closest.Humanoid.Health > 0 then
-                    hrp.CFrame = closest.RootPart.CFrame * CFrame.new(0, 6, 0) * CFrame.Angles(math.rad(-90), 0, 0)
+                if CurrentFarmTarget and CurrentFarmTarget.Humanoid.Health > 0 then
+                    local targetPart = CurrentFarmTarget.RootPart
+                    local targetPos = targetPart.Position
+
+                    -- UPRIGHT HOVER: Hover 5 studs directly above the mob, looking down at it
+                    -- NO ROTATION FLIP (-90 is removed!), prevents Humanoid physics fight
+                    hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, 5, 0), targetPos)
+                    
+                    -- Nullify all physical velocity to guarantee 0% camera vibration
                     hrp.AssemblyLinearVelocity = Vector3.zero
-                    ExecuteAttack(closest.RootPart)
+                    hrp.AssemblyAngularVelocity = Vector3.zero
+
+                    -- Disable collision on character to eliminate part bump jitter
+                    for _, p in ipairs(char:GetChildren()) do
+                        if p:IsA("BasePart") then
+                            p.CanCollide = false
+                        end
+                    end
+
+                    ExecuteAttack(targetPart)
                 end
             end)
+        else
+            CurrentFarmTarget = nil
         end
     end
 end)
 
--- Auto Accept Quests Engine
+-- 5. Auto Accept Quests Engine
 pcall(function()
     ProximityPromptService.PromptShown:Connect(function(prompt)
         if Toggles.AutoAcceptQuests and isAlive() then
@@ -542,7 +523,7 @@ end)
 
 task.spawn(function()
     while true do
-        task.wait(0.6)
+        task.wait(1.0)
         if Toggles.AutoAcceptQuests and isAlive() then
             pcall(function()
                 local pg = LocalPlayer:FindFirstChild("PlayerGui")
@@ -572,7 +553,6 @@ task.spawn(function()
                         if remote:IsA("RemoteEvent") then
                             remote:FireServer("Accept")
                             remote:FireServer(1)
-                            remote:FireServer(true)
                         elseif remote:IsA("RemoteFunction") then
                             remote:InvokeServer("Accept")
                         end
@@ -583,7 +563,7 @@ task.spawn(function()
     end
 end)
 
--- Mob / Demon ESP Engine
+-- 6. Mob / Demon ESP Engine
 local function UpdateMobESP()
     pcall(function()
         if not Toggles.MobESP then
@@ -605,7 +585,7 @@ local function UpdateMobESP()
                     local bg = Instance.new("BillboardGui")
                     bg.Name = "JunejoMobESP"
                     bg.Adornee = part
-                    bg.Size = UDim2.new(0, 140, 0, 30)
+                    bg.Size = UDim2.new(0, 140, 0, 28)
                     bg.StudsOffset = Vector3.new(0, 3.5, 0)
                     bg.AlwaysOnTop = true
                     bg.Parent = part
@@ -616,7 +596,7 @@ local function UpdateMobESP()
                     lbl.TextColor3 = Color3.fromRGB(255, 60, 80)
                     lbl.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
                     lbl.TextStrokeTransparency = 0
-                    lbl.TextSize = 11
+                    lbl.TextSize = 10
                     lbl.Font = Enum.Font.GothamBold
                     lbl.Text = "[DEMON] " .. enemy.Name .. " [HP: " .. math.floor(enemy.Humanoid.Health) .. "]"
                     lbl.Parent = bg
@@ -641,7 +621,7 @@ local function UpdateMobESP()
     end)
 end
 
--- Player ESP Engine
+-- 7. Player ESP Engine
 local function UpdatePlayerESP()
     pcall(function()
         if not Toggles.PlayerESP then
@@ -663,7 +643,7 @@ local function UpdatePlayerESP()
                         local bg = Instance.new("BillboardGui")
                         bg.Name = "JunejoPlayerESP"
                         bg.Adornee = hrp
-                        bg.Size = UDim2.new(0, 140, 0, 30)
+                        bg.Size = UDim2.new(0, 140, 0, 28)
                         bg.StudsOffset = Vector3.new(0, 3.5, 0)
                         bg.AlwaysOnTop = true
                         bg.Parent = hrp
@@ -674,7 +654,7 @@ local function UpdatePlayerESP()
                         lbl.TextColor3 = Color3.fromRGB(0, 220, 255)
                         lbl.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
                         lbl.TextStrokeTransparency = 0
-                        lbl.TextSize = 11
+                        lbl.TextSize = 10
                         lbl.Font = Enum.Font.GothamBold
                         lbl.Text = "[PLAYER] " .. plr.DisplayName
                         lbl.Parent = bg
@@ -693,7 +673,7 @@ local function UpdatePlayerESP()
     end)
 end
 
--- Breathing Trainers / NPC ESP Engine
+-- 8. Breathing Trainers / NPC ESP Engine
 local function UpdateTrainerESP()
     pcall(function()
         if not Toggles.TrainerESP then
@@ -724,7 +704,7 @@ local function UpdateTrainerESP()
                         local bg = Instance.new("BillboardGui")
                         bg.Name = "JunejoTrainerESP"
                         bg.Adornee = root
-                        bg.Size = UDim2.new(0, 160, 0, 32)
+                        bg.Size = UDim2.new(0, 150, 0, 28)
                         bg.StudsOffset = Vector3.new(0, 4, 0)
                         bg.AlwaysOnTop = true
                         bg.Parent = root
@@ -735,7 +715,7 @@ local function UpdateTrainerESP()
                         lbl.TextColor3 = Color3.fromRGB(255, 215, 0)
                         lbl.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
                         lbl.TextStrokeTransparency = 0
-                        lbl.TextSize = 11
+                        lbl.TextSize = 10
                         lbl.Font = Enum.Font.GothamBold
                         lbl.Text = "[TRAINER] " .. obj.Name
                         lbl.Parent = bg
@@ -754,10 +734,10 @@ local function UpdateTrainerESP()
     end)
 end
 
--- ESP Master Timer
+-- ESP Master Loop
 task.spawn(function()
     while true do
-        task.wait(0.4)
+        task.wait(0.5)
         UpdateMobESP()
         UpdatePlayerESP()
         UpdateTrainerESP()
@@ -778,7 +758,7 @@ end)
 
 -- ====================================================
 -- OFFICIAL UI 1: ULTRA SCRIPT HUB CLASSIC MATTE DARK
--- (Compact 280x225px with 5-Row Scrolling Frame Standard)
+-- (280x250px with Perfectly Sized 5-Row Visible Scrolling Frame)
 -- ====================================================
 
 local ScreenGui = Instance.new("ScreenGui")
@@ -797,11 +777,11 @@ else
     ScreenGui.Parent = UIContainer
 end
 
--- Main Container: 280px width, 225px height (Classic 5-Row Standard)
+-- Main Container: 280px width, 250px height
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 225)
-MainFrame.Position = UDim2.new(0.5, -140, 0.45, -112)
+MainFrame.Size = UDim2.new(0, 280, 0, 250)
+MainFrame.Position = UDim2.new(0.5, -140, 0.45, -125)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -892,11 +872,11 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Content Scroll Frame: Exactly 136px height to display 5 items at a time!
+-- Content Scroll Frame: Exactly 180px height to display 5 items cleanly at a time
 local ContentScroll = Instance.new("ScrollingFrame")
 ContentScroll.Name = "ContentScroll"
-ContentScroll.Size = UDim2.new(1, 0, 0, 154)
-ContentScroll.Position = UDim2.new(0, 0, 0, 33)
+ContentScroll.Size = UDim2.new(1, 0, 0, 180)
+ContentScroll.Position = UDim2.new(0, 0, 0, 34)
 ContentScroll.BackgroundTransparency = 1
 ContentScroll.BorderSizePixel = 0
 ContentScroll.ScrollBarThickness = 3
@@ -908,21 +888,21 @@ ContentScroll.Parent = MainFrame
 
 local ContentLayout = Instance.new("UIListLayout")
 ContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
-ContentLayout.Padding = UDim.new(0, 4)
+ContentLayout.Padding = UDim.new(0, 6)
 ContentLayout.Parent = ContentScroll
 
 local ContentPadding = Instance.new("UIPadding")
-ContentPadding.PaddingTop = UDim.new(0, 4)
-ContentPadding.PaddingBottom = UDim.new(0, 4)
+ContentPadding.PaddingTop = UDim.new(0, 6)
+ContentPadding.PaddingBottom = UDim.new(0, 6)
 ContentPadding.PaddingLeft = UDim.new(0, 14)
 ContentPadding.PaddingRight = UDim.new(0, 14)
 ContentPadding.Parent = ContentScroll
 
--- Helper: Create 1-Click Action Button Row (24px height)
+-- Helper: Create 1-Click Action Button Row (28px height)
 local function CreateActionRow(order, name, callback)
     local Row = Instance.new("Frame")
     Row.Name = name .. "Row"
-    Row.Size = UDim2.new(1, 0, 0, 24)
+    Row.Size = UDim2.new(1, 0, 0, 28)
     Row.BackgroundTransparency = 1
     Row.LayoutOrder = order
     Row.Parent = ContentScroll
@@ -939,7 +919,7 @@ local function CreateActionRow(order, name, callback)
     Btn.Parent = Row
 
     local Corner = Instance.new("UICorner")
-    Corner.CornerRadius = UDim.new(0, 5)
+    Corner.CornerRadius = UDim.new(0, 6)
     Corner.Parent = Btn
 
     local Stroke = Instance.new("UIStroke")
@@ -951,11 +931,11 @@ local function CreateActionRow(order, name, callback)
     return Row
 end
 
--- Helper: Create Feature Toggle Row (24px height, flat borderless row with rounded-square checkbox)
+-- Helper: Create Feature Toggle Row (26px height, flat borderless row with rounded-square checkbox)
 local function CreateToggleRow(order, name, key, onToggle)
     local Row = Instance.new("Frame")
     Row.Name = name .. "Row"
-    Row.Size = UDim2.new(1, 0, 0, 24)
+    Row.Size = UDim2.new(1, 0, 0, 26)
     Row.BackgroundTransparency = 1
     Row.LayoutOrder = order
     Row.Parent = ContentScroll
@@ -1070,7 +1050,7 @@ CreateToggleRow(11, "Trainers / NPC ESP", "TrainerESP")
 -- 12. WalkSpeed Row (Checkbox + Pill Stepper: [ - 50 + ])
 local SpeedRow = Instance.new("Frame")
 SpeedRow.Name = "SpeedRow"
-SpeedRow.Size = UDim2.new(1, 0, 0, 24)
+SpeedRow.Size = UDim2.new(1, 0, 0, 26)
 SpeedRow.BackgroundTransparency = 1
 SpeedRow.LayoutOrder = 12
 SpeedRow.Parent = ContentScroll
@@ -1238,5 +1218,5 @@ CreatorSubtitle.TextSize = 9
 CreatorSubtitle.Font = Enum.Font.GothamMedium
 CreatorSubtitle.Parent = Footer
 
-ShowToast("ULTRA SCRIPT HUB", "Slayers 2 V2.5 Loaded!")
-print("[Junejo Hub] Slayers 2 V2.5 initialized with 5-Row Visible Scroll Standard!")
+ShowToast("ULTRA SCRIPT HUB", "Slayers 2 V3.0 Loaded!")
+print("[Junejo Hub] Slayers 2 V3.0 initialized with Rock-Solid Stability!")
