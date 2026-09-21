@@ -1520,9 +1520,45 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   - 15. ☑️ NoClip (Stepped collision bypass)
 - **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280px` width) with Scrollable Content and Centered Branding Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
 
+---
+
+## Ride A Pet 🐾
+- **Game Name**: Ride A Pet
+- **Place ID**: `124216119978534`
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/ride_a_pet.lua"))()
+  ```
+- **Raw Script URL**: `https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/ride_a_pet.lua`
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included**:
+  - 1. ☑️ Auto Steal (Rarest Egg) (Auto-locates target egg, mount-aware teleports, multi-hook prompt & remote trigger, delivers to base nest)
+  - 2. 📑 Steal Target Rarity Dropdown (Best Egg, Ethereal, Divine, Mythic, Legendary, Epic, Rare, Any)
+  - 3. ☑️ Auto Hatch Eggs (Triggers hatch remotes, prompts, and click detectors on all base nests)
+  - 4. ☑️ Auto Place Eggs (Auto-deposit held eggs into open nests)
+  - 5. ☑️ Auto Equip Best Pet (Continuously equips & mounts highest rarity pet)
+  - 6. 📑 Teleport Destination Dropdown (Stalls, Egg Spawns, Landmarks, Base)
+  - 7. 🔘 Teleport to Destination Button (Safe mount-aware teleport)
+  - 8. 🔘 Teleport to My Base Button (1-Click warp to base plot)
+  - 9. ⚡ WalkSpeed Boost & Stepper Pill ([16 - 250])
+  - 10. ⚡ JumpPower Boost & Stepper Pill ([50 - 300])
+  - 11. ☑️ Infinite Jump (Airborne continuous Y-boost)
+  - 12. ☑️ Player NoClip (Walk through maze walls, fences, and gates)
+  - 13. ⚡ Universal 3D Fly Mode & Stepper Pill (WASD / Mobile Touch Flight + [10 - 200] Stepper)
+  - 14. ☑️ Rare Egg ESP (Highlights & 3D tags, excludes base eggs)
+  - 15. ☑️ Player Chams ESP (Violet wall-hack highlights)
+  - 16. ☑️ Player Info Tags (Billboard tags with live distance & HP)
+  - 17. ☑️ FullBright & Clear Fog (Crystal clear visibility)
+  - 18. ☑️ Instant Proximity Prompts (0s hold time)
+  - 19. 🛡️ Bulletproof Anti-AFK (VirtualUser idle kick bypass)
+  - 20. 🔘 Rejoin Server (1-Click reconnect)
+  - 21. 🔘 Server Hop (Find and join alternate server)
+- **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280px` width) with Scrollable Content and Centered Branding Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
+
 ====================================================
 Updated: September 21, 2026
 ====================================================
+
 
 
 
