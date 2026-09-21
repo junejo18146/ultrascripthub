@@ -1,11 +1,12 @@
 --[[
-    JUNEJO ULTRA SCRIPT HUB - SLAYERS 2 (V2.0 HIGH-PERFORMANCE EDITION)
+    JUNEJO ULTRA SCRIPT HUB - SLAYERS 2 (V2.5 5-ROW SCROLLING EDITION)
     Target Game: Slayers 2 (Roblox)
     Author: Made by Junejo (junejo18146)
     Repository: junejo18146/ultrascripthub
     Theme: Official UI 1 - Classic Matte Dark (#0F0F11)
     Status: Unlocked Direct Standalone Execution (Key System Disabled)
-    Optimized: 0% CPU Lag, Pre-Cached Remotes, Zero Screen Hang, 100% Tested
+    Layout: 5 Features Visible on Main Screen + Smooth Scrollable Slider
+    New Features: Instant Auto Get Up, Hitbox Expander, Teleport to Low HP Player
 --]]
 
 local CoreGui = game:GetService("CoreGui")
@@ -45,6 +46,8 @@ end
 
 -- Global Configuration & State
 local Toggles = {
+    InstantGetUp = true,
+    HitboxExpander = false,
     AutoFarmMobs = false,
     KillAura = false,
     AutoAcceptQuests = false,
@@ -63,6 +66,7 @@ local SafePlatform = nil
 local ActiveMobESP = {}
 local ActivePlayerESP = {}
 local ActiveTrainerESP = {}
+local OriginalHitboxSizes = {}
 
 -- Pre-Cached Remotes Storage (Prevents freezing & lag)
 local CachedCombatRemotes = {}
@@ -78,14 +82,14 @@ local function isAlive()
 end
 
 -- ====================================================
--- PRE-CACHING SYSTEM (RUNS ONCE IN BACKGROUND - NO FREEZE)
+-- PRE-CACHING SYSTEM (RUNS ONCE IN BACKGROUND)
 -- ====================================================
 task.spawn(function()
     pcall(function()
         for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
             if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
                 local n = obj.Name:lower()
-                if n:find("attack") or n:find("combat") or n:find("m1") or n:find("slash") or n:find("hit") or n:find("swing") or n:find("damage") or n:find("swing") or n:find("punch") then
+                if n:find("attack") or n:find("combat") or n:find("m1") or n:find("slash") or n:find("hit") or n:find("swing") or n:find("damage") or n:find("punch") then
                     table.insert(CachedCombatRemotes, obj)
                 elseif n:find("quest") or n:find("mission") or n:find("task") or n:find("dialogue") or n:find("tonpc") or n:find("accept") then
                     table.insert(CachedQuestRemotes, obj)
@@ -116,7 +120,7 @@ local function ShowToast(title, message)
 
         local Toast = Instance.new("Frame")
         Toast.Name = "JunejoToast"
-        Toast.Size = UDim2.new(0, 240, 0, 40)
+        Toast.Size = UDim2.new(0, 240, 0, 38)
         Toast.Position = UDim2.new(0.5, -120, 0.08, 0)
         Toast.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
         Toast.BorderSizePixel = 0
@@ -134,7 +138,7 @@ local function ShowToast(title, message)
 
         local TitleLbl = Instance.new("TextLabel")
         TitleLbl.Size = UDim2.new(1, -12, 0, 16)
-        TitleLbl.Position = UDim2.new(0, 8, 0, 4)
+        TitleLbl.Position = UDim2.new(0, 8, 0, 3)
         TitleLbl.BackgroundTransparency = 1
         TitleLbl.Text = title
         TitleLbl.TextColor3 = Color3.fromRGB(255, 200, 50)
@@ -146,7 +150,7 @@ local function ShowToast(title, message)
 
         local MsgLbl = Instance.new("TextLabel")
         MsgLbl.Size = UDim2.new(1, -12, 0, 16)
-        MsgLbl.Position = UDim2.new(0, 8, 0, 19)
+        MsgLbl.Position = UDim2.new(0, 8, 0, 18)
         MsgLbl.BackgroundTransparency = 1
         MsgLbl.Text = message
         MsgLbl.TextColor3 = Color3.fromRGB(220, 220, 230)
@@ -171,10 +175,196 @@ local function ShowToast(title, message)
 end
 
 -- ====================================================
--- CORE FUNCTIONALITIES & ENGINES (OPTIMIZED & TESTED)
+-- CORE FUNCTIONALITIES & ENGINES
 -- ====================================================
 
--- 1. Safe Zone Teleport Action
+-- 1. Instant Auto Get Up / Anti-Ragdoll Engine
+pcall(function()
+    local function HandleCharacter(char)
+        local hum = char:WaitForChild("Humanoid", 5)
+        if not hum then return end
+
+        hum.StateChanged:Connect(function(oldState, newState)
+            if Toggles.InstantGetUp then
+                if newState == Enum.HumanoidStateType.Ragdoll or 
+                   newState == Enum.HumanoidStateType.FallingDown or 
+                   newState == Enum.HumanoidStateType.PlatformStanding or 
+                   newState == Enum.HumanoidStateType.Physics then
+                    hum.PlatformStand = false
+                    hum.Sit = false
+                    hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+                    hum:ChangeState(Enum.HumanoidStateType.Running)
+                end
+            end
+        end)
+    end
+
+    if LocalPlayer.Character then
+        HandleCharacter(LocalPlayer.Character)
+    end
+    LocalPlayer.CharacterAdded:Connect(HandleCharacter)
+end)
+
+-- Instant Get Up Continuous Loop (Catch-all for ragdoll states & knockdowns)
+task.spawn(function()
+    while true do
+        task.wait(0.04)
+        if Toggles.InstantGetUp and isAlive() then
+            pcall(function()
+                local char = LocalPlayer.Character
+                local hum = char and char:FindFirstChildOfClass("Humanoid")
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                if hum and hrp then
+                    local state = hum:GetState()
+                    if state == Enum.HumanoidStateType.Ragdoll or 
+                       state == Enum.HumanoidStateType.FallingDown or 
+                       state == Enum.HumanoidStateType.PlatformStanding or 
+                       state == Enum.HumanoidStateType.Physics or 
+                       hum.PlatformStand or 
+                       hum.Sit then
+                        hum.PlatformStand = false
+                        hum.Sit = false
+                        hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+                        hum:ChangeState(Enum.HumanoidStateType.Running)
+                        hrp.AssemblyLinearVelocity = Vector3.new(hrp.AssemblyLinearVelocity.X, 0, hrp.AssemblyLinearVelocity.Z)
+                    end
+                    -- Disable ragdoll ball socket constraints if any are created
+                    for _, obj in ipairs(char:GetDescendants()) do
+                        if obj:IsA("BallSocketConstraint") then
+                            obj.Enabled = false
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- 2. Fast Enemy Scanner Helper
+local function GetAliveEnemies()
+    local enemies = {}
+    pcall(function()
+        local function checkModel(model)
+            if not model:IsA("Model") or model == LocalPlayer.Character then return end
+            if Players:GetPlayerFromCharacter(model) then return end
+
+            local hum = model:FindFirstChildOfClass("Humanoid")
+            local root = model:FindFirstChild("HumanoidRootPart") or model:FindFirstChild("Torso") or model:FindFirstChild("UpperTorso")
+            
+            if hum and hum.Health > 0 and root then
+                table.insert(enemies, {
+                    Model = model,
+                    Humanoid = hum,
+                    RootPart = root,
+                    Name = model.Name
+                })
+            end
+        end
+
+        local humanoidsFolder = Workspace:FindFirstChild("Humanoids")
+        if humanoidsFolder then
+            for _, m in ipairs(humanoidsFolder:GetChildren()) do checkModel(m) end
+        end
+
+        local npcsFolder = Workspace:FindFirstChild("ActiveNpcs") or Workspace:FindFirstChild("Npcs")
+        if npcsFolder then
+            for _, m in ipairs(npcsFolder:GetChildren()) do checkModel(m) end
+        end
+
+        for _, obj in ipairs(Workspace:GetChildren()) do
+            if obj:IsA("Model") then checkModel(obj) end
+        end
+    end)
+    return enemies
+end
+
+-- 3. Hitbox Expander Engine (Demons + Rival Players)
+local function UpdateHitboxExpander()
+    pcall(function()
+        if not Toggles.HitboxExpander then
+            for part, originalSize in pairs(OriginalHitboxSizes) do
+                if part and part.Parent then
+                    part.Size = originalSize
+                    part.Transparency = 0
+                    part.CanCollide = true
+                end
+            end
+            OriginalHitboxSizes = {}
+            return
+        end
+
+        local targets = GetAliveEnemies()
+        -- Add rival players
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr ~= LocalPlayer and plr.Character then
+                local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+                local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+                if hum and hum.Health > 0 and hrp then
+                    table.insert(targets, { RootPart = hrp, Name = plr.Name })
+                end
+            end
+        end
+
+        for _, target in ipairs(targets) do
+            local part = target.RootPart
+            if part and part:IsA("BasePart") then
+                if not OriginalHitboxSizes[part] then
+                    OriginalHitboxSizes[part] = part.Size
+                end
+                part.Size = Vector3.new(18, 18, 18)
+                part.Transparency = 0.7
+                part.Material = Enum.Material.Neon
+                part.Color = Color3.fromRGB(255, 40, 40)
+                part.CanCollide = false
+            end
+        end
+    end)
+end
+
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        if Toggles.HitboxExpander then
+            UpdateHitboxExpander()
+        end
+    end
+end)
+
+-- 4. Teleport to Low Health Player Action
+local function TeleportToLowHealthPlayer()
+    pcall(function()
+        if not isAlive() then
+            ShowToast("Error", "Character not spawned!")
+            return
+        end
+
+        local myHrp = LocalPlayer.Character.HumanoidRootPart
+        local lowestPlayer = nil
+        local lowestHealth = math.huge
+
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr ~= LocalPlayer and plr.Character then
+                local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+                local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+                if hum and hrp and hum.Health > 0 and hum.Health < lowestHealth then
+                    lowestHealth = hum.Health
+                    lowestPlayer = plr
+                end
+            end
+        end
+
+        if lowestPlayer and lowestPlayer.Character and lowestPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local targetHrp = lowestPlayer.Character.HumanoidRootPart
+            myHrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, 3)
+            myHrp.AssemblyLinearVelocity = Vector3.zero
+            ShowToast("TP Low HP", "Warped behind " .. lowestPlayer.DisplayName .. " [HP: " .. math.floor(lowestHealth) .. "]")
+        else
+            ShowToast("Notice", "No low HP players found!")
+        end
+    end)
+end
+
+-- 5. Safe Zone Teleport Action
 local function TeleportToSafeZone()
     pcall(function()
         if not isAlive() then
@@ -224,20 +414,18 @@ local function AutoEquipWeapon()
     end)
 end
 
--- Instant Attack Executor (Fast, non-blocking, reliable)
+-- Instant Attack Executor
 local function ExecuteAttack(targetRoot)
     pcall(function()
         if not isAlive() then return end
         AutoEquipWeapon()
 
-        -- 1. Expand target hitbox if specified (Ensures 100% melee reach)
-        if targetRoot and targetRoot:IsA("BasePart") then
+        if targetRoot and targetRoot:IsA("BasePart") and not Toggles.HitboxExpander then
             targetRoot.Size = Vector3.new(18, 18, 18)
             targetRoot.CanCollide = false
             targetRoot.Transparency = 0.85
         end
 
-        -- 2. Activate Weapon Tool
         local char = LocalPlayer.Character
         for _, tool in ipairs(char:GetChildren()) do
             if tool:IsA("Tool") then
@@ -245,7 +433,6 @@ local function ExecuteAttack(targetRoot)
             end
         end
 
-        -- 3. Mouse / Virtual Click
         pcall(function()
             if mouse1click then
                 mouse1click()
@@ -257,7 +444,6 @@ local function ExecuteAttack(targetRoot)
             end
         end)
 
-        -- 4. Fire Cached Combat Remotes (Instant, 0 search overhead)
         for _, remote in ipairs(CachedCombatRemotes) do
             pcall(function()
                 if remote:IsA("RemoteEvent") then
@@ -275,53 +461,7 @@ local function ExecuteAttack(targetRoot)
     end)
 end
 
--- Fast Enemy Scanner (Scans specific folders without freezing)
-local function GetAliveEnemies()
-    local enemies = {}
-    pcall(function()
-        local function checkModel(model)
-            if not model:IsA("Model") or model == LocalPlayer.Character then return end
-            if Players:GetPlayerFromCharacter(model) then return end
-
-            local hum = model:FindFirstChildOfClass("Humanoid")
-            local root = model:FindFirstChild("HumanoidRootPart") or model:FindFirstChild("Torso") or model:FindFirstChild("UpperTorso")
-            
-            if hum and hum.Health > 0 and root then
-                table.insert(enemies, {
-                    Model = model,
-                    Humanoid = hum,
-                    RootPart = root,
-                    Name = model.Name
-                })
-            end
-        end
-
-        -- Check specific Slayers 2 workspace folders first
-        local humanoidsFolder = Workspace:FindFirstChild("Humanoids")
-        if humanoidsFolder then
-            for _, m in ipairs(humanoidsFolder:GetChildren()) do
-                checkModel(m)
-            end
-        end
-
-        local npcsFolder = Workspace:FindFirstChild("ActiveNpcs") or Workspace:FindFirstChild("Npcs")
-        if npcsFolder then
-            for _, m in ipairs(npcsFolder:GetChildren()) do
-                checkModel(m)
-            end
-        end
-
-        -- Shallow scan of Workspace direct children
-        for _, obj in ipairs(Workspace:GetChildren()) do
-            if obj:IsA("Model") then
-                checkModel(obj)
-            end
-        end
-    end)
-    return enemies
-end
-
--- 2. Fast Auto Attack Loop (Independent, non-laggy)
+-- Fast Auto Attack Loop
 task.spawn(function()
     while true do
         task.wait(0.12)
@@ -331,7 +471,7 @@ task.spawn(function()
     end
 end)
 
--- 3. Kill Aura Loop (35-Studs Reach, Instant Damage, Zero Lag)
+-- Kill Aura Loop (35 Studs Reach)
 task.spawn(function()
     while true do
         task.wait(0.15)
@@ -351,7 +491,7 @@ task.spawn(function()
     end
 end)
 
--- 4. Auto Farm Mobs Loop (Teleport above closest enemy + Lock + Attack)
+-- Auto Farm Mobs Loop
 task.spawn(function()
     while true do
         task.wait(0.1)
@@ -371,7 +511,6 @@ task.spawn(function()
                 end
 
                 if closest and closest.Humanoid.Health > 0 then
-                    -- Lock above enemy to stay safe from counter-attacks
                     hrp.CFrame = closest.RootPart.CFrame * CFrame.new(0, 6, 0) * CFrame.Angles(math.rad(-90), 0, 0)
                     hrp.AssemblyLinearVelocity = Vector3.zero
                     ExecuteAttack(closest.RootPart)
@@ -381,8 +520,7 @@ task.spawn(function()
     end
 end)
 
--- 5. Auto Accept Quests Engine (Event-driven + Local Prompts + Dialogues)
--- A. Event Listener: Triggers any quest prompt immediately when in range
+-- Auto Accept Quests Engine
 pcall(function()
     ProximityPromptService.PromptShown:Connect(function(prompt)
         if Toggles.AutoAcceptQuests and isAlive() then
@@ -402,13 +540,11 @@ pcall(function()
     end)
 end)
 
--- B. Auto Dialogue Clicker & Quest Remotes Trigger
 task.spawn(function()
     while true do
         task.wait(0.6)
         if Toggles.AutoAcceptQuests and isAlive() then
             pcall(function()
-                -- 1. Click Dialogue Accept buttons in PlayerGui
                 local pg = LocalPlayer:FindFirstChild("PlayerGui")
                 if pg then
                     for _, gui in ipairs(pg:GetChildren()) do
@@ -431,7 +567,6 @@ task.spawn(function()
                     end
                 end
 
-                -- 2. Fire Cached Quest Remotes
                 for _, remote in ipairs(CachedQuestRemotes) do
                     pcall(function()
                         if remote:IsA("RemoteEvent") then
@@ -448,7 +583,7 @@ task.spawn(function()
     end
 end)
 
--- 6. Mob / Demon ESP Engine (GPU BillboardGui - Zero lag, No screen hang)
+-- Mob / Demon ESP Engine
 local function UpdateMobESP()
     pcall(function()
         if not Toggles.MobESP then
@@ -497,7 +632,6 @@ local function UpdateMobESP()
             end
         end
 
-        -- Clean up dead/despawned mobs
         for part, bg in pairs(ActiveMobESP) do
             if not validParts[part] or not part.Parent then
                 if bg and bg.Parent then bg:Destroy() end
@@ -507,7 +641,7 @@ local function UpdateMobESP()
     end)
 end
 
--- 7. Player ESP Engine
+-- Player ESP Engine
 local function UpdatePlayerESP()
     pcall(function()
         if not Toggles.PlayerESP then
@@ -559,7 +693,7 @@ local function UpdatePlayerESP()
     end)
 end
 
--- 8. Breathing Trainers / NPC ESP Engine (Direct Folder Scan - Zero Lag)
+-- Breathing Trainers / NPC ESP Engine
 local function UpdateTrainerESP()
     pcall(function()
         if not Toggles.TrainerESP then
@@ -620,7 +754,7 @@ local function UpdateTrainerESP()
     end)
 end
 
--- ESP Master Timer (Runs smoothly at 0.4s intervals without CPU spikes)
+-- ESP Master Timer
 task.spawn(function()
     while true do
         task.wait(0.4)
@@ -630,7 +764,7 @@ task.spawn(function()
     end
 end)
 
--- 9. WalkSpeed Controller Loop (Locked on Heartbeat)
+-- WalkSpeed Heartbeat Loop
 RunService.Heartbeat:Connect(function()
     pcall(function()
         if isAlive() and Toggles.WalkSpeed then
@@ -644,6 +778,7 @@ end)
 
 -- ====================================================
 -- OFFICIAL UI 1: ULTRA SCRIPT HUB CLASSIC MATTE DARK
+-- (Compact 280x225px with 5-Row Scrolling Frame Standard)
 -- ====================================================
 
 local ScreenGui = Instance.new("ScreenGui")
@@ -662,11 +797,11 @@ else
     ScreenGui.Parent = UIContainer
 end
 
--- Main Container (280px width, 360px height)
+-- Main Container: 280px width, 225px height (Classic 5-Row Standard)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 360)
-MainFrame.Position = UDim2.new(0.5, -140, 0.45, -180)
+MainFrame.Size = UDim2.new(0, 280, 0, 225)
+MainFrame.Position = UDim2.new(0.5, -140, 0.45, -112)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -674,7 +809,7 @@ MainFrame.ClipsDescendants = true
 MainFrame.Parent = ScreenGui
 
 local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 12)
+MainCorner.CornerRadius = UDim.new(0, 10)
 MainCorner.Parent = MainFrame
 
 local MainStroke = Instance.new("UIStroke")
@@ -682,10 +817,10 @@ MainStroke.Color = Color3.fromRGB(35, 35, 42)
 MainStroke.Thickness = 1
 MainStroke.Parent = MainFrame
 
--- Header Bar
+-- Header Bar (32px)
 local Header = Instance.new("Frame")
 Header.Name = "Header"
-Header.Size = UDim2.new(1, 0, 0, 36)
+Header.Size = UDim2.new(1, 0, 0, 32)
 Header.BackgroundTransparency = 1
 Header.Parent = MainFrame
 
@@ -696,19 +831,19 @@ TitleLabel.Position = UDim2.new(0, 14, 0, 0)
 TitleLabel.BackgroundTransparency = 1
 TitleLabel.Text = "SLAYERS 2"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleLabel.TextSize = 13
+TitleLabel.TextSize = 12
 TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.Parent = Header
 
 local CloseButton = Instance.new("TextButton")
 CloseButton.Name = "CloseButton"
-CloseButton.Size = UDim2.new(0, 36, 0, 36)
-CloseButton.Position = UDim2.new(1, -36, 0, 0)
+CloseButton.Size = UDim2.new(0, 32, 0, 32)
+CloseButton.Position = UDim2.new(1, -32, 0, 0)
 CloseButton.BackgroundTransparency = 1
 CloseButton.Text = "x"
 CloseButton.TextColor3 = Color3.fromRGB(160, 160, 175)
-CloseButton.TextSize = 16
+CloseButton.TextSize = 15
 CloseButton.Font = Enum.Font.GothamMedium
 CloseButton.Parent = Header
 
@@ -719,7 +854,7 @@ end)
 local HeaderDivider = Instance.new("Frame")
 HeaderDivider.Name = "HeaderDivider"
 HeaderDivider.Size = UDim2.new(1, 0, 0, 1)
-HeaderDivider.Position = UDim2.new(0, 0, 0, 36)
+HeaderDivider.Position = UDim2.new(0, 0, 0, 32)
 HeaderDivider.BackgroundColor3 = Color3.fromRGB(28, 28, 35)
 HeaderDivider.BorderSizePixel = 0
 HeaderDivider.Parent = MainFrame
@@ -757,113 +892,114 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Content Scroll Frame
+-- Content Scroll Frame: Exactly 136px height to display 5 items at a time!
 local ContentScroll = Instance.new("ScrollingFrame")
 ContentScroll.Name = "ContentScroll"
-ContentScroll.Size = UDim2.new(1, 0, 1, -74)
-ContentScroll.Position = UDim2.new(0, 0, 0, 37)
+ContentScroll.Size = UDim2.new(1, 0, 0, 154)
+ContentScroll.Position = UDim2.new(0, 0, 0, 33)
 ContentScroll.BackgroundTransparency = 1
 ContentScroll.BorderSizePixel = 0
-ContentScroll.ScrollBarThickness = 2
-ContentScroll.ScrollBarImageColor3 = Color3.fromRGB(50, 50, 60)
+ContentScroll.ScrollBarThickness = 3
+ContentScroll.ScrollBarImageColor3 = Color3.fromRGB(65, 65, 80)
 ContentScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 ContentScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+ContentScroll.ScrollingDirection = Enum.ScrollingDirection.Y
 ContentScroll.Parent = MainFrame
 
 local ContentLayout = Instance.new("UIListLayout")
 ContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
-ContentLayout.Padding = UDim.new(0, 0)
+ContentLayout.Padding = UDim.new(0, 4)
 ContentLayout.Parent = ContentScroll
 
 local ContentPadding = Instance.new("UIPadding")
-ContentPadding.PaddingTop = UDim.new(0, 6)
-ContentPadding.PaddingBottom = UDim.new(0, 6)
+ContentPadding.PaddingTop = UDim.new(0, 4)
+ContentPadding.PaddingBottom = UDim.new(0, 4)
 ContentPadding.PaddingLeft = UDim.new(0, 14)
 ContentPadding.PaddingRight = UDim.new(0, 14)
 ContentPadding.Parent = ContentScroll
 
--- Top Action Button: Teleport to Safe Zone
-local ActionRow = Instance.new("Frame")
-ActionRow.Name = "ActionRow"
-ActionRow.Size = UDim2.new(1, 0, 0, 34)
-ActionRow.BackgroundTransparency = 1
-ActionRow.LayoutOrder = 1
-ActionRow.Parent = ContentScroll
-
-local ActionBtn = Instance.new("TextButton")
-ActionBtn.Name = "ActionBtn"
-ActionBtn.Size = UDim2.new(1, 0, 0, 28)
-ActionBtn.Position = UDim2.new(0, 0, 0, 3)
-ActionBtn.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-ActionBtn.BorderSizePixel = 0
-ActionBtn.Text = "Teleport to Safe Zone"
-ActionBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ActionBtn.TextSize = 12
-ActionBtn.Font = Enum.Font.GothamBold
-ActionBtn.Parent = ActionRow
-
-local ActionCorner = Instance.new("UICorner")
-ActionCorner.CornerRadius = UDim.new(0, 6)
-ActionCorner.Parent = ActionBtn
-
-local ActionStroke = Instance.new("UIStroke")
-ActionStroke.Color = Color3.fromRGB(45, 45, 55)
-ActionStroke.Thickness = 1
-ActionStroke.Parent = ActionBtn
-
-ActionBtn.MouseButton1Click:Connect(function()
-    TeleportToSafeZone()
-end)
-
--- Feature Toggle Row Creator (Flat borderless row with rounded-square checkbox)
-local function CreateToggleRow(order, name, key)
+-- Helper: Create 1-Click Action Button Row (24px height)
+local function CreateActionRow(order, name, callback)
     local Row = Instance.new("Frame")
     Row.Name = name .. "Row"
-    Row.Size = UDim2.new(1, 0, 0, 26)
+    Row.Size = UDim2.new(1, 0, 0, 24)
+    Row.BackgroundTransparency = 1
+    Row.LayoutOrder = order
+    Row.Parent = ContentScroll
+
+    local Btn = Instance.new("TextButton")
+    Btn.Name = "ActionBtn"
+    Btn.Size = UDim2.new(1, 0, 1, 0)
+    Btn.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+    Btn.BorderSizePixel = 0
+    Btn.Text = name
+    Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Btn.TextSize = 12
+    Btn.Font = Enum.Font.GothamBold
+    Btn.Parent = Row
+
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 5)
+    Corner.Parent = Btn
+
+    local Stroke = Instance.new("UIStroke")
+    Stroke.Color = Color3.fromRGB(45, 45, 55)
+    Stroke.Thickness = 1
+    Stroke.Parent = Btn
+
+    Btn.MouseButton1Click:Connect(callback)
+    return Row
+end
+
+-- Helper: Create Feature Toggle Row (24px height, flat borderless row with rounded-square checkbox)
+local function CreateToggleRow(order, name, key, onToggle)
+    local Row = Instance.new("Frame")
+    Row.Name = name .. "Row"
+    Row.Size = UDim2.new(1, 0, 0, 24)
     Row.BackgroundTransparency = 1
     Row.LayoutOrder = order
     Row.Parent = ContentScroll
 
     local Label = Instance.new("TextLabel")
     Label.Name = "Label"
-    Label.Size = UDim2.new(1, -30, 1, 0)
+    Label.Size = UDim2.new(1, -28, 1, 0)
     Label.BackgroundTransparency = 1
     Label.Text = name
-    Label.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Label.TextSize = 13
+    Label.TextColor3 = Color3.fromRGB(240, 240, 240)
+    Label.TextSize = 12
     Label.Font = Enum.Font.GothamMedium
     Label.TextXAlignment = Enum.TextXAlignment.Left
     Label.Parent = Row
 
     local Checkbox = Instance.new("TextButton")
     Checkbox.Name = "Checkbox"
-    Checkbox.Size = UDim2.new(0, 20, 0, 20)
-    Checkbox.Position = UDim2.new(1, -20, 0.5, -10)
-    Checkbox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+    Checkbox.Size = UDim2.new(0, 18, 0, 18)
+    Checkbox.Position = UDim2.new(1, -18, 0.5, -9)
+    Checkbox.BackgroundColor3 = Toggles[key] and Color3.fromRGB(35, 35, 45) or Color3.fromRGB(27, 27, 32)
     Checkbox.BorderSizePixel = 0
     Checkbox.Text = ""
     Checkbox.Parent = Row
 
     local BoxCorner = Instance.new("UICorner")
-    BoxCorner.CornerRadius = UDim.new(0, 5)
+    BoxCorner.CornerRadius = UDim.new(0, 4)
     BoxCorner.Parent = Checkbox
 
     local BoxStroke = Instance.new("UIStroke")
-    BoxStroke.Color = Color3.fromRGB(45, 45, 55)
+    BoxStroke.Color = Toggles[key] and Color3.fromRGB(80, 80, 100) or Color3.fromRGB(45, 45, 55)
     BoxStroke.Thickness = 1
     BoxStroke.Parent = Checkbox
 
     local CheckMark = Instance.new("Frame")
     CheckMark.Name = "CheckMark"
-    CheckMark.Size = UDim2.new(0, 10, 0, 10)
-    CheckMark.Position = UDim2.new(0.5, -5, 0.5, -5)
+    CheckMark.Size = UDim2.new(0, 8, 0, 8)
+    CheckMark.Position = UDim2.new(0.5, -4, 0.5, -4)
     CheckMark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     CheckMark.BorderSizePixel = 0
     CheckMark.Visible = Toggles[key]
     CheckMark.Parent = Checkbox
 
     local MarkCorner = Instance.new("UICorner")
-    MarkCorner.CornerRadius = UDim.new(0, 3)
+    MarkCorner.CornerRadius = UDim.new(0, 2)
     MarkCorner.Parent = CheckMark
 
     local function ToggleState()
@@ -876,6 +1012,7 @@ local function CreateToggleRow(order, name, key)
             Checkbox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
             BoxStroke.Color = Color3.fromRGB(45, 45, 55)
         end
+        if onToggle then onToggle(Toggles[key]) end
         ShowToast(name, Toggles[key] and "Enabled" or "Disabled")
     end
 
@@ -883,46 +1020,83 @@ local function CreateToggleRow(order, name, key)
     return Row
 end
 
--- Create Standard Feature Rows
-CreateToggleRow(2, "Auto Farm Mobs / Demons", "AutoFarmMobs")
-CreateToggleRow(3, "Kill Aura", "KillAura")
-CreateToggleRow(4, "Auto Accept Quests", "AutoAcceptQuests")
-CreateToggleRow(5, "Fast Auto Attack", "FastAutoAttack")
-CreateToggleRow(6, "Mob / Demon ESP", "MobESP")
-CreateToggleRow(7, "Player ESP", "PlayerESP")
-CreateToggleRow(8, "Trainers / NPC ESP", "TrainerESP")
+-- ====================================================
+-- ROWS DEFINITION (TOP 5 VISIBLE ON SCREEN FIRST!)
+-- ====================================================
 
--- WalkSpeed Row with Dual Controls: Checkbox + Integrated Stepper Pill [ - 50 + ]
+-- 1. [TOP ITEM 1] Instant Auto Get Up
+CreateToggleRow(1, "Instant Auto Get Up", "InstantGetUp")
+
+-- 2. [TOP ITEM 2] Hitbox Expander
+CreateToggleRow(2, "Hitbox Expander", "HitboxExpander", function(enabled)
+    if not enabled then UpdateHitboxExpander() end
+end)
+
+-- 3. [TOP ITEM 3] Teleport to Low Health Player
+CreateActionRow(3, "Teleport to Low HP Player", function()
+    TeleportToLowHealthPlayer()
+end)
+
+-- 4. [TOP ITEM 4] Teleport to Safe Zone
+CreateActionRow(4, "Teleport to Safe Zone", function()
+    TeleportToSafeZone()
+end)
+
+-- 5. [TOP ITEM 5] Auto Farm Mobs / Demons
+CreateToggleRow(5, "Auto Farm Mobs / Demons", "AutoFarmMobs")
+
+-- ====================================================
+-- SCROLLABLE ROWS (SCROLL DOWN TO ACCESS)
+-- ====================================================
+
+-- 6. Kill Aura
+CreateToggleRow(6, "Kill Aura", "KillAura")
+
+-- 7. Auto Accept Quests
+CreateToggleRow(7, "Auto Accept Quests", "AutoAcceptQuests")
+
+-- 8. Fast Auto Attack
+CreateToggleRow(8, "Fast Auto Attack", "FastAutoAttack")
+
+-- 9. Mob / Demon ESP
+CreateToggleRow(9, "Mob / Demon ESP", "MobESP")
+
+-- 10. Player ESP
+CreateToggleRow(10, "Player ESP", "PlayerESP")
+
+-- 11. Trainers / NPC ESP
+CreateToggleRow(11, "Trainers / NPC ESP", "TrainerESP")
+
+-- 12. WalkSpeed Row (Checkbox + Pill Stepper: [ - 50 + ])
 local SpeedRow = Instance.new("Frame")
 SpeedRow.Name = "SpeedRow"
-SpeedRow.Size = UDim2.new(1, 0, 0, 30)
+SpeedRow.Size = UDim2.new(1, 0, 0, 24)
 SpeedRow.BackgroundTransparency = 1
-SpeedRow.LayoutOrder = 9
+SpeedRow.LayoutOrder = 12
 SpeedRow.Parent = ContentScroll
 
 local SpeedLabel = Instance.new("TextLabel")
 SpeedLabel.Name = "SpeedLabel"
-SpeedLabel.Size = UDim2.new(1, -135, 1, 0)
+SpeedLabel.Size = UDim2.new(1, -125, 1, 0)
 SpeedLabel.BackgroundTransparency = 1
 SpeedLabel.Text = "WalkSpeed"
-SpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-SpeedLabel.TextSize = 13
+SpeedLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
+SpeedLabel.TextSize = 12
 SpeedLabel.Font = Enum.Font.GothamMedium
 SpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
 SpeedLabel.Parent = SpeedRow
 
--- Speed Checkbox
 local SpeedCheckbox = Instance.new("TextButton")
 SpeedCheckbox.Name = "SpeedCheckbox"
-SpeedCheckbox.Size = UDim2.new(0, 20, 0, 20)
-SpeedCheckbox.Position = UDim2.new(1, -130, 0.5, -10)
+SpeedCheckbox.Size = UDim2.new(0, 18, 0, 18)
+SpeedCheckbox.Position = UDim2.new(1, -120, 0.5, -9)
 SpeedCheckbox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
 SpeedCheckbox.BorderSizePixel = 0
 SpeedCheckbox.Text = ""
 SpeedCheckbox.Parent = SpeedRow
 
 local SpeedBoxCorner = Instance.new("UICorner")
-SpeedBoxCorner.CornerRadius = UDim.new(0, 5)
+SpeedBoxCorner.CornerRadius = UDim.new(0, 4)
 SpeedBoxCorner.Parent = SpeedCheckbox
 
 local SpeedBoxStroke = Instance.new("UIStroke")
@@ -932,15 +1106,15 @@ SpeedBoxStroke.Parent = SpeedCheckbox
 
 local SpeedMark = Instance.new("Frame")
 SpeedMark.Name = "SpeedMark"
-SpeedMark.Size = UDim2.new(0, 10, 0, 10)
-SpeedMark.Position = UDim2.new(0.5, -5, 0.5, -5)
+SpeedMark.Size = UDim2.new(0, 8, 0, 8)
+SpeedMark.Position = UDim2.new(0.5, -4, 0.5, -4)
 SpeedMark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 SpeedMark.BorderSizePixel = 0
 SpeedMark.Visible = Toggles.WalkSpeed
 SpeedMark.Parent = SpeedCheckbox
 
 local SpeedMarkCorner = Instance.new("UICorner")
-SpeedMarkCorner.CornerRadius = UDim.new(0, 3)
+SpeedMarkCorner.CornerRadius = UDim.new(0, 2)
 SpeedMarkCorner.Parent = SpeedMark
 
 SpeedCheckbox.MouseButton1Click:Connect(function()
@@ -960,17 +1134,16 @@ SpeedCheckbox.MouseButton1Click:Connect(function()
     ShowToast("WalkSpeed", Toggles.WalkSpeed and ("Enabled (" .. CustomSpeedValue .. ")") or "Disabled")
 end)
 
--- Integrated Stepper Pill: [  -    50    +  ]
 local StepperPill = Instance.new("Frame")
 StepperPill.Name = "StepperPill"
-StepperPill.Size = UDim2.new(0, 100, 0, 24)
-StepperPill.Position = UDim2.new(1, -100, 0.5, -12)
+StepperPill.Size = UDim2.new(0, 95, 0, 22)
+StepperPill.Position = UDim2.new(1, -95, 0.5, -11)
 StepperPill.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
 StepperPill.BorderSizePixel = 0
 StepperPill.Parent = SpeedRow
 
 local PillCorner = Instance.new("UICorner")
-PillCorner.CornerRadius = UDim.new(0, 6)
+PillCorner.CornerRadius = UDim.new(0, 5)
 PillCorner.Parent = StepperPill
 
 local PillStroke = Instance.new("UIStroke")
@@ -980,18 +1153,18 @@ PillStroke.Parent = StepperPill
 
 local MinusBtn = Instance.new("TextButton")
 MinusBtn.Name = "MinusBtn"
-MinusBtn.Size = UDim2.new(0, 28, 1, 0)
+MinusBtn.Size = UDim2.new(0, 26, 1, 0)
 MinusBtn.BackgroundTransparency = 1
 MinusBtn.Text = "-"
 MinusBtn.TextColor3 = Color3.fromRGB(200, 200, 215)
-MinusBtn.TextSize = 14
+MinusBtn.TextSize = 13
 MinusBtn.Font = Enum.Font.GothamBold
 MinusBtn.Parent = StepperPill
 
 local SpeedValLbl = Instance.new("TextLabel")
 SpeedValLbl.Name = "SpeedValLbl"
-SpeedValLbl.Size = UDim2.new(1, -56, 1, 0)
-SpeedValLbl.Position = UDim2.new(0, 28, 0, 0)
+SpeedValLbl.Size = UDim2.new(1, -52, 1, 0)
+SpeedValLbl.Position = UDim2.new(0, 26, 0, 0)
 SpeedValLbl.BackgroundTransparency = 1
 SpeedValLbl.Text = tostring(CustomSpeedValue)
 SpeedValLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -1001,12 +1174,12 @@ SpeedValLbl.Parent = StepperPill
 
 local PlusBtn = Instance.new("TextButton")
 PlusBtn.Name = "PlusBtn"
-PlusBtn.Size = UDim2.new(0, 28, 1, 0)
-PlusBtn.Position = UDim2.new(1, -28, 0, 0)
+PlusBtn.Size = UDim2.new(0, 26, 1, 0)
+PlusBtn.Position = UDim2.new(1, -26, 0, 0)
 PlusBtn.BackgroundTransparency = 1
 PlusBtn.Text = "+"
 PlusBtn.TextColor3 = Color3.fromRGB(200, 200, 215)
-PlusBtn.TextSize = 14
+PlusBtn.TextSize = 13
 PlusBtn.Font = Enum.Font.GothamBold
 PlusBtn.Parent = StepperPill
 
@@ -1031,8 +1204,8 @@ end)
 -- Mandatory Centered Branding Footer (UI 1 Standard)
 local Footer = Instance.new("Frame")
 Footer.Name = "Footer"
-Footer.Size = UDim2.new(1, 0, 0, 36)
-Footer.Position = UDim2.new(0, 0, 1, -36)
+Footer.Size = UDim2.new(1, 0, 0, 34)
+Footer.Position = UDim2.new(0, 0, 1, -34)
 Footer.BackgroundTransparency = 1
 Footer.Parent = MainFrame
 
@@ -1045,8 +1218,8 @@ FooterDivider.Parent = Footer
 
 local HubTitle = Instance.new("TextLabel")
 HubTitle.Name = "HubTitle"
-HubTitle.Size = UDim2.new(1, 0, 0, 16)
-HubTitle.Position = UDim2.new(0, 0, 0, 3)
+HubTitle.Size = UDim2.new(1, 0, 0, 15)
+HubTitle.Position = UDim2.new(0, 0, 0, 2)
 HubTitle.BackgroundTransparency = 1
 HubTitle.Text = "ULTRA SCRIPT HUB"
 HubTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -1057,13 +1230,13 @@ HubTitle.Parent = Footer
 local CreatorSubtitle = Instance.new("TextLabel")
 CreatorSubtitle.Name = "CreatorSubtitle"
 CreatorSubtitle.Size = UDim2.new(1, 0, 0, 14)
-CreatorSubtitle.Position = UDim2.new(0, 0, 0, 18)
+CreatorSubtitle.Position = UDim2.new(0, 0, 0, 17)
 CreatorSubtitle.BackgroundTransparency = 1
 CreatorSubtitle.Text = "Made by Junejo"
 CreatorSubtitle.TextColor3 = Color3.fromRGB(136, 136, 153)
-CreatorSubtitle.TextSize = 10
+CreatorSubtitle.TextSize = 9
 CreatorSubtitle.Font = Enum.Font.GothamMedium
 CreatorSubtitle.Parent = Footer
 
-ShowToast("ULTRA SCRIPT HUB", "Slayers 2 Loaded Successfully!")
-print("[Junejo Hub] Slayers 2 V2.0 initialized with 0% CPU Lag & Pre-Cached Remotes!")
+ShowToast("ULTRA SCRIPT HUB", "Slayers 2 V2.5 Loaded!")
+print("[Junejo Hub] Slayers 2 V2.5 initialized with 5-Row Visible Scroll Standard!")
