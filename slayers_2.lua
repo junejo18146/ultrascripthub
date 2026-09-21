@@ -400,6 +400,186 @@ local function TeleportToLowHealthPlayer()
     end)
 end
 
+local CurrentQuestIndex = 1
+
+-- Comprehensive Multi-Tier Quest & Objective Locator
+local function GetAllQuestTargets()
+    local targets = {}
+    local seenParts = {}
+
+    local function addTarget(part, label, priority)
+        if not part or not part:IsA("BasePart") or seenParts[part] then return end
+        seenParts[part] = true
+        table.insert(targets, {
+            Part = part,
+            Name = label or part.Name,
+            Priority = priority or 10
+        })
+    end
+
+    pcall(function()
+        -- 1. Active In-Game Waypoints / Trackers / Beams (Priority 1)
+        for _, descendant in ipairs(Workspace:GetDescendants()) do
+            if descendant:IsA("BillboardGui") or descendant:IsA("SurfaceGui") then
+                local n = descendant.Name:lower()
+                if n:find("quest") or n:find("waypoint") or n:find("marker") or n:find("objective") or n:find("track") or n:find("goal") or n:find("compass") then
+                    local p = descendant.Adornee or (descendant.Parent:IsA("BasePart") and descendant.Parent) or (descendant.Parent:FindFirstChildWhichIsA("BasePart"))
+                    if p and p ~= LocalPlayer.Character and not p:IsDescendantOf(LocalPlayer.Character) then
+                        addTarget(p, "[Objective] " .. (descendant.Parent and descendant.Parent.Name or p.Name), 1)
+                    end
+                end
+            elseif descendant:IsA("Beam") then
+                local n = descendant.Name:lower()
+                if n:find("quest") or n:find("guide") or n:find("path") or n:find("track") then
+                    if descendant.Attachment1 and descendant.Attachment1.Parent and descendant.Attachment1.Parent:IsA("BasePart") then
+                        local p = descendant.Attachment1.Parent
+                        if not p:IsDescendantOf(LocalPlayer.Character) then
+                            addTarget(p, "[Marker] " .. p.Name, 1)
+                        end
+                    end
+                end
+            end
+        end
+
+        -- 2. Inspect PlayerGui for Active Quest Keywords (Priority 2)
+        local pg = LocalPlayer:FindFirstChild("PlayerGui")
+        local questKeywords = {}
+        if pg then
+            for _, gui in ipairs(pg:GetDescendants()) do
+                if gui:IsA("TextLabel") or gui:IsA("TextButton") then
+                    local parentName = (gui.Parent and gui.Parent.Name or ""):lower()
+                    local gName = gui.Name:lower()
+                    if parentName:find("quest") or parentName:find("mission") or parentName:find("task") or 
+                       gName:find("quest") or gName:find("mission") or gName:find("task") or gName:find("desc") or gName:find("title") then
+                        local txt = (gui.Text or ""):lower()
+                        if #txt > 3 and not txt:find("none") and not txt:find("no quest") then
+                            for word in txt:gmatch("%a+") do
+                                if #word >= 4 and not word:find("defeat") and not word:find("kill") and not word:find("slay") and not word:find("talk") and not word:find("bring") and not word:find("collect") and not word:find("quest") then
+                                    table.insert(questKeywords, word)
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+
+        if #questKeywords > 0 then
+            for _, m in ipairs(Workspace:GetDescendants()) do
+                if m:IsA("Model") and m ~= LocalPlayer.Character and not Players:GetPlayerFromCharacter(m) then
+                    local mName = m.Name:lower()
+                    for _, kw in ipairs(questKeywords) do
+                        if mName:find(kw) then
+                            local root = m:FindFirstChild("HumanoidRootPart") or m:FindFirstChild("Torso") or m:FindFirstChildWhichIsA("BasePart")
+                            local hum = m:FindFirstChildOfClass("Humanoid")
+                            if root and (not hum or hum.Health > 0) then
+                                addTarget(root, "[Quest Target] " .. m.Name, 2)
+                                break
+                            end
+                        end
+                    end
+                end
+            end
+        end
+
+        -- 3. Check for Quest Pickups / Items / Gates / Objectives (Priority 3)
+        for _, name in ipairs({"questpickup", "questdeposit", "questgate", "questobjective", "questitem", "lostpage", "lost pages", "bookofguidance", "guidance"}) do
+            for _, found in ipairs(Workspace:GetDescendants()) do
+                if found.Name:lower():find(name) then
+                    local part = found:IsA("BasePart") and found or found:FindFirstChildWhichIsA("BasePart")
+                    if part and not part:IsDescendantOf(LocalPlayer.Character) then
+                        addTarget(part, "[Objective] " .. found.Name, 3)
+                    end
+                end
+            end
+        end
+
+        -- 4. Check for Quest NPCs & Givers in all known NPC folders & Workspace (Priority 4)
+        local npcFolders = {}
+        for _, folderName in ipairs({"NPCs", "Npcs", "NPCS", "ActiveNpcs", "QuestGivers", "QuestBoards", "Entities", "Spawns", "Map", "Village"}) do
+            local f = Workspace:FindFirstChild(folderName)
+            if f then table.insert(npcFolders, f) end
+        end
+        table.insert(npcFolders, Workspace)
+
+        local knownNpcNames = {"kona", "grandpa", "board", "quest", "trainer", "urokodaki", "sabito", "muzan", "giyuu", "chief", "slayer", "elder"}
+
+        for _, folder in ipairs(npcFolders) do
+            for _, obj in ipairs(folder:GetChildren()) do
+                if obj:IsA("Model") and obj ~= LocalPlayer.Character and not Players:GetPlayerFromCharacter(obj) then
+                    local objName = obj.Name:lower()
+                    local isQuestGiver = false
+
+                    if obj:FindFirstChild("Quests") or obj:FindFirstChild("Quest") or obj:FindFirstChild("QuestGiver") or 
+                       obj:FindFirstChild("Dialogue") or obj:FindFirstChild("Dialog") or obj:FindFirstChild("Mission") then
+                        isQuestGiver = true
+                    end
+
+                    if not isQuestGiver then
+                        for _, p in ipairs(obj:GetDescendants()) do
+                            if p:IsA("ProximityPrompt") then
+                                local pt = (p.ActionText .. " " .. p.ObjectText .. " " .. p.Name):lower()
+                                if pt:find("quest") or pt:find("talk") or pt:find("speak") or pt:find("interact") or pt:find("take") or pt:find("mission") then
+                                    isQuestGiver = true
+                                    break
+                                end
+                            elseif p:IsA("BillboardGui") then
+                                for _, lbl in ipairs(p:GetDescendants()) do
+                                    if lbl:IsA("TextLabel") and (lbl.Text:find("!") or lbl.Text:find("?") or lbl.Text:lower():find("quest")) then
+                                        isQuestGiver = true
+                                        break
+                                    end
+                                end
+                            end
+                        end
+                    end
+
+                    if not isQuestGiver then
+                        for _, kn in ipairs(knownNpcNames) do
+                            if objName:find(kn) then
+                                isQuestGiver = true
+                                break
+                            end
+                        end
+                    end
+
+                    if isQuestGiver then
+                        local root = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Torso") or obj:FindFirstChildWhichIsA("BasePart")
+                        if root then
+                            addTarget(root, "[Quest NPC] " .. obj.Name, 4)
+                        end
+                    end
+                end
+            end
+        end
+
+        -- 5. Fallback: Any ProximityPrompt in Workspace with dialogue or interaction (Priority 5)
+        if #targets == 0 then
+            for _, prompt in ipairs(Workspace:GetDescendants()) do
+                if prompt:IsA("ProximityPrompt") then
+                    local pt = (prompt.ActionText .. " " .. prompt.ObjectText):lower()
+                    if pt:find("quest") or pt:find("talk") or pt:find("speak") or pt:find("mission") or pt:find("interact") then
+                        local p = prompt.Parent:IsA("BasePart") and prompt.Parent or prompt.Parent:FindFirstChildWhichIsA("BasePart")
+                        if p and not p:IsDescendantOf(LocalPlayer.Character) then
+                            addTarget(p, "[Interaction] " .. (prompt.Parent and prompt.Parent.Name or "Quest Prompt"), 5)
+                        end
+                    end
+                end
+            end
+        end
+    end)
+
+    local myPos = isAlive() and LocalPlayer.Character.HumanoidRootPart.Position or Vector3.zero
+    table.sort(targets, function(a, b)
+        if a.Priority ~= b.Priority then
+            return a.Priority < b.Priority
+        end
+        return (a.Part.Position - myPos).Magnitude < (b.Part.Position - myPos).Magnitude
+    end)
+
+    return targets
+end
+
 -- 6. Teleport to Quest Action
 local function TeleportToQuest()
     pcall(function()
@@ -409,59 +589,26 @@ local function TeleportToQuest()
         end
 
         local hrp = LocalPlayer.Character.HumanoidRootPart
-        local questTarget = nil
+        local targets = GetAllQuestTargets()
 
-        -- 1. Check for Quest Pickups / Deposits / Gates
-        for _, name in ipairs({"QuestPickup", "QuestDeposit", "QuestGate", "QuestObjective"}) do
-            local found = Workspace:FindFirstChild(name, true)
-            if found then
-                local part = found:IsA("BasePart") and found or found:FindFirstChildWhichIsA("BasePart")
-                if part then
-                    questTarget = part
-                    break
-                end
-            end
+        if #targets == 0 then
+            ShowToast("Notice", "No Quest objective or NPC found!")
+            return
         end
 
-        -- 2. Check for Quest NPCs in ActiveNpcs
-        if not questTarget then
-            local npcsFolder = Workspace:FindFirstChild("ActiveNpcs") or Workspace:FindFirstChild("Npcs")
-            if npcsFolder then
-                for _, npc in ipairs(npcsFolder:GetChildren()) do
-                    if npc:FindFirstChild("Quests") or npc:FindFirstChild("Quest") or npc.Name:lower():find("quest") then
-                        local root = npc:FindFirstChild("HumanoidRootPart") or npc:FindFirstChild("Torso") or npc:FindFirstChildWhichIsA("BasePart")
-                        if root then
-                            questTarget = root
-                            break
-                        end
-                    end
-                end
-            end
+        if CurrentQuestIndex > #targets then
+            CurrentQuestIndex = 1
         end
 
-        -- 3. Check for any NPC with active quest proximity prompt
-        if not questTarget then
-            for _, prompt in ipairs(Workspace:GetDescendants()) do
-                if prompt:IsA("ProximityPrompt") then
-                    local t = (prompt.ActionText .. " " .. prompt.ObjectText):lower()
-                    if t:find("quest") or t:find("mission") then
-                        local part = prompt.Parent:IsA("BasePart") and prompt.Parent or prompt.Parent:FindFirstChildWhichIsA("BasePart")
-                        if part then
-                            questTarget = part
-                            break
-                        end
-                    end
-                end
-            end
-        end
+        local selected = targets[CurrentQuestIndex]
+        CurrentQuestIndex = CurrentQuestIndex + 1
 
-        if questTarget then
-            hrp.CFrame = questTarget.CFrame * CFrame.new(0, 3, 3)
-            hrp.AssemblyLinearVelocity = Vector3.zero
-            ShowToast("Teleport Success", "Warped to Quest: " .. (questTarget.Parent and questTarget.Parent.Name or questTarget.Name))
-        else
-            ShowToast("Notice", "No active Quest objective found nearby!")
-        end
+        local targetPart = selected.Part
+        hrp.CFrame = targetPart.CFrame * CFrame.new(0, 3, 3)
+        hrp.AssemblyLinearVelocity = Vector3.zero
+        hrp.AssemblyAngularVelocity = Vector3.zero
+
+        ShowToast("Quest Teleport", "Warped to " .. selected.Name)
     end)
 end
 
@@ -748,56 +895,46 @@ local function UpdateQuestESP()
             return
         end
 
-        local questParts = {}
-        local npcsFolder = Workspace:FindFirstChild("ActiveNpcs") or Workspace:FindFirstChild("Npcs")
-        if npcsFolder then
-            for _, npc in ipairs(npcsFolder:GetChildren()) do
-                if npc:FindFirstChild("Quests") or npc:FindFirstChild("Quest") or npc.Name:lower():find("quest") then
-                    local root = npc:FindFirstChild("HumanoidRootPart") or npc:FindFirstChild("Torso") or npc:FindFirstChildWhichIsA("BasePart")
-                    if root then table.insert(questParts, { Part = root, Name = npc.Name }) end
-                end
-            end
-        end
+        local targets = GetAllQuestTargets()
+        local currentParts = {}
 
-        for _, name in ipairs({"QuestPickup", "QuestDeposit", "QuestGate", "QuestObjective"}) do
-            for _, found in ipairs(Workspace:GetDescendants()) do
-                if found.Name == name and found:IsA("BasePart") then
-                    table.insert(questParts, { Part = found, Name = name })
-                end
-            end
-        end
-
-        for _, item in ipairs(questParts) do
+        for _, item in ipairs(targets) do
             local part = item.Part
-            if part then
-                if not ActiveQuestESP[part] then
-                    local bg = Instance.new("BillboardGui")
-                    bg.Name = "JunejoQuestESP"
-                    bg.Adornee = part
-                    bg.Size = UDim2.new(0, 140, 0, 28)
-                    bg.StudsOffset = Vector3.new(0, 3.5, 0)
-                    bg.AlwaysOnTop = true
-                    bg.Parent = part
+            currentParts[part] = true
+            if not ActiveQuestESP[part] then
+                local bg = Instance.new("BillboardGui")
+                bg.Name = "JunejoQuestESP"
+                bg.Adornee = part
+                bg.Size = UDim2.new(0, 160, 0, 28)
+                bg.StudsOffset = Vector3.new(0, 3.5, 0)
+                bg.AlwaysOnTop = true
+                bg.Parent = part
 
-                    local lbl = Instance.new("TextLabel")
-                    lbl.Size = UDim2.new(1, 0, 1, 0)
-                    lbl.BackgroundTransparency = 1
-                    lbl.TextColor3 = Color3.fromRGB(255, 170, 0)
-                    lbl.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-                    lbl.TextStrokeTransparency = 0
-                    lbl.TextSize = 10
-                    lbl.Font = Enum.Font.GothamBold
-                    lbl.Text = "[QUEST] " .. item.Name
-                    lbl.Parent = bg
+                local lbl = Instance.new("TextLabel")
+                lbl.Size = UDim2.new(1, 0, 1, 0)
+                lbl.BackgroundTransparency = 1
+                lbl.TextColor3 = Color3.fromRGB(255, 185, 30)
+                lbl.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+                lbl.TextStrokeTransparency = 0
+                lbl.TextSize = 10
+                lbl.Font = Enum.Font.GothamBold
+                lbl.Text = item.Name
+                lbl.Parent = bg
 
-                    ActiveQuestESP[part] = bg
-                else
-                    local lbl = ActiveQuestESP[part]:FindFirstChildOfClass("TextLabel")
-                    if lbl and isAlive() then
-                        local dist = math.floor((part.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude)
-                        lbl.Text = "[QUEST] " .. item.Name .. " [" .. dist .. "m]"
-                    end
+                ActiveQuestESP[part] = bg
+            else
+                local lbl = ActiveQuestESP[part]:FindFirstChildOfClass("TextLabel")
+                if lbl and isAlive() then
+                    local dist = math.floor((part.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude)
+                    lbl.Text = item.Name .. " [" .. dist .. "m]"
                 end
+            end
+        end
+
+        for part, bg in pairs(ActiveQuestESP) do
+            if not currentParts[part] or not part.Parent then
+                if bg and bg.Parent then bg:Destroy() end
+                ActiveQuestESP[part] = nil
             end
         end
     end)
