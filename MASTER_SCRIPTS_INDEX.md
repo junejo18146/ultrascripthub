@@ -1555,9 +1555,36 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   - 21. 🔘 Server Hop (Find and join alternate server)
 - **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280px` width) with Scrollable Content and Centered Branding Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
 
+---
+
+## Steal a Chicken 🐔
+- **Game Name**: Steal a Chicken
+- **Place ID**: `76503495566299`
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/steal_a_chicken.lua"))()
+  ```
+- **Raw Script URL**: `https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/steal_a_chicken.lua`
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included**:
+  - 1. ☑️ Auto Steal Chickens (Best) (Smart Zone & Rarity Tier Scanner, Prompt Bypass, Direct Base Pen Delivery - Never touches treadmill)
+  - 2. 📑 Target Zone Dropdown (All Zones, Crystal, Cosmic, Abyss, Beach, Volcano, Snow, Desert, Jungle, Lake, Forest)
+  - 3. ☑️ Auto Collect Eggs (Remotes + Backpack GUI + Pen Eggs Models & Base Prompts)
+  - 4. ☑️ Auto Sell Eggs (Instant Direct Bulk Sell Bypassing Dialogues)
+  - 5. ☑️ Auto Train Speed (Base Treadmill Auto-Train)
+  - 6. ☑️ Remove Guards (Safe Void & Deletion Mode)
+  - 7. 🔘 Teleport to My Base (1-Click Instant Safe Base Pen Warp)
+  - 8. ⚡ WalkSpeed Boost & Stepper Pill ([16 - 250])
+  - 9. ⚡ Fly Mode & Stepper Pill ([20 - 200])
+  - 10. ☑️ No Clip (Phase through walls and gates)
+  - 11. ☑️ Infinite Jump (Continuous airborne jumps)
+  - 12. 🛡️ 24/7 Anti-AFK Engine (VirtualUser idle kick bypass)
+- **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280px` width) with Scrollable Content and Centered Branding Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
+
 ====================================================
 Updated: September 21, 2026
 ====================================================
+
 
 
 
