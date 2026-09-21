@@ -1440,7 +1440,32 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   - 20. 24/7 Anti-AFK Disconnect Engine
 - **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280x260px`) with `ScrollingFrame` & Mandatory Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
 
+---
+
+## Slayers 2
+- **Game Name**: Slayers 2
+- **Place IDs**: `16205713724` (Root) / `136406881576517` (Ouwland)
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/slayers_2.lua"))()
+  ```
+- **Raw Script URL**: `https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/slayers_2.lua`
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included**:
+  - 🔘 Teleport to Safe Zone (Top Action Button)
+  - ☑️ Auto Farm Mobs / Demons (Auto position & attack loop)
+  - ☑️ Auto Accept Quests (Auto accept quest prompts & remotes)
+  - ☑️ Fast Auto Attack (M1 Attack Spam & Tool Activation)
+  - ☑️ Kill Aura (AOE damage to all nearby enemies)
+  - ☑️ Mob / Demon ESP (ESP billboard with Name, HP & Distance)
+  - ☑️ Player ESP (ESP billboard with Player Name & Distance)
+  - ☑️ Trainers / NPC ESP (ESP billboard for all Breathing Trainers)
+  - ⚡ WalkSpeed Stepper (+ / - Integrated Pill Stepper & Toggle)
+  - 🛡️ Anti-AFK Protection (Idled prevention)
+- **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280x360px`) with Mandatory Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
+
 ====================================================
-Updated: September 19, 2026
+Updated: September 21, 2026
 ====================================================
+
 
