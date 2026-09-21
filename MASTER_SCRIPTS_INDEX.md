@@ -1472,6 +1472,25 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   - 17. 🛡️ 24/7 Anti-AFK Engine (Idle disconnect prevention)
 - **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280x250px`) with `ScrollingFrame` (5 features visible at once) and Mandatory Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
 
+---
+
+## Steal An Egg
+- **Game Name**: Steal An Egg
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/steal_an_egg.lua"))()
+  ```
+- **Raw Script URL**: `https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/steal_an_egg.lua`
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included**:
+  - 1. ☑️ Auto Steal & Return (Auto teleport to egg, 0s prompt trigger, return to base)
+  - 2. ☑️ Auto Treadmill Train (Auto train speed on treadmills/speedpads & remotes)
+  - 3. ☑️ Auto Hatch & Place (Automatic egg opening & remote hatch)
+  - 4. ☑️ Infinite Jump (Continuous multi-jump)
+  - 5. ⚡ WalkSpeed Controller (Checkbox Toggle + [ - 50 + ] Stepper Pill)
+  - 6. 🛡️ 24/7 Anti-AFK Engine (Idle disconnect prevention)
+- **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280x240px`) with Centered Branding Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
+
 ====================================================
 Updated: September 21, 2026
 ====================================================
