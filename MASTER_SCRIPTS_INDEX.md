@@ -1491,8 +1491,38 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   - 6. 🛡️ 24/7 Anti-AFK Engine (Idle disconnect prevention)
 - **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280x240px`) with Centered Branding Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
 
+---
+
+## Jump for Animals 🐾
+- **Game Name**: Jump for Animals
+- **Place ID**: `126870639873289`
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/jump_for_animals.lua"))()
+  ```
+- **Raw Script URL**: `https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/jump_for_animals.lua`
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included**:
+  - 1. ☑️ Auto Steal Best Egg (Smart Rarity Detection, Zone Locked, Never visits base empty-handed)
+  - 2. 📑 Steal Zone Dropdown (11 Zones: Meadow, Jungle, Coral Reef, Savannah, Desert, Winter, Crystal Mines, Mystic Isles, Celestial Heights, Prehistoric, The Underworld)
+  - 3. ☑️ Auto Train (Squats) (SquatZone Detector, Remotes, Barbell Equip & Auto Clicker)
+  - 4. ☑️ Remove Guards (Voids all map & stage guard models permanently)
+  - 5. ☑️ Auto Place Egg (Auto-deposit carried eggs into plot nest)
+  - 6. ☑️ Auto Hatch Egg (Incubator & ProximityPrompt auto-trigger)
+  - 7. 🔘 TP to Base (Instant warp to owned plot detector)
+  - 8. 🔘 Set Base Spot (Here) (Custom base CFrame bookmark)
+  - 9. 📑 Teleport to Zone Dropdown (Instant warp to any chosen zone)
+  - 10. ☑️ Fly Mode (Smooth 3D WASD flight navigation)
+  - 11. ⚡ Fly Speed Stepper Pill ([10 - 250])
+  - 12. ⚡ WalkSpeed Boost Stepper Pill ([16 - 250])
+  - 13. ☑️ Infinite Jump (Continuous airborne jumps)
+  - 14. ☑️ Player ESP (Highlight + Distance BillboardGui)
+  - 15. ☑️ NoClip (Stepped collision bypass)
+- **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280px` width) with Scrollable Content and Centered Branding Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
+
 ====================================================
 Updated: September 21, 2026
 ====================================================
+
 
 
