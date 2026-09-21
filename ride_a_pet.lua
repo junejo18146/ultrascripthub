@@ -1,156 +1,202 @@
---[[
-    ========================================================================
-    JUNEJO ULTRA SCRIPT HUB - RIDE A PET
-    ========================================================================
-    Author: Made by Junejo (junejo18146)
-    Target Game: Ride A Pet (Roblox Place: 124216119978534)
-    Repository: junejo18146/ultrascripthub
-    File: ride_a_pet.lua
-    Universal Mobile (Delta / Codex / Fluxus / Arceus X) & PC Compatible
-    UI Standard: UI 1 - Official Ultra Script Hub Classic Matte Dark (#0F0F11)
-    
-    Features Included:
-        1. Auto Steal Egg (Automatic teleport, grab rare egg & base nest deposit)
-        2. Steal Zone Selector (< Zone > Interactive Selector Pill)
-        3. Auto Hatch Eggs (Automatic incubator & nest hatcher)
-        4. Auto Place Egg (Automatic egg placing into nests)
-        5. Auto Equip Best Pet (Mounts highest tier pet)
-        6. Rare Egg ESP (Highlights rarest map eggs with distance & excludes base eggs)
-        7. Teleport Zone Selector (< Destination > Interactive Selector Pill)
-        8. Teleport To Zone (1-Click Action Button)
-        9. Teleport To My Base (1-Click Action Button)
-        10. WalkSpeed Boost (Integrated - / + Stepper Controller: 16 to 250)
-        11. Fly Mode (Integrated - / + Stepper Controller: 20 to 200)
-        12. NoClip Mode (Walk through fences, walls & barriers)
-        13. 24/7 Anti-AFK Engine (Prevents 20-minute disconnects)
-    ========================================================================
---]]
+-- =================================================================
+-- JUNEJO ULTRA SCRIPT HUB - RIDE A PET (OFFICIAL SCRIPT)
+-- Target Game: Ride A Pet (Roblox ID: 124216119978534)
+-- Author: Made by Junejo (junejo18146)
+-- GitHub: https://github.com/junejo18146/ultrascripthub
+-- UI Standard: UI 1 (Official Ultra Script Hub Classic Matte Dark)
+-- Universal Mobile (Delta / Codex / Fluxus) & PC Compatible
+-- =================================================================
 
-local GameName = "RIDE A PET"
+local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local VirtualUser = nil
-pcall(function() VirtualUser = game:GetService("VirtualUser") end)
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local CoreGui = game:GetService("CoreGui")
-local StarterGui = game:GetService("StarterGui")
 local TweenService = game:GetService("TweenService")
+local Lighting = game:GetService("Lighting")
+local TeleportService = game:GetService("TeleportService")
+local VirtualUser = game:GetService("VirtualUser")
+local Workspace = game:GetService("Workspace")
+local HttpService = game:GetService("HttpService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StarterGui = game:GetService("StarterGui")
 
 local LocalPlayer = Players.LocalPlayer
 while not LocalPlayer do
-    task.wait()
+    task.wait(0.1)
     LocalPlayer = Players.LocalPlayer
 end
 
--- =================================================================
--- SAFE UI CONTAINER RESOLVER & INSTANT CLEANUP
--- =================================================================
-local function GetSafeUIContainer()
-    local container = nil
-    pcall(function()
-        if gethui then container = gethui() end
-    end)
-    if not container then
-        pcall(function()
-            local playerGui = LocalPlayer:FindFirstChild("PlayerGui") or LocalPlayer:WaitForChild("PlayerGui", 2)
-            if playerGui then container = playerGui end
+local Camera = Workspace.CurrentCamera or Workspace:WaitForChild("Camera")
+
+-- Safe GUI Parent Resolver (Instant 0s Rendering on Mobile & PC)
+local function getSafeGui()
+    if gethui then
+        local success, res = pcall(gethui)
+        if success and res then return res end
+    end
+    local core = nil
+    pcall(function() core = game:GetService("CoreGui") end)
+    if core then
+        local ok = pcall(function()
+            local test = Instance.new("Folder")
+            test.Parent = core
+            test:Destroy()
         end)
+        if ok then return core end
     end
-    if not container then
-        pcall(function()
-            if syn and syn.protect_gui then container = CoreGui end
-        end)
-    end
-    if not container then
-        pcall(function() container = CoreGui end)
-    end
-    return container or LocalPlayer:WaitForChild("PlayerGui")
+    return LocalPlayer:WaitForChild("PlayerGui", 10) or LocalPlayer:FindFirstChildOfClass("PlayerGui")
 end
 
-local UIContainer = GetSafeUIContainer()
+local guiParent = getSafeGui()
 
--- Cleanup Previous UI Instances
+-- Clean all previous UI instances safely
 pcall(function()
-    local names = {"JunejoRideAPetUI", "RobloxScriptUI_RideAPet", "JunejoHubUI"}
-    for _, name in ipairs(names) do
+    for _, name in ipairs({"FarhanScriptsHub", "RobloxScriptUI_RideAPet", "RideAPetMobileUI", "JunejoUltraScriptHub_RideAPet", "JunejoRideAPetUI"}) do
+        if guiParent and guiParent:FindFirstChild(name) then pcall(function() guiParent[name]:Destroy() end) end
         pcall(function()
             if CoreGui and CoreGui:FindFirstChild(name) then CoreGui[name]:Destroy() end
         end)
         pcall(function()
-            if LocalPlayer and LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild(name) then
-                LocalPlayer.PlayerGui[name]:Destroy()
-            end
-        end)
-        pcall(function()
-            if gethui and gethui():FindFirstChild(name) then gethui()[name]:Destroy() end
+            local pg = LocalPlayer:FindFirstChild("PlayerGui") or LocalPlayer:FindFirstChildOfClass("PlayerGui")
+            if pg and pg:FindFirstChild(name) then pg[name]:Destroy() end
         end)
     end
 end)
 
--- =================================================================
--- STATE & SETTINGS
--- =================================================================
-local Toggles = {
-    AutoSteal = false,
-    AutoHatch = false,
-    AutoPlace = false,
-    AutoEquipBest = false,
-    NoClip = false,
-    WalkSpeed = false,
-    Fly = false,
-    BestEggESP = false,
-    AntiAFK = true
+-- Global Engine State Store
+_G.JunejoRideAPetState = {
+    -- Pet Farm
+    AutoSteal            = false,
+    SelectedStealZone    = "Best Egg (Auto Rarest)",
+    AutoHatch            = false,
+    AutoPlace            = false,
+    AutoEquipBest        = false,
+    SelectedTeleportZone = "Food Stall (Tim)",
+
+    -- Movement
+    WalkSpeedActive      = false,
+    WalkSpeedValue       = 45,
+    JumpPowerActive      = false,
+    JumpPowerValue       = 50,
+    InfJumpActive        = false,
+    NoClipActive         = false,
+    FlyActive            = false,
+    FlySpeed             = 50,
+
+    -- Visuals
+    RareEggESP           = false,
+    PlayerESP            = false,
+    PlayerTags           = false,
+    FullBrightActive     = false,
+    FOV                  = 70,
+
+    -- Utilities
+    InstantPrompts       = false,
+    AntiAFKActive        = true
 }
+local State = _G.JunejoRideAPetState
 
-local CustomSpeedValue = 45
-local CustomFlySpeed = 50
-local StealZoneIndex = 1
-local TeleportZoneIndex = 1
+-- Internal Game References & Remotes
+local Remotes = ReplicatedStorage:WaitForChild("Remotes", 5)
+local GameRemotes = Remotes and Remotes:WaitForChild("Game", 5)
 
--- Egg Rarity Ranking (Higher score = Rarer Egg)
+local Remote_EggPickup      = GameRemotes and GameRemotes:FindFirstChild("EggPickup")
+local Remote_EggPlaced      = GameRemotes and GameRemotes:FindFirstChild("EggPlaced")
+local Remote_Hatch          = GameRemotes and GameRemotes:FindFirstChild("Hatch")
+local Remote_TeleportToPlot = GameRemotes and GameRemotes:FindFirstChild("TeleportToPlot")
+local Remote_Mounting       = GameRemotes and GameRemotes:FindFirstChild("Mounting")
+local Remote_PetDismount    = GameRemotes and GameRemotes:FindFirstChild("PetDismount")
+local Remote_FeedPet        = GameRemotes and GameRemotes:FindFirstChild("FeedPet")
+local Remote_PetCollect     = GameRemotes and GameRemotes:FindFirstChild("PetCollect")
+
+-- Dynamic Remote Resolver
+local function GetRemote(...)
+    local candidates = {...}
+    for _, name in ipairs(candidates) do
+        local r = nil
+        pcall(function()
+            if GameRemotes then r = GameRemotes:FindFirstChild(name) end
+            if not r and Remotes then r = Remotes:FindFirstChild(name, true) end
+            if not r then r = ReplicatedStorage:FindFirstChild(name, true) end
+        end)
+        if r and (r:IsA("RemoteEvent") or r:IsA("RemoteFunction")) then
+            return r
+        end
+    end
+    return nil
+end
+
+-- Safe Remote Invoker
+local function SafeFireRemote(rem, ...)
+    if not rem then return end
+    local args = {...}
+    pcall(function()
+        if rem:IsA("RemoteEvent") then
+            rem:FireServer(unpack(args))
+        elseif rem:IsA("RemoteFunction") then
+            task.spawn(function()
+                pcall(function()
+                    rem:InvokeServer(unpack(args))
+                end)
+            end)
+        end
+    end)
+end
+
+-- Find all remotes across ReplicatedStorage matching keywords
+local function FindAllRemotes(...)
+    local patterns = {...}
+    local found = {}
+    pcall(function()
+        for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
+            if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
+                local oName = obj.Name:lower()
+                for _, pat in ipairs(patterns) do
+                    if oName:find(pat:lower(), 1, true) then
+                        table.insert(found, obj)
+                        break
+                    end
+                end
+            end
+        end
+    end)
+    return found
+end
+
+-- Egg Rarity Ranking
 local EggRarityRank = {
-    ["blackhole"] = 100,
-    ["ethereal"]  = 90,
-    ["diamond"]   = 80,
-    ["divine"]    = 75,
-    ["golden"]    = 70,
-    ["gold"]      = 70,
-    ["mythic"]    = 68,
-    ["flaming"]   = 65,
-    ["flame"]     = 65,
-    ["fire"]      = 65,
-    ["legendary"] = 62,
-    ["legend"]    = 62,
-    ["skull"]     = 60,
-    ["slime"]     = 55,
-    ["slimy"]     = 55,
-    ["crystal"]   = 50,
-    ["glass"]     = 45,
-    ["flower"]    = 40,
-    ["easter"]    = 35,
-    ["mushroom"]  = 30,
-    ["stone"]     = 25,
-    ["rock"]      = 25,
-    ["leaf"]      = 20,
-    ["wood"]      = 20,
-    ["cracked"]   = 15,
-    ["brown"]     = 10,
-    ["white"]     = 5,
-    ["basic"]     = 5,
-    ["common"]    = 5
+    ["blackhole egg"] = 100,
+    ["ethereal egg"]  = 90,
+    ["diamond egg"]   = 80,
+    ["divine egg"]    = 75,
+    ["golden egg"]    = 70,
+    ["mythic egg"]    = 68,
+    ["flaming egg"]   = 65,
+    ["legendary egg"] = 62,
+    ["skull egg"]     = 60,
+    ["slime egg"]     = 55,
+    ["crystal egg"]   = 50,
+    ["glass egg"]     = 45,
+    ["flower egg"]    = 40,
+    ["slimy egg"]     = 38,
+    ["easter egg"]    = 35,
+    ["mushroom egg"]  = 30,
+    ["stone egg"]     = 25,
+    ["leaf egg"]      = 20,
+    ["cracked egg"]   = 15,
+    ["brown egg"]     = 10,
+    ["white egg"]     = 5
 }
 
 -- Zone Options for Stealing Eggs
 local StealZoneOptions = {
-    "Best Egg (Auto)",
+    "Best Egg (Auto Rarest)",
     "Ethereal Zone",
     "Divine / Diamond",
     "Mythic / Golden",
-    "Legend / Flaming",
-    "Epic / Skull",
-    "Rare / Crystal",
+    "Legendary / Flaming",
+    "Epic / Skull / Slime",
+    "Rare / Crystal / Flower",
     "Any Egg Spawned"
 }
 
@@ -191,286 +237,251 @@ local TeleportZoneNames = {
     "My Base / Plot"
 }
 
--- =================================================================
--- BASE & PLOT DETECTION SYSTEM
--- =================================================================
-local CachedMyPlot = nil
+-- Character & Base Helpers
+local function getChar()
+    return LocalPlayer.Character
+end
+
+local function getRoot(char)
+    char = char or getChar()
+    return char and (char:FindFirstChild("HumanoidRootPart") or char.PrimaryPart)
+end
+
+local function getHum(char)
+    char = char or getChar()
+    return char and char:FindFirstChildOfClass("Humanoid")
+end
+
+local function isAlive(char)
+    char = char or getChar()
+    local hum = getHum(char)
+    return hum and hum.Health > 0
+end
+
+local cachedMyPlot = nil
 local SavedBaseCFrame = nil
 
--- Record initial position as fallback base location
-pcall(function()
-    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    local hrp = char and (char:FindFirstChild("HumanoidRootPart") or char:WaitForChild("HumanoidRootPart", 3))
-    if hrp then
-        SavedBaseCFrame = hrp.CFrame
-    end
-end)
-
-LocalPlayer.CharacterAdded:Connect(function(char)
-    task.wait(0.5)
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if hrp and not SavedBaseCFrame then
-        SavedBaseCFrame = hrp.CFrame
-    end
-end)
-
 local function GetMyPlot()
-    if CachedMyPlot and CachedMyPlot.Parent then
-        return CachedMyPlot
-    end
+    if cachedMyPlot and cachedMyPlot.Parent then return cachedMyPlot end
 
-    local candidatePlotFolders = {
-        Workspace:FindFirstChild("Plots"),
-        Workspace:FindFirstChild("PlayerPlots"),
-        Workspace:FindFirstChild("Bases"),
-        Workspace:FindFirstChild("Islands"),
-        Workspace:FindFirstChild("Houses")
-    }
+    pcall(function()
+        local myName = LocalPlayer.Name:lower()
+        local myUserId = tostring(LocalPlayer.UserId)
+        local myDisplay = LocalPlayer.DisplayName:lower()
+        local plotsFolder = Workspace:FindFirstChild("Plots") 
+                         or Workspace:FindFirstChild("Bases") 
+                         or Workspace:FindFirstChild("Farms")
+                         or Workspace:FindFirstChild("Tycoons")
+                         or Workspace:FindFirstChild("PlayerPlots")
+                         or Workspace:FindFirstChild("PlayerBases")
+                         or Workspace:FindFirstChild("Islands")
 
-    for _, folder in ipairs(candidatePlotFolders) do
-        if folder then
-            for _, plot in ipairs(folder:GetChildren()) do
-                -- 1. Check Data.Owner / Data.Player
+        if plotsFolder then
+            for _, plot in ipairs(plotsFolder:GetChildren()) do
                 local data = plot:FindFirstChild("Data")
                 if data then
-                    local ownerVal = data:FindFirstChild("Owner") or data:FindFirstChild("Player")
+                    local ownerVal = data:FindFirstChild("Owner") or data:FindFirstChild("Player") or data:FindFirstChild("UserId")
                     if ownerVal then
-                        if ownerVal.Value == LocalPlayer
-                           or (typeof(ownerVal.Value) == "Instance" and ownerVal.Value == LocalPlayer)
-                           or (typeof(ownerVal.Value) == "string" and (ownerVal.Value == LocalPlayer.Name or ownerVal.Value == tostring(LocalPlayer.UserId)))
-                           or (typeof(ownerVal.Value) == "number" and ownerVal.Value == LocalPlayer.UserId) then
-                            CachedMyPlot = plot
-                            return plot
+                        local ov = ownerVal.Value
+                        if ov == LocalPlayer or (typeof(ov) == "Instance" and ov.Name:lower() == myName) or tostring(ov):lower() == myName or tostring(ov) == myUserId then
+                            cachedMyPlot = plot
+                            return
                         end
                     end
                 end
 
-                -- 2. Check direct Owner / Player object
-                local ownerChild = plot:FindFirstChild("Owner") or plot:FindFirstChild("Player")
-                if ownerChild then
-                    if ownerChild.Value == LocalPlayer
-                       or (typeof(ownerChild.Value) == "Instance" and ownerChild.Value == LocalPlayer)
-                       or (typeof(ownerChild.Value) == "string" and (ownerChild.Value == LocalPlayer.Name or ownerChild.Value == tostring(LocalPlayer.UserId)))
-                       or (typeof(ownerChild.Value) == "number" and ownerChild.Value == LocalPlayer.UserId) then
-                        CachedMyPlot = plot
-                        return plot
+                for _, attr in ipairs({"Owner", "Player", "UserId", "OwnerId"}) do
+                    local val = plot:GetAttribute(attr)
+                    if val and (tostring(val):lower() == myName or tostring(val) == myUserId) then
+                        cachedMyPlot = plot
+                        return
                     end
                 end
 
-                -- 3. Check Plot Attributes
-                local attrOwner = plot:GetAttribute("Owner") or plot:GetAttribute("Player") or plot:GetAttribute("UserId")
-                if attrOwner then
-                    if tostring(attrOwner) == LocalPlayer.Name or tostring(attrOwner) == tostring(LocalPlayer.UserId) then
-                        CachedMyPlot = plot
-                        return plot
+                local directOwner = plot:FindFirstChild("Owner") or plot:FindFirstChild("Player")
+                if directOwner and directOwner:IsA("ValueObject") then
+                    local ov = directOwner.Value
+                    if ov == LocalPlayer or (typeof(ov) == "Instance" and ov.Name:lower() == myName) or tostring(ov):lower() == myName or tostring(ov) == myUserId then
+                        cachedMyPlot = plot
+                        return
                     end
                 end
 
-                -- 4. Check Plot Name
-                if plot.Name == LocalPlayer.Name or plot.Name == tostring(LocalPlayer.UserId) then
-                    CachedMyPlot = plot
-                    return plot
+                local pn = plot.Name:lower()
+                if pn == myName or pn:find(myName, 1, true) or pn:find(myDisplay, 1, true) then
+                    cachedMyPlot = plot
+                    return
                 end
+            end
 
-                -- 5. Check text labels or signs inside plot
-                for _, desc in ipairs(plot:GetDescendants()) do
-                    if desc:IsA("TextLabel") then
-                        local txt = desc.Text or ""
-                        if txt:find(LocalPlayer.Name) or txt:find(LocalPlayer.DisplayName) then
-                            CachedMyPlot = plot
-                            return plot
-                        end
+            for _, plot in ipairs(plotsFolder:GetChildren()) do
+                for _, lbl in ipairs(plot:GetDescendants()) do
+                    if lbl:IsA("TextLabel") and lbl.Visible and (lbl.Text:lower():find(myName, 1, true) or lbl.Text:lower():find(myDisplay, 1, true)) then
+                        cachedMyPlot = plot
+                        return
                     end
                 end
             end
         end
-    end
+    end)
 
-    return nil
+    return cachedMyPlot
 end
 
-local function GetBasePosition()
+local function GetPlayerBaseCFrame()
     local myPlot = GetMyPlot()
     if myPlot then
-        local bp = myPlot:FindFirstChild("Baseplate") or myPlot:FindFirstChild("Floor") or myPlot.PrimaryPart or myPlot:FindFirstChildWhichIsA("BasePart", true)
+        local bp = myPlot:FindFirstChild("Baseplate") or myPlot:FindFirstChild("Spawn") or myPlot.PrimaryPart or myPlot:FindFirstChildWhichIsA("BasePart", true)
         if bp then
-            return bp.CFrame + Vector3.new(0, 4, 0)
+            SavedBaseCFrame = bp.CFrame + Vector3.new(0, 3.5, 0)
+            return SavedBaseCFrame
         else
-            return myPlot:GetPivot() + Vector3.new(0, 4, 0)
+            SavedBaseCFrame = myPlot:GetPivot() + Vector3.new(0, 3.5, 0)
+            return SavedBaseCFrame
         end
     end
     if SavedBaseCFrame then
         return SavedBaseCFrame
     end
-    return nil
+    local char = getChar()
+    local hrp = getRoot(char)
+    if hrp then
+        SavedBaseCFrame = hrp.CFrame
+        return SavedBaseCFrame
+    end
+    return CFrame.new(0, 5, 0)
 end
 
--- =================================================================
--- SMART REMOTE ENGINE & PROXIMITY PROMPT / CLICKDETECTOR TRIGGER
--- =================================================================
+local function GetPlayerNests()
+    local nests = {}
+    local seen = {}
+    local myPlot = GetMyPlot()
 
--- Find all matching remotes in ReplicatedStorage dynamically
-local function FindRemotes(keywords)
-    local found = {}
-    pcall(function()
-        for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
-            if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
-                local objName = obj.Name:lower()
-                for _, kw in ipairs(keywords) do
-                    if objName:find(kw:lower()) then
-                        table.insert(found, obj)
-                        break
+    if myPlot then
+        local nestsFolder = myPlot:FindFirstChild("Nests") or myPlot:FindFirstChild("NestFolder") or myPlot:FindFirstChild("Incubators")
+        if nestsFolder then
+            for _, n in ipairs(nestsFolder:GetChildren()) do
+                if not seen[n] then seen[n] = true table.insert(nests, n) end
+            end
+        end
+        for _, child in ipairs(myPlot:GetChildren()) do
+            if not seen[child] and (child.Name:lower():find("nest") or child.Name:lower():find("incubator")) then
+                seen[child] = true
+                table.insert(nests, child)
+            end
+        end
+    end
+
+    if #nests == 0 then
+        local char = getChar()
+        local hrp = getRoot(char)
+        local basePos = (hrp and hrp.Position) or (SavedBaseCFrame and SavedBaseCFrame.Position)
+        if basePos then
+            for _, obj in ipairs(Workspace:GetDescendants()) do
+                if obj:IsA("Model") and not seen[obj] and (obj.Name:lower():find("nest") or obj.Name:lower():find("incubator")) then
+                    local p = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
+                    if p and (p.Position - basePos).Magnitude < 70 then
+                        seen[obj] = true
+                        table.insert(nests, obj)
                     end
                 end
             end
         end
-    end)
-    return found
-end
-
--- Fire all candidate remotes safely
-local function FireAllCandidateRemotes(keywords, ...)
-    local args = {...}
-    local remotes = FindRemotes(keywords)
-    for _, remote in ipairs(remotes) do
-        pcall(function()
-            if remote:IsA("RemoteEvent") then
-                remote:FireServer(unpack(args))
-            elseif remote:IsA("RemoteFunction") then
-                remote:InvokeServer(unpack(args))
-            end
-        end)
-    end
-end
-
--- Direct named remote helper
-local function GetGameRemote(remoteName)
-    local targetRemote = nil
-    pcall(function()
-        local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-        local gameRemotes = remotes and remotes:FindFirstChild("Game")
-        if gameRemotes then
-            targetRemote = gameRemotes:FindFirstChild(remoteName)
-        end
-        if not targetRemote and remotes then
-            targetRemote = remotes:FindFirstChild(remoteName, true)
-        end
-        if not targetRemote then
-            targetRemote = ReplicatedStorage:FindFirstChild(remoteName, true)
-        end
-    end)
-    return targetRemote
-end
-
--- Universal ProximityPrompt Activator
-local function TriggerPrompt(prompt)
-    if not prompt or not prompt:IsA("ProximityPrompt") then return false end
-    local success = false
-    pcall(function()
-        prompt.HoldDuration = 0
-        prompt.RequiresLineOfSight = false
-        prompt.MaxActivationDistance = 99999
-        prompt.Enabled = true
-    end)
-
-    -- Method 1: Executor Global fireproximityprompt
-    if fireproximityprompt then
-        pcall(function()
-            fireproximityprompt(prompt, 0)
-            success = true
-        end)
-        pcall(function()
-            fireproximityprompt(prompt, 1)
-        end)
-        pcall(function()
-            fireproximityprompt(prompt)
-        end)
     end
 
-    -- Method 2: Virtual Input Hold
-    pcall(function()
-        if prompt.InputHoldBegin then
-            prompt:InputHoldBegin()
-            task.wait(0.04)
-            prompt:InputHoldEnd()
-            success = true
-        end
-    end)
-
-    return success
+    return nests
 end
 
--- Universal ClickDetector Activator
-local function TriggerClickDetector(cd)
-    if not cd or not cd:IsA("ClickDetector") then return false end
-    local success = false
-    pcall(function()
-        cd.MaxActivationDistance = 99999
-    end)
-    if fireclickdetector then
-        pcall(function()
-            fireclickdetector(cd)
-            success = true
-        end)
+local function IsEggInsideMyBase(egg)
+    if not egg or not egg.Parent then return true end
+    local myPlot = GetMyPlot()
+    if myPlot and egg:IsDescendantOf(myPlot) then
+        return true
     end
-    return success
+    local basePos = (SavedBaseCFrame and SavedBaseCFrame.Position)
+    if basePos then
+        local eggPart = (egg:IsA("BasePart") and egg) or egg:FindFirstChildWhichIsA("BasePart", true)
+        if eggPart and (eggPart.Position - basePos).Magnitude < 30 then
+            return true
+        end
+    end
+    return false
 end
 
--- =================================================================
--- SAFE MOUNT-AWARE TELEPORTATION
--- =================================================================
+local function IsEggInsideAnyBase(egg)
+    return IsEggInsideMyBase(egg)
+end
+
+-- Safe Mount-Aware & Streaming-Proof Teleportation
 local function SafeTeleport(targetCFrame)
-    if not targetCFrame then return end
     pcall(function()
-        local char = LocalPlayer.Character
+        local char = getChar()
         if not char then return end
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        local hrp = char:FindFirstChild("HumanoidRootPart")
+        local hum = getHum(char)
+        local hrp = getRoot(char)
         if not hrp then return end
 
+        local targetPos = (typeof(targetCFrame) == "CFrame" and targetCFrame.Position) or (typeof(targetCFrame) == "Vector3" and targetCFrame) or hrp.Position
+        local targetCF = (typeof(targetCFrame) == "CFrame" and targetCFrame) or CFrame.new(targetPos)
+
+        pcall(function()
+            if Workspace.StreamingEnabled and LocalPlayer.RequestStreamAroundAsync then
+                LocalPlayer:RequestStreamAroundAsync(targetPos, 1.5)
+            end
+        end)
+
         if hum and hum.SeatPart then
-            local mount = hum.SeatPart.Parent
+            local seat = hum.SeatPart
+            local mount = seat.Parent
+            if seat:IsA("BasePart") then
+                seat.AssemblyLinearVelocity = Vector3.zero
+                seat.AssemblyAngularVelocity = Vector3.zero
+                seat.CFrame = targetCF
+            end
             if mount and mount:IsA("Model") then
-                local mountRoot = mount.PrimaryPart or mount:FindFirstChild("RootPart") or mount:FindFirstChild("HumanoidRootPart") or hum.SeatPart
+                pcall(function() mount:PivotTo(targetCF) end)
+                local mountRoot = mount.PrimaryPart or mount:FindFirstChild("RootPart") or mount:FindFirstChild("HumanoidRootPart") or seat
                 if mountRoot and mountRoot:IsA("BasePart") then
                     mountRoot.AssemblyLinearVelocity = Vector3.zero
                     mountRoot.AssemblyAngularVelocity = Vector3.zero
-                    mount:PivotTo(targetCFrame)
-                    mountRoot.CFrame = targetCFrame
+                    mountRoot.CFrame = targetCF
                 end
             end
         end
 
+        hrp.Anchored = true
         hrp.AssemblyLinearVelocity = Vector3.zero
         hrp.AssemblyAngularVelocity = Vector3.zero
-        char:PivotTo(targetCFrame)
-        hrp.CFrame = targetCFrame
+        char:PivotTo(targetCF)
+        hrp.CFrame = targetCF
+        task.wait(0.04)
+        hrp.Anchored = false
 
-        task.spawn(function()
-            for _ = 1, 3 do
-                task.wait(0.03)
-                if hrp and hrp.Parent then
-                    hrp.AssemblyLinearVelocity = Vector3.zero
-                    char:PivotTo(targetCFrame)
-                    hrp.CFrame = targetCFrame
-                end
+        if LocalPlayer.GameplayPaused then
+            local pauseStart = tick()
+            while LocalPlayer.GameplayPaused and (tick() - pauseStart < 2.5) do
+                task.wait(0.05)
             end
-        end)
+        end
     end)
 end
 
 -- Teleport directly to named game location / stall / spawn
 local function TeleportToLocation(destName)
-    local char = LocalPlayer.Character
+    local char = getChar()
     if not char then return end
 
     if destName == "My Base / Plot" then
-        local basePos = GetBasePosition()
-        if basePos then
-            SafeTeleport(basePos)
-        else
-            local tpRemote = GetGameRemote("TeleportToPlot")
-            if tpRemote then tpRemote:FireServer() end
+        local myPlot = GetMyPlot()
+        if myPlot then
+            local bp = myPlot:FindFirstChild("Baseplate") or myPlot.PrimaryPart or myPlot:FindFirstChildWhichIsA("BasePart", true)
+            if bp then
+                SafeTeleport(bp.CFrame + Vector3.new(0, 5, 0))
+            else
+                SafeTeleport(myPlot:GetPivot() + Vector3.new(0, 5, 0))
+            end
+        elseif Remote_TeleportToPlot then
+            Remote_TeleportToPlot:FireServer()
         end
         return
     end
@@ -534,25 +545,1114 @@ local function TeleportToLocation(destName)
 end
 
 -- =================================================================
--- UTILITIES & CHARACTER BOOSTS
+-- CORE AUTOMATION LOGIC
 -- =================================================================
+local function isCollectibleEgg(obj)
+    if not obj or not obj.Parent then return false end
+    if IsEggInsideMyBase(obj) then return false end
 
--- Anti-AFK Engine
-LocalPlayer.Idled:Connect(function()
-    if Toggles.AntiAFK and VirtualUser then
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character and obj:IsDescendantOf(p.Character) then return false end
+    end
+
+    local oName = obj.Name:lower()
+    local pName = obj.Parent.Name:lower()
+
+    if oName:find("gate") or oName:find("door") or oName:find("wall") or oName:find("floor") or oName:find("stall") or oName:find("shop") or oName:find("tracker") then
+        return false
+    end
+
+    local eggSpawnsFolder = Workspace:FindFirstChild("EggSpawns")
+    if (eggSpawnsFolder and obj:IsDescendantOf(eggSpawnsFolder)) or pName == "eggspawns" or pName:find("eggspawn") then
+        return true
+    end
+
+    for _, desc in ipairs(obj:GetDescendants()) do
+        if desc:IsA("ProximityPrompt") then
+            local at = (desc.ActionText or ""):lower()
+            local ot = (desc.ObjectText or ""):lower()
+            local pn = desc.Name:lower()
+            if at:find("steal") or at:find("egg") or at:find("grab") or at:find("take") or at:find("collect") or at:find("pick")
+            or ot:find("egg") or ot:find("steal") or pn:find("steal") or pn:find("egg") then
+                return true
+            end
+        end
+    end
+
+    local part = (obj:IsA("BasePart") and obj) or obj:FindFirstChildWhichIsA("BasePart", true)
+    if part and (part.Size.X > 25 or part.Size.Z > 25) then
+        return false
+    end
+
+    if oName:find("egg") then
+        return true
+    end
+
+    for k, _ in pairs(EggRarityRank) do
+        local baseK = k:gsub(" egg", "")
+        if oName:find(baseK, 1, true) then
+            return true
+        end
+    end
+
+    if obj.Parent.Name:lower():find("nest") and (obj:IsA("Model") or (part and part.Size.Y < 8)) then
+        return true
+    end
+
+    return false
+end
+
+local function GetAllEggs()
+    local candidates = {}
+    local seen = {}
+
+    local function checkAdd(obj)
+        if not obj or not obj.Parent or seen[obj] then return end
+        if not isCollectibleEgg(obj) then return end
+
+        seen[obj] = true
+        table.insert(candidates, obj)
+    end
+
+    local eggSpawns = Workspace:FindFirstChild("EggSpawns")
+    if eggSpawns then
+        for _, child in ipairs(eggSpawns:GetChildren()) do
+            local innerEgg = child:FindFirstChild("Egg") 
+                          or child:FindFirstChild("EggBase")
+                          or child:FindFirstChildWhichIsA("Model")
+            if innerEgg then
+                checkAdd(innerEgg)
+            else
+                checkAdd(child)
+            end
+            for _, sub in ipairs(child:GetChildren()) do
+                if sub:IsA("Model") or sub:IsA("BasePart") then
+                    checkAdd(sub)
+                end
+            end
+        end
+    end
+
+    pcall(function()
+        for _, desc in ipairs(Workspace:GetDescendants()) do
+            if desc:IsA("ProximityPrompt") and desc.Parent and desc.Parent:IsA("BasePart") then
+                local at = (desc.ActionText or ""):lower()
+                local ot = (desc.ObjectText or ""):lower()
+                local pn = desc.Name:lower()
+                if at:find("steal") or at:find("egg") or at:find("grab") or at:find("take")
+                or ot:find("egg") or ot:find("steal") or pn:find("steal") or pn:find("egg") then
+                    local target = (desc.Parent.Parent and desc.Parent.Parent:IsA("Model") and desc.Parent.Parent ~= Workspace and desc.Parent.Parent)
+                                or (desc.Parent:IsA("Model") and desc.Parent)
+                                or desc.Parent
+                    checkAdd(target)
+                end
+            end
+        end
+    end)
+
+    for _, fName in ipairs({"RenderedEggs", "Eggs", "SpawnedEggs", "WorldEggs", "WildEggs", "Items", "Drops", "Map"}) do
+        local f = Workspace:FindFirstChild(fName)
+        if f then
+            for _, child in ipairs(f:GetChildren()) do
+                checkAdd(child)
+                for _, sub in ipairs(child:GetChildren()) do
+                    checkAdd(sub)
+                end
+            end
+        end
+    end
+
+    local myPlot = GetMyPlot()
+    local plots = Workspace:FindFirstChild("Plots") or Workspace:FindFirstChild("Bases") or Workspace:FindFirstChild("Farms")
+    if plots then
+        for _, plot in ipairs(plots:GetChildren()) do
+            if not myPlot or plot ~= myPlot then
+                local nests = plot:FindFirstChild("Nests") or plot:FindFirstChild("Incubators")
+                if nests then
+                    for _, nest in ipairs(nests:GetChildren()) do
+                        for _, child in ipairs(nest:GetChildren()) do
+                            checkAdd(child)
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    if #candidates == 0 then
+        for _, child in ipairs(Workspace:GetChildren()) do
+            checkAdd(child)
+        end
+    end
+
+    if #candidates == 0 then
+        for _, desc in ipairs(Workspace:GetDescendants()) do
+            if desc:IsA("Model") and isCollectibleEgg(desc) then
+                checkAdd(desc)
+                if #candidates >= 30 then break end
+            end
+        end
+    end
+
+    return candidates
+end
+
+local function GetBestStealEgg()
+    local eggs = GetAllEggs()
+    if #eggs == 0 then return nil end
+
+    local bestEgg = nil
+    local bestScore = -1
+    local overallBestEgg = nil
+    local overallBestScore = -1
+    local zone = State.SelectedStealZone or "Best Egg"
+
+    for _, egg in ipairs(eggs) do
+        local eggName = egg.Name:lower()
+        local score = 1
+
+        for k, v in pairs(EggRarityRank) do
+            local baseK = k:gsub(" egg", "")
+            if eggName:find(baseK, 1, true) then
+                score = math.max(score, v)
+            end
+        end
+
+        local attrRarity = egg:GetAttribute("Rarity") or egg:GetAttribute("Tier")
+        if attrRarity then
+            local astr = tostring(attrRarity):lower()
+            for k, v in pairs(EggRarityRank) do
+                local baseK = k:gsub(" egg", "")
+                if astr:find(baseK, 1, true) then
+                    score = math.max(score, v + 50)
+                end
+            end
+        end
+
+        if score > overallBestScore then
+            overallBestScore = score
+            overallBestEgg = egg
+        end
+
+        local matchesFilter = false
+        if zone:find("Best Egg") or zone:find("Any Egg") then
+            matchesFilter = true
+        elseif zone:find("Ethereal") and (eggName:find("ethereal") or eggName:find("blackhole")) then
+            matchesFilter = true
+        elseif (zone:find("Divine") or zone:find("Diamond")) and (eggName:find("divine") or eggName:find("diamond")) then
+            matchesFilter = true
+        elseif (zone:find("Mythic") or zone:find("Golden")) and (eggName:find("mythic") or eggName:find("golden")) then
+            matchesFilter = true
+        elseif (zone:find("Legendary") or zone:find("Flaming")) and (eggName:find("legend") or eggName:find("flaming")) then
+            matchesFilter = true
+        elseif (zone:find("Epic") or zone:find("Skull") or zone:find("Slime")) and (eggName:find("epic") or eggName:find("skull") or eggName:find("slime")) then
+            matchesFilter = true
+        elseif (zone:find("Rare") or zone:find("Crystal") or zone:find("Flower")) and (eggName:find("rare") or eggName:find("crystal") or eggName:find("flower")) then
+            matchesFilter = true
+        end
+
+        if matchesFilter and score > bestScore then
+            bestScore = score
+            bestEgg = egg
+        end
+    end
+
+    if bestEgg then
+        return bestEgg
+    end
+
+    if overallBestEgg then
+        return overallBestEgg
+    end
+
+    return eggs[1]
+end
+
+local function isEggHeld(targetEgg, initialBasketCount, initialCharCount, initialCharItems)
+    if not targetEgg or not targetEgg.Parent or not targetEgg:IsDescendantOf(Workspace) then
+        return true
+    end
+
+    local char = getChar()
+    if not char then return false end
+
+    if targetEgg:IsDescendantOf(char) then
+        return true
+    end
+
+    for _, item in ipairs(char:GetChildren()) do
+        if not initialCharItems or not initialCharItems[item] then
+            local iname = item.Name:lower()
+            if iname:find("egg") or iname:find("held") or iname:find("stolen") or iname:find("carry") then
+                return true
+            end
+        end
+    end
+
+    for _, item in ipairs(char:GetChildren()) do
+        local iname = item.Name:lower()
+        if iname:find("basket") or iname:find("backpack") then
+            if initialBasketCount and #item:GetChildren() > initialBasketCount then
+                return true
+            end
+            for _, child in ipairs(item:GetChildren()) do
+                local cname = child.Name:lower()
+                if cname:find("egg") or cname:find("held") or cname:find("stolen") then
+                    return true
+                end
+            end
+        end
+    end
+
+    for attr, val in pairs(char:GetAttributes()) do
+        local an = tostring(attr):lower()
+        if (an:find("egg") or an:find("carry") or an:find("hold") or an:find("stolen")) and val ~= false and val ~= 0 and val ~= "" and val ~= nil then
+            return true
+        end
+    end
+
+    local pgui = LocalPlayer:FindFirstChildOfClass("PlayerGui") or LocalPlayer:FindFirstChild("PlayerGui")
+    if pgui then
+        for _, g in ipairs(pgui:GetDescendants()) do
+            if (g:IsA("TextButton") or g:IsA("TextLabel")) and g.Visible then
+                local txt = g.Text:lower()
+                if txt:find("drop egg") or txt:find("run to base") or txt:find("carrying egg") or txt:find("stolen egg") then
+                    return true
+                end
+            end
+        end
+    end
+
+    return false
+end
+
+-- Forward declaration for auto steal toggle controller
+local autoStealController = nil
+
+local isStealing = false
+local function ExecuteStealEgg()
+    if isStealing then return end
+    isStealing = true
+
+    pcall(function()
+        local char = getChar()
+        local hrp = getRoot(char)
+        local hum = getHum(char)
+        if not hrp or not hum or not isAlive(char) then
+            isStealing = false
+            return
+        end
+
+        if not SavedBaseCFrame then
+            SavedBaseCFrame = hrp.CFrame
+        end
+
+        local targetEgg = GetBestStealEgg()
+        if not targetEgg or not targetEgg.Parent or IsEggInsideMyBase(targetEgg) then
+            State.AutoSteal = false
+            if autoStealController then autoStealController.SetState(false) end
+            isStealing = false
+            return
+        end
+
+        local eggPart = targetEgg:FindFirstChild("Handle") 
+                     or targetEgg:FindFirstChild("Egg") 
+                     or targetEgg:FindFirstChild("EggBase") 
+                     or targetEgg:FindFirstChild("Sphere.007") 
+                     or (targetEgg:IsA("Model") and targetEgg.PrimaryPart) 
+                     or targetEgg:FindFirstChildWhichIsA("MeshPart", true)
+                     or (targetEgg:IsA("BasePart") and targetEgg)
+                     or targetEgg:FindFirstChildOfClass("BasePart")
+                     or targetEgg:FindFirstChildWhichIsA("BasePart", true)
+        if not eggPart then
+            isStealing = false
+            return
+        end
+
+        local initialCharItems = {}
+        for _, item in ipairs(char:GetChildren()) do
+            initialCharItems[item] = true
+        end
+
+        local basket = nil
+        for _, item in ipairs(char:GetChildren()) do
+            local iname = item.Name:lower()
+            if iname:find("basket") or iname:find("backpack") then
+                basket = item
+                break
+            end
+        end
+        local initialBasketCount = basket and #basket:GetChildren() or 0
+        local initialCharCount = #char:GetChildren()
+
+        local pickupRemotes = FindAllRemotes("pickup", "steal", "grab", "collect", "take", "egg")
+        if Remote_EggPickup and not table.find(pickupRemotes, Remote_EggPickup) then
+            table.insert(pickupRemotes, Remote_EggPickup)
+        end
+
+        SafeTeleport(eggPart.CFrame + Vector3.new(0, 1.2, 0))
+        
+        if LocalPlayer.GameplayPaused then
+            local pStart = tick()
+            while LocalPlayer.GameplayPaused and (tick() - pStart < 2.5) do
+                task.wait(0.05)
+            end
+        end
+        task.wait(0.1)
+
+        if hum.Sit or hum.SeatPart then
+            hum.Sit = false
+            if Remote_PetDismount then
+                SafeFireRemote(Remote_PetDismount)
+            end
+            task.wait(0.08)
+            if eggPart and eggPart.Parent and hrp then
+                SafeTeleport(eggPart.CFrame + Vector3.new(0, 0.8, 0))
+            end
+        end
+
+        local nearbyPrompts = {}
+        local function collectPrompts(container)
+            if not container then return end
+            for _, p in ipairs(container:GetDescendants()) do
+                if p:IsA("ProximityPrompt") and not table.find(nearbyPrompts, p) then
+                    table.insert(nearbyPrompts, p)
+                end
+            end
+        end
+        collectPrompts(targetEgg)
+        collectPrompts(targetEgg.Parent)
         pcall(function()
-            VirtualUser:Button2Down(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
-            task.wait(1)
-            VirtualUser:Button2Up(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
+            for _, p in ipairs(Workspace:GetDescendants()) do
+                if p:IsA("ProximityPrompt") and p.Parent and p.Parent:IsA("BasePart") then
+                    if (p.Parent.Position - eggPart.Position).Magnitude <= 25 then
+                        if not table.find(nearbyPrompts, p) then
+                            table.insert(nearbyPrompts, p)
+                        end
+                    end
+                end
+            end
+        end)
+
+        local startTime = tick()
+        local grabbed = false
+        local VIM = nil
+        pcall(function() VIM = game:GetService("VirtualInputManager") end)
+
+        local function triggerProximityPrompt(prompt)
+            if not prompt or not prompt:IsA("ProximityPrompt") or not prompt.Enabled then return end
+            pcall(function()
+                prompt.RequiresLineOfSight = false
+                prompt.MaxActivationDistance = 99999
+            end)
+            local origHold = prompt.HoldDuration or 0
+            if fireproximityprompt then
+                pcall(function() fireproximityprompt(prompt, 0) end)
+                pcall(function() fireproximityprompt(prompt, origHold) end)
+                pcall(function() fireproximityprompt(prompt) end)
+            end
+            if typeof(prompt.InputHoldBegin) == "function" then
+                pcall(function()
+                    prompt.HoldDuration = 0
+                    prompt:InputHoldBegin()
+                    task.wait(0.03)
+                    prompt:InputHoldEnd()
+                    prompt.HoldDuration = origHold
+                end)
+            end
+        end
+
+        while (tick() - startTime < 4.0) do
+            if not isAlive(char) then break end
+
+            if isEggHeld(targetEgg, initialBasketCount, initialCharCount, initialCharItems) then
+                grabbed = true
+                break
+            end
+
+            if hum.Sit or hum.SeatPart then
+                hum.Sit = false
+                if Remote_PetDismount then SafeFireRemote(Remote_PetDismount) end
+            end
+
+            if eggPart and eggPart.Parent and hrp and (hrp.Position - eggPart.Position).Magnitude > 3 then
+                SafeTeleport(eggPart.CFrame + Vector3.new(0, 0.5, 0))
+            end
+
+            for _, prompt in ipairs(nearbyPrompts) do
+                triggerProximityPrompt(prompt)
+            end
+
+            if VIM then
+                pcall(function()
+                    VIM:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+                    task.wait(0.03)
+                    VIM:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+                end)
+            end
+
+            for _, cd in ipairs(targetEgg:GetDescendants()) do
+                if cd:IsA("ClickDetector") and fireclickdetector then
+                    pcall(function() fireclickdetector(cd) end)
+                end
+            end
+
+            if firetouchinterest and hrp then
+                local contactParts = {hrp, char:FindFirstChild("Torso"), char:FindFirstChild("UpperTorso"), char:FindFirstChild("RightLeg"), char:FindFirstChild("RightFoot")}
+                for _, cp in ipairs(contactParts) do
+                    if cp and cp:IsA("BasePart") then
+                        for _, ep in ipairs(targetEgg:GetDescendants()) do
+                            if ep:IsA("BasePart") then
+                                pcall(function()
+                                    firetouchinterest(cp, ep, 0)
+                                    firetouchinterest(cp, ep, 1)
+                                end)
+                            end
+                        end
+                        if eggPart and eggPart:IsA("BasePart") then
+                            pcall(function()
+                                firetouchinterest(cp, eggPart, 0)
+                                firetouchinterest(cp, eggPart, 1)
+                            end)
+                        end
+                    end
+                end
+            end
+
+            for _, rem in ipairs(pickupRemotes) do
+                SafeFireRemote(rem, targetEgg)
+                SafeFireRemote(rem, eggPart)
+                SafeFireRemote(rem, targetEgg.Name)
+                SafeFireRemote(rem, targetEgg.Parent)
+                if targetEgg.Parent then SafeFireRemote(rem, targetEgg.Parent.Name) end
+                SafeFireRemote(rem, targetEgg, true)
+                SafeFireRemote(rem, eggPart, true)
+                SafeFireRemote(rem, 1)
+                SafeFireRemote(rem)
+            end
+
+            pcall(function()
+                if eggPart and VirtualUser then
+                    local screenPos, onScreen = Camera:WorldToViewportPoint(eggPart.Position)
+                    if onScreen then
+                        VirtualUser:Button1Down(Vector2.new(screenPos.X, screenPos.Y), Camera.CFrame)
+                        task.wait(0.02)
+                        VirtualUser:Button1Up(Vector2.new(screenPos.X, screenPos.Y), Camera.CFrame)
+                    end
+                end
+            end)
+
+            if hum and hrp and eggPart then
+                hum:MoveTo(eggPart.Position)
+            end
+
+            task.wait(0.12)
+        end
+
+        if not grabbed and isEggHeld(targetEgg, initialBasketCount, initialCharCount, initialCharItems) then
+            grabbed = true
+        end
+
+        task.wait(0.15)
+
+        local basePos = GetPlayerBaseCFrame()
+        SafeTeleport(basePos)
+        
+        if LocalPlayer.GameplayPaused then
+            local pStart = tick()
+            while LocalPlayer.GameplayPaused and (tick() - pStart < 2.5) do
+                task.wait(0.05)
+            end
+        end
+        task.wait(0.25)
+
+        local placeRemotes = FindAllRemotes("place", "deposit", "nest", "put")
+        if Remote_EggPlaced and not table.find(placeRemotes, Remote_EggPlaced) then
+            table.insert(placeRemotes, Remote_EggPlaced)
+        end
+
+        local hatchRemotes = FindAllRemotes("hatch", "openegg", "incubate", "claim", "crack")
+        if Remote_Hatch and not table.find(hatchRemotes, Remote_Hatch) then
+            table.insert(hatchRemotes, Remote_Hatch)
+        end
+
+        local nests = GetPlayerNests()
+        if #nests > 0 then
+            local firstNest = nests[1]
+            local fPart = firstNest:FindFirstChild("Handle") or firstNest.PrimaryPart or firstNest:FindFirstChildWhichIsA("BasePart", true)
+            if fPart and hrp and (hrp.Position - fPart.Position).Magnitude > 15 then
+                SafeTeleport(fPart.CFrame + Vector3.new(0, 1.5, 0))
+                task.wait(0.15)
+            end
+        end
+
+        for i, nest in ipairs(nests) do
+            local nestPart = nest:FindFirstChild("Handle") or nest.PrimaryPart or nest:FindFirstChildWhichIsA("BasePart", true)
+
+            for _, rem in ipairs(placeRemotes) do
+                SafeFireRemote(rem, nest)
+                SafeFireRemote(rem, nest.Name)
+                SafeFireRemote(rem, i)
+                SafeFireRemote(rem, targetEgg)
+                SafeFireRemote(rem)
+            end
+
+            if firetouchinterest and hrp and nestPart then
+                pcall(function()
+                    firetouchinterest(hrp, nestPart, 0)
+                    task.wait(0.02)
+                    firetouchinterest(hrp, nestPart, 1)
+                end)
+            end
+
+            for _, prompt in ipairs(nest:GetDescendants()) do
+                if prompt:IsA("ProximityPrompt") then
+                    pcall(function()
+                        prompt.HoldDuration = 0
+                        prompt.RequiresLineOfSight = false
+                        prompt.MaxActivationDistance = 99999
+                    end)
+                    if fireproximityprompt then
+                        pcall(function() fireproximityprompt(prompt, 0) end)
+                        pcall(function() fireproximityprompt(prompt) end)
+                    end
+                end
+            end
+
+            if State.AutoHatch then
+                for _, hRem in ipairs(hatchRemotes) do
+                    SafeFireRemote(hRem, nest)
+                    SafeFireRemote(hRem, nest.Name)
+                    SafeFireRemote(hRem, i)
+                    SafeFireRemote(hRem)
+                end
+            end
+        end
+
+        if State.AutoEquipBest then
+            task.spawn(function()
+                task.wait(0.3)
+                EquipBestPet()
+            end)
+        end
+
+        State.AutoSteal = false
+        if autoStealController then
+            autoStealController.SetState(false)
+        end
+    end)
+
+    isStealing = false
+end
+
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        if State.AutoSteal and not isStealing and isAlive() then
+            ExecuteStealEgg()
+        end
+    end
+end)
+
+local function ExecuteHatchNests()
+    local char = getChar()
+    local hrp = getRoot(char)
+    local hatchRemotes = FindAllRemotes("hatch", "openegg", "incubate", "claim", "crack")
+    if Remote_Hatch and not table.find(hatchRemotes, Remote_Hatch) then
+        table.insert(hatchRemotes, Remote_Hatch)
+    end
+
+    pcall(function()
+        for _, desc in ipairs(Workspace:GetDescendants()) do
+            if desc:IsA("TextLabel") and desc.Visible then
+                local txt = desc.Text:lower()
+                if txt:find("ready") or (txt:find("hatch") and not txt:find("auto")) then
+                    local bg = desc:FindFirstAncestorWhichIsA("BillboardGui") or desc:FindFirstAncestorWhichIsA("SurfaceGui")
+                    local eggModel = (bg and bg.Adornee and (bg.Adornee:IsA("Model") and bg.Adornee or bg.Adornee.Parent))
+                                  or desc:FindFirstAncestorWhichIsA("Model") 
+                                  or desc.Parent
+                    local eggPart = (bg and bg.Adornee and bg.Adornee:IsA("BasePart") and bg.Adornee)
+                                 or (eggModel and (eggModel.PrimaryPart or eggModel:FindFirstChildWhichIsA("BasePart", true)))
+                                 or (desc.Parent and desc.Parent:IsA("BasePart") and desc.Parent)
+
+                    if eggModel and eggPart then
+                        for _, prompt in ipairs(eggModel:GetDescendants()) do
+                            if prompt:IsA("ProximityPrompt") then
+                                pcall(function()
+                                    prompt.HoldDuration = 0
+                                    prompt.RequiresLineOfSight = false
+                                    prompt.MaxActivationDistance = 99999
+                                end)
+                                if fireproximityprompt then
+                                    pcall(function() fireproximityprompt(prompt, 0) end)
+                                    pcall(function() fireproximityprompt(prompt) end)
+                                end
+                            end
+                        end
+
+                        if firetouchinterest and hrp then
+                            pcall(function()
+                                firetouchinterest(hrp, eggPart, 0)
+                                task.wait(0.01)
+                                firetouchinterest(hrp, eggPart, 1)
+                            end)
+                        end
+
+                        for _, rem in ipairs(hatchRemotes) do
+                            SafeFireRemote(rem, eggModel)
+                            SafeFireRemote(rem, eggModel.Name)
+                            SafeFireRemote(rem, eggPart)
+                            SafeFireRemote(rem, 1)
+                            SafeFireRemote(rem, true)
+                            SafeFireRemote(rem)
+                        end
+                    end
+                end
+            end
+        end
+    end)
+
+    local nests = GetPlayerNests()
+    for i, nest in ipairs(nests) do
+        local nestPart = nest:FindFirstChild("Handle") or nest.PrimaryPart or nest:FindFirstChildWhichIsA("BasePart", true)
+
+        for _, rem in ipairs(hatchRemotes) do
+            SafeFireRemote(rem, nest)
+            SafeFireRemote(rem, nest.Name)
+            SafeFireRemote(rem, i)
+            SafeFireRemote(rem, true)
+            SafeFireRemote(rem)
+
+            for _, child in ipairs(nest:GetChildren()) do
+                if child:IsA("Model") or child.Name:lower():find("egg") then
+                    SafeFireRemote(rem, child)
+                    SafeFireRemote(rem, child.Name)
+                end
+            end
+        end
+
+        for _, prompt in ipairs(nest:GetDescendants()) do
+            if prompt:IsA("ProximityPrompt") then
+                pcall(function()
+                    prompt.HoldDuration = 0
+                    prompt.RequiresLineOfSight = false
+                    prompt.MaxActivationDistance = 99999
+                end)
+                if fireproximityprompt then
+                    pcall(function() fireproximityprompt(prompt, 0) end)
+                    pcall(function() fireproximityprompt(prompt) end)
+                end
+            end
+        end
+    end
+end
+
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        if State.AutoHatch and isAlive() then
+            pcall(ExecuteHatchNests)
+        end
+    end
+end)
+
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        if State.AutoPlace and isAlive() then
+            pcall(function()
+                local placeRemote = Remote_EggPlaced or GetRemote("EggPlaced", "PlaceEgg", "DepositEgg")
+                local nests = GetPlayerNests()
+                if #nests > 0 and placeRemote then
+                    for _, nest in ipairs(nests) do
+                        pcall(function() placeRemote:FireServer(nest) end)
+                        pcall(function() placeRemote:FireServer(nest.Name) end)
+                        pcall(function() placeRemote:FireServer() end)
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+local function GetBestPet()
+    local myPlot = GetMyPlot()
+    local petsFolder = myPlot and myPlot:FindFirstChild("Pets")
+    local candidates = {}
+
+    if petsFolder then
+        for _, p in ipairs(petsFolder:GetChildren()) do
+            if p:IsA("Model") then
+                table.insert(candidates, p)
+            end
+        end
+    end
+
+    if #candidates == 0 then
+        local pPets = LocalPlayer:FindFirstChild("Pets")
+        if pPets then
+            for _, p in ipairs(pPets:GetChildren()) do
+                if p:IsA("Model") or p:IsA("Configuration") or p:IsA("Folder") then
+                    table.insert(candidates, p)
+                end
+            end
+        end
+    end
+
+    if #candidates == 0 then return nil end
+
+    local bestPet = nil
+    local bestScore = -1
+
+    for _, pet in ipairs(candidates) do
+        local score = 1
+        local pName = pet.Name:lower()
+
+        for eggKey, rank in pairs(EggRarityRank) do
+            local baseKey = eggKey:gsub(" egg", "")
+            if pName:find(baseKey, 1, true) then
+                score = math.max(score, rank * 10)
+            end
+        end
+
+        if pName:find("ethereal") or pName:find("blackhole") then score = math.max(score, 1000)
+        elseif pName:find("divine") or pName:find("diamond") then score = math.max(score, 800)
+        elseif pName:find("mythic") or pName:find("golden") then score = math.max(score, 650)
+        elseif pName:find("legend") or pName:find("flaming") then score = math.max(score, 500)
+        elseif pName:find("epic") or pName:find("skull") or pName:find("slime") then score = math.max(score, 350)
+        elseif pName:find("rare") or pName:find("crystal") then score = math.max(score, 200)
+        end
+
+        for _, attr in ipairs({"Multiplier", "Speed", "Level", "Tier", "Power", "Rarity"}) do
+            local val = pet:GetAttribute(attr)
+            if typeof(val) == "number" then
+                score = score + val * 5
+            elseif typeof(val) == "string" then
+                local sval = val:lower()
+                if sval:find("ethereal") then score = score + 900
+                elseif sval:find("divine") then score = score + 700
+                elseif sval:find("mythic") then score = score + 500
+                elseif sval:find("legend") then score = score + 400
+                elseif sval:find("epic") then score = score + 200
+                end
+            end
+        end
+
+        for _, childName in ipairs({"Multiplier", "Speed", "Level", "Tier", "Rarity"}) do
+            local cv = pet:FindFirstChild(childName)
+            if cv and cv:IsA("ValueObject") and typeof(cv.Value) == "number" then
+                score = score + cv.Value * 5
+            end
+        end
+
+        if score > bestScore then
+            bestScore = score
+            bestPet = pet
+        end
+    end
+
+    return bestPet or candidates[#candidates]
+end
+
+function EquipBestPet()
+    local char = getChar()
+    if not isAlive(char) then return end
+    local hum = getHum(char)
+    if not hum then return end
+
+    local bestPet = GetBestPet()
+    if not bestPet then return end
+
+    if hum.SeatPart and hum.SeatPart:IsDescendantOf(bestPet) then
+        return
+    end
+
+    if hum.SeatPart then
+        local dRemote = Remote_PetDismount or GetRemote("PetDismount", "Dismount", "Unmount")
+        if dRemote then
+            pcall(function() dRemote:FireServer() end)
+            task.wait(0.1)
+        end
+    end
+
+    local mRemote = Remote_Mounting or GetRemote("Mounting", "Mount", "Ride", "RidePet", "EquipPet")
+    if mRemote then
+        pcall(function() mRemote:FireServer(bestPet) end)
+        pcall(function() mRemote:FireServer(bestPet.Name) end)
+        local idVal = bestPet:GetAttribute("Id") or bestPet:FindFirstChild("Id")
+        if idVal then
+            pcall(function() mRemote:FireServer(idVal) end)
+        end
+    end
+
+    for _, prompt in ipairs(bestPet:GetDescendants()) do
+        if prompt:IsA("ProximityPrompt") then
+            pcall(function()
+                prompt.HoldDuration = 0
+                prompt.RequiresLineOfSight = false
+                prompt.MaxActivationDistance = 99999
+            end)
+            if fireproximityprompt then
+                pcall(function() fireproximityprompt(prompt, 0) end)
+                pcall(function() fireproximityprompt(prompt) end)
+            end
+        end
+    end
+
+    local seat = bestPet:FindFirstChildWhichIsA("Seat", true) or bestPet:FindFirstChildWhichIsA("VehicleSeat", true)
+    if seat and not hum.SeatPart then
+        pcall(function() seat:Sit(hum) end)
+    end
+end
+
+task.spawn(function()
+    while true do
+        task.wait(1.5)
+        if State.AutoEquipBest and isAlive() then
+            pcall(EquipBestPet)
+        end
+    end
+end)
+
+-- Rare Egg ESP Engine
+local espHighlights = {}
+local espBillboards = {}
+
+local function ClearEggESP()
+    for _, h in pairs(espHighlights) do
+        if h and h.Parent then h:Destroy() end
+    end
+    for _, b in pairs(espBillboards) do
+        if b and b.Parent then b:Destroy() end
+    end
+    espHighlights = {}
+    espBillboards = {}
+end
+
+task.spawn(function()
+    while true do
+        task.wait(1.0)
+        if State.RareEggESP then
+            pcall(function()
+                local renderedEggs = Workspace:FindFirstChild("RenderedEggs")
+                local char = getChar()
+                local hrp = getRoot(char)
+
+                if renderedEggs and hrp then
+                    for _, egg in ipairs(renderedEggs:GetChildren()) do
+                        if egg:IsA("Model") then
+                            if IsEggInsideAnyBase(egg) then
+                                if espHighlights[egg] then espHighlights[egg]:Destroy() espHighlights[egg] = nil end
+                                if espBillboards[egg] then espBillboards[egg]:Destroy() espBillboards[egg] = nil end
+                            else
+                                local eggName = egg.Name:lower()
+                                local score = EggRarityRank[eggName] or 0
+
+                                if score >= 25 or eggName:find("egg") then
+                                    local targetPart = egg:FindFirstChild("Handle") or egg:FindFirstChild("EggBase") or egg.PrimaryPart or egg:FindFirstChildOfClass("BasePart")
+                                    if targetPart and not espHighlights[egg] then
+                                        local hl = Instance.new("Highlight")
+                                        hl.Name = "JunejoEggESP"
+                                        hl.Adornee = egg
+                                        hl.FillColor = (score >= 80 and Color3.fromRGB(239, 68, 68)) or (score >= 50 and Color3.fromRGB(168, 85, 247)) or Color3.fromRGB(255, 215, 0)
+                                        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                                        hl.FillTransparency = 0.35
+                                        hl.OutlineTransparency = 0
+                                        hl.Parent = egg
+                                        espHighlights[egg] = hl
+
+                                        local bb = Instance.new("BillboardGui")
+                                        bb.Name = "JunejoEggTag"
+                                        bb.Adornee = targetPart
+                                        bb.Size = UDim2.new(0, 130, 0, 32)
+                                        bb.StudsOffset = Vector3.new(0, 2.5, 0)
+                                        bb.AlwaysOnTop = true
+
+                                        local lbl = Instance.new("TextLabel")
+                                        lbl.Size = UDim2.new(1, 0, 1, 0)
+                                        lbl.BackgroundTransparency = 1
+                                        lbl.Font = Enum.Font.GothamBold
+                                        lbl.TextSize = 10
+                                        lbl.TextColor3 = hl.FillColor
+                                        lbl.TextStrokeTransparency = 0
+                                        lbl.TextStrokeColor3 = Color3.fromRGB(15, 14, 22)
+                                        lbl.Text = egg.Name .. "\n[" .. math.floor((hrp.Position - targetPart.Position).Magnitude) .. "m]"
+                                        lbl.Parent = bb
+                                        bb.Parent = targetPart
+                                        espBillboards[egg] = bb
+                                    end
+
+                                    if espBillboards[egg] and targetPart then
+                                        local lbl = espBillboards[egg]:FindFirstChildOfClass("TextLabel")
+                                        if lbl then
+                                            lbl.Text = egg.Name .. "\n[" .. math.floor((hrp.Position - targetPart.Position).Magnitude) .. "m]"
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end)
+        else
+            ClearEggESP()
+        end
+    end
+end)
+
+-- Player Chams ESP & Billboard Tags
+local playerHighlights = {}
+local playerBillboards = {}
+
+local function ClearPlayerESP()
+    for _, h in pairs(playerHighlights) do
+        if h and h.Parent then h:Destroy() end
+    end
+    for _, b in pairs(playerBillboards) do
+        if b and b.Parent then b:Destroy() end
+    end
+    playerHighlights = {}
+    playerBillboards = {}
+end
+
+task.spawn(function()
+    while true do
+        task.wait(1.0)
+        if State.PlayerESP or State.PlayerTags then
+            pcall(function()
+                local myChar = getChar()
+                local myRoot = getRoot(myChar)
+
+                for _, p in ipairs(Players:GetPlayers()) do
+                    if p ~= LocalPlayer and p.Character then
+                        local pChar = p.Character
+                        local pHum = pChar:FindFirstChildOfClass("Humanoid")
+                        local pRoot = pChar:FindFirstChild("HumanoidRootPart") or pChar.PrimaryPart
+
+                        if pHum and pRoot and pHum.Health > 0 then
+                            if State.PlayerESP and not playerHighlights[p] then
+                                local hl = Instance.new("Highlight")
+                                hl.Name = "JunejoPlayerChams"
+                                hl.Adornee = pChar
+                                hl.FillColor = Color3.fromRGB(168, 85, 247)
+                                hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                                hl.FillTransparency = 0.4
+                                hl.OutlineTransparency = 0
+                                hl.Parent = pChar
+                                playerHighlights[p] = hl
+                            elseif not State.PlayerESP and playerHighlights[p] then
+                                playerHighlights[p]:Destroy()
+                                playerHighlights[p] = nil
+                            end
+
+                            if State.PlayerTags and not playerBillboards[p] then
+                                local bb = Instance.new("BillboardGui")
+                                bb.Name = "JunejoPlayerTag"
+                                bb.Adornee = pRoot
+                                bb.Size = UDim2.new(0, 140, 0, 36)
+                                bb.StudsOffset = Vector3.new(0, 3.2, 0)
+                                bb.AlwaysOnTop = true
+
+                                local nameLbl = Instance.new("TextLabel", bb)
+                                nameLbl.Size = UDim2.new(1, 0, 0, 18)
+                                nameLbl.BackgroundTransparency = 1
+                                nameLbl.Font = Enum.Font.GothamBold
+                                nameLbl.TextSize = 11
+                                nameLbl.TextColor3 = Color3.fromRGB(192, 132, 252)
+                                nameLbl.TextStrokeTransparency = 0
+                                nameLbl.TextStrokeColor3 = Color3.fromRGB(15, 14, 22)
+                                nameLbl.Text = p.DisplayName
+
+                                local distLbl = Instance.new("TextLabel", bb)
+                                distLbl.Name = "DistLabel"
+                                distLbl.Size = UDim2.new(1, 0, 0, 14)
+                                distLbl.Position = UDim2.new(0, 0, 0, 18)
+                                distLbl.BackgroundTransparency = 1
+                                distLbl.Font = Enum.Font.Gotham
+                                distLbl.TextSize = 9.5
+                                distLbl.TextColor3 = Color3.fromRGB(157, 148, 190)
+                                distLbl.TextStrokeTransparency = 0
+                                distLbl.TextStrokeColor3 = Color3.fromRGB(15, 14, 22)
+
+                                local dist = myRoot and math.floor((myRoot.Position - pRoot.Position).Magnitude) or 0
+                                distLbl.Text = dist .. " Studs | HP: " .. math.floor(pHum.Health)
+                                bb.Parent = pRoot
+                                playerBillboards[p] = bb
+                            elseif State.PlayerTags and playerBillboards[p] then
+                                local distLbl = playerBillboards[p]:FindFirstChild("DistLabel")
+                                if distLbl then
+                                    local dist = myRoot and math.floor((myRoot.Position - pRoot.Position).Magnitude) or 0
+                                    distLbl.Text = dist .. " Studs | HP: " .. math.floor(pHum.Health)
+                                end
+                            elseif not State.PlayerTags and playerBillboards[p] then
+                                playerBillboards[p]:Destroy()
+                                playerBillboards[p] = nil
+                            end
+                        end
+                    end
+                end
+            end)
+        else
+            ClearPlayerESP()
+        end
+    end
+end)
+
+-- Physics Systems
+local function ApplyWalkSpeed()
+    pcall(function()
+        local hum = getHum()
+        if hum then
+            hum.WalkSpeed = State.WalkSpeedActive and State.WalkSpeedValue or 16
+        end
+    end)
+end
+
+RunService.Stepped:Connect(function()
+    if State.WalkSpeedActive and not State.FlyActive then
+        local hum = getHum()
+        if hum and hum.WalkSpeed ~= State.WalkSpeedValue then
+            hum.WalkSpeed = State.WalkSpeedValue
+        end
+    end
+end)
+
+local function ApplyJumpPower()
+    pcall(function()
+        local hum = getHum()
+        if hum then
+            hum.UseJumpPower = true
+            hum.JumpPower = State.JumpPowerActive and State.JumpPowerValue or 50
+        end
+    end)
+end
+
+RunService.Stepped:Connect(function()
+    if State.JumpPowerActive then
+        local hum = getHum()
+        if hum and hum.JumpPower ~= State.JumpPowerValue then
+            hum.UseJumpPower = true
+            hum.JumpPower = State.JumpPowerValue
+        end
+    end
+end)
+
+UserInputService.JumpRequest:Connect(function()
+    if State.InfJumpActive and isAlive() then
+        pcall(function()
+            local hrp = getRoot()
+            if hrp then
+                hrp.AssemblyLinearVelocity = Vector3.new(hrp.AssemblyLinearVelocity.X, 55, hrp.AssemblyLinearVelocity.Z)
+            end
         end)
     end
 end)
 
--- NoClip System
 RunService.Stepped:Connect(function()
-    if Toggles.NoClip and LocalPlayer.Character then
+    if State.NoClipActive and isAlive() then
         pcall(function()
-            for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+            local char = getChar()
+            for _, part in ipairs(char:GetDescendants()) do
                 if part:IsA("BasePart") and part.CanCollide then
                     part.CanCollide = false
                 end
@@ -561,40 +1661,13 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- WalkSpeed System
-local function ApplyWalkSpeed()
-    pcall(function()
-        local char = LocalPlayer.Character
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        if hum then
-            hum.WalkSpeed = Toggles.WalkSpeed and CustomSpeedValue or 16
-        end
-    end)
-end
-
-RunService.Stepped:Connect(function()
-    if Toggles.WalkSpeed and not Toggles.Fly and LocalPlayer.Character then
-        local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if hum and hum.WalkSpeed ~= CustomSpeedValue then
-            hum.WalkSpeed = CustomSpeedValue
-        end
-    end
-end)
-
-LocalPlayer.CharacterAdded:Connect(function()
-    task.wait(0.3)
-    ApplyWalkSpeed()
-end)
-
--- Fly System (Mobile Touch & PC WASD Compatible)
 local flyBodyGyro, flyBodyVelocity, flyConnection
-
 local function StopFly()
     pcall(function()
         if flyConnection then flyConnection:Disconnect() flyConnection = nil end
         if flyBodyGyro then flyBodyGyro:Destroy() flyBodyGyro = nil end
         if flyBodyVelocity then flyBodyVelocity:Destroy() flyBodyVelocity = nil end
-        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        local hum = getHum()
         if hum then hum.PlatformStand = false end
     end)
 end
@@ -602,9 +1675,9 @@ end
 local function StartFly()
     StopFly()
     pcall(function()
-        local char = LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        local char = getChar()
+        local hrp = getRoot(char)
+        local hum = getHum(char)
         if not hrp or not hum then return end
 
         hum.PlatformStand = true
@@ -621,14 +1694,14 @@ local function StartFly()
         flyBodyVelocity.Parent = hrp
 
         flyConnection = RunService.RenderStepped:Connect(function()
-            if not Toggles.Fly or not hrp.Parent then
+            if not State.FlyActive or not hrp.Parent then
                 StopFly()
                 return
             end
 
             local cam = Workspace.CurrentCamera
             local moveDir = hum.MoveDirection
-            local speed = CustomFlySpeed
+            local speed = State.FlySpeed
 
             flyBodyGyro.CFrame = cam.CFrame
             if moveDir.Magnitude > 0 then
@@ -640,636 +1713,84 @@ local function StartFly()
     end)
 end
 
--- =================================================================
--- NESTS & EGG COLLECTION HELPERS
--- =================================================================
+local origAmbient = Lighting.Ambient
+local origBrightness = Lighting.Brightness
+local origFogEnd = Lighting.FogEnd
 
--- Find all nests on player's plot or nearby base
-local function GetMyNests()
-    local myPlot = GetMyPlot()
-    local nests = {}
-    local seen = {}
-
-    if myPlot then
-        -- 1. Check known nest folders
-        local candidateFolders = {
-            myPlot:FindFirstChild("Nests"),
-            myPlot:FindFirstChild("Incubators"),
-            myPlot:FindFirstChild("NestFolder"),
-            myPlot:FindFirstChild("Eggs"),
-            myPlot:FindFirstChild("Structures"),
-            myPlot:FindFirstChild("Buildings"),
-            myPlot:FindFirstChild("Base")
-        }
-        for _, folder in ipairs(candidateFolders) do
-            if folder then
-                for _, child in ipairs(folder:GetChildren()) do
-                    if (child:IsA("Model") or child:IsA("BasePart")) and not seen[child] then
-                        seen[child] = true
-                        table.insert(nests, child)
-                    end
-                end
-            end
+local function ApplyFullBright()
+    pcall(function()
+        if State.FullBrightActive then
+            Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+            Lighting.Brightness = 2
+            Lighting.FogEnd = 1e6
+            Lighting.GlobalShadows = false
+        else
+            Lighting.Ambient = origAmbient
+            Lighting.Brightness = origBrightness
+            Lighting.FogEnd = origFogEnd
+            Lighting.GlobalShadows = true
         end
+    end)
+end
 
-        -- 2. Search all descendants of myPlot for nest keywords
-        for _, desc in ipairs(myPlot:GetDescendants()) do
-            if (desc:IsA("Model") or desc:IsA("BasePart")) and not seen[desc] then
-                local name = desc.Name:lower()
-                if name:find("nest") or name:find("incubator") or name:find("eggslot") or name:find("slot") or name:find("hatch") then
-                    seen[desc] = true
-                    table.insert(nests, desc)
+pcall(function()
+    local ProximityPromptService = game:GetService("ProximityPromptService")
+    ProximityPromptService.PromptButtonHoldBegan:Connect(function(prompt)
+        if State.InstantPrompts then
+            pcall(function()
+                prompt.HoldDuration = 0
+                if typeof(fireproximityprompt) == "function" then
+                    fireproximityprompt(prompt)
                 end
-            end
+            end)
         end
+    end)
+end)
 
-        -- 3. Any model in myPlot that contains a ProximityPrompt or ClickDetector
-        for _, prompt in ipairs(myPlot:GetDescendants()) do
-            if prompt:IsA("ProximityPrompt") or prompt:IsA("ClickDetector") then
-                local model = prompt:FindFirstAncestorOfClass("Model") or prompt.Parent
-                if model and not seen[model] and not (model == myPlot) then
-                    seen[model] = true
-                    table.insert(nests, model)
-                end
-            end
-        end
-    end
-
-    -- 4. Fallback: Search nearby base for nests
-    if #nests == 0 and SavedBaseCFrame then
+LocalPlayer.Idled:Connect(function()
+    if State.AntiAFKActive then
         pcall(function()
-            for _, obj in ipairs(Workspace:GetDescendants()) do
-                if (obj:IsA("Model") or obj:IsA("BasePart")) and not seen[obj] then
-                    local name = obj.Name:lower()
-                    if name:find("nest") or name:find("incubator") or name:find("eggslot") then
-                        local primary = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
-                        if primary and (primary.Position - SavedBaseCFrame.Position).Magnitude < 120 then
-                            seen[obj] = true
-                            table.insert(nests, obj)
-                        end
-                    end
-                end
-            end
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.zero)
         end)
     end
-
-    return nests
-end
-
--- Find all eggs on the map across all folders & workspace
-local function GetAllMapEggs()
-    local eggList = {}
-    local seen = {}
-
-    local candidateFolders = {
-        Workspace:FindFirstChild("RenderedEggs"),
-        Workspace:FindFirstChild("Eggs"),
-        Workspace:FindFirstChild("SpawnedEggs"),
-        Workspace:FindFirstChild("MapEggs"),
-        Workspace:FindFirstChild("EggSpawns"),
-        Workspace:FindFirstChild("Debris"),
-        Workspace:FindFirstChild("Spawns")
-    }
-
-    for _, folder in ipairs(candidateFolders) do
-        if folder then
-            for _, egg in ipairs(folder:GetChildren()) do
-                if (egg:IsA("Model") or egg:IsA("BasePart")) and not seen[egg] then
-                    seen[egg] = true
-                    table.insert(eggList, egg)
-                end
-            end
-        end
-    end
-
-    -- Scan Workspace direct children
-    pcall(function()
-        for _, obj in ipairs(Workspace:GetChildren()) do
-            if not seen[obj] and (obj:IsA("Model") or obj:IsA("BasePart")) then
-                local name = obj.Name:lower()
-                if name:find("egg") and not name:find("spawn") and not name:find("stall") and not name:find("tracker") and not name:find("gui") then
-                    seen[obj] = true
-                    table.insert(eggList, obj)
-                end
-            end
-        end
-    end)
-
-    -- Scan for ProximityPrompts with egg actions
-    pcall(function()
-        for _, prompt in ipairs(Workspace:GetDescendants()) do
-            if prompt:IsA("ProximityPrompt") then
-                local actText = (prompt.ActionText or ""):lower()
-                local objText = (prompt.ObjectText or ""):lower()
-                if actText:find("egg") or actText:find("pick") or actText:find("steal") or actText:find("grab") or actText:find("take")
-                   or objText:find("egg") then
-                    local model = prompt:FindFirstAncestorOfClass("Model") or prompt.Parent
-                    if model and not seen[model] then
-                        seen[model] = true
-                        table.insert(eggList, model)
-                    end
-                end
-            end
-        end
-    end)
-
-    return eggList
-end
-
--- Calculate egg rarity score
-local function GetEggRarityScore(egg)
-    if not egg then return 0 end
-    local name = egg.Name:lower()
-    for rarityKey, score in pairs(EggRarityRank) do
-        if name:find(rarityKey) then
-            return score
-        end
-    end
-    return 1
-end
-
--- Check if egg matches selected zone
-local function MatchesSelectedZone(egg, selectedZone)
-    if not egg then return false end
-    local name = egg.Name:lower()
-    
-    if selectedZone:find("Best Egg") then
-        return true
-    elseif selectedZone:find("Ethereal") then
-        return name:find("ethereal") or name:find("blackhole")
-    elseif selectedZone:find("Divine") or selectedZone:find("Diamond") then
-        return name:find("divine") or name:find("diamond")
-    elseif selectedZone:find("Mythic") or selectedZone:find("Golden") then
-        return name:find("mythic") or name:find("golden") or name:find("gold")
-    elseif selectedZone:find("Legend") or selectedZone:find("Flaming") then
-        return name:find("legend") or name:find("flaming") or name:find("fire")
-    elseif selectedZone:find("Epic") or selectedZone:find("Skull") then
-        return name:find("epic") or name:find("skull") or name:find("slime") or name:find("slimy")
-    elseif selectedZone:find("Rare") or selectedZone:find("Crystal") then
-        return name:find("rare") or name:find("crystal") or name:find("glass") or name:find("flower")
-    else
-        return true
-    end
-end
-
--- Select the best target egg based on zone filter
-local function GetBestStealEgg()
-    local allEggs = GetAllMapEggs()
-    if #allEggs == 0 then return nil end
-
-    local selectedZone = StealZoneOptions[StealZoneIndex] or "Best Egg (Auto)"
-    local myPlot = GetMyPlot()
-    
-    local matchedEggs = {}
-    local validEggs = {}
-
-    for _, egg in ipairs(allEggs) do
-        -- Skip eggs inside player's own base
-        local inMyPlot = myPlot and egg:IsDescendantOf(myPlot)
-        if not inMyPlot then
-            table.insert(validEggs, egg)
-            if MatchesSelectedZone(egg, selectedZone) then
-                table.insert(matchedEggs, egg)
-            end
-        end
-    end
-
-    local pool = (#matchedEggs > 0) and matchedEggs or validEggs
-    if #pool == 0 then return nil end
-
-    table.sort(pool, function(a, b)
-        return GetEggRarityScore(a) > GetEggRarityScore(b)
-    end)
-
-    return pool[1]
-end
-
--- =================================================================
--- UNIVERSAL HATCH & CRACK ENGINE (ALL PROMPTS, CLICKDETECTORS, REMOTES)
--- =================================================================
-local function HatchNest(nest, shouldTeleport)
-    if not nest then return end
-    pcall(function()
-        local char = LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
-
-        local nestPart = nest:FindFirstChild("Handle") 
-                      or nest:FindFirstChild("EggBase")
-                      or nest:FindFirstChild("Egg")
-                      or nest.PrimaryPart 
-                      or nest:FindFirstChildWhichIsA("BasePart", true)
-
-        -- If requested or needed, bring player close to nest so server passes distance validation
-        if shouldTeleport and nestPart then
-            SafeTeleport(nestPart.CFrame + Vector3.new(0, 2, 0))
-            task.wait(0.04)
-        end
-
-        -- 1. Trigger ALL ProximityPrompts inside nest & eggs inside nest
-        for _, prompt in ipairs(nest:GetDescendants()) do
-            if prompt:IsA("ProximityPrompt") then
-                TriggerPrompt(prompt)
-            end
-        end
-
-        -- 2. Trigger ALL ClickDetectors inside nest & eggs inside nest
-        for _, cd in ipairs(nest:GetDescendants()) do
-            if cd:IsA("ClickDetector") then
-                TriggerClickDetector(cd)
-            end
-        end
-
-        -- 3. Touch interest with nest & egg parts
-        if nestPart and firetouchinterest then
-            pcall(function()
-                firetouchinterest(hrp, nestPart, 0)
-                task.wait(0.01)
-                firetouchinterest(hrp, nestPart, 1)
-            end)
-        end
-        for _, childPart in ipairs(nest:GetDescendants()) do
-            if childPart:IsA("BasePart") and firetouchinterest then
-                pcall(function()
-                    firetouchinterest(hrp, childPart, 0)
-                    firetouchinterest(hrp, childPart, 1)
-                end)
-            end
-        end
-
-        -- 4. Check if there is an egg inside the nest
-        local eggInside = nest:FindFirstChild("Egg") 
-                       or nest:FindFirstChildWhichIsA("Model")
-                       or nest:FindFirstChild("PlacedEgg")
-
-        -- 5. Fire all candidate remotes with multiple argument patterns
-        local remoteKeywords = {"hatch", "crack", "openegg", "claimnest", "claimpet", "claim", "incubate", "open"}
-        
-        -- Pattern A: nest instance
-        FireAllCandidateRemotes(remoteKeywords, nest)
-        -- Pattern B: nest name
-        FireAllCandidateRemotes(remoteKeywords, nest.Name)
-        -- Pattern C: nest number
-        local num = tonumber(nest.Name:match("%d+"))
-        if num then
-            FireAllCandidateRemotes(remoteKeywords, num)
-        end
-        -- Pattern D: egg instance if present
-        if eggInside then
-            FireAllCandidateRemotes(remoteKeywords, eggInside)
-            FireAllCandidateRemotes(remoteKeywords, nest, eggInside)
-            FireAllCandidateRemotes(remoteKeywords, nest.Name, eggInside.Name)
-        end
-        -- Pattern E: no args
-        FireAllCandidateRemotes(remoteKeywords)
-
-        -- Direct Game Remotes
-        local hatchRemote = GetGameRemote("Hatch")
-        if hatchRemote then
-            hatchRemote:FireServer(nest)
-            hatchRemote:FireServer(nest.Name)
-            if eggInside then hatchRemote:FireServer(eggInside) end
-            if num then hatchRemote:FireServer(num) end
-            hatchRemote:FireServer()
-        end
-
-        local hatchEggRemote = GetGameRemote("HatchEgg")
-        if hatchEggRemote then
-            hatchEggRemote:FireServer(nest)
-            hatchEggRemote:FireServer(nest.Name)
-            if eggInside then hatchEggRemote:FireServer(eggInside) end
-            hatchEggRemote:FireServer()
-        end
-    end)
-end
-
--- =================================================================
--- CORE AUTOMATION SYSTEMS (FEATURES 1, 2, 3, 4, 5)
--- =================================================================
-
--- 1 & 2: Robust Multi-Layer Auto Steal Egg Routine
-local isStealing = false
-local function ExecuteStealEgg()
-    if isStealing then return end
-    isStealing = true
-
-    pcall(function()
-        local char = LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
-
-        local targetEgg = GetBestStealEgg()
-        if not targetEgg or not targetEgg.Parent then return end
-
-        local eggPart = targetEgg:FindFirstChild("Handle") 
-                     or targetEgg:FindFirstChild("EggBase") 
-                     or targetEgg:FindFirstChild("Sphere.007") 
-                     or targetEgg.PrimaryPart 
-                     or targetEgg:FindFirstChildOfClass("BasePart")
-                     or targetEgg:FindFirstChildWhichIsA("BasePart", true)
-        if not eggPart then return end
-
-        -- Step 1: Teleport to Egg
-        SafeTeleport(eggPart.CFrame + Vector3.new(0, 1.5, 0))
-        task.wait(0.2)
-
-        -- Step 2: Trigger ProximityPrompts, ClickDetectors & Fire Remotes & Touch
-        for _, prompt in ipairs(targetEgg:GetDescendants()) do
-            if prompt:IsA("ProximityPrompt") then
-                TriggerPrompt(prompt)
-            end
-            if prompt:IsA("ClickDetector") then
-                TriggerClickDetector(prompt)
-            end
-        end
-
-        FireAllCandidateRemotes({"pickup", "steal", "grab", "take", "collect", "egg"}, targetEgg, targetEgg.Name, eggPart, 1)
-
-        local directPickup = GetGameRemote("EggPickup")
-        if directPickup then
-            directPickup:FireServer(targetEgg)
-            directPickup:FireServer(targetEgg.Name)
-            directPickup:FireServer(eggPart)
-        end
-
-        if firetouchinterest and hrp and eggPart then
-            firetouchinterest(hrp, eggPart, 0)
-            task.wait(0.02)
-            firetouchinterest(hrp, eggPart, 1)
-        end
-
-        task.wait(0.25)
-
-        -- Step 3: Teleport Back To Player Base
-        local basePos = GetBasePosition()
-        if basePos then
-            SafeTeleport(basePos)
-        else
-            local tpRemote = GetGameRemote("TeleportToPlot")
-            if tpRemote then tpRemote:FireServer() end
-        end
-
-        task.wait(0.25)
-
-        -- Step 4: Deposit Egg onto Open Nest
-        local myNests = GetMyNests()
-        for _, nest in ipairs(myNests) do
-            local nestPart = nest:FindFirstChild("Handle") or nest.PrimaryPart or nest:FindFirstChildWhichIsA("BasePart", true)
-            if nestPart then
-                SafeTeleport(nestPart.CFrame + Vector3.new(0, 2.5, 0))
-                task.wait(0.08)
-
-                for _, prompt in ipairs(nest:GetDescendants()) do
-                    if prompt:IsA("ProximityPrompt") then
-                        TriggerPrompt(prompt)
-                    end
-                    if prompt:IsA("ClickDetector") then
-                        TriggerClickDetector(prompt)
-                    end
-                end
-
-                FireAllCandidateRemotes({"place", "deposit", "put", "nest", "insert", "drop"}, nest, nest.Name, targetEgg)
-
-                local placeRemote = GetGameRemote("EggPlaced")
-                if placeRemote then
-                    placeRemote:FireServer(nest)
-                    placeRemote:FireServer(nest.Name)
-                    placeRemote:FireServer()
-                end
-
-                if firetouchinterest and hrp then
-                    firetouchinterest(hrp, nestPart, 0)
-                    task.wait(0.02)
-                    firetouchinterest(hrp, nestPart, 1)
-                end
-
-                if Toggles.AutoHatch then
-                    HatchNest(nest, false)
-                end
-            end
-        end
-    end)
-
-    isStealing = false
-end
-
--- Auto Steal Egg Background Loop
-task.spawn(function()
-    while true do
-        task.wait(0.5)
-        if Toggles.AutoSteal then
-            ExecuteStealEgg()
-        end
-    end
 end)
 
--- 3: Auto Hatch Eggs Background Loop (High-Frequency Multi-Layer Engine)
-task.spawn(function()
-    while true do
-        task.wait(0.25)
-        if Toggles.AutoHatch then
-            pcall(function()
-                local nests = GetMyNests()
-                for _, nest in ipairs(nests) do
-                    HatchNest(nest, false)
-                end
-
-                -- Direct scan of all prompts and click detectors on my plot
-                local myPlot = GetMyPlot()
-                if myPlot then
-                    for _, prompt in ipairs(myPlot:GetDescendants()) do
-                        if prompt:IsA("ProximityPrompt") then
-                            local act = (prompt.ActionText or ""):lower()
-                            local obj = (prompt.ObjectText or ""):lower()
-                            if act:find("hatch") or act:find("crack") or act:find("open") or act:find("claim") or act:find("incubate")
-                               or obj:find("hatch") or obj:find("crack") or obj:find("open") or obj:find("claim") or obj:find("incubate") or act == "" then
-                                TriggerPrompt(prompt)
-                            end
-                        elseif prompt:IsA("ClickDetector") then
-                            TriggerClickDetector(prompt)
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- 4: Auto Place Egg Background Loop
-task.spawn(function()
-    while true do
-        task.wait(0.35)
-        if Toggles.AutoPlace then
-            pcall(function()
-                local nests = GetMyNests()
-                for _, nest in ipairs(nests) do
-                    -- Trigger place prompts & click detectors
-                    for _, prompt in ipairs(nest:GetDescendants()) do
-                        if prompt:IsA("ProximityPrompt") then
-                            local act = (prompt.ActionText or ""):lower()
-                            local obj = (prompt.ObjectText or ""):lower()
-                            if act:find("place") or act:find("deposit") or act:find("put") or act:find("egg")
-                               or obj:find("place") or obj:find("deposit") or obj:find("put") or obj:find("egg") or act == "" then
-                                TriggerPrompt(prompt)
-                            end
-                        elseif prompt:IsA("ClickDetector") then
-                            TriggerClickDetector(prompt)
-                        end
-                    end
-
-                    -- Fire place remotes
-                    FireAllCandidateRemotes({"place", "deposit", "put", "eggplaced", "nest", "insert"}, nest, nest.Name, 1)
-
-                    local placeRemote = GetGameRemote("EggPlaced")
-                    if placeRemote then
-                        placeRemote:FireServer(nest)
-                        placeRemote:FireServer(nest.Name)
-                        placeRemote:FireServer()
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- 5: Auto Equip Best Pet Loop
-task.spawn(function()
-    while true do
-        task.wait(1.2)
-        if Toggles.AutoEquipBest then
-            pcall(function()
-                local myPlot = GetMyPlot()
-                local petsFolder = myPlot and (myPlot:FindFirstChild("Pets") or myPlot:FindFirstChild("MyPets"))
-                if petsFolder then
-                    local pets = petsFolder:GetChildren()
-                    if #pets > 0 then
-                        local targetPet = pets[#pets]
-                        FireAllCandidateRemotes({"mount", "ride", "equip"}, targetPet, targetPet.Name)
-                        local mountRemote = GetGameRemote("Mounting")
-                        if mountRemote then
-                            mountRemote:FireServer(targetPet)
-                        end
-                    end
-                else
-                    FireAllCandidateRemotes({"equipbest", "mountbest", "bestpet"})
-                end
-            end)
-        end
-    end
+LocalPlayer.CharacterAdded:Connect(function(newChar)
+    task.wait(0.5)
+    ApplyWalkSpeed()
+    ApplyJumpPower()
+    if State.FlyActive then StartFly() end
 end)
 
 -- =================================================================
--- 6: RARE EGG ESP (HIGHLIGHTS RAREST MAP EGGS)
--- =================================================================
-local espHighlights = {}
-local espBillboards = {}
-
-local function ClearESP()
-    for _, h in pairs(espHighlights) do
-        if h and h.Parent then h:Destroy() end
-    end
-    for _, b in pairs(espBillboards) do
-        if b and b.Parent then b:Destroy() end
-    end
-    espHighlights = {}
-    espBillboards = {}
-end
-
-task.spawn(function()
-    while true do
-        task.wait(0.8)
-        if Toggles.BestEggESP then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                local allEggs = GetAllMapEggs()
-                local myPlot = GetMyPlot()
-
-                if hrp then
-                    for _, egg in ipairs(allEggs) do
-                        if egg:IsA("Model") or egg:IsA("BasePart") then
-                            local inMyPlot = myPlot and egg:IsDescendantOf(myPlot)
-                            if inMyPlot then
-                                if espHighlights[egg] then espHighlights[egg]:Destroy() espHighlights[egg] = nil end
-                                if espBillboards[egg] then espBillboards[egg]:Destroy() espBillboards[egg] = nil end
-                            else
-                                local score = GetEggRarityScore(egg)
-                                local targetPart = egg:FindFirstChild("Handle") 
-                                                or egg:FindFirstChild("EggBase") 
-                                                or egg.PrimaryPart 
-                                                or egg:FindFirstChildOfClass("BasePart") 
-                                                or egg:FindFirstChildWhichIsA("BasePart", true)
-
-                                if targetPart and not espHighlights[egg] then
-                                    local hl = Instance.new("Highlight")
-                                    hl.Name = "JunejoEggESP"
-                                    hl.Adornee = egg
-                                    hl.FillColor = (score >= 80 and Color3.fromRGB(255, 60, 255)) 
-                                                or (score >= 50 and Color3.fromRGB(255, 215, 0)) 
-                                                or (score >= 30 and Color3.fromRGB(50, 220, 255))
-                                                or Color3.fromRGB(150, 255, 150)
-                                    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-                                    hl.FillTransparency = 0.35
-                                    hl.OutlineTransparency = 0
-                                    hl.Parent = egg
-                                    espHighlights[egg] = hl
-
-                                    local bb = Instance.new("BillboardGui")
-                                    bb.Name = "JunejoTag"
-                                    bb.Adornee = targetPart
-                                    bb.Size = UDim2.new(0, 130, 0, 32)
-                                    bb.StudsOffset = Vector3.new(0, 2.5, 0)
-                                    bb.AlwaysOnTop = true
-
-                                    local lbl = Instance.new("TextLabel")
-                                    lbl.Size = UDim2.new(1, 0, 1, 0)
-                                    lbl.BackgroundTransparency = 1
-                                    lbl.Font = Enum.Font.GothamBold
-                                    lbl.TextSize = 10
-                                    lbl.TextColor3 = hl.FillColor
-                                    lbl.TextStrokeTransparency = 0.2
-                                    lbl.TextStrokeColor3 = Color3.fromRGB(15, 14, 22)
-                                    lbl.Text = egg.Name .. "\n[" .. math.floor((hrp.Position - targetPart.Position).Magnitude) .. "m]"
-                                    lbl.Parent = bb
-                                    bb.Parent = targetPart
-                                    espBillboards[egg] = bb
-                                end
-
-                                if espBillboards[egg] and targetPart then
-                                    local lbl = espBillboards[egg]:FindFirstChildOfClass("TextLabel")
-                                    if lbl then
-                                        lbl.Text = egg.Name .. "\n[" .. math.floor((hrp.Position - targetPart.Position).Magnitude) .. "m]"
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-            end)
-        else
-            ClearESP()
-        end
-    end
-end)
-
--- =================================================================
--- OFFICIAL JUNEJO CLASSIC DARK UI (UI 1 STANDARD - 280x265px)
+-- UI CREATION (UI 1: OFFICIAL ULTRA SCRIPT HUB CLASSIC MATTE DARK)
 -- =================================================================
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "JunejoRideAPetUI"
+ScreenGui.Name = "JunejoUltraScriptHub_RideAPet"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.DisplayOrder = 999999
-ScreenGui.IgnoreGuiInset = true
 
--- Main Frame (280px x 265px)
+pcall(function()
+    if syn and syn.protect_gui then
+        syn.protect_gui(ScreenGui)
+        ScreenGui.Parent = guiParent
+    else
+        ScreenGui.Parent = guiParent
+    end
+end)
+
+if not ScreenGui.Parent then
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+end
+
+-- Main Window (Width: 280px, Height: 335px, Background: #0F0F11, Corner: 10px, Border: #23232A)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 265)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -132)
+MainFrame.Size = UDim2.new(0, 280, 0, 335)
+MainFrame.Position = UDim2.new(0.05, 0, 0.2, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
 MainFrame.ClipsDescendants = true
 MainFrame.Parent = ScreenGui
 
@@ -1282,100 +1803,127 @@ MainStroke.Color = Color3.fromRGB(35, 35, 42)
 MainStroke.Thickness = 1
 MainStroke.Parent = MainFrame
 
--- Dragging Engine
-local isDragging, dragStart, startPos = false, nil, nil
-MainFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        isDragging = true
-        dragStart = input.Position
-        startPos = MainFrame.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                isDragging = false
-            end
-        end)
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local delta = input.Position - dragStart
-        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-end)
-
--- Header Frame (Height: 32px)
+-- Header Bar
 local Header = Instance.new("Frame")
 Header.Name = "Header"
-Header.Size = UDim2.new(1, 0, 0, 32)
+Header.Size = UDim2.new(1, 0, 0, 34)
 Header.BackgroundTransparency = 1
+Header.BorderSizePixel = 0
 Header.Parent = MainFrame
 
 local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Name = "TitleLabel"
 TitleLabel.Size = UDim2.new(1, -40, 1, 0)
-TitleLabel.Position = UDim2.new(0, 12, 0, 0)
+TitleLabel.Position = UDim2.new(0, 14, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = GameName
+TitleLabel.Text = "RIDE A PET"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleLabel.TextSize = 12
+TitleLabel.TextSize = 13
 TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.Parent = Header
 
 local CloseButton = Instance.new("TextButton")
-CloseButton.Size = UDim2.new(0, 24, 0, 24)
-CloseButton.Position = UDim2.new(1, -28, 0, 4)
+CloseButton.Name = "CloseButton"
+CloseButton.Size = UDim2.new(0, 34, 0, 34)
+CloseButton.Position = UDim2.new(1, -34, 0, 0)
 CloseButton.BackgroundTransparency = 1
-CloseButton.Text = "X"
-CloseButton.TextColor3 = Color3.fromRGB(160, 160, 160)
-CloseButton.TextSize = 13
+CloseButton.Text = "×"
+CloseButton.TextColor3 = Color3.fromRGB(160, 160, 170)
+CloseButton.TextSize = 16
 CloseButton.Font = Enum.Font.GothamBold
 CloseButton.Parent = Header
+
 CloseButton.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
 
--- Header Separation Line (1px)
-local HeaderLine = Instance.new("Frame")
-HeaderLine.Size = UDim2.new(1, -24, 0, 1)
-HeaderLine.Position = UDim2.new(0, 12, 0, 32)
-HeaderLine.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
-HeaderLine.BorderSizePixel = 0
-HeaderLine.Parent = MainFrame
+-- Header Divider Line
+local HeaderDivider = Instance.new("Frame")
+HeaderDivider.Name = "HeaderDivider"
+HeaderDivider.Size = UDim2.new(1, 0, 0, 1)
+HeaderDivider.Position = UDim2.new(0, 0, 0, 34)
+HeaderDivider.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+HeaderDivider.BorderSizePixel = 0
+HeaderDivider.Parent = MainFrame
 
--- Scrolling Content Frame
-local ContentFrame = Instance.new("ScrollingFrame")
-ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -24, 0, 190)
-ContentFrame.Position = UDim2.new(0, 12, 0, 38)
-ContentFrame.BackgroundTransparency = 1
-ContentFrame.BorderSizePixel = 0
-ContentFrame.ScrollBarThickness = 2
-ContentFrame.ScrollBarImageColor3 = Color3.fromRGB(60, 60, 75)
-ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 360)
-ContentFrame.Parent = MainFrame
+-- Header Draggable Logic
+local dragging = false
+local dragInput, dragStart, startPos
 
-local UIList = Instance.new("UIListLayout")
-UIList.SortOrder = Enum.SortOrder.LayoutOrder
-UIList.Padding = UDim.new(0, 4)
-UIList.Parent = ContentFrame
+Header.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
 
--- Helper: Add Flat Borderless Toggle Row (Classic Square Checkbox)
-local function AddToggleRow(text, configKey, callback)
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+Header.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- Scrollable Content Container
+local ContentScroll = Instance.new("ScrollingFrame")
+ContentScroll.Name = "ContentScroll"
+ContentScroll.Size = UDim2.new(1, -24, 1, -80)
+ContentScroll.Position = UDim2.new(0, 12, 0, 38)
+ContentScroll.BackgroundTransparency = 1
+ContentScroll.BorderSizePixel = 0
+ContentScroll.ScrollBarThickness = 2
+ContentScroll.ScrollBarImageColor3 = Color3.fromRGB(50, 50, 62)
+ContentScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+ContentScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+ContentScroll.Parent = MainFrame
+
+local ContentLayout = Instance.new("UIListLayout")
+ContentLayout.Padding = UDim.new(0, 5)
+ContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ContentLayout.Parent = ContentScroll
+
+local ContentPadding = Instance.new("UIPadding")
+ContentPadding.PaddingTop = UDim.new(0, 4)
+ContentPadding.PaddingBottom = UDim.new(0, 6)
+ContentPadding.Parent = ContentScroll
+
+-- =================================================================
+-- UI 1 COMPONENT BUILDERS (Checkboxes, Steppers, Action Buttons, Dropdowns)
+-- =================================================================
+local currentLayoutOrder = 0
+
+local function AddToggleRow(text, defaultState, callback)
+    currentLayoutOrder = currentLayoutOrder + 1
     local Row = Instance.new("Frame")
-    Row.Size = UDim2.new(1, 0, 0, 23)
+    Row.Name = text .. "_Row"
+    Row.Size = UDim2.new(1, 0, 0, 26)
     Row.BackgroundTransparency = 1
-    Row.Parent = ContentFrame
-    
+    Row.LayoutOrder = currentLayoutOrder
+    Row.Parent = ContentScroll
+
     local RowBtn = Instance.new("TextButton")
     RowBtn.Size = UDim2.new(1, 0, 1, 0)
     RowBtn.BackgroundTransparency = 1
     RowBtn.Text = ""
     RowBtn.ZIndex = 5
     RowBtn.Parent = Row
-    
+
     local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(1, -28, 1, 0)
+    Label.Size = UDim2.new(1, -30, 1, 0)
     Label.BackgroundTransparency = 1
     Label.Text = text
     Label.TextColor3 = Color3.fromRGB(240, 240, 240)
@@ -1383,490 +1931,503 @@ local function AddToggleRow(text, configKey, callback)
     Label.Font = Enum.Font.GothamBold
     Label.TextXAlignment = Enum.TextXAlignment.Left
     Label.Parent = Row
-    
+
     local CheckBox = Instance.new("Frame")
     CheckBox.Size = UDim2.new(0, 18, 0, 18)
-    CheckBox.Position = UDim2.new(1, -18, 0.5, -9)
+    CheckBox.Position = UDim2.new(1, -20, 0.5, -9)
     CheckBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
     CheckBox.BorderSizePixel = 0
     CheckBox.Parent = Row
-    
+
     local CheckCorner = Instance.new("UICorner")
     CheckCorner.CornerRadius = UDim.new(0, 4)
     CheckCorner.Parent = CheckBox
-    
+
     local CheckStroke = Instance.new("UIStroke")
     CheckStroke.Color = Color3.fromRGB(45, 45, 55)
     CheckStroke.Thickness = 1.2
     CheckStroke.Parent = CheckBox
-    
+
     local CheckMark = Instance.new("Frame")
     CheckMark.Size = UDim2.new(0, 10, 0, 10)
     CheckMark.Position = UDim2.new(0.5, -5, 0.5, -5)
     CheckMark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    CheckMark.BackgroundTransparency = Toggles[configKey] and 0 or 1
+    CheckMark.BackgroundTransparency = defaultState and 0 or 1
     CheckMark.BorderSizePixel = 0
     CheckMark.Parent = CheckBox
-    
+
     local MarkCorner = Instance.new("UICorner")
     MarkCorner.CornerRadius = UDim.new(0, 2)
     MarkCorner.Parent = CheckMark
-    
+
+    local isEnabled = defaultState
+
+    local function updateState(newState)
+        isEnabled = newState
+        CheckMark.BackgroundTransparency = isEnabled and 0 or 1
+        if callback then
+            callback(isEnabled)
+        end
+    end
+
     RowBtn.MouseButton1Click:Connect(function()
-        Toggles[configKey] = not Toggles[configKey]
-        CheckMark.BackgroundTransparency = Toggles[configKey] and 0 or 1
-        if callback then callback(Toggles[configKey]) end
+        updateState(not isEnabled)
     end)
+
+    return {
+        SetState = updateState,
+        GetState = function() return isEnabled end
+    }
 end
 
--- Helper: Add 1-Click Action Button Row
-local function AddActionRow(text, buttonText, callback)
+local function AddActionButton(text, callback)
+    currentLayoutOrder = currentLayoutOrder + 1
+    local Btn = Instance.new("TextButton")
+    Btn.Name = text .. "_Btn"
+    Btn.Size = UDim2.new(1, 0, 0, 28)
+    Btn.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+    Btn.BorderSizePixel = 0
+    Btn.AutoButtonColor = false
+    Btn.Text = text:upper()
+    Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Btn.Font = Enum.Font.GothamBold
+    Btn.TextSize = 11
+    Btn.LayoutOrder = currentLayoutOrder
+    Btn.Parent = ContentScroll
+
+    local BtnCorner = Instance.new("UICorner")
+    BtnCorner.CornerRadius = UDim.new(0, 6)
+    BtnCorner.Parent = Btn
+
+    local BtnStroke = Instance.new("UIStroke")
+    BtnStroke.Color = Color3.fromRGB(45, 45, 55)
+    BtnStroke.Thickness = 1
+    BtnStroke.Parent = Btn
+
+    Btn.MouseButton1Click:Connect(function()
+        TweenService:Create(Btn, TweenInfo.new(0.08), { BackgroundColor3 = Color3.fromRGB(45, 45, 58) }):Play()
+        task.wait(0.09)
+        TweenService:Create(Btn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(27, 27, 32) }):Play()
+        if callback then
+            callback()
+        end
+    end)
+
+    return Btn
+end
+
+local function AddStepperRow(title, min, max, defaultVal, step, callback)
+    currentLayoutOrder = currentLayoutOrder + 1
     local Row = Instance.new("Frame")
-    Row.Size = UDim2.new(1, 0, 0, 23)
+    Row.Name = title .. "_StepperRow"
+    Row.Size = UDim2.new(1, 0, 0, 26)
     Row.BackgroundTransparency = 1
-    Row.Parent = ContentFrame
-    
+    Row.LayoutOrder = currentLayoutOrder
+    Row.Parent = ContentScroll
+
     local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(1, -65, 1, 0)
+    Label.Size = UDim2.new(1, -115, 1, 0)
     Label.BackgroundTransparency = 1
-    Label.Text = text
+    Label.Text = title
     Label.TextColor3 = Color3.fromRGB(240, 240, 240)
     Label.TextSize = 12
     Label.Font = Enum.Font.GothamBold
     Label.TextXAlignment = Enum.TextXAlignment.Left
     Label.Parent = Row
-    
-    local ActionBtn = Instance.new("TextButton")
-    ActionBtn.Size = UDim2.new(0, 58, 0, 20)
-    ActionBtn.Position = UDim2.new(1, -58, 0.5, -10)
-    ActionBtn.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-    ActionBtn.BorderSizePixel = 0
-    ActionBtn.Text = buttonText
-    ActionBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    ActionBtn.TextSize = 10
-    ActionBtn.Font = Enum.Font.GothamBold
-    ActionBtn.Parent = Row
-    
-    local BtnCorner = Instance.new("UICorner")
-    BtnCorner.CornerRadius = UDim.new(0, 4)
-    BtnCorner.Parent = ActionBtn
-    
-    local BtnStroke = Instance.new("UIStroke")
-    BtnStroke.Color = Color3.fromRGB(45, 45, 55)
-    BtnStroke.Thickness = 1.2
-    BtnStroke.Parent = ActionBtn
-    
-    ActionBtn.MouseButton1Click:Connect(function()
-        ActionBtn.BackgroundColor3 = Color3.fromRGB(55, 55, 70)
-        task.delay(0.15, function()
-            ActionBtn.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+
+    local ControlFrame = Instance.new("Frame")
+    ControlFrame.Size = UDim2.new(0, 105, 0, 24)
+    ControlFrame.Position = UDim2.new(1, -105, 0.5, -12)
+    ControlFrame.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+    ControlFrame.BorderSizePixel = 0
+    ControlFrame.Parent = Row
+
+    local CtrlCorner = Instance.new("UICorner")
+    CtrlCorner.CornerRadius = UDim.new(0, 6)
+    CtrlCorner.Parent = ControlFrame
+
+    local CtrlStroke = Instance.new("UIStroke")
+    CtrlStroke.Color = Color3.fromRGB(45, 45, 55)
+    CtrlStroke.Thickness = 1
+    CtrlStroke.Parent = ControlFrame
+
+    local MinusBtn = Instance.new("TextButton")
+    MinusBtn.Size = UDim2.new(0, 26, 1, 0)
+    MinusBtn.Position = UDim2.new(0, 0, 0, 0)
+    MinusBtn.BackgroundTransparency = 1
+    MinusBtn.Text = "-"
+    MinusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
+    MinusBtn.TextSize = 14
+    MinusBtn.Font = Enum.Font.GothamBold
+    MinusBtn.Parent = ControlFrame
+
+    local ValLabel = Instance.new("TextLabel")
+    ValLabel.Size = UDim2.new(1, -52, 1, 0)
+    ValLabel.Position = UDim2.new(0, 26, 0, 0)
+    ValLabel.BackgroundTransparency = 1
+    ValLabel.Text = tostring(defaultVal)
+    ValLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ValLabel.TextSize = 11
+    ValLabel.Font = Enum.Font.GothamBold
+    ValLabel.Parent = ControlFrame
+
+    local PlusBtn = Instance.new("TextButton")
+    PlusBtn.Size = UDim2.new(0, 26, 1, 0)
+    PlusBtn.Position = UDim2.new(1, -26, 0, 0)
+    PlusBtn.BackgroundTransparency = 1
+    PlusBtn.Text = "+"
+    PlusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
+    PlusBtn.TextSize = 14
+    PlusBtn.Font = Enum.Font.GothamBold
+    PlusBtn.Parent = ControlFrame
+
+    local currentVal = defaultVal
+    step = step or 10
+
+    MinusBtn.MouseButton1Click:Connect(function()
+        currentVal = math.clamp(currentVal - step, min, max)
+        ValLabel.Text = tostring(currentVal)
+        if callback then
+            callback(currentVal)
+        end
+    end)
+
+    PlusBtn.MouseButton1Click:Connect(function()
+        currentVal = math.clamp(currentVal + step, min, max)
+        ValLabel.Text = tostring(currentVal)
+        if callback then
+            callback(currentVal)
+        end
+    end)
+
+    return Row
+end
+
+local function AddDropdownRow(title, optionsList, defaultIndex, callback)
+    currentLayoutOrder = currentLayoutOrder + 1
+    local DropBtn = Instance.new("TextButton")
+    DropBtn.Name = title .. "_DropdownBtn"
+    DropBtn.Size = UDim2.new(1, 0, 0, 28)
+    DropBtn.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+    DropBtn.BorderSizePixel = 0
+    DropBtn.AutoButtonColor = false
+    DropBtn.Text = ""
+    DropBtn.LayoutOrder = currentLayoutOrder
+    DropBtn.Parent = ContentScroll
+
+    local DropCorner = Instance.new("UICorner")
+    DropCorner.CornerRadius = UDim.new(0, 6)
+    DropCorner.Parent = DropBtn
+
+    local DropStroke = Instance.new("UIStroke")
+    DropStroke.Color = Color3.fromRGB(45, 45, 55)
+    DropStroke.Thickness = 1
+    DropStroke.Parent = DropBtn
+
+    local DropLabel = Instance.new("TextLabel")
+    DropLabel.Size = UDim2.new(1, -34, 1, 0)
+    DropLabel.Position = UDim2.new(0, 10, 0, 0)
+    DropLabel.BackgroundTransparency = 1
+    DropLabel.Text = title .. ": " .. tostring(optionsList[defaultIndex])
+    DropLabel.TextColor3 = Color3.fromRGB(230, 230, 240)
+    DropLabel.Font = Enum.Font.GothamMedium
+    DropLabel.TextSize = 11
+    DropLabel.TextXAlignment = Enum.TextXAlignment.Left
+    DropLabel.Parent = DropBtn
+
+    local Arrow = Instance.new("TextLabel")
+    Arrow.Size = UDim2.new(0, 24, 1, 0)
+    Arrow.Position = UDim2.new(1, -26, 0, 0)
+    Arrow.BackgroundTransparency = 1
+    Arrow.Text = "▾"
+    Arrow.TextColor3 = Color3.fromRGB(160, 160, 175)
+    Arrow.Font = Enum.Font.GothamBold
+    Arrow.TextSize = 12
+    Arrow.Parent = DropBtn
+
+    currentLayoutOrder = currentLayoutOrder + 1
+    local ListFrame = Instance.new("Frame")
+    ListFrame.Name = title .. "_List"
+    ListFrame.Size = UDim2.new(1, 0, 0, 0)
+    ListFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
+    ListFrame.BorderSizePixel = 0
+    ListFrame.Visible = false
+    ListFrame.ClipsDescendants = true
+    ListFrame.LayoutOrder = currentLayoutOrder
+    ListFrame.Parent = ContentScroll
+
+    local ListCorner = Instance.new("UICorner")
+    ListCorner.CornerRadius = UDim.new(0, 6)
+    ListCorner.Parent = ListFrame
+
+    local ListStroke = Instance.new("UIStroke")
+    ListStroke.Color = Color3.fromRGB(45, 45, 55)
+    ListStroke.Thickness = 1
+    ListStroke.Parent = ListFrame
+
+    local ListLayout = Instance.new("UIListLayout")
+    ListLayout.Padding = UDim.new(0, 3)
+    ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    ListLayout.Parent = ListFrame
+
+    local ListPadding = Instance.new("UIPadding")
+    ListPadding.PaddingTop = UDim.new(0, 4)
+    ListPadding.PaddingBottom = UDim.new(0, 4)
+    ListPadding.PaddingLeft = UDim.new(0, 4)
+    ListPadding.PaddingRight = UDim.new(0, 4)
+    ListPadding.Parent = ListFrame
+
+    local isOpen = false
+    local totalH = #optionsList * 25 + 8
+
+    for idx, item in ipairs(optionsList) do
+        local ItemBtn = Instance.new("TextButton")
+        ItemBtn.Size = UDim2.new(1, 0, 0, 22)
+        ItemBtn.BackgroundColor3 = Color3.fromRGB(26, 26, 32)
+        ItemBtn.BorderSizePixel = 0
+        ItemBtn.AutoButtonColor = false
+        ItemBtn.Text = string.format("  %d. %s", idx, tostring(item))
+        ItemBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
+        ItemBtn.Font = Enum.Font.GothamMedium
+        ItemBtn.TextSize = 10
+        ItemBtn.TextXAlignment = Enum.TextXAlignment.Left
+        ItemBtn.LayoutOrder = idx
+        ItemBtn.Parent = ListFrame
+
+        local ItemCorner = Instance.new("UICorner")
+        ItemCorner.CornerRadius = UDim.new(0, 4)
+        ItemCorner.Parent = ItemBtn
+
+        ItemBtn.MouseButton1Click:Connect(function()
+            DropLabel.Text = title .. ": " .. tostring(item)
+            isOpen = false
+            Arrow.Text = "▾"
+            TweenService:Create(ListFrame, TweenInfo.new(0.15), { Size = UDim2.new(1, 0, 0, 0) }):Play()
+            task.wait(0.16)
+            ListFrame.Visible = false
+            if callback then
+                callback(item)
+            end
         end)
-        if callback then callback() end
-    end)
-end
+    end
 
--- Helper: Add Interactive Option Stepper Pill (< Choice >)
-local function AddSelectorRow(text, options, getIndex, setIndex, onSelect)
-    local Row = Instance.new("Frame")
-    Row.Size = UDim2.new(1, 0, 0, 23)
-    Row.BackgroundTransparency = 1
-    Row.Parent = ContentFrame
-
-    local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(0.42, 0, 1, 0)
-    Label.BackgroundTransparency = 1
-    Label.Text = text
-    Label.TextColor3 = Color3.fromRGB(240, 240, 240)
-    Label.TextSize = 11
-    Label.Font = Enum.Font.GothamBold
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.Parent = Row
-
-    local StepperFrame = Instance.new("Frame")
-    StepperFrame.Size = UDim2.new(0.56, 0, 1, 0)
-    StepperFrame.Position = UDim2.new(0.44, 0, 0, 0)
-    StepperFrame.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-    StepperFrame.BorderSizePixel = 0
-    StepperFrame.Parent = Row
-
-    local StepCorner = Instance.new("UICorner")
-    StepCorner.CornerRadius = UDim.new(0, 4)
-    StepCorner.Parent = StepperFrame
-
-    local StepStroke = Instance.new("UIStroke")
-    StepStroke.Color = Color3.fromRGB(45, 45, 55)
-    StepStroke.Thickness = 1
-    StepStroke.Parent = StepperFrame
-
-    local LeftBtn = Instance.new("TextButton")
-    LeftBtn.Size = UDim2.new(0, 18, 1, 0)
-    LeftBtn.Position = UDim2.new(0, 0, 0, 0)
-    LeftBtn.BackgroundTransparency = 1
-    LeftBtn.Text = "<"
-    LeftBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
-    LeftBtn.TextSize = 12
-    LeftBtn.Font = Enum.Font.GothamBold
-    LeftBtn.Parent = StepperFrame
-
-    local DisplayLabel = Instance.new("TextLabel")
-    DisplayLabel.Size = UDim2.new(1, -36, 1, 0)
-    DisplayLabel.Position = UDim2.new(0, 18, 0, 0)
-    DisplayLabel.BackgroundTransparency = 1
-    DisplayLabel.Text = options[getIndex()] or options[1]
-    DisplayLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    DisplayLabel.TextSize = 9
-    DisplayLabel.TextTruncate = Enum.TextTruncate.AtEnd
-    DisplayLabel.Font = Enum.Font.GothamBold
-    DisplayLabel.Parent = StepperFrame
-
-    local RightBtn = Instance.new("TextButton")
-    RightBtn.Size = UDim2.new(0, 18, 1, 0)
-    RightBtn.Position = UDim2.new(1, -18, 0, 0)
-    RightBtn.BackgroundTransparency = 1
-    RightBtn.Text = ">"
-    RightBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
-    RightBtn.TextSize = 12
-    RightBtn.Font = Enum.Font.GothamBold
-    RightBtn.Parent = StepperFrame
-
-    LeftBtn.MouseButton1Click:Connect(function()
-        local idx = getIndex() - 1
-        if idx < 1 then idx = #options end
-        setIndex(idx)
-        DisplayLabel.Text = options[idx]
-        if onSelect then onSelect(options[idx]) end
+    DropBtn.MouseButton1Click:Connect(function()
+        isOpen = not isOpen
+        Arrow.Text = isOpen and "▴" or "▾"
+        if isOpen then
+            ListFrame.Visible = true
+            TweenService:Create(ListFrame, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Size = UDim2.new(1, 0, 0, totalH)
+            }):Play()
+        else
+            local tw = TweenService:Create(ListFrame, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                Size = UDim2.new(1, 0, 0, 0)
+            })
+            tw:Play()
+            tw.Completed:Connect(function()
+                if not isOpen then ListFrame.Visible = false end
+            end)
+        end
     end)
 
-    RightBtn.MouseButton1Click:Connect(function()
-        local idx = getIndex() + 1
-        if idx > #options then idx = 1 end
-        setIndex(idx)
-        DisplayLabel.Text = options[idx]
-        if onSelect then onSelect(options[idx]) end
-    end)
+    return DropBtn
 end
 
 -- =================================================================
--- REGISTERING ALL FEATURES
+-- REGISTER ALL FEATURES
 -- =================================================================
 
--- 1. Auto Steal Egg Toggle
-AddToggleRow("Auto Steal (Best)", "AutoSteal", function(state)
-    if state then
+-- 1. Auto Steal (Rarest Egg) Toggle
+autoStealController = AddToggleRow("Auto Steal (Rarest Egg)", false, function(s)
+    State.AutoSteal = s
+    if s then
         task.spawn(ExecuteStealEgg)
     end
 end)
 
--- 2. Steal Zone Selector Pill
-AddSelectorRow("Steal Zone", StealZoneOptions, function() return StealZoneIndex end, function(val) StealZoneIndex = val end, function(sel)
-    if Toggles.AutoSteal then task.spawn(ExecuteStealEgg) end
+-- 2. Steal Target Rarity Dropdown
+AddDropdownRow("Steal Target Rarity", StealZoneOptions, 1, function(opt)
+    State.SelectedStealZone = opt
+    if State.AutoSteal then
+        task.spawn(ExecuteStealEgg)
+    end
 end)
 
--- 3. Auto Hatch Eggs
-AddToggleRow("Auto Hatch Eggs", "AutoHatch", function(state)
-    if state then
+-- 3. Auto Hatch Eggs Toggle
+AddToggleRow("Auto Hatch Eggs", false, function(s)
+    State.AutoHatch = s
+    if s then
         task.spawn(function()
-            local nests = GetMyNests()
-            for _, nest in ipairs(nests) do
-                HatchNest(nest, false)
-            end
+            pcall(ExecuteHatchNests)
         end)
     end
 end)
 
--- 4. Auto Place Egg
-AddToggleRow("Auto Place Egg", "AutoPlace")
-
--- 5. Auto Equip Best Pet
-AddToggleRow("Auto Equip Best Pet", "AutoEquipBest")
-
--- 6. Rare Egg ESP (Excludes Base Eggs)
-AddToggleRow("Rare Egg ESP", "BestEggESP", function(state)
-    if not state then ClearESP() end
+-- 4. Auto Place Eggs Toggle
+AddToggleRow("Auto Place Eggs", false, function(s)
+    State.AutoPlace = s
 end)
 
--- 7. Teleport Zone Selector Pill
-AddSelectorRow("Teleport Zone", TeleportZoneNames, function() return TeleportZoneIndex end, function(val) TeleportZoneIndex = val end, function(sel)
-    TeleportToLocation(sel)
+-- 5. Auto Equip Best Pet Toggle
+AddToggleRow("Auto Equip Best Pet", false, function(s)
+    State.AutoEquipBest = s
+    if s then
+        task.spawn(function()
+            EquipBestPet()
+        end)
+    end
 end)
 
--- 8. Teleport To Zone (Action Button)
-AddActionRow("Teleport To Zone", "TP ZONE", function()
-    local dest = TeleportZoneNames[TeleportZoneIndex] or "Food Stall (Tim)"
-    TeleportToLocation(dest)
+-- 6. Teleport Destination Dropdown
+AddDropdownRow("Teleport Destination", TeleportZoneNames, 1, function(opt)
+    State.SelectedTeleportZone = opt
+    TeleportToLocation(opt)
 end)
 
--- 9. Teleport To My Base (Action Button)
-AddActionRow("Teleport To My Base", "MY BASE", function()
+-- 7. Teleport to Destination Action Button
+AddActionButton("Teleport to Destination", function()
+    TeleportToLocation(State.SelectedTeleportZone)
+end)
+
+-- 8. Teleport to My Base Action Button
+AddActionButton("Teleport to My Base", function()
     TeleportToLocation("My Base / Plot")
 end)
 
--- 10. WalkSpeed Boost + Integrated Pill Controller (- / +)
-local SpeedRow = Instance.new("Frame")
-SpeedRow.Size = UDim2.new(1, 0, 0, 23)
-SpeedRow.BackgroundTransparency = 1
-SpeedRow.Parent = ContentFrame
-
-local SpeedToggleBtn = Instance.new("TextButton")
-SpeedToggleBtn.Size = UDim2.new(0.55, 0, 1, 0)
-SpeedToggleBtn.BackgroundTransparency = 1
-SpeedToggleBtn.Text = ""
-SpeedToggleBtn.ZIndex = 5
-SpeedToggleBtn.Parent = SpeedRow
-
-local SpeedLabel = Instance.new("TextLabel")
-SpeedLabel.Size = UDim2.new(1, -26, 1, 0)
-SpeedLabel.BackgroundTransparency = 1
-SpeedLabel.Text = "WalkSpeed"
-SpeedLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
-SpeedLabel.TextSize = 12
-SpeedLabel.Font = Enum.Font.GothamBold
-SpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
-SpeedLabel.Parent = SpeedToggleBtn
-
-local SpeedCheckBox = Instance.new("Frame")
-SpeedCheckBox.Size = UDim2.new(0, 18, 0, 18)
-SpeedCheckBox.Position = UDim2.new(1, -18, 0.5, -9)
-SpeedCheckBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-SpeedCheckBox.BorderSizePixel = 0
-SpeedCheckBox.Parent = SpeedToggleBtn
-
-local SpeedCheckCorner = Instance.new("UICorner")
-SpeedCheckCorner.CornerRadius = UDim.new(0, 4)
-SpeedCheckCorner.Parent = SpeedCheckBox
-
-local SpeedCheckStroke = Instance.new("UIStroke")
-SpeedCheckStroke.Color = Color3.fromRGB(45, 45, 55)
-SpeedCheckStroke.Thickness = 1.2
-SpeedCheckStroke.Parent = SpeedCheckBox
-
-local SpeedCheckMark = Instance.new("Frame")
-SpeedCheckMark.Size = UDim2.new(0, 10, 0, 10)
-SpeedCheckMark.Position = UDim2.new(0.5, -5, 0.5, -5)
-SpeedCheckMark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-SpeedCheckMark.BackgroundTransparency = Toggles.WalkSpeed and 0 or 1
-SpeedCheckMark.BorderSizePixel = 0
-SpeedCheckMark.Parent = SpeedCheckBox
-
-local SpeedMarkCorner = Instance.new("UICorner")
-SpeedMarkCorner.CornerRadius = UDim.new(0, 2)
-SpeedMarkCorner.Parent = SpeedCheckMark
-
-SpeedToggleBtn.MouseButton1Click:Connect(function()
-    Toggles.WalkSpeed = not Toggles.WalkSpeed
-    SpeedCheckMark.BackgroundTransparency = Toggles.WalkSpeed and 0 or 1
+-- 9. WalkSpeed Boost & Stepper
+AddToggleRow("WalkSpeed Boost", false, function(s)
+    State.WalkSpeedActive = s
     ApplyWalkSpeed()
 end)
 
-local SpeedControlFrame = Instance.new("Frame")
-SpeedControlFrame.Size = UDim2.new(0.42, 0, 1, 0)
-SpeedControlFrame.Position = UDim2.new(0.58, 0, 0, 0)
-SpeedControlFrame.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-SpeedControlFrame.BorderSizePixel = 0
-SpeedControlFrame.Parent = SpeedRow
-
-local CtrlCorner = Instance.new("UICorner")
-CtrlCorner.CornerRadius = UDim.new(0, 4)
-CtrlCorner.Parent = SpeedControlFrame
-
-local CtrlStroke = Instance.new("UIStroke")
-CtrlStroke.Color = Color3.fromRGB(45, 45, 55)
-CtrlStroke.Thickness = 1
-CtrlStroke.Parent = SpeedControlFrame
-
-local MinusBtn = Instance.new("TextButton")
-MinusBtn.Size = UDim2.new(0, 22, 1, 0)
-MinusBtn.Position = UDim2.new(0, 0, 0, 0)
-MinusBtn.BackgroundTransparency = 1
-MinusBtn.Text = "-"
-MinusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
-MinusBtn.TextSize = 14
-MinusBtn.Font = Enum.Font.GothamBold
-MinusBtn.Parent = SpeedControlFrame
-
-local SpeedDisplay = Instance.new("TextLabel")
-SpeedDisplay.Size = UDim2.new(1, -44, 1, 0)
-SpeedDisplay.Position = UDim2.new(0, 22, 0, 0)
-SpeedDisplay.BackgroundTransparency = 1
-SpeedDisplay.Text = tostring(CustomSpeedValue)
-SpeedDisplay.TextColor3 = Color3.fromRGB(255, 255, 255)
-SpeedDisplay.TextSize = 11
-SpeedDisplay.Font = Enum.Font.GothamBold
-SpeedDisplay.Parent = SpeedControlFrame
-
-local PlusBtn = Instance.new("TextButton")
-PlusBtn.Size = UDim2.new(0, 22, 1, 0)
-PlusBtn.Position = UDim2.new(1, -22, 0, 0)
-PlusBtn.BackgroundTransparency = 1
-PlusBtn.Text = "+"
-PlusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
-PlusBtn.TextSize = 14
-PlusBtn.Font = Enum.Font.GothamBold
-PlusBtn.Parent = SpeedControlFrame
-
-MinusBtn.MouseButton1Click:Connect(function()
-    CustomSpeedValue = math.max(16, CustomSpeedValue - 10)
-    SpeedDisplay.Text = tostring(CustomSpeedValue)
+AddStepperRow("WalkSpeed", 16, 250, 45, 10, function(v)
+    State.WalkSpeedValue = v
     ApplyWalkSpeed()
 end)
 
-PlusBtn.MouseButton1Click:Connect(function()
-    CustomSpeedValue = math.min(250, CustomSpeedValue + 10)
-    SpeedDisplay.Text = tostring(CustomSpeedValue)
-    ApplyWalkSpeed()
+-- 10. JumpPower Boost & Stepper
+AddToggleRow("JumpPower Boost", false, function(s)
+    State.JumpPowerActive = s
+    ApplyJumpPower()
 end)
 
--- 11. Fly Mode + Integrated Pill Controller (- / +)
-local FlyRow = Instance.new("Frame")
-FlyRow.Size = UDim2.new(1, 0, 0, 23)
-FlyRow.BackgroundTransparency = 1
-FlyRow.Parent = ContentFrame
-
-local FlyToggleBtn = Instance.new("TextButton")
-FlyToggleBtn.Size = UDim2.new(0.55, 0, 1, 0)
-FlyToggleBtn.BackgroundTransparency = 1
-FlyToggleBtn.Text = ""
-FlyToggleBtn.ZIndex = 5
-FlyToggleBtn.Parent = FlyRow
-
-local FlyLabel = Instance.new("TextLabel")
-FlyLabel.Size = UDim2.new(1, -26, 1, 0)
-FlyLabel.BackgroundTransparency = 1
-FlyLabel.Text = "Fly Mode"
-FlyLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
-FlyLabel.TextSize = 12
-FlyLabel.Font = Enum.Font.GothamBold
-FlyLabel.TextXAlignment = Enum.TextXAlignment.Left
-FlyLabel.Parent = FlyToggleBtn
-
-local FlyCheckBox = Instance.new("Frame")
-FlyCheckBox.Size = UDim2.new(0, 18, 0, 18)
-FlyCheckBox.Position = UDim2.new(1, -18, 0.5, -9)
-FlyCheckBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-FlyCheckBox.BorderSizePixel = 0
-FlyCheckBox.Parent = FlyToggleBtn
-
-local FlyCheckCorner = Instance.new("UICorner")
-FlyCheckCorner.CornerRadius = UDim.new(0, 4)
-FlyCheckCorner.Parent = FlyCheckBox
-
-local FlyCheckStroke = Instance.new("UIStroke")
-FlyCheckStroke.Color = Color3.fromRGB(45, 45, 55)
-FlyCheckStroke.Thickness = 1.2
-FlyCheckStroke.Parent = FlyCheckBox
-
-local FlyCheckMark = Instance.new("Frame")
-FlyCheckMark.Size = UDim2.new(0, 10, 0, 10)
-FlyCheckMark.Position = UDim2.new(0.5, -5, 0.5, -5)
-FlyCheckMark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-FlyCheckMark.BackgroundTransparency = Toggles.Fly and 0 or 1
-FlyCheckMark.BorderSizePixel = 0
-FlyCheckMark.Parent = FlyCheckBox
-
-local FlyMarkCorner = Instance.new("UICorner")
-FlyMarkCorner.CornerRadius = UDim.new(0, 2)
-FlyMarkCorner.Parent = FlyCheckMark
-
-FlyToggleBtn.MouseButton1Click:Connect(function()
-    Toggles.Fly = not Toggles.Fly
-    FlyCheckMark.BackgroundTransparency = Toggles.Fly and 0 or 1
-    if Toggles.Fly then StartFly() else StopFly() end
+AddStepperRow("JumpPower", 50, 300, 50, 10, function(v)
+    State.JumpPowerValue = v
+    ApplyJumpPower()
 end)
 
-local FlyControlFrame = Instance.new("Frame")
-FlyControlFrame.Size = UDim2.new(0.42, 0, 1, 0)
-FlyControlFrame.Position = UDim2.new(0.58, 0, 0, 0)
-FlyControlFrame.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-FlyControlFrame.BorderSizePixel = 0
-FlyControlFrame.Parent = FlyRow
-
-local FlyCtrlCorner = Instance.new("UICorner")
-FlyCtrlCorner.CornerRadius = UDim.new(0, 4)
-FlyCtrlCorner.Parent = FlyControlFrame
-
-local FlyCtrlStroke = Instance.new("UIStroke")
-FlyCtrlStroke.Color = Color3.fromRGB(45, 45, 55)
-FlyCtrlStroke.Thickness = 1
-FlyCtrlStroke.Parent = FlyControlFrame
-
-local FlyMinusBtn = Instance.new("TextButton")
-FlyMinusBtn.Size = UDim2.new(0, 22, 1, 0)
-FlyMinusBtn.Position = UDim2.new(0, 0, 0, 0)
-FlyMinusBtn.BackgroundTransparency = 1
-FlyMinusBtn.Text = "-"
-FlyMinusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
-FlyMinusBtn.TextSize = 14
-FlyMinusBtn.Font = Enum.Font.GothamBold
-FlyMinusBtn.Parent = FlyControlFrame
-
-local FlyDisplay = Instance.new("TextLabel")
-FlyDisplay.Size = UDim2.new(1, -44, 1, 0)
-FlyDisplay.Position = UDim2.new(0, 22, 0, 0)
-FlyDisplay.BackgroundTransparency = 1
-FlyDisplay.Text = tostring(CustomFlySpeed)
-FlyDisplay.TextColor3 = Color3.fromRGB(255, 255, 255)
-FlyDisplay.TextSize = 11
-FlyDisplay.Font = Enum.Font.GothamBold
-FlyDisplay.Parent = FlyControlFrame
-
-local FlyPlusBtn = Instance.new("TextButton")
-FlyPlusBtn.Size = UDim2.new(0, 22, 1, 0)
-FlyPlusBtn.Position = UDim2.new(1, -22, 0, 0)
-FlyPlusBtn.BackgroundTransparency = 1
-FlyPlusBtn.Text = "+"
-FlyPlusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
-FlyPlusBtn.TextSize = 14
-FlyPlusBtn.Font = Enum.Font.GothamBold
-FlyPlusBtn.Parent = FlyControlFrame
-
-FlyMinusBtn.MouseButton1Click:Connect(function()
-    CustomFlySpeed = math.max(20, CustomFlySpeed - 10)
-    FlyDisplay.Text = tostring(CustomFlySpeed)
+-- 11. Infinite Jump Toggle
+AddToggleRow("Infinite Jump", false, function(s)
+    State.InfJumpActive = s
 end)
 
-FlyPlusBtn.MouseButton1Click:Connect(function()
-    CustomFlySpeed = math.min(200, CustomFlySpeed + 10)
-    FlyDisplay.Text = tostring(CustomFlySpeed)
+-- 12. Player NoClip Toggle
+AddToggleRow("Player NoClip", false, function(s)
+    State.NoClipActive = s
 end)
 
--- 12. NoClip Mode
-AddToggleRow("NoClip Mode", "NoClip")
+-- 13. Universal 3D Fly & Stepper
+AddToggleRow("Universal 3D Fly", false, function(s)
+    State.FlyActive = s
+    if s then StartFly() else StopFly() end
+end)
 
--- Pinned Footer (Mandatory Junejo Footer)
+AddStepperRow("Fly Speed", 10, 200, 50, 10, function(v)
+    State.FlySpeed = v
+end)
+
+-- 14. Rare Egg ESP Toggle
+AddToggleRow("Rare Egg ESP", false, function(s)
+    State.RareEggESP = s
+    if not s then ClearEggESP() end
+end)
+
+-- 15. Player Chams ESP Toggle
+AddToggleRow("Player Chams ESP", false, function(s)
+    State.PlayerESP = s
+    if not s then ClearPlayerESP() end
+end)
+
+-- 16. Player Info Tags Toggle
+AddToggleRow("Player Info Tags", false, function(s)
+    State.PlayerTags = s
+    if not s then ClearPlayerESP() end
+end)
+
+-- 17. FullBright & Clear Fog Toggle
+AddToggleRow("FullBright & Clear Fog", false, function(s)
+    State.FullBrightActive = s
+    ApplyFullBright()
+end)
+
+-- 18. Instant Prompts Toggle
+AddToggleRow("Instant Prompts", false, function(s)
+    State.InstantPrompts = s
+end)
+
+-- 19. Anti-AFK System Toggle
+AddToggleRow("Anti-AFK System", true, function(s)
+    State.AntiAFKActive = s
+end)
+
+-- 20. Server Actions
+AddActionButton("Rejoin Server", function()
+    TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+end)
+
+AddActionButton("Server Hop", function()
+    pcall(function()
+        local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
+        local res = game:HttpGet(url)
+        local data = HttpService:JSONDecode(res)
+        for _, s in ipairs(data.data) do
+            if s.playing < s.maxPlayers and s.id ~= game.JobId then
+                TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id, LocalPlayer)
+                return
+            end
+        end
+    end)
+end)
+
+-- =================================================================
+-- MANDATORY CENTERED FOOTER (ULTRA SCRIPT HUB | Made by Junejo)
+-- =================================================================
+local FooterDivider = Instance.new("Frame")
+FooterDivider.Name = "FooterDivider"
+FooterDivider.Size = UDim2.new(1, 0, 0, 1)
+FooterDivider.Position = UDim2.new(0, 0, 1, -40)
+FooterDivider.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+FooterDivider.BorderSizePixel = 0
+FooterDivider.Parent = MainFrame
+
 local Footer = Instance.new("Frame")
-Footer.Size = UDim2.new(1, 0, 0, 36)
-Footer.Position = UDim2.new(0, 0, 1, -38)
+Footer.Name = "Footer"
+Footer.Size = UDim2.new(1, 0, 0, 39)
+Footer.Position = UDim2.new(0, 0, 1, -39)
 Footer.BackgroundTransparency = 1
+Footer.BorderSizePixel = 0
 Footer.Parent = MainFrame
 
 local FooterTitle = Instance.new("TextLabel")
-FooterTitle.Size = UDim2.new(1, 0, 0, 14)
+FooterTitle.Name = "FooterTitle"
+FooterTitle.Size = UDim2.new(1, 0, 0, 16)
 FooterTitle.Position = UDim2.new(0, 0, 0, 4)
 FooterTitle.BackgroundTransparency = 1
 FooterTitle.Text = "ULTRA SCRIPT HUB"
 FooterTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-FooterTitle.TextSize = 11
+FooterTitle.TextSize = 12
 FooterTitle.Font = Enum.Font.GothamBold
 FooterTitle.Parent = Footer
 
 local FooterSub = Instance.new("TextLabel")
-FooterSub.Size = UDim2.new(1, 0, 0, 12)
-FooterSub.Position = UDim2.new(0, 0, 0, 18)
+FooterSub.Name = "FooterSub"
+FooterSub.Size = UDim2.new(1, 0, 0, 14)
+FooterSub.Position = UDim2.new(0, 0, 0, 20)
 FooterSub.BackgroundTransparency = 1
 FooterSub.Text = "Made by Junejo"
 FooterSub.TextColor3 = Color3.fromRGB(136, 136, 153)
-FooterSub.TextSize = 9
+FooterSub.TextSize = 10
 FooterSub.Font = Enum.Font.GothamMedium
 FooterSub.Parent = Footer
 
--- Mount UI Directly to Container
-ScreenGui.Parent = UIContainer
-
--- Startup Toast Notification
-pcall(function()
-    StarterGui:SetCore("SendNotification", {
-        Title = "ULTRA SCRIPT HUB",
-        Text = GameName .. " Loaded Successfully!",
-        Duration = 4
-    })
-end)
+print("[ULTRA SCRIPT HUB] Ride A Pet loaded successfully!")
