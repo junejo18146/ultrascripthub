@@ -1,15 +1,29 @@
 --[[
-    JUNEJO ULTRA SCRIPT HUB - SLAYERS 2 (V3.0 ROCK-SOLID STABILITY EDITION)
+    JUNEJO ULTRA SCRIPT HUB - SLAYERS 2 (V3.5 DEFINITIVE EDITION)
     Target Game: Slayers 2 (Roblox)
     Author: Made by Junejo (junejo18146)
     Repository: junejo18146/ultrascripthub
     Theme: Official UI 1 - Classic Matte Dark (#0F0F11)
     Status: Unlocked Direct Standalone Execution (Key System Disabled)
-    Fixes:
-      - 100% Anti-Vibration & Anti-Shake (Upright hovering, zero physics fight)
-      - Zero Screen Freeze on Mobile / Delta (Removed input-blocking CaptureController)
-      - Smart Target Lock (No 10x/sec Workspace scans; holds target until killed)
-      - Smooth 5-Row Main Screen Standard with Scrollable Slider
+    Layout: 5 Features Visible on Main Screen + Smooth Scrollable Slider
+    Order:
+      1. Instant Auto Get Up (Toggle)
+      2. FullBright (Toggle) -- [DOSRE NUMBER PE / POSITION 2]
+      3. Hitbox Expander (Toggle)
+      4. Teleport to Low HP Player (Action Button)
+      5. Teleport to Quest (Action Button)
+      -- [Scroll for remaining features] --
+      6. Teleport to Safe Zone (Action Button)
+      7. Auto Farm Mobs / Demons (Toggle - Upright, Zero Shake)
+      8. Auto Accept Quests (Toggle)
+      9. Fast Auto Attack (Toggle)
+      10. Fly Mode (Toggle)
+      11. Infinite Jump (Toggle)
+      12. Quest ESP (Toggle)
+      13. Mob / Demon ESP (Toggle)
+      14. Player ESP (Toggle)
+      15. Trainers / NPC ESP (Toggle)
+      16. WalkSpeed Stepper (+ / - Pill [16-250])
 --]]
 
 local CoreGui = game:GetService("CoreGui")
@@ -19,6 +33,7 @@ local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 
@@ -50,11 +65,14 @@ end
 -- Global Configuration & State
 local Toggles = {
     InstantGetUp = true,
+    FullBright = false,
     HitboxExpander = false,
     AutoFarmMobs = false,
-    KillAura = false,
     AutoAcceptQuests = false,
     FastAutoAttack = false,
+    Fly = false,
+    InfiniteJump = false,
+    QuestESP = false,
     MobESP = false,
     PlayerESP = false,
     TrainerESP = false,
@@ -63,18 +81,34 @@ local Toggles = {
 }
 
 local CustomSpeedValue = 50
+local FlySpeed = 50
 local SafePlatform = nil
+
+-- Flight Components
+local FlyBodyGyro = nil
+local FlyBodyVelocity = nil
 
 -- Target & ESP Storage
 local CurrentFarmTarget = nil
 local ActiveMobESP = {}
 local ActivePlayerESP = {}
 local ActiveTrainerESP = {}
+local ActiveQuestESP = {}
 local OriginalHitboxSizes = {}
 
 -- Pre-Cached Remotes Storage (Prevents freezing & network spam)
 local CachedCombatRemotes = {}
 local CachedQuestRemotes = {}
+
+-- Store original Lighting settings
+local DefaultLightingSettings = {
+    Brightness = Lighting.Brightness,
+    ClockTime = Lighting.ClockTime,
+    FogEnd = Lighting.FogEnd,
+    GlobalShadows = Lighting.GlobalShadows,
+    OutdoorAmbient = Lighting.OutdoorAmbient,
+    Ambient = Lighting.Ambient
+}
 
 -- Safe Alive Check
 local function isAlive()
@@ -178,10 +212,10 @@ local function ShowToast(title, message)
 end
 
 -- ====================================================
--- CORE FUNCTIONALITIES & ENGINES (ROCK-SOLID STABILITY)
+-- CORE FUNCTIONALITIES & ENGINES
 -- ====================================================
 
--- 1. Instant Auto Get Up / Anti-Ragdoll (Event-driven, 0% CPU overhead)
+-- 1. Instant Auto Get Up / Anti-Ragdoll Engine
 local function SetupInstantGetUp(char)
     pcall(function()
         local hum = char:WaitForChild("Humanoid", 5)
@@ -212,7 +246,37 @@ end
 if LocalPlayer.Character then SetupInstantGetUp(LocalPlayer.Character) end
 LocalPlayer.CharacterAdded:Connect(SetupInstantGetUp)
 
--- 2. Fast & Safe Enemy Scanner (Only scans folders, avoids workspace lag)
+-- 2. FullBright Engine (Daytime Simulation & Fog Removal)
+local function UpdateFullBright(enabled)
+    pcall(function()
+        if enabled then
+            Lighting.Brightness = 2
+            Lighting.ClockTime = 14
+            Lighting.FogEnd = 100000
+            Lighting.GlobalShadows = false
+            Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
+            Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+        else
+            Lighting.Brightness = DefaultLightingSettings.Brightness
+            Lighting.ClockTime = DefaultLightingSettings.ClockTime
+            Lighting.FogEnd = DefaultLightingSettings.FogEnd
+            Lighting.GlobalShadows = DefaultLightingSettings.GlobalShadows
+            Lighting.OutdoorAmbient = DefaultLightingSettings.OutdoorAmbient
+            Lighting.Ambient = DefaultLightingSettings.Ambient
+        end
+    end)
+end
+
+task.spawn(function()
+    while true do
+        task.wait(1.5)
+        if Toggles.FullBright then
+            UpdateFullBright(true)
+        end
+    end
+end)
+
+-- 3. Fast Enemy Scanner Helper
 local function GetAliveEnemies()
     local enemies = {}
     pcall(function()
@@ -250,7 +314,7 @@ local function GetAliveEnemies()
     return enemies
 end
 
--- 3. Hitbox Expander Engine (Smooth, Massless, CanCollide = false)
+-- 4. Hitbox Expander Engine (Demons + Rival Players)
 local function UpdateHitboxExpander()
     pcall(function()
         if not Toggles.HitboxExpander then
@@ -302,7 +366,7 @@ task.spawn(function()
     end
 end)
 
--- 4. Teleport to Low Health Player Action
+-- 5. Teleport to Low Health Player Action
 local function TeleportToLowHealthPlayer()
     pcall(function()
         if not isAlive() then
@@ -336,7 +400,72 @@ local function TeleportToLowHealthPlayer()
     end)
 end
 
--- 5. Safe Zone Teleport Action
+-- 6. Teleport to Quest Action
+local function TeleportToQuest()
+    pcall(function()
+        if not isAlive() then
+            ShowToast("Error", "Character not spawned!")
+            return
+        end
+
+        local hrp = LocalPlayer.Character.HumanoidRootPart
+        local questTarget = nil
+
+        -- 1. Check for Quest Pickups / Deposits / Gates
+        for _, name in ipairs({"QuestPickup", "QuestDeposit", "QuestGate", "QuestObjective"}) do
+            local found = Workspace:FindFirstChild(name, true)
+            if found then
+                local part = found:IsA("BasePart") and found or found:FindFirstChildWhichIsA("BasePart")
+                if part then
+                    questTarget = part
+                    break
+                end
+            end
+        end
+
+        -- 2. Check for Quest NPCs in ActiveNpcs
+        if not questTarget then
+            local npcsFolder = Workspace:FindFirstChild("ActiveNpcs") or Workspace:FindFirstChild("Npcs")
+            if npcsFolder then
+                for _, npc in ipairs(npcsFolder:GetChildren()) do
+                    if npc:FindFirstChild("Quests") or npc:FindFirstChild("Quest") or npc.Name:lower():find("quest") then
+                        local root = npc:FindFirstChild("HumanoidRootPart") or npc:FindFirstChild("Torso") or npc:FindFirstChildWhichIsA("BasePart")
+                        if root then
+                            questTarget = root
+                            break
+                        end
+                    end
+                end
+            end
+        end
+
+        -- 3. Check for any NPC with active quest proximity prompt
+        if not questTarget then
+            for _, prompt in ipairs(Workspace:GetDescendants()) do
+                if prompt:IsA("ProximityPrompt") then
+                    local t = (prompt.ActionText .. " " .. prompt.ObjectText):lower()
+                    if t:find("quest") or t:find("mission") then
+                        local part = prompt.Parent:IsA("BasePart") and prompt.Parent or prompt.Parent:FindFirstChildWhichIsA("BasePart")
+                        if part then
+                            questTarget = part
+                            break
+                        end
+                    end
+                end
+            end
+        end
+
+        if questTarget then
+            hrp.CFrame = questTarget.CFrame * CFrame.new(0, 3, 3)
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            ShowToast("Teleport Success", "Warped to Quest: " .. (questTarget.Parent and questTarget.Parent.Name or questTarget.Name))
+        else
+            ShowToast("Notice", "No active Quest objective found nearby!")
+        end
+    end)
+end
+
+-- 7. Safe Zone Teleport Action
 local function TeleportToSafeZone()
     pcall(function()
         if not isAlive() then
@@ -386,13 +515,12 @@ local function AutoEquipWeapon()
     end)
 end
 
--- Safe Attack Executor (DOES NOT INTERCEPT TOUCH OR HANG SCREEN)
+-- Safe Attack Executor
 local function ExecuteAttack(targetRoot)
     pcall(function()
         if not isAlive() then return end
         AutoEquipWeapon()
 
-        -- 1. Activate Weapon Tool
         local char = LocalPlayer.Character
         for _, tool in ipairs(char:GetChildren()) do
             if tool:IsA("Tool") then
@@ -400,7 +528,6 @@ local function ExecuteAttack(targetRoot)
             end
         end
 
-        -- 2. Fire Cached Combat Remotes in a safe, non-flooding manner
         for _, remote in ipairs(CachedCombatRemotes) do
             pcall(function()
                 if remote:IsA("RemoteEvent") then
@@ -414,7 +541,7 @@ local function ExecuteAttack(targetRoot)
     end)
 end
 
--- Fast Auto Attack Loop (Clean 0.18s rate-limit)
+-- Fast Auto Attack Loop
 task.spawn(function()
     while true do
         task.wait(0.18)
@@ -424,27 +551,7 @@ task.spawn(function()
     end
 end)
 
--- Kill Aura Loop (35 Studs Reach)
-task.spawn(function()
-    while true do
-        task.wait(0.2)
-        if Toggles.KillAura and isAlive() then
-            pcall(function()
-                local myPos = LocalPlayer.Character.HumanoidRootPart.Position
-                local enemies = GetAliveEnemies()
-                for _, enemy in ipairs(enemies) do
-                    if not Toggles.KillAura then break end
-                    local dist = (enemy.RootPart.Position - myPos).Magnitude
-                    if dist <= 35 and enemy.Humanoid.Health > 0 then
-                        ExecuteAttack(enemy.RootPart)
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- 4. Auto Farm Mobs Loop (VIBRATION-FREE, UPRIGHT HOVER, ZERO SHAKE)
+-- Auto Farm Mobs Loop (Upright, Zero Shake, Rock-Solid Hover)
 task.spawn(function()
     while true do
         task.wait(0.12)
@@ -453,13 +560,11 @@ task.spawn(function()
                 local hrp = LocalPlayer.Character.HumanoidRootPart
                 local char = LocalPlayer.Character
 
-                -- Verify current target is still valid and alive
                 if not CurrentFarmTarget or 
                    not CurrentFarmTarget.Model.Parent or 
                    CurrentFarmTarget.Humanoid.Health <= 0 or 
                    not CurrentFarmTarget.RootPart.Parent then
                     
-                    -- Find new closest target
                     local enemies = GetAliveEnemies()
                     local closest = nil
                     local shortestDist = math.huge
@@ -477,15 +582,10 @@ task.spawn(function()
                     local targetPart = CurrentFarmTarget.RootPart
                     local targetPos = targetPart.Position
 
-                    -- UPRIGHT HOVER: Hover 5 studs directly above the mob, looking down at it
-                    -- NO ROTATION FLIP (-90 is removed!), prevents Humanoid physics fight
                     hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, 5, 0), targetPos)
-                    
-                    -- Nullify all physical velocity to guarantee 0% camera vibration
                     hrp.AssemblyLinearVelocity = Vector3.zero
                     hrp.AssemblyAngularVelocity = Vector3.zero
 
-                    -- Disable collision on character to eliminate part bump jitter
                     for _, p in ipairs(char:GetChildren()) do
                         if p:IsA("BasePart") then
                             p.CanCollide = false
@@ -501,7 +601,7 @@ task.spawn(function()
     end
 end)
 
--- 5. Auto Accept Quests Engine
+-- Auto Accept Quests Engine
 pcall(function()
     ProximityPromptService.PromptShown:Connect(function(prompt)
         if Toggles.AutoAcceptQuests and isAlive() then
@@ -563,7 +663,147 @@ task.spawn(function()
     end
 end)
 
--- 6. Mob / Demon ESP Engine
+-- 8. Fly Mode Engine (Smooth 3D WASD & Mobile Touch Support)
+local function UpdateFly(enabled)
+    pcall(function()
+        if not isAlive() then return end
+        local hrp = LocalPlayer.Character.HumanoidRootPart
+        local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+
+        if enabled then
+            if FlyBodyGyro then FlyBodyGyro:Destroy() end
+            if FlyBodyVelocity then FlyBodyVelocity:Destroy() end
+
+            FlyBodyGyro = Instance.new("BodyGyro")
+            FlyBodyGyro.Name = "JunejoFlyGyro"
+            FlyBodyGyro.P = 9e4
+            FlyBodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+            FlyBodyGyro.CFrame = hrp.CFrame
+            FlyBodyGyro.Parent = hrp
+
+            FlyBodyVelocity = Instance.new("BodyVelocity")
+            FlyBodyVelocity.Name = "JunejoFlyVelocity"
+            FlyBodyVelocity.Velocity = Vector3.zero
+            FlyBodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+            FlyBodyVelocity.Parent = hrp
+
+            hum.PlatformStand = true
+
+            task.spawn(function()
+                while Toggles.Fly and isAlive() do
+                    task.wait()
+                    pcall(function()
+                        local cam = Workspace.CurrentCamera
+                        local moveDir = hum.MoveDirection
+                        local vel = Vector3.zero
+
+                        if moveDir.Magnitude > 0 then
+                            vel = (cam.CFrame.LookVector * (moveDir.Z * -1) + cam.CFrame.RightVector * moveDir.X).Unit * FlySpeed
+                        end
+
+                        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+                            vel = vel + Vector3.new(0, FlySpeed * 0.8, 0)
+                        elseif UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+                            vel = vel - Vector3.new(0, FlySpeed * 0.8, 0)
+                        end
+
+                        FlyBodyVelocity.Velocity = vel
+                        FlyBodyGyro.CFrame = cam.CFrame
+                    end)
+                end
+                if FlyBodyGyro then FlyBodyGyro:Destroy() end
+                if FlyBodyVelocity then FlyBodyVelocity:Destroy() end
+                if isAlive() then
+                    LocalPlayer.Character:FindFirstChildOfClass("Humanoid").PlatformStand = false
+                end
+            end)
+        else
+            if FlyBodyGyro then FlyBodyGyro:Destroy() end
+            if FlyBodyVelocity then FlyBodyVelocity:Destroy() end
+            if hum then hum.PlatformStand = false end
+        end
+    end)
+end
+
+-- 9. Infinite Jump Engine
+UserInputService.JumpRequest:Connect(function()
+    if Toggles.InfiniteJump and isAlive() then
+        pcall(function()
+            local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if hum then
+                hum:ChangeState(Enum.HumanoidStateType.Jumping)
+            end
+        end)
+    end
+end)
+
+-- 10. Quest ESP Engine
+local function UpdateQuestESP()
+    pcall(function()
+        if not Toggles.QuestESP then
+            for obj, bg in pairs(ActiveQuestESP) do
+                if bg and bg.Parent then bg:Destroy() end
+            end
+            ActiveQuestESP = {}
+            return
+        end
+
+        local questParts = {}
+        local npcsFolder = Workspace:FindFirstChild("ActiveNpcs") or Workspace:FindFirstChild("Npcs")
+        if npcsFolder then
+            for _, npc in ipairs(npcsFolder:GetChildren()) do
+                if npc:FindFirstChild("Quests") or npc:FindFirstChild("Quest") or npc.Name:lower():find("quest") then
+                    local root = npc:FindFirstChild("HumanoidRootPart") or npc:FindFirstChild("Torso") or npc:FindFirstChildWhichIsA("BasePart")
+                    if root then table.insert(questParts, { Part = root, Name = npc.Name }) end
+                end
+            end
+        end
+
+        for _, name in ipairs({"QuestPickup", "QuestDeposit", "QuestGate", "QuestObjective"}) do
+            for _, found in ipairs(Workspace:GetDescendants()) do
+                if found.Name == name and found:IsA("BasePart") then
+                    table.insert(questParts, { Part = found, Name = name })
+                end
+            end
+        end
+
+        for _, item in ipairs(questParts) do
+            local part = item.Part
+            if part then
+                if not ActiveQuestESP[part] then
+                    local bg = Instance.new("BillboardGui")
+                    bg.Name = "JunejoQuestESP"
+                    bg.Adornee = part
+                    bg.Size = UDim2.new(0, 140, 0, 28)
+                    bg.StudsOffset = Vector3.new(0, 3.5, 0)
+                    bg.AlwaysOnTop = true
+                    bg.Parent = part
+
+                    local lbl = Instance.new("TextLabel")
+                    lbl.Size = UDim2.new(1, 0, 1, 0)
+                    lbl.BackgroundTransparency = 1
+                    lbl.TextColor3 = Color3.fromRGB(255, 170, 0)
+                    lbl.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+                    lbl.TextStrokeTransparency = 0
+                    lbl.TextSize = 10
+                    lbl.Font = Enum.Font.GothamBold
+                    lbl.Text = "[QUEST] " .. item.Name
+                    lbl.Parent = bg
+
+                    ActiveQuestESP[part] = bg
+                else
+                    local lbl = ActiveQuestESP[part]:FindFirstChildOfClass("TextLabel")
+                    if lbl and isAlive() then
+                        local dist = math.floor((part.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude)
+                        lbl.Text = "[QUEST] " .. item.Name .. " [" .. dist .. "m]"
+                    end
+                end
+            end
+        end
+    end)
+end
+
+-- 11. Mob / Demon ESP Engine
 local function UpdateMobESP()
     pcall(function()
         if not Toggles.MobESP then
@@ -621,7 +861,7 @@ local function UpdateMobESP()
     end)
 end
 
--- 7. Player ESP Engine
+-- 12. Player ESP Engine
 local function UpdatePlayerESP()
     pcall(function()
         if not Toggles.PlayerESP then
@@ -673,7 +913,7 @@ local function UpdatePlayerESP()
     end)
 end
 
--- 8. Breathing Trainers / NPC ESP Engine
+-- 13. Breathing Trainers / NPC ESP Engine
 local function UpdateTrainerESP()
     pcall(function()
         if not Toggles.TrainerESP then
@@ -738,6 +978,7 @@ end
 task.spawn(function()
     while true do
         task.wait(0.5)
+        UpdateQuestESP()
         UpdateMobESP()
         UpdatePlayerESP()
         UpdateTrainerESP()
@@ -1007,52 +1248,70 @@ end
 -- 1. [TOP ITEM 1] Instant Auto Get Up
 CreateToggleRow(1, "Instant Auto Get Up", "InstantGetUp")
 
--- 2. [TOP ITEM 2] Hitbox Expander
-CreateToggleRow(2, "Hitbox Expander", "HitboxExpander", function(enabled)
+-- 2. [TOP ITEM 2] FullBright (EXPLICITLY 2ND NUMBER AS REQUESTED)
+CreateToggleRow(2, "FullBright", "FullBright", function(enabled)
+    UpdateFullBright(enabled)
+end)
+
+-- 3. [TOP ITEM 3] Hitbox Expander
+CreateToggleRow(3, "Hitbox Expander", "HitboxExpander", function(enabled)
     if not enabled then UpdateHitboxExpander() end
 end)
 
--- 3. [TOP ITEM 3] Teleport to Low Health Player
-CreateActionRow(3, "Teleport to Low HP Player", function()
+-- 4. [TOP ITEM 4] Teleport to Low Health Player
+CreateActionRow(4, "Teleport to Low HP Player", function()
     TeleportToLowHealthPlayer()
 end)
 
--- 4. [TOP ITEM 4] Teleport to Safe Zone
-CreateActionRow(4, "Teleport to Safe Zone", function()
-    TeleportToSafeZone()
+-- 5. [TOP ITEM 5] Teleport to Quest
+CreateActionRow(5, "Teleport to Quest", function()
+    TeleportToQuest()
 end)
-
--- 5. [TOP ITEM 5] Auto Farm Mobs / Demons
-CreateToggleRow(5, "Auto Farm Mobs / Demons", "AutoFarmMobs")
 
 -- ====================================================
 -- SCROLLABLE ROWS (SCROLL DOWN TO ACCESS)
 -- ====================================================
 
--- 6. Kill Aura
-CreateToggleRow(6, "Kill Aura", "KillAura")
+-- 6. Teleport to Safe Zone
+CreateActionRow(6, "Teleport to Safe Zone", function()
+    TeleportToSafeZone()
+end)
 
--- 7. Auto Accept Quests
-CreateToggleRow(7, "Auto Accept Quests", "AutoAcceptQuests")
+-- 7. Auto Farm Mobs / Demons
+CreateToggleRow(7, "Auto Farm Mobs / Demons", "AutoFarmMobs")
 
--- 8. Fast Auto Attack
-CreateToggleRow(8, "Fast Auto Attack", "FastAutoAttack")
+-- 8. Auto Accept Quests
+CreateToggleRow(8, "Auto Accept Quests", "AutoAcceptQuests")
 
--- 9. Mob / Demon ESP
-CreateToggleRow(9, "Mob / Demon ESP", "MobESP")
+-- 9. Fast Auto Attack
+CreateToggleRow(9, "Fast Auto Attack", "FastAutoAttack")
 
--- 10. Player ESP
-CreateToggleRow(10, "Player ESP", "PlayerESP")
+-- 10. Fly Mode
+CreateToggleRow(10, "Fly Mode", "Fly", function(enabled)
+    UpdateFly(enabled)
+end)
 
--- 11. Trainers / NPC ESP
-CreateToggleRow(11, "Trainers / NPC ESP", "TrainerESP")
+-- 11. Infinite Jump
+CreateToggleRow(11, "Infinite Jump", "InfiniteJump")
 
--- 12. WalkSpeed Row (Checkbox + Pill Stepper: [ - 50 + ])
+-- 12. Quest ESP
+CreateToggleRow(12, "Quest ESP", "QuestESP")
+
+-- 13. Mob / Demon ESP
+CreateToggleRow(13, "Mob / Demon ESP", "MobESP")
+
+-- 14. Player ESP
+CreateToggleRow(14, "Player ESP", "PlayerESP")
+
+-- 15. Trainers / NPC ESP
+CreateToggleRow(15, "Trainers / NPC ESP", "TrainerESP")
+
+-- 16. WalkSpeed Row (Checkbox + Pill Stepper: [ - 50 + ])
 local SpeedRow = Instance.new("Frame")
 SpeedRow.Name = "SpeedRow"
 SpeedRow.Size = UDim2.new(1, 0, 0, 26)
 SpeedRow.BackgroundTransparency = 1
-SpeedRow.LayoutOrder = 12
+SpeedRow.LayoutOrder = 16
 SpeedRow.Parent = ContentScroll
 
 local SpeedLabel = Instance.new("TextLabel")
@@ -1218,5 +1477,5 @@ CreatorSubtitle.TextSize = 9
 CreatorSubtitle.Font = Enum.Font.GothamMedium
 CreatorSubtitle.Parent = Footer
 
-ShowToast("ULTRA SCRIPT HUB", "Slayers 2 V3.0 Loaded!")
-print("[Junejo Hub] Slayers 2 V3.0 initialized with Rock-Solid Stability!")
+ShowToast("ULTRA SCRIPT HUB", "Slayers 2 V3.5 Loaded!")
+print("[Junejo Hub] Slayers 2 V3.5 initialized with FullBright & Fly!")
