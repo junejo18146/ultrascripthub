@@ -1442,7 +1442,7 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
 
 ---
 
-## Slayers 2
+## Slayers 2 (V2.5 5-Row Standard Edition)
 - **Game Name**: Slayers 2
 - **Place IDs**: `16205713724` (Root) / `136406881576517` (Ouwland)
 - **Raw Script Loadstring**:
@@ -1451,18 +1451,22 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   ```
 - **Raw Script URL**: `https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/slayers_2.lua`
 - **Key System Status**: Disabled (Direct Standalone Executable)
-- **Features Included**:
-  - 🔘 Teleport to Safe Zone (Top Action Button)
-  - ☑️ Auto Farm Mobs / Demons (Auto position & attack loop)
-  - ☑️ Auto Accept Quests (Auto accept quest prompts & remotes)
-  - ☑️ Fast Auto Attack (M1 Attack Spam & Tool Activation)
-  - ☑️ Kill Aura (AOE damage to all nearby enemies)
-  - ☑️ Mob / Demon ESP (ESP billboard with Name, HP & Distance)
-  - ☑️ Player ESP (ESP billboard with Player Name & Distance)
-  - ☑️ Trainers / NPC ESP (ESP billboard for all Breathing Trainers)
-  - ⚡ WalkSpeed Stepper (+ / - Integrated Pill Stepper & Toggle)
-  - 🛡️ Anti-AFK Protection (Idled prevention)
-- **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280x360px`) with Mandatory Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
+- **Features Included (5 Features Visible on Main Screen, Scroll for Rest)**:
+  - 1. ☑️ Instant Auto Get Up (Immediate recovery from knockdowns & ragdoll)
+  - 2. ☑️ Hitbox Expander (18x18 Neon Red expanded hitboxes for 100% reach)
+  - 3. 🔘 Teleport to Low HP Player (1-Click warp behind lowest health player)
+  - 4. 🔘 Teleport to Safe Zone (1-Click warp to sky safe platform)
+  - 5. ☑️ Auto Farm Mobs / Demons (Safe overhead lock & auto farm combo)
+  ----------------- [End of 5-Row Main Screen View] -----------------
+  - 6. ☑️ Kill Aura (35-studs AOE damage with weapon & remote sync)
+  - 7. ☑️ Auto Accept Quests (0s Prompt trigger + dialogue auto-click)
+  - 8. ☑️ Fast Auto Attack (M1 attack spam & tool activation)
+  - 9. ☑️ Mob / Demon ESP (Billboard GUI with Name, Live HP & Distance)
+  - 10. ☑️ Player ESP (Billboard GUI with Player Name & Distance)
+  - 11. ☑️ Trainers / NPC ESP (Billboard GUI for all Breathing Trainers)
+  - 12. ⚡ WalkSpeed Stepper (+ / - Pill Stepper [16-250] & Toggle)
+  - 13. 🛡️ 24/7 Anti-AFK Engine (Idle disconnect prevention)
+- **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280x225px`) with `ScrollingFrame` (5 features visible at once) and Mandatory Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
 
 ====================================================
 Updated: September 21, 2026
