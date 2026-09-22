@@ -1605,9 +1605,35 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   - 10. 🛡️ 24/7 Anti-AFK System (VirtualUser idle kick bypass)
 - **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280px` width) with Centered Branding Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
 
+---
+
+## Jailbreak 🚨
+- **Game Name**: Jailbreak
+- **Place ID**: `606849621`
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/jailbreak.lua"))()
+  ```
+- **Raw Script URL**: `https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/jailbreak.lua`
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included**:
+  - 1. ✈️ Player Flight (Dual-Control Checkbox + Stepper Pill [20 - 250])
+  - 2. ⚡ Fast WalkSpeed (Dual-Control Checkbox + Stepper Pill [16 - 250])
+  - 3. ☑️ Noclip (Phase through walls and barriers)
+  - 4. ☑️ Infinite Jump (Continuous airborne jumps)
+  - 5. ☑️ Shift Dash (Tap LeftShift to dash 40 studs)
+  - 6. ☑️ Ghost Invisibility (Full character transparency modifier)
+  - 7. ☑️ Player Box ESP (Real-time highlighted boxes)
+  - 8. ↩ Return to Previous Location (Anti-cheat safe rubberband fix)
+  - 9. 🔘 POI Teleports (Bank, Jewelry Store, Museum, Casino, Volcano Base, City Base)
+  - 10. 🚨 Mobile Floating Toggle Button
+  - 11. 🛡️ 24/7 Anti-AFK Engine (VirtualUser idle kick bypass)
+- **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280px` width) with Scrollable Content and Centered Branding Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
+
 ====================================================
 Updated: September 22, 2026
 ====================================================
+
 
 
 
