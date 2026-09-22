@@ -56,6 +56,11 @@ end)
 _G.HitboxExpanderActive = false
 _G.PlayerESPActive = false
 _G.InfJumpActive = false
+_G.NoclipActive = false
+_G.InstantGetUpActive = false
+_G.InfiniteStaminaActive = false
+_G.FlyActive = false
+_G.FlySpeed = 50
 _G.WalkSpeedActive = false
 _G.WalkSpeedValue = 50
 
@@ -149,13 +154,13 @@ UserInputService.InputChanged:Connect(function(input)
 end)
 
 --========================================================--
--- MAIN CONTAINER (OFFICIAL UI 1: 280 x 255)
+-- MAIN CONTAINER (OFFICIAL UI 1: 280 x 290)
 --========================================================--
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
-MainFrame.Size = UDim2.new(0, 280, 0, 255)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -127)
+MainFrame.Size = UDim2.new(0, 280, 0, 290)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -145)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -251,19 +256,24 @@ UserInputService.InputChanged:Connect(function(input)
 end)
 
 --========================================================--
--- CONTENT AREA (STANDARD ROWS)
+-- CONTENT AREA (SCROLLABLE FOR ALL FEATURES)
 --========================================================--
-local ContentFrame = Instance.new("Frame")
-ContentFrame.Name = "ContentFrame"
-ContentFrame.Parent = MainFrame
-ContentFrame.Position = UDim2.new(0, 14, 0, 44)
-ContentFrame.Size = UDim2.new(1, -28, 0, 155)
-ContentFrame.BackgroundTransparency = 1
+local ScrollFrame = Instance.new("ScrollingFrame")
+ScrollFrame.Name = "ScrollFrame"
+ScrollFrame.Parent = MainFrame
+ScrollFrame.Position = UDim2.new(0, 14, 0, 42)
+ScrollFrame.Size = UDim2.new(1, -28, 1, -86)
+ScrollFrame.BackgroundTransparency = 1
+ScrollFrame.BorderSizePixel = 0
+ScrollFrame.ScrollBarThickness = 2
+ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(45, 45, 55)
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ScrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
 local ContentLayout = Instance.new("UIListLayout")
-ContentLayout.Parent = ContentFrame
+ContentLayout.Parent = ScrollFrame
 ContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
-ContentLayout.Padding = UDim.new(0, 8)
+ContentLayout.Padding = UDim.new(0, 6)
 
 -- Helper: Standard Toggle Row
 local function CreateToggleRow(name, default, order, callback)
@@ -271,8 +281,8 @@ local function CreateToggleRow(name, default, order, callback)
 
     local Row = Instance.new("Frame")
     Row.Name = name .. "_Row"
-    Row.Parent = ContentFrame
-    Row.Size = UDim2.new(1, 0, 0, 28)
+    Row.Parent = ScrollFrame
+    Row.Size = UDim2.new(1, -4, 0, 26)
     Row.BackgroundTransparency = 1
     Row.LayoutOrder = order
 
@@ -345,8 +355,8 @@ local function CreateSpeedRow(name, defaultVal, order, toggleCallback, valueCall
 
     local Row = Instance.new("Frame")
     Row.Name = name .. "_Row"
-    Row.Parent = ContentFrame
-    Row.Size = UDim2.new(1, 0, 0, 28)
+    Row.Parent = ScrollFrame
+    Row.Size = UDim2.new(1, -4, 0, 26)
     Row.BackgroundTransparency = 1
     Row.LayoutOrder = order
 
@@ -681,7 +691,214 @@ UserInputService.JumpRequest:Connect(function()
 end)
 
 --========================================================--
--- 4. WALKSPEED CONTROLLER (CONTINUOUS ENFORCER)
+-- 4. NO CLIP ENGINE
+--========================================================--
+RunService.Stepped:Connect(function()
+    if _G.NoclipActive and LocalPlayer.Character then
+        pcall(function()
+            for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+                if part:IsA("BasePart") and part.CanCollide then
+                    part.CanCollide = false
+                end
+            end
+        end)
+    end
+end)
+
+--========================================================--
+-- 5. INSTANT GET UP ENGINE (ANTI-RAGDOLL / QUICK RECOVERY)
+--========================================================--
+local function ProcessInstantGetUp()
+    pcall(function()
+        local char = LocalPlayer.Character
+        if not char then return end
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if not hum then return end
+
+        local state = hum:GetState()
+        if state == Enum.HumanoidStateType.Ragdoll or
+           state == Enum.HumanoidStateType.FallingDown or
+           state == Enum.HumanoidStateType.PlatformStanding or
+           state == Enum.HumanoidStateType.Physics or
+           state == Enum.HumanoidStateType.GettingUp then
+            hum:ChangeState(Enum.HumanoidStateType.Running)
+        end
+
+        if hum.PlatformStand then
+            hum.PlatformStand = false
+        end
+        if hum.Sit then
+            hum.Sit = false
+        end
+
+        -- Cancel any ragdoll/knock attributes
+        for attr, _ in pairs(char:GetAttributes()) do
+            local lName = string.lower(attr)
+            if string.find(lName, "ragdoll") or string.find(lName, "knock") or string.find(lName, "stun") or string.find(lName, "down") then
+                char:SetAttribute(attr, false)
+            end
+        end
+
+        -- Enable any motor6ds disabled by ragdoll
+        for _, motor in ipairs(char:GetDescendants()) do
+            if motor:IsA("Motor6D") and not motor.Enabled then
+                motor.Enabled = true
+            end
+        end
+    end)
+end
+
+task.spawn(function()
+    while true do
+        task.wait(0.05)
+        if _G.InstantGetUpActive then
+            ProcessInstantGetUp()
+        end
+    end
+end)
+
+local function HookCharacterRagdoll(char)
+    local hum = char:WaitForChild("Humanoid", 5)
+    if hum then
+        hum.StateChanged:Connect(function(oldState, newState)
+            if _G.InstantGetUpActive then
+                if newState == Enum.HumanoidStateType.Ragdoll or
+                   newState == Enum.HumanoidStateType.FallingDown or
+                   newState == Enum.HumanoidStateType.PlatformStanding or
+                   newState == Enum.HumanoidStateType.Physics or
+                   newState == Enum.HumanoidStateType.GettingUp then
+                    task.wait()
+                    hum:ChangeState(Enum.HumanoidStateType.Running)
+                    hum.PlatformStand = false
+                    hum.Sit = false
+                end
+            end
+        end)
+    end
+end
+
+if LocalPlayer.Character then
+    HookCharacterRagdoll(LocalPlayer.Character)
+end
+LocalPlayer.CharacterAdded:Connect(HookCharacterRagdoll)
+
+--========================================================--
+-- 6. INFINITE STAMINA ENGINE
+--========================================================--
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        if _G.InfiniteStaminaActive then
+            pcall(function()
+                local char = LocalPlayer.Character
+                if char then
+                    -- Reset Character Attributes
+                    for attr, _ in pairs(char:GetAttributes()) do
+                        local lName = string.lower(attr)
+                        if string.find(lName, "stamina") or string.find(lName, "energy") then
+                            char:SetAttribute(attr, 100)
+                        end
+                    end
+                    -- Reset Descendant Values
+                    for _, obj in ipairs(char:GetDescendants()) do
+                        if obj:IsA("ValueBase") then
+                            local name = string.lower(obj.Name)
+                            if string.find(name, "stamina") or string.find(name, "energy") then
+                                obj.Value = 100
+                            end
+                        end
+                    end
+                end
+                -- Reset Player Attributes
+                for attr, _ in pairs(LocalPlayer:GetAttributes()) do
+                    local lName = string.lower(attr)
+                    if string.find(lName, "stamina") or string.find(lName, "energy") then
+                        LocalPlayer:SetAttribute(attr, 100)
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+--========================================================--
+-- 7. FLY MODE ENGINE (SMOOTH 3D FLIGHT)
+--========================================================--
+local FlyBV, FlyBG
+
+local function StopFly()
+    pcall(function()
+        if FlyBV then FlyBV:Destroy(); FlyBV = nil end
+        if FlyBG then FlyBG:Destroy(); FlyBG = nil end
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.PlatformStand = false
+        end
+    end)
+end
+
+local function UpdateFly()
+    pcall(function()
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        local camera = Workspace.CurrentCamera
+        if not hrp or not hum or not camera then return end
+
+        if not FlyBV or FlyBV.Parent ~= hrp then
+            FlyBV = Instance.new("BodyVelocity")
+            FlyBV.Name = "UltraFlyBV"
+            FlyBV.MaxForce = Vector3.new(1e7, 1e7, 1e7)
+            FlyBV.Parent = hrp
+        end
+        if not FlyBG or FlyBG.Parent ~= hrp then
+            FlyBG = Instance.new("BodyGyro")
+            FlyBG.Name = "UltraFlyBG"
+            FlyBG.MaxTorque = Vector3.new(1e7, 1e7, 1e7)
+            FlyBG.P = 10000
+            FlyBG.Parent = hrp
+        end
+
+        hum.PlatformStand = true
+        FlyBG.CFrame = camera.CFrame
+
+        local speed = _G.FlySpeed or 50
+        local moveDir = hum.MoveDirection
+        if moveDir.Magnitude > 0 then
+            local vel = camera.CFrame.LookVector * speed
+            if math.abs(moveDir.Z) < 0.2 and math.abs(moveDir.X) > 0.5 then
+                vel = camera.CFrame.RightVector * speed * (moveDir.X > 0 and 1 or -1)
+            end
+            FlyBV.Velocity = vel
+        else
+            FlyBV.Velocity = Vector3.new(0, 0, 0)
+        end
+    end)
+end
+
+task.spawn(function()
+    while true do
+        task.wait(0.03)
+        if _G.FlyActive then
+            UpdateFly()
+        else
+            if FlyBV or FlyBG then
+                StopFly()
+            end
+        end
+    end
+end)
+
+LocalPlayer.CharacterAdded:Connect(function(newChar)
+    task.wait(0.3)
+    if not _G.FlyActive then
+        StopFly()
+    end
+end)
+
+--========================================================--
+-- 8. WALKSPEED CONTROLLER (CONTINUOUS ENFORCER)
 --========================================================--
 RunService.Stepped:Connect(function()
     pcall(function()
@@ -734,8 +951,37 @@ CreateToggleRow("Infinite Jump", false, 3, function(state)
     _G.InfJumpActive = state
 end)
 
--- 4. WalkSpeed (Dual Control: Stepper + Checkbox)
-CreateSpeedRow("WalkSpeed", 50, 4, function(active, value)
+-- 4. No Clip
+CreateToggleRow("No Clip", false, 4, function(state)
+    _G.NoclipActive = state
+end)
+
+-- 5. Instant Get Up
+CreateToggleRow("Instant Get Up", false, 5, function(state)
+    _G.InstantGetUpActive = state
+    if state then
+        ProcessInstantGetUp()
+    end
+end)
+
+-- 6. Infinite Stamina
+CreateToggleRow("Infinite Stamina", false, 6, function(state)
+    _G.InfiniteStaminaActive = state
+end)
+
+-- 7. Fly Mode (Dual Control Stepper + Checkbox)
+CreateSpeedRow("Fly Mode", 50, 7, function(active, value)
+    _G.FlyActive = active
+    _G.FlySpeed = value
+    if not active then
+        StopFly()
+    end
+end, function(value)
+    _G.FlySpeed = value
+end)
+
+-- 8. WalkSpeed (Dual Control Stepper + Checkbox)
+CreateSpeedRow("WalkSpeed", 50, 8, function(active, value)
     _G.WalkSpeedActive = active
     _G.WalkSpeedValue = value
     pcall(function()
