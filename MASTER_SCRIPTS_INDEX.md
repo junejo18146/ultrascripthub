@@ -1581,9 +1581,30 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   - 12. 🛡️ 24/7 Anti-AFK Engine (VirtualUser idle kick bypass)
 - **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280px` width) with Scrollable Content and Centered Branding Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
 
+---
+
+## Fight in a School 🥊
+- **Game Name**: Fight in a School
+- **Place ID**: `17698425045`
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/fight_in_a_school.lua"))()
+  ```
+- **Raw Script URL**: `https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/fight_in_a_school.lua`
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included**:
+  - 1. ☑️ Hitbox Expander (14x14x14 Really Red Neon Reach Multiplier)
+  - 2. ☑️ Player ESP & Health Display (Highlight + Live Billboard with HP & Distance)
+  - 3. ☑️ Infinite Jump (Airborne bypass)
+  - 4. ⚡ WalkSpeed Boost (Dual-Control Checkbox + Stepper Pill [16 - 250])
+  - 5. 🥊 Mobile Floating Toggle Button
+  - 6. 🛡️ 24/7 Anti-AFK System (VirtualUser idle kick bypass)
+- **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280px` width) with Centered Branding Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
+
 ====================================================
-Updated: September 21, 2026
+Updated: September 22, 2026
 ====================================================
+
 
 
 
