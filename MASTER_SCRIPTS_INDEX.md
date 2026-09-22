@@ -1596,9 +1596,13 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   - 1. ☑️ Hitbox Expander (14x14x14 Really Red Neon Reach Multiplier)
   - 2. ☑️ Player ESP & Health Display (Highlight + Live Billboard with HP & Distance)
   - 3. ☑️ Infinite Jump (Airborne bypass)
-  - 4. ⚡ WalkSpeed Boost (Dual-Control Checkbox + Stepper Pill [16 - 250])
-  - 5. 🥊 Mobile Floating Toggle Button
-  - 6. 🛡️ 24/7 Anti-AFK System (VirtualUser idle kick bypass)
+  - 4. ☑️ No Clip (Phase through walls and doors)
+  - 5. ☑️ Instant Get Up (Anti-Ragdoll / Instant recovery on knockdown)
+  - 6. ☑️ Infinite Stamina (Continuous stamina/energy replenishment)
+  - 7. ✈️ Fly Mode (Dual-Control Checkbox + Stepper Pill [20 - 250])
+  - 8. ⚡ WalkSpeed Boost (Dual-Control Checkbox + Stepper Pill [16 - 250])
+  - 9. 🥊 Mobile Floating Toggle Button
+  - 10. 🛡️ 24/7 Anti-AFK System (VirtualUser idle kick bypass)
 - **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280px` width) with Centered Branding Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
 
 ====================================================
