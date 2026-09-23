@@ -6,7 +6,7 @@ Place ID: 87695656520229
 Creator: Made by Junejo (junejo18146)
 Repository: ultrascripthub
 File Name: grow_beanstalk_to_steal_an_egg.lua
-UI Standard: UI 1 (Official Ultra Script Hub Classic Matte Dark - 280x305px)
+UI Standard: UI 1 (Official Ultra Script Hub Classic Matte Dark - 280x280px)
 Key System: Disabled (Direct Standalone Executable)
 Date Updated: September 23, 2026
 
@@ -16,28 +16,26 @@ RAW SCRIPT LOADSTRING (DELTA / ARCEUS / CODEX / FLUXUS):
 loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/grow_beanstalk_to_steal_an_egg.lua"))()
 
 ------------------------------------------------------------------------
-FEATURES INCLUDED (13 CLEAN FEATURES - NO CASH / NO NOCLIP):
+FEATURES INCLUDED (11 CLEAN FEATURES - AUTO STEAL RARE EGG EXCLUSIVE):
 ------------------------------------------------------------------------
-1. ☑️ Auto Steal Egg (Continuous automated egg stealing and plot deposit cycle)
-2. ☑️ Auto Steal Rare Egg (Prioritizes highest tier & rarest eggs on beanstalk summit)
-3. ☑️ Auto Steal Nearest Egg (Instant grab of closest egg in range)
-4. ☑️ Fast Climb on Beanstalk (Superfast smooth upward glide & summit reach)
-5. ☑️ Infinite Long Beanstalk (Beanstalk Growth & Skyward Stacker Engine)
-6. ☑️ Auto Unlock Treadmill (Auto Unlock & Speed Trainer)
-7. ☑️ Auto Upgrade Base (Auto buys base capacity, beanstalk growth and plot upgrades)
-8. ☑️ Auto Hatch Egg (Plot prompt, touch pad, remotes & GUI clicker)
-9. ☑️ Auto Rebirth (Remote sweeper, plot pads, prompts & UI clicker)
-10. ☑️ Auto Claim All Rewards (Claims daily rewards, playtime gifts, free chests & spins)
-11. ⚡ WalkSpeed Boost & Stepper Pill ([16 - 300])
-12. ⚡ Infinite Jump & Jump Power Stepper Pill ([50 - 300])
-13. 🕊️ Fly Mode & Fly Speed Stepper Pill ([20 - 250] with Mobile & PC 3D navigation)
+1. ☑️ Auto Steal Rare Egg (Bulletproof Summit & Rare Tier Scanner, Prompt Bypass & Base Plot Auto-Deposit)
+2. ☑️ Fast Climb on Beanstalk (Superfast smooth upward glide & summit reach)
+3. ☑️ Infinite Long Beanstalk (Beanstalk Growth & Skyward Stacker Engine)
+4. ☑️ Auto Unlock Treadmill (Auto Unlock & Speed Trainer)
+5. ☑️ Auto Upgrade Base (Auto buys base capacity, beanstalk growth and plot upgrades)
+6. ☑️ Auto Hatch Egg (Plot prompt, touch pad, remotes & GUI clicker)
+7. ☑️ Auto Rebirth (Remote sweeper, plot pads, prompts & UI clicker)
+8. ☑️ Auto Claim All Rewards (Claims daily rewards, playtime gifts, free chests & spins)
+9. ⚡ WalkSpeed Boost & Stepper Pill ([16 - 300])
+10. ⚡ Infinite Jump & Jump Power Stepper Pill ([50 - 300])
+11. 🕊️ Fly Mode & Fly Speed Stepper Pill ([20 - 250] with Mobile & PC 3D navigation)
 
 ------------------------------------------------------------------------
 SYSTEM ENHANCEMENTS:
 ------------------------------------------------------------------------
-- Fresh unique refactored codebase architecture
+- Bulletproof Rare Egg Detection & Auto-Deposit System
 - Instant 0s Hold ProximityPrompts across the game
 - Anti-AFK 24/7 VirtualUser Disconnect Protection Engine
-- Draggable Official Ultra Script Hub Classic Matte Dark UI (280x305px)
+- Draggable Official Ultra Script Hub Classic Matte Dark UI (280x280px)
 - Mandatory Centered Footer (ULTRA SCRIPT HUB | Made by Junejo)
 ========================================================================
