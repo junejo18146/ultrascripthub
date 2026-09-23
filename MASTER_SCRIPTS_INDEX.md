@@ -1088,7 +1088,7 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
 
 ---
 
-## 55. Grow Beanstalk to Steal An Egg (V4.0 - Infinite Cash Edition)
+## 55. Grow Beanstalk to Steal An Egg
 - **Game Name**: Grow Beanstalk to Steal An Egg
 - **Place ID**: 87695656520229
 - **Universe ID**: 10737911048
@@ -1098,22 +1098,21 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   ```
 - **Key System Status**: Disabled (Direct Standalone Executable)
 - **Features Included**:
-  - Infinite Cash (+999B) (NEW: Rapid pet revenue, ATM/collector magnet & leaderstats cash locker)
   - Auto Steal Egg (Continuous automated egg stealing & plot deposit loop)
   - Auto Steal Rare Egg (Prioritizes highest tier & rarest eggs on beanstalk summit)
   - Auto Steal Nearest Egg (Instant grab of closest egg in range)
   - Fast Climb on Beanstalk (UPGRADED: Superfast smooth upward glide & summit reach)
-  - Infinite Long Beanstalk (6-Layer Beanstalk Growth & Skyward Stacker + Auto Cash Engine)
-  - Auto Unlock Treadmill (5-Layer Auto Unlock & Speed Trainer)
+  - Infinite Long Beanstalk (Beanstalk Growth & Skyward Stacker Engine)
+  - Auto Unlock Treadmill (Auto Unlock & Speed Trainer)
   - Auto Upgrade Base (Auto buys base capacity, beanstalk growth and plot upgrades)
-  - Auto Hatch Egg (4-Layer plot prompt, touch pad, remotes & GUI clicker)
-  - Auto Rebirth (4-Layer remote sweeper, plot pads, prompts & UI confirmatory clicker)
+  - Auto Hatch Egg (Plot prompt, touch pad, remotes & GUI clicker)
+  - Auto Rebirth (Remote sweeper, plot pads, prompts & UI confirmatory clicker)
   - Auto Claim All Rewards (Claims daily rewards, playtime gifts, free chests & spins)
-  - WalkSpeed (Interactive Line Bar Slider: 16 to 300)
-  - Infinite Jump (Interactive Line Bar Slider for Jump Power: 50 to 300)
-  - Fly Mode (Interactive Line Bar Slider for Fly Speed: 20 to 250 with Mobile/PC 3D navigation)
-  - Anti-AFK Engine (Auto 20-minute idle disconnect protection)
-  - Official Classic Junejo Dark UI (Flat Borderless Rows & Interactive Line Bars Standard, 285x320px)
+  - WalkSpeed Boost & Stepper Pill ([16 - 300])
+  - Infinite Jump & Jump Power Stepper Pill ([50 - 300])
+  - Fly Mode & Fly Speed Stepper Pill ([20 - 250] with Mobile/PC 3D navigation)
+  - Anti-AFK Engine (Auto 24/7 VirtualUser idle disconnect protection)
+- **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280x305px`) with Scrollable Content and Centered Branding Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
 
 ---
 
