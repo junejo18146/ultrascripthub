@@ -1,14 +1,15 @@
 -- ==============================================================================
 -- JUNEJO ULTRA SCRIPT HUB - GROW BEANSTALK TO STEAL AN EGG
--- Made by Junejo (junejo18146)
+-- Game: Grow Beanstalk to Steal An Egg (Place ID: 87695656520229)
+-- Author: Made by Junejo (junejo18146)
 -- GitHub: https://github.com/junejo18146/ultrascripthub
 -- UI Framework: UI 1 (Official Ultra Script Hub Classic Matte Dark)
--- Universal Mobile & PC Delta / Codex / Fluxus / PC Optimized
+-- Universal Mobile (Delta / Codex / Fluxus) & PC Compatible
 -- ==============================================================================
 
-local GameName = "GROW BEANSTALK TO STEAL AN EGG"
+local GameTitle = "GROW BEANSTALK TO STEAL AN EGG"
 
--- Services
+-- Core Services
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -16,7 +17,6 @@ local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CoreGui = game:GetService("CoreGui")
-local VirtualUser = game:GetService("VirtualUser")
 
 local LocalPlayer = Players.LocalPlayer
 while not LocalPlayer do
@@ -26,19 +26,19 @@ end
 
 local Camera = Workspace.CurrentCamera
 
--- Destroy existing UI if re-executed
-for _, guiName in ipairs({"JunejoHubUI_GrowBeanstalk", "JunejoHubUI"}) do
+-- Cleanup previous interface if running
+for _, name in ipairs({"JunejoHubUI_GrowBeanstalk", "JunejoHubUI", "UltraHub_Beanstalk"}) do
     pcall(function()
-        if CoreGui:FindFirstChild(guiName) then CoreGui[guiName]:Destroy() end
-        if LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild(guiName) then
-            LocalPlayer.PlayerGui[guiName]:Destroy()
-        end
+        if CoreGui:FindFirstChild(name) then CoreGui[name]:Destroy() end
+        local pGui = LocalPlayer:FindFirstChild("PlayerGui")
+        if pGui and pGui:FindFirstChild(name) then pGui[name]:Destroy() end
     end)
 end
 
--- Configuration & State
-local Toggles = {
-    InfiniteCash = false,
+-- ==============================================================================
+-- 1. STATE CONFIGURATION (CASH & NOCLIP COMPLETELY EXCLUDED)
+-- ==============================================================================
+local HubState = {
     AutoStealEgg = false,
     AutoStealRareEgg = false,
     AutoStealNearestEgg = false,
@@ -54,92 +54,127 @@ local Toggles = {
     FlyMode = false,
 }
 
-local Sliders = {
+local Settings = {
     WalkSpeed = 75,
     JumpPower = 120,
     FlySpeed = 70,
 }
 
-local SavedBasePosition = nil
-local Flying = false
-local FlyBodyVel = nil
-local FlyBodyGyro = nil
+local CachedPlot = nil
+local SavedBaseCFrame = nil
+local FlyingActive = false
+local FlyVelocity = nil
+local FlyGyro = nil
 
--- Anti-AFK Disconnect Protection
-if getconnections then
-    for _, conn in pairs(getconnections(LocalPlayer.Idled)) do
-        if conn.Disable then conn:Disable() elseif conn.Disconnect then conn:Disconnect() end
-    end
-else
-    LocalPlayer.Idled:Connect(function()
+-- ==============================================================================
+-- 2. ESSENTIAL ENGINE HELPERS
+-- ==============================================================================
+
+-- 24/7 Anti-AFK Idle Bypass
+local VirtualUser = nil
+pcall(function() VirtualUser = game:GetService("VirtualUser") end)
+LocalPlayer.Idled:Connect(function()
+    if VirtualUser then
         pcall(function()
             VirtualUser:CaptureController()
-            VirtualUser:ClickButton2(Vector2.new(0, 0))
+            VirtualUser:ClickButton2(Vector2.zero)
         end)
-    end)
-end
-
--- Fast ProximityPrompt 0s Hold Bypass
-task.spawn(function()
-    local function OptimizePrompt(prompt)
-        if prompt and prompt:IsA("ProximityPrompt") then
-            prompt.HoldDuration = 0
-            prompt.RequiresLineOfSight = false
-            prompt.MaxActivationDistance = 99999
-        end
     end
-    for _, prompt in ipairs(Workspace:GetDescendants()) do
-        OptimizePrompt(prompt)
-    end
-    Workspace.DescendantAdded:Connect(OptimizePrompt)
 end)
 
--- Character & Base Helpers
-local function GetCharacter()
+local function GetPlayerCharacter()
     return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 end
 
 local function GetRootPart()
-    local char = GetCharacter()
-    return char and (char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("UpperTorso"))
+    local char = GetPlayerCharacter()
+    return char and (char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso"))
 end
 
 local function GetHumanoid()
-    local char = GetCharacter()
+    local char = GetPlayerCharacter()
     return char and char:FindFirstChildOfClass("Humanoid")
 end
 
--- Auto-Locate Player's Base/Plot
-local function FindMyPlot()
-    local possibleContainers = {
+-- Instant 0-second Proximity Prompt Resolver
+local function FastTriggerPrompt(prompt)
+    if not prompt or not prompt:IsA("ProximityPrompt") then return end
+    pcall(function()
+        prompt.RequiresLineOfSight = false
+        prompt.MaxActivationDistance = 99999
+        local origHold = prompt.HoldDuration or 0
+        prompt.HoldDuration = 0
+
+        if fireproximityprompt then
+            fireproximityprompt(prompt, 0)
+            fireproximityprompt(prompt)
+        else
+            prompt:InputHoldBegin()
+            task.wait(0.04)
+            prompt:InputHoldEnd()
+        end
+        prompt.HoldDuration = origHold
+    end)
+end
+
+-- Touch Transmitter / Pad Interactor
+local function DirectTouch(part)
+    local root = GetRootPart()
+    if not root or not part or not part:IsA("BasePart") then return end
+    pcall(function()
+        if firetouchinterest then
+            firetouchinterest(root, part, 0)
+            task.wait()
+            firetouchinterest(root, part, 1)
+        end
+    end)
+end
+
+-- Proximity prompt global optimizer
+task.spawn(function()
+    local function Optimize(p)
+        if p:IsA("ProximityPrompt") then
+            p.HoldDuration = 0
+            p.RequiresLineOfSight = false
+            p.MaxActivationDistance = 99999
+        end
+    end
+    for _, desc in ipairs(Workspace:GetDescendants()) do Optimize(desc) end
+    Workspace.DescendantAdded:Connect(Optimize)
+end)
+
+-- Dynamic Plot Locator
+local function LocatePlot()
+    if CachedPlot and CachedPlot.Parent then return CachedPlot end
+
+    local candidates = {
         Workspace:FindFirstChild("Plots"),
         Workspace:FindFirstChild("Bases"),
         Workspace:FindFirstChild("Tycoons"),
         Workspace:FindFirstChild("Islands"),
-        Workspace:FindFirstChild("Players"),
         Workspace:FindFirstChild("Map"),
         Workspace
     }
-    
-    for _, container in ipairs(possibleContainers) do
+
+    local pName = LocalPlayer.Name:lower()
+    local pUserId = tostring(LocalPlayer.UserId)
+
+    for _, container in ipairs(candidates) do
         if container then
-            for _, plot in ipairs(container:GetChildren()) do
-                if plot:IsA("Model") or plot:IsA("Folder") then
-                    local ownerVal = plot:FindFirstChild("Owner") or plot:FindFirstChild("Player") or plot:FindFirstChild("UserId") or plot:FindFirstChild("OwnerName")
-                    if ownerVal and (ownerVal.Value == LocalPlayer or ownerVal.Value == LocalPlayer.Name or ownerVal.Value == LocalPlayer.UserId or tostring(ownerVal.Value) == tostring(LocalPlayer.UserId)) then
-                        return plot
-                    end
-                    local lowName = string.lower(plot.Name)
-                    if string.find(lowName, string.lower(LocalPlayer.Name)) or string.find(lowName, tostring(LocalPlayer.UserId)) then
-                        return plot
-                    end
-                    local sign = plot:FindFirstChild("Sign", true) or plot:FindFirstChild("OwnerSign", true)
-                    if sign then
-                        for _, txt in ipairs(sign:GetDescendants()) do
-                            if txt:IsA("TextLabel") and (string.find(string.lower(txt.Text), string.lower(LocalPlayer.Name)) or string.find(string.lower(txt.Text), string.lower(LocalPlayer.DisplayName))) then
-                                return plot
-                            end
+            for _, item in ipairs(container:GetChildren()) do
+                if item:IsA("Model") or item:IsA("Folder") then
+                    local owner = item:FindFirstChild("Owner") or item:FindFirstChild("Player") or item:FindFirstChild("UserId")
+                    if owner then
+                        local ov = tostring(typeof(owner) == "Instance" and owner.Value or owner):lower()
+                        if ov:find(pName, 1, true) or ov:find(pUserId, 1, true) then
+                            CachedPlot = item
+                            return item
                         end
+                    end
+                    local n = item.Name:lower()
+                    if n:find(pName, 1, true) or n:find(pUserId, 1, true) then
+                        CachedPlot = item
+                        return item
                     end
                 end
             end
@@ -148,94 +183,45 @@ local function FindMyPlot()
     return nil
 end
 
-local function GetBasePosition()
-    if SavedBasePosition then
-        return SavedBasePosition
-    end
-    local myPlot = FindMyPlot()
-    if myPlot then
-        local baseSpawn = myPlot:FindFirstChild("Spawn") or myPlot:FindFirstChild("BaseSpawn") or myPlot:FindFirstChild("Floor") or myPlot:FindFirstChild("PrimaryPart") or myPlot:FindFirstChildWhichIsA("BasePart")
-        if baseSpawn then
-            return baseSpawn.Position + Vector3.new(0, 4, 0)
+local function GetBaseCFrame()
+    if SavedBaseCFrame then return SavedBaseCFrame end
+    local plot = LocatePlot()
+    if plot then
+        local sp = plot:FindFirstChild("Spawn") or plot:FindFirstChild("BaseSpawn") or plot:FindFirstChildWhichIsA("BasePart")
+        if sp then
+            SavedBaseCFrame = sp.CFrame + Vector3.new(0, 3, 0)
+            return SavedBaseCFrame
         end
     end
     local root = GetRootPart()
     if root then
-        return root.Position
+        SavedBaseCFrame = root.CFrame
+        return SavedBaseCFrame
     end
-    return Vector3.new(0, 5, 0)
+    return CFrame.new(0, 5, 0)
 end
 
--- Universal Interaction Handlers
-local function TriggerPrompt(prompt)
-    if not prompt or not prompt:IsA("ProximityPrompt") then return end
+-- Smart Remote Dispatcher
+local function DispatchRemotes(tags, args)
     pcall(function()
-        if fireproximityprompt then
-            fireproximityprompt(prompt, 0)
-            fireproximityprompt(prompt)
-        else
-            prompt.HoldDuration = 0
-            prompt:InputHoldBegin()
-            task.wait(0.04)
-            prompt:InputHoldEnd()
-        end
-    end)
-end
-
-local function TriggerClickDetector(cd)
-    if not cd or not cd:IsA("ClickDetector") then return end
-    pcall(function()
-        if fireclickdetector then
-            fireclickdetector(cd)
-        end
-    end)
-end
-
-local function SafeTouch(targetPart)
-    local root = GetRootPart()
-    if not root or not targetPart or not targetPart:IsA("BasePart") then return end
-    pcall(function()
-        if firetouchinterest then
-            firetouchinterest(root, targetPart, 0)
-            task.wait(0.02)
-            firetouchinterest(root, targetPart, 1)
-        end
-    end)
-end
-
-local function ClickGuiButton(btn)
-    if not btn then return end
-    pcall(function()
-        for _, conn in pairs(getconnections(btn.MouseButton1Click)) do
-            conn:Fire()
-        end
-        for _, conn in pairs(getconnections(btn.Activated)) do
-            conn:Fire()
-        end
-    end)
-end
-
--- Universal Remote Fire Helper
-local function FireRemotesByKeywords(keywords, argsList)
-    pcall(function()
-        for _, descendant in ipairs(ReplicatedStorage:GetDescendants()) do
-            if descendant:IsA("RemoteEvent") or descendant:IsA("RemoteFunction") then
-                local lname = string.lower(descendant.Name)
-                for _, kw in ipairs(keywords) do
-                    if string.find(lname, kw) then
-                        if descendant:IsA("RemoteEvent") then
-                            descendant:FireServer()
-                            if argsList then
-                                for _, arg in ipairs(argsList) do
-                                    descendant:FireServer(arg)
-                                    descendant:FireServer(unpack(type(arg) == "table" and arg or {arg}))
+        for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
+            if rem:IsA("RemoteEvent") or rem:IsA("RemoteFunction") then
+                local rName = rem.Name:lower()
+                for _, tag in ipairs(tags) do
+                    if rName:find(tag, 1, true) then
+                        if rem:IsA("RemoteEvent") then
+                            rem:FireServer()
+                            if args then
+                                for _, a in ipairs(args) do
+                                    rem:FireServer(a)
+                                    rem:FireServer(unpack(type(a) == "table" and a or {a}))
                                 end
                             end
-                        elseif descendant:IsA("RemoteFunction") then
-                            descendant:InvokeServer()
-                            if argsList then
-                                for _, arg in ipairs(argsList) do
-                                    descendant:InvokeServer(arg)
+                        elseif rem:IsA("RemoteFunction") then
+                            rem:InvokeServer()
+                            if args then
+                                for _, a in ipairs(args) do
+                                    rem:InvokeServer(a)
                                 end
                             end
                         end
@@ -247,203 +233,130 @@ local function FireRemotesByKeywords(keywords, argsList)
     end)
 end
 
--- Instant Cash Add Function
-local function AddCashInstant()
-    local myPlot = FindMyPlot()
-    if myPlot then
-        for _, obj in ipairs(myPlot:GetDescendants()) do
-            local name = string.lower(obj.Name)
-            if string.find(name, "collector") or string.find(name, "cash") or string.find(name, "money") or string.find(name, "bank") or string.find(name, "drop") or string.find(name, "earnings") or string.find(name, "atm") or string.find(name, "safe") then
-                if obj:IsA("ProximityPrompt") then TriggerPrompt(obj)
-                elseif obj:IsA("ClickDetector") then TriggerClickDetector(obj)
-                elseif obj:IsA("BasePart") then SafeTouch(obj) end
-            end
-        end
-    end
-    FireRemotesByKeywords(
-        {"collect", "claimcash", "withdraw", "collectcash", "getmoney", "bank", "addcash", "givecash", "claimincome", "petrevenue", "claimall", "cashreward"},
-        {999999999, 1000000, 50000, true, "Max", "Cash", "All"}
-    )
-    pcall(function()
-        local stats = LocalPlayer:FindFirstChild("leaderstats") or LocalPlayer:FindFirstChild("Data") or LocalPlayer:FindFirstChild("Values") or LocalPlayer
-        if stats then
-            for _, val in ipairs(stats:GetChildren()) do
-                local vName = string.lower(val.Name)
-                if string.find(vName, "cash") or string.find(vName, "money") or string.find(vName, "coin") or string.find(vName, "gold") then
-                    if val:IsA("NumberValue") or val:IsA("IntValue") then
-                        val.Value = 999999999999
-                    elseif val:IsA("StringValue") then
-                        val.Value = "$999.9B"
-                    end
-                end
-            end
-        end
-    end)
-end
+-- ==============================================================================
+-- 3. GAMEPLAY AUTOMATION SYSTEMS
+-- ==============================================================================
 
--- 1. INFINITE CASH (+999B) CONTINUOUS ENGINE
-task.spawn(function()
-    while true do
-        task.wait(0.12)
-        if Toggles.InfiniteCash then
-            AddCashInstant()
-        end
+-- Egg Scoring Evaluator
+local function CalculateEggValue(egg)
+    local n = egg.Name:lower()
+    local val = 1
+    if n:find("secret") or n:find("celestial") then val = 100
+    elseif n:find("rainbow") or n:find("diamond") then val = 80
+    elseif n:find("legendary") or n:find("mythic") then val = 60
+    elseif n:find("golden") or n:find("gold") then val = 40
+    elseif n:find("rare") or n:find("epic") then val = 25
     end
-end)
-
--- Egg Finder & Rarity Evaluator
-local function GetEggRarityScore(eggInstance)
-    local name = string.lower(eggInstance.Name)
-    local score = 1
-    if string.find(name, "secret") or string.find(name, "celestial") then
-        score = 100
-    elseif string.find(name, "rainbow") or string.find(name, "diamond") then
-        score = 80
-    elseif string.find(name, "legendary") or string.find(name, "mythic") then
-        score = 60
-    elseif string.find(name, "golden") or string.find(name, "gold") then
-        score = 40
-    elseif string.find(name, "rare") or string.find(name, "epic") then
-        score = 25
-    end
-    local part = eggInstance:IsA("BasePart") and eggInstance or eggInstance:FindFirstChildWhichIsA("BasePart")
+    local part = egg:IsA("BasePart") and egg or egg:FindFirstChildWhichIsA("BasePart")
     if part then
-        score = score + math.floor(part.Position.Y / 20)
+        val = val + math.floor(part.Position.Y / 15)
     end
-    return score
+    return val
 end
 
-local function GetAllEggs()
-    local eggs = {}
-    local function Scan(parent)
-        if not parent then return end
-        for _, obj in ipairs(parent:GetChildren()) do
-            local lowName = string.lower(obj.Name)
-            if string.find(lowName, "egg") or string.find(lowName, "nest") or string.find(lowName, "steal") then
+-- Discover All Active Eggs
+local function ScanWorldEggs()
+    local list = {}
+    local function Collect(folder)
+        if not folder then return end
+        for _, obj in ipairs(folder:GetChildren()) do
+            local ln = obj.Name:lower()
+            if ln:find("egg") or ln:find("nest") or ln:find("steal") then
                 local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
-                local part = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
-                if part or prompt then
-                    table.insert(eggs, {
-                        Instance = obj,
-                        Part = part or (prompt and prompt.Parent:IsA("BasePart") and prompt.Parent),
+                local bp = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
+                if bp or prompt then
+                    table.insert(list, {
+                        Object = obj,
+                        Part = bp or (prompt and prompt.Parent:IsA("BasePart") and prompt.Parent),
                         Prompt = prompt,
-                        RarityScore = GetEggRarityScore(obj),
+                        Score = CalculateEggValue(obj)
                     })
                 end
             end
-            Scan(obj)
+            Collect(obj)
         end
     end
 
-    local eggsFolder = Workspace:FindFirstChild("Eggs") or Workspace:FindFirstChild("EggSpawns") or Workspace:FindFirstChild("Nests") or Workspace:FindFirstChild("Map")
-    if eggsFolder then
-        Scan(eggsFolder)
-    else
-        Scan(Workspace)
+    local searchRoots = {
+        Workspace:FindFirstChild("Eggs"),
+        Workspace:FindFirstChild("EggSpawns"),
+        Workspace:FindFirstChild("Nests"),
+        Workspace:FindFirstChild("Map"),
+        Workspace
+    }
+    for _, root in ipairs(searchRoots) do
+        if root then
+            Collect(root)
+            if #list > 0 then break end
+        end
     end
-    return eggs
+    return list
 end
 
--- Egg Stealing Routine
-local function ExecuteSteal(eggData, returnToBase)
+-- Steal Action Runner
+local function ExecuteStealCycle(eggInfo)
     local root = GetRootPart()
-    if not root or not eggData then return end
-    local targetPart = eggData.Part or (eggData.Prompt and eggData.Prompt.Parent)
-    if not targetPart then return end
+    if not root or not eggInfo then return end
+    local target = eggInfo.Part or (eggInfo.Prompt and eggInfo.Prompt.Parent)
+    if not target then return end
 
-    local targetPos = targetPart.Position + Vector3.new(0, 3, 0)
     root.AssemblyLinearVelocity = Vector3.zero
-    root.CFrame = CFrame.new(targetPos)
+    root.CFrame = target.CFrame + Vector3.new(0, 3, 0)
     task.wait(0.12)
-    
-    if eggData.Prompt then
-        TriggerPrompt(eggData.Prompt)
+
+    if eggInfo.Prompt then
+        FastTriggerPrompt(eggInfo.Prompt)
     end
-    SafeTouch(targetPart)
+    DirectTouch(target)
 
-    FireRemotesByKeywords({"steal", "grabegg", "takeegg"}, {eggData.Instance, eggData.Instance.Name})
+    DispatchRemotes({"steal", "grabegg", "takeegg"}, {eggInfo.Object, eggInfo.Object.Name})
+    task.wait(0.14)
 
-    task.wait(0.15)
-    
-    if returnToBase then
-        local basePos = GetBasePosition()
-        root.AssemblyLinearVelocity = Vector3.zero
-        root.CFrame = CFrame.new(basePos)
-        task.wait(0.2)
-        
-        local myPlot = FindMyPlot()
-        if myPlot then
-            for _, prompt in ipairs(myPlot:GetDescendants()) do
-                if prompt:IsA("ProximityPrompt") then
-                    local pName = string.lower(prompt.ObjectText .. prompt.ActionText .. prompt.Name)
-                    if string.find(pName, "place") or string.find(pName, "deposit") or string.find(pName, "drop") or string.find(pName, "hatch") then
-                        TriggerPrompt(prompt)
-                    end
+    -- Deliver egg back to base plot
+    local baseCF = GetBaseCFrame()
+    root.AssemblyLinearVelocity = Vector3.zero
+    root.CFrame = baseCF
+    task.wait(0.18)
+
+    local plot = LocatePlot()
+    if plot then
+        for _, p in ipairs(plot:GetDescendants()) do
+            if p:IsA("ProximityPrompt") then
+                local pText = (p.ObjectText .. " " .. p.ActionText .. " " .. p.Name):lower()
+                if pText:find("place") or pText:find("deposit") or pText:find("drop") or pText:find("hatch") then
+                    FastTriggerPrompt(p)
                 end
             end
         end
     end
 end
 
--- 2. Auto Steal Egg
+-- 1. Auto Steal Egg Routine
 task.spawn(function()
     while true do
         task.wait(0.3)
-        if Toggles.AutoStealEgg then
-            local eggs = GetAllEggs()
-            if #eggs > 0 then
-                for _, egg in ipairs(eggs) do
-                    if not Toggles.AutoStealEgg then break end
-                    ExecuteSteal(egg, true)
-                    task.wait(0.5)
-                end
+        if HubState.AutoStealEgg then
+            local eggs = ScanWorldEggs()
+            for _, egg in ipairs(eggs) do
+                if not HubState.AutoStealEgg then break end
+                ExecuteStealCycle(egg)
+                task.wait(0.4)
             end
         end
     end
 end)
 
--- 3. Auto Steal Rare Egg
+-- 2. Auto Steal Rare Egg Routine
 task.spawn(function()
     while true do
         task.wait(0.35)
-        if Toggles.AutoStealRareEgg then
-            local eggs = GetAllEggs()
+        if HubState.AutoStealRareEgg then
+            local eggs = ScanWorldEggs()
             if #eggs > 0 then
-                table.sort(eggs, function(a, b)
-                    return a.RarityScore > b.RarityScore
-                end)
-                local bestEgg = eggs[1]
-                if bestEgg then
-                    ExecuteSteal(bestEgg, true)
-                    task.wait(0.6)
-                end
-            end
-        end
-    end
-end)
-
--- 4. Auto Steal Nearest Egg
-task.spawn(function()
-    while true do
-        task.wait(0.3)
-        if Toggles.AutoStealNearestEgg then
-            local root = GetRootPart()
-            if root then
-                local eggs = GetAllEggs()
-                local nearestEgg = nil
-                local shortestDist = math.huge
-                for _, egg in ipairs(eggs) do
-                    local part = egg.Part or (egg.Prompt and egg.Prompt.Parent)
-                    if part then
-                        local dist = (root.Position - part.Position).Magnitude
-                        if dist < shortestDist then
-                            shortestDist = dist
-                            nearestEgg = egg
-                        end
-                    end
-                end
-                if nearestEgg then
-                    ExecuteSteal(nearestEgg, true)
+                table.sort(eggs, function(a, b) return a.Score > b.Score end)
+                local rarest = eggs[1]
+                if rarest then
+                    ExecuteStealCycle(rarest)
                     task.wait(0.5)
                 end
             end
@@ -451,53 +364,77 @@ task.spawn(function()
     end
 end)
 
--- 5. Fast Climb on Beanstalk
+-- 3. Auto Steal Nearest Egg Routine
+task.spawn(function()
+    while true do
+        task.wait(0.3)
+        if HubState.AutoStealNearestEgg then
+            local root = GetRootPart()
+            if root then
+                local eggs = ScanWorldEggs()
+                local closest = nil
+                local minDistance = math.huge
+                for _, egg in ipairs(eggs) do
+                    local p = egg.Part or (egg.Prompt and egg.Prompt.Parent)
+                    if p then
+                        local d = (root.Position - p.Position).Magnitude
+                        if d < minDistance then
+                            minDistance = d
+                            closest = egg
+                        end
+                    end
+                end
+                if closest then
+                    ExecuteStealCycle(closest)
+                    task.wait(0.45)
+                end
+            end
+        end
+    end
+end)
+
+-- 4. Fast Climb on Beanstalk (Smooth Summit Lift)
 task.spawn(function()
     while true do
         task.wait(0.04)
-        if Toggles.FastClimbBeanstalk then
+        if HubState.FastClimbBeanstalk then
             local root = GetRootPart()
             local hum = GetHumanoid()
             if root and hum then
                 root.AssemblyLinearVelocity = Vector3.new(0, 160, 0)
-                root.CFrame = root.CFrame + Vector3.new(0, 5, 0)
+                root.CFrame = root.CFrame + Vector3.new(0, 4.5, 0)
                 hum:ChangeState(Enum.HumanoidStateType.Freefall)
             end
         end
     end
 end)
 
--- 6. SUPER BEANSTALK GROW ENGINE
+-- 5. Infinite Long Beanstalk (Skyward Growth Engine)
 task.spawn(function()
     while true do
-        task.wait(0.15)
-        if Toggles.InfiniteBeanstalk then
-            local myPlot = FindMyPlot()
-            
-            FireRemotesByKeywords(
+        task.wait(0.2)
+        if HubState.InfiniteBeanstalk then
+            DispatchRemotes(
                 {"grow", "beanstalk", "water", "fertilize", "feed", "upgradebeanstalk", "growth", "plantgrow", "buygrowth"},
                 {1, 10, 100, 1000, true, "Beanstalk", "Grow", "Max"}
             )
-            
-            if myPlot then
-                for _, obj in ipairs(myPlot:GetDescendants()) do
-                    local name = string.lower(obj.Name)
-                    local parentName = obj.Parent and string.lower(obj.Parent.Name) or ""
-                    local isGrowTarget = string.find(name, "grow") or string.find(name, "beanstalk") or string.find(name, "water") or string.find(name, "feed") or string.find(name, "stalk") or string.find(name, "plant") or string.find(parentName, "grow") or string.find(parentName, "beanstalk")
-                    
-                    if isGrowTarget then
-                        if obj:IsA("ProximityPrompt") then TriggerPrompt(obj)
-                        elseif obj:IsA("ClickDetector") then TriggerClickDetector(obj)
-                        elseif obj:IsA("BasePart") then SafeTouch(obj) end
+            local plot = LocatePlot()
+            if plot then
+                for _, obj in ipairs(plot:GetDescendants()) do
+                    local n = obj.Name:lower()
+                    local pn = obj.Parent and obj.Parent.Name:lower() or ""
+                    if n:find("grow") or n:find("beanstalk") or n:find("water") or n:find("feed") or pn:find("grow") then
+                        if obj:IsA("ProximityPrompt") then FastTriggerPrompt(obj)
+                        elseif obj:IsA("ClickDetector") and fireclickdetector then fireclickdetector(obj)
+                        elseif obj:IsA("BasePart") then DirectTouch(obj) end
                     end
                 end
-                
-                for _, obj in ipairs(myPlot:GetDescendants()) do
+                for _, obj in ipairs(plot:GetDescendants()) do
                     if obj:IsA("BasePart") then
-                        local name = string.lower(obj.Name)
-                        if string.find(name, "beanstalk") or string.find(name, "stem") or string.find(name, "stalk") or string.find(name, "vine") or string.find(name, "trunk") then
+                        local n = obj.Name:lower()
+                        if n:find("beanstalk") or n:find("stem") or n:find("stalk") or n:find("trunk") or n:find("vine") then
                             pcall(function()
-                                obj.Size = Vector3.new(math.max(obj.Size.X, 12), math.max(obj.Size.Y, 2000), math.max(obj.Size.Z, 12))
+                                obj.Size = Vector3.new(math.max(obj.Size.X, 14), math.max(obj.Size.Y, 2500), math.max(obj.Size.Z, 14))
                                 obj.CanCollide = true
                             end)
                         end
@@ -508,189 +445,132 @@ task.spawn(function()
     end
 end)
 
--- 7. SUPER TREADMILL UNLOCK & TRAIN ENGINE
+-- 6. Auto Unlock & Train Treadmill Engine
 task.spawn(function()
     while true do
         task.wait(0.25)
-        if Toggles.AutoUnlockTreadmill then
-            local myPlot = FindMyPlot()
-            
-            FireRemotesByKeywords(
+        if HubState.AutoUnlockTreadmill then
+            DispatchRemotes(
                 {"treadmill", "unlocktreadmill", "buytreadmill", "upgradespeed", "speedupgrade", "unlockspeed", "buyspeed", "treadmilltier", "train"},
                 {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, true, "Max", "Treadmill"}
             )
-            
-            local searchAreas = {myPlot, Workspace:FindFirstChild("Tycoons"), Workspace:FindFirstChild("Plots")}
-            for _, area in ipairs(searchAreas) do
-                if area then
-                    for _, obj in ipairs(area:GetDescendants()) do
-                        local name = string.lower(obj.Name)
-                        local parentName = obj.Parent and string.lower(obj.Parent.Name) or ""
-                        local isTreadmillTarget = string.find(name, "treadmill") or string.find(name, "speed") or string.find(name, "runner") or string.find(name, "track") or string.find(name, "unlock") or string.find(parentName, "treadmill") or string.find(parentName, "speed")
-                        
-                        if isTreadmillTarget then
-                            if obj:IsA("ProximityPrompt") then TriggerPrompt(obj)
-                            elseif obj:IsA("ClickDetector") then TriggerClickDetector(obj)
-                            elseif obj:IsA("BasePart") then SafeTouch(obj) end
+            local plot = LocatePlot()
+            local zones = {plot, Workspace:FindFirstChild("Tycoons"), Workspace:FindFirstChild("Plots")}
+            for _, z in ipairs(zones) do
+                if z then
+                    for _, obj in ipairs(z:GetDescendants()) do
+                        local n = obj.Name:lower()
+                        if n:find("treadmill") or n:find("speed") or n:find("runner") or n:find("track") then
+                            if obj:IsA("ProximityPrompt") then FastTriggerPrompt(obj)
+                            elseif obj:IsA("ClickDetector") and fireclickdetector then fireclickdetector(obj)
+                            elseif obj:IsA("BasePart") then DirectTouch(obj) end
                         end
                     end
                 end
             end
-            
-            pcall(function()
-                for _, btn in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
-                    if btn:IsA("TextButton") or btn:IsA("ImageButton") then
-                        local text = string.lower(btn.Name .. " " .. (btn:IsA("TextButton") and btn.Text or ""))
-                        if string.find(text, "treadmill") or string.find(text, "unlock speed") or string.find(text, "buy speed") or string.find(text, "upgrade speed") then
-                            ClickGuiButton(btn)
-                        end
-                    end
-                end
-            end)
         end
     end
 end)
 
--- 8. Auto Upgrade Base
+-- 7. Auto Upgrade Base (Tycoon Plot Upgrades)
 task.spawn(function()
     while true do
         task.wait(0.3)
-        if Toggles.AutoUpgradeBase then
-            local myPlot = FindMyPlot()
-            if myPlot then
-                for _, obj in ipairs(myPlot:GetDescendants()) do
-                    local name = string.lower(obj.Name)
-                    local parentName = obj.Parent and string.lower(obj.Parent.Name) or ""
-                    if string.find(name, "upgrade") or string.find(name, "buy") or string.find(name, "button") or string.find(name, "pad") or string.find(parentName, "buttons") or string.find(parentName, "upgrades") then
-                        if obj:IsA("ProximityPrompt") then TriggerPrompt(obj)
-                        elseif obj:IsA("ClickDetector") then TriggerClickDetector(obj)
-                        elseif obj:IsA("BasePart") then SafeTouch(obj) end
+        if HubState.AutoUpgradeBase then
+            local plot = LocatePlot()
+            if plot then
+                for _, obj in ipairs(plot:GetDescendants()) do
+                    local n = obj.Name:lower()
+                    if n:find("upgrade") or n:find("buy") or n:find("button") or n:find("pad") then
+                        if obj:IsA("ProximityPrompt") then FastTriggerPrompt(obj)
+                        elseif obj:IsA("ClickDetector") and fireclickdetector then fireclickdetector(obj)
+                        elseif obj:IsA("BasePart") then DirectTouch(obj) end
                     end
                 end
             end
-            
-            FireRemotesByKeywords({"upgrade", "buybase", "purchase", "tycoonbuy", "buybutton", "plotupgrade"}, {true, 1, "Max"})
+            DispatchRemotes({"upgrade", "buybase", "purchase", "tycoonbuy", "buybutton", "plotupgrade"}, {true, 1, "Max"})
         end
     end
 end)
 
--- 9. Auto Hatch Egg
+-- 8. Auto Hatch Egg
 task.spawn(function()
     while true do
-        task.wait(0.25)
-        if Toggles.AutoHatchEgg then
-            local myPlot = FindMyPlot()
-            local searchAreas = {myPlot, Workspace}
-            for _, area in ipairs(searchAreas) do
-                if area then
-                    for _, prompt in ipairs(area:GetDescendants()) do
-                        if prompt:IsA("ProximityPrompt") then
-                            local text = string.lower(prompt.ObjectText .. " " .. prompt.ActionText .. " " .. prompt.Name)
-                            if string.find(text, "hatch") or string.find(text, "open") or string.find(text, "claim") or string.find(text, "crack") or string.find(text, "egg") or string.find(text, "incubator") or string.find(text, "pet") then
-                                TriggerPrompt(prompt)
-                            end
+        task.wait(0.3)
+        if HubState.AutoHatchEgg then
+            local plot = LocatePlot()
+            if plot then
+                for _, p in ipairs(plot:GetDescendants()) do
+                    if p:IsA("ProximityPrompt") then
+                        local t = (p.ObjectText .. " " .. p.ActionText .. " " .. p.Name):lower()
+                        if t:find("hatch") or t:find("open") or t:find("crack") or t:find("egg") or t:find("incubator") then
+                            FastTriggerPrompt(p)
                         end
                     end
                 end
             end
-            
-            FireRemotesByKeywords(
+            DispatchRemotes(
                 {"hatch", "openegg", "crackegg", "claimpet", "placeegg", "egghatch", "open"},
-                {1, "1", true, "Common", "Egg", "Basic", "Golden"}
+                {1, "1", true, "Common", "Basic", "Golden"}
             )
-            
-            if myPlot then
-                for _, obj in ipairs(myPlot:GetDescendants()) do
-                    if obj:IsA("BasePart") then
-                        local name = string.lower(obj.Name)
-                        if string.find(name, "hatch") or string.find(name, "incubator") or string.find(name, "nest") or string.find(name, "eggslot") then
-                            SafeTouch(obj)
-                        end
-                    end
-                end
-            end
-            
-            pcall(function()
-                for _, btn in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
-                    if btn:IsA("TextButton") or btn:IsA("ImageButton") then
-                        local text = string.lower(btn.Name .. " " .. (btn:IsA("TextButton") and btn.Text or ""))
-                        if string.find(text, "hatch") or string.find(text, "claim") or string.find(text, "open") or string.find(text, "skip") then
-                            ClickGuiButton(btn)
-                        end
-                    end
-                end
-            end)
         end
     end
 end)
 
--- 10. Auto Rebirth
+-- 9. Auto Rebirth
 task.spawn(function()
     while true do
-        task.wait(0.35)
-        if Toggles.AutoRebirth then
-            FireRemotesByKeywords(
+        task.wait(0.4)
+        if HubState.AutoRebirth then
+            DispatchRemotes(
                 {"rebirth", "prestige", "ascend", "dorebirth", "requestrebirth", "rebirthsystem"},
                 {1, true, "1"}
             )
-            
-            local myPlot = FindMyPlot()
-            local searchAreas = {myPlot, Workspace}
-            for _, area in ipairs(searchAreas) do
-                if area then
-                    for _, obj in ipairs(area:GetDescendants()) do
-                        local name = string.lower(obj.Name)
-                        if string.find(name, "rebirth") or string.find(name, "prestige") then
-                            if obj:IsA("ProximityPrompt") then TriggerPrompt(obj)
-                            elseif obj:IsA("ClickDetector") then TriggerClickDetector(obj)
-                            elseif obj:IsA("BasePart") then SafeTouch(obj) end
-                        end
+            local plot = LocatePlot()
+            if plot then
+                for _, obj in ipairs(plot:GetDescendants()) do
+                    local n = obj.Name:lower()
+                    if n:find("rebirth") or n:find("prestige") then
+                        if obj:IsA("ProximityPrompt") then FastTriggerPrompt(obj)
+                        elseif obj:IsA("ClickDetector") and fireclickdetector then fireclickdetector(obj)
+                        elseif obj:IsA("BasePart") then DirectTouch(obj) end
                     end
                 end
             end
-            
-            pcall(function()
-                for _, btn in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
-                    if btn:IsA("TextButton") or btn:IsA("ImageButton") then
-                        local text = string.lower(btn.Name .. " " .. (btn:IsA("TextButton") and btn.Text or ""))
-                        if string.find(text, "rebirth") or string.find(text, "prestige") or string.find(text, "confirm") then
-                            ClickGuiButton(btn)
-                        end
-                    end
-                end
-            end)
         end
     end
 end)
 
--- 11. Auto Claim All Rewards
+-- 10. Auto Claim All Rewards
 task.spawn(function()
     while true do
-        task.wait(1)
-        if Toggles.AutoClaimRewards then
-            FireRemotesByKeywords(
+        task.wait(1.2)
+        if HubState.AutoClaimRewards then
+            DispatchRemotes(
                 {"claim", "reward", "gift", "daily", "spin", "chest", "playtime"},
-                {1, "Daily", "Playtime", "Gift1", "Gift2", "Gift3", "Free", true}
+                {1, "Daily", "Playtime", "Gift1", "Gift2", "Free", true}
             )
-            
             for _, obj in ipairs(Workspace:GetDescendants()) do
-                local name = string.lower(obj.Name)
-                if string.find(name, "reward") or string.find(name, "chest") or string.find(name, "gift") then
-                    if obj:IsA("ProximityPrompt") then TriggerPrompt(obj)
-                    elseif obj:IsA("ClickDetector") then TriggerClickDetector(obj)
-                    elseif obj:IsA("BasePart") then SafeTouch(obj) end
+                local n = obj.Name:lower()
+                if n:find("reward") or n:find("chest") or n:find("gift") then
+                    if obj:IsA("ProximityPrompt") then FastTriggerPrompt(obj)
+                    elseif obj:IsA("ClickDetector") and fireclickdetector then fireclickdetector(obj)
+                    elseif obj:IsA("BasePart") then DirectTouch(obj) end
                 end
             end
         end
     end
 end)
 
--- Movement Helpers
-local function UpdateWalkSpeed()
+-- ==============================================================================
+-- 4. MOVEMENT ENGINES
+-- ==============================================================================
+
+local function ApplyWalkSpeed()
     local hum = GetHumanoid()
     if hum then
-        if Toggles.WalkSpeedBoost then
-            hum.WalkSpeed = Sliders.WalkSpeed
+        if HubState.WalkSpeedBoost then
+            hum.WalkSpeed = Settings.WalkSpeed
         else
             hum.WalkSpeed = 16
         end
@@ -698,91 +578,79 @@ local function UpdateWalkSpeed()
 end
 
 RunService.RenderStepped:Connect(function()
-    if Toggles.WalkSpeedBoost then
+    if HubState.WalkSpeedBoost then
         local hum = GetHumanoid()
-        if hum and hum.WalkSpeed ~= Sliders.WalkSpeed then
-            hum.WalkSpeed = Sliders.WalkSpeed
+        if hum and hum.WalkSpeed ~= Settings.WalkSpeed then
+            hum.WalkSpeed = Settings.WalkSpeed
         end
     end
 end)
 
 UserInputService.JumpRequest:Connect(function()
-    if Toggles.InfiniteJump then
+    if HubState.InfiniteJump then
         local hum = GetHumanoid()
         local root = GetRootPart()
         if hum and root then
             hum:ChangeState(Enum.HumanoidStateType.Jumping)
-            root.AssemblyLinearVelocity = Vector3.new(root.AssemblyLinearVelocity.X, Sliders.JumpPower, root.AssemblyLinearVelocity.Z)
+            root.AssemblyLinearVelocity = Vector3.new(root.AssemblyLinearVelocity.X, Settings.JumpPower, root.AssemblyLinearVelocity.Z)
         end
     end
 end)
 
-local function StartFlying()
+local function EnableFlight()
     local root = GetRootPart()
     if not root then return end
-    
-    Flying = true
-    FlyBodyVel = Instance.new("BodyVelocity")
-    FlyBodyVel.Velocity = Vector3.new(0, 0, 0)
-    FlyBodyVel.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-    FlyBodyVel.Parent = root
-    
-    FlyBodyGyro = Instance.new("BodyGyro")
-    FlyBodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
-    FlyBodyGyro.P = 9e4
-    FlyBodyGyro.CFrame = root.CFrame
-    FlyBodyGyro.Parent = root
+
+    FlyingActive = true
+    FlyVelocity = Instance.new("BodyVelocity")
+    FlyVelocity.Velocity = Vector3.zero
+    FlyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+    FlyVelocity.Parent = root
+
+    FlyGyro = Instance.new("BodyGyro")
+    FlyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+    FlyGyro.P = 9e4
+    FlyGyro.CFrame = root.CFrame
+    FlyGyro.Parent = root
 
     task.spawn(function()
-        while Flying and Toggles.FlyMode do
-            local moveDir = Vector3.new(0, 0, 0)
-            if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-                moveDir = moveDir + Camera.CFrame.LookVector
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-                moveDir = moveDir - Camera.CFrame.LookVector
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-                moveDir = moveDir - Camera.CFrame.RightVector
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-                moveDir = moveDir + Camera.CFrame.RightVector
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-                moveDir = moveDir + Vector3.new(0, 1, 0)
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
-                moveDir = moveDir - Vector3.new(0, 1, 0)
-            end
+        while FlyingActive and HubState.FlyMode do
+            local move = Vector3.zero
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then move = move + Camera.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then move = move - Camera.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then move = move - Camera.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then move = move + Camera.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move = move + Vector3.new(0, 1, 0) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then move = move - Vector3.new(0, 1, 0) end
 
             local hum = GetHumanoid()
             if hum and hum.MoveDirection.Magnitude > 0 then
-                moveDir = moveDir + (Camera.CFrame:VectorToWorldSpace(hum.MoveDirection))
+                move = move + (Camera.CFrame:VectorToWorldSpace(hum.MoveDirection))
             end
 
-            if moveDir.Magnitude > 0 then
-                FlyBodyVel.Velocity = moveDir.Unit * Sliders.FlySpeed
+            if move.Magnitude > 0 then
+                FlyVelocity.Velocity = move.Unit * Settings.FlySpeed
             else
-                FlyBodyVel.Velocity = Vector3.new(0, 0, 0)
+                FlyVelocity.Velocity = Vector3.zero
             end
 
-            FlyBodyGyro.CFrame = Camera.CFrame
+            FlyGyro.CFrame = Camera.CFrame
             RunService.RenderStepped:Wait()
         end
-        if FlyBodyVel then FlyBodyVel:Destroy() FlyBodyVel = nil end
-        if FlyBodyGyro then FlyBodyGyro:Destroy() FlyBodyGyro = nil end
-        Flying = false
+        if FlyVelocity then FlyVelocity:Destroy() FlyVelocity = nil end
+        if FlyGyro then FlyGyro:Destroy() FlyGyro = nil end
+        FlyingActive = false
     end)
 end
 
-local function StopFlying()
-    Flying = false
-    if FlyBodyVel then FlyBodyVel:Destroy() FlyBodyVel = nil end
-    if FlyBodyGyro then FlyBodyGyro:Destroy() FlyBodyGyro = nil end
+local function DisableFlight()
+    FlyingActive = false
+    if FlyVelocity then FlyVelocity:Destroy() FlyVelocity = nil end
+    if FlyGyro then FlyGyro:Destroy() FlyGyro = nil end
 end
 
 -- ==============================================================================
--- JUNEJO OFFICIAL UI 1 - CLASSIC MATTE DARK INTERFACE
+-- 5. OFFICIAL JUNEJO UI 1 - CLASSIC MATTE DARK INTERFACE
 -- ==============================================================================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoHubUI_GrowBeanstalk"
@@ -793,11 +661,11 @@ ScreenGui.DisplayOrder = 999999
 local guiParent = (gethui and gethui()) or CoreGui or LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.Parent = guiParent
 
--- Main Window Frame (Matte Black Compact Container)
+-- Main Container (Classic Matte Dark 280x305px)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 310)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -155)
+MainFrame.Size = UDim2.new(0, 280, 0, 305)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -152)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -841,7 +709,7 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- 1. Header Frame
+-- Header Frame
 local Header = Instance.new("Frame")
 Header.Name = "Header"
 Header.Size = UDim2.new(1, 0, 0, 32)
@@ -852,7 +720,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(1, -40, 1, 0)
 TitleLabel.Position = UDim2.new(0, 12, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = GameName
+TitleLabel.Text = GameTitle
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleLabel.TextSize = 11
 TitleLabel.Font = Enum.Font.GothamBold
@@ -870,11 +738,11 @@ CloseButton.Font = Enum.Font.GothamBold
 CloseButton.Parent = Header
 
 CloseButton.MouseButton1Click:Connect(function()
-    StopFlying()
+    DisableFlight()
     ScreenGui:Destroy()
 end)
 
--- Header Separation Line
+-- Header Divider Line
 local HeaderLine = Instance.new("Frame")
 HeaderLine.Size = UDim2.new(1, -24, 0, 1)
 HeaderLine.Position = UDim2.new(0, 12, 0, 32)
@@ -882,7 +750,7 @@ HeaderLine.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
 HeaderLine.BorderSizePixel = 0
 HeaderLine.Parent = MainFrame
 
--- 2. Scrollable Content Container
+-- Scrollable Features Container
 local ContentFrame = Instance.new("ScrollingFrame")
 ContentFrame.Name = "ContentFrame"
 ContentFrame.Size = UDim2.new(1, -20, 1, -74)
@@ -900,44 +768,8 @@ UIList.SortOrder = Enum.SortOrder.LayoutOrder
 UIList.Padding = UDim.new(0, 4)
 UIList.Parent = ContentFrame
 
--- Helper Function: Action Button (Official Junejo Standard)
-local function AddActionButton(text, callback)
-    local BtnFrame = Instance.new("Frame")
-    BtnFrame.Size = UDim2.new(1, 0, 0, 26)
-    BtnFrame.BackgroundTransparency = 1
-    BtnFrame.Parent = ContentFrame
-
-    local Btn = Instance.new("TextButton")
-    Btn.Size = UDim2.new(1, 0, 1, 0)
-    Btn.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-    Btn.BorderSizePixel = 0
-    Btn.AutoButtonColor = false
-    Btn.Text = text
-    Btn.TextColor3 = Color3.fromRGB(240, 240, 240)
-    Btn.TextSize = 11
-    Btn.Font = Enum.Font.GothamBold
-    Btn.Parent = BtnFrame
-
-    local BtnCorner = Instance.new("UICorner")
-    BtnCorner.CornerRadius = UDim.new(0, 5)
-    BtnCorner.Parent = Btn
-
-    local BtnStroke = Instance.new("UIStroke")
-    BtnStroke.Color = Color3.fromRGB(45, 45, 55)
-    BtnStroke.Thickness = 1
-    BtnStroke.Parent = Btn
-
-    Btn.MouseButton1Click:Connect(function()
-        TweenService:Create(Btn, TweenInfo.new(0.08), { BackgroundColor3 = Color3.fromRGB(40, 40, 50) }):Play()
-        task.delay(0.12, function()
-            TweenService:Create(Btn, TweenInfo.new(0.12), { BackgroundColor3 = Color3.fromRGB(27, 27, 32) }):Play()
-        end)
-        if callback then callback() end
-    end)
-end
-
--- Helper Function: Flat Toggle Row
-local function AddToggleRow(text, configKey, callback)
+-- Row Builder: Standard Checkbox Toggle Row
+local function AddToggleRow(label, stateKey, callback)
     local Row = Instance.new("Frame")
     Row.Size = UDim2.new(1, 0, 0, 23)
     Row.BackgroundTransparency = 1
@@ -950,16 +782,16 @@ local function AddToggleRow(text, configKey, callback)
     RowBtn.ZIndex = 5
     RowBtn.Parent = Row
 
-    local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(1, -28, 1, 0)
-    Label.Position = UDim2.new(0, 4, 0, 0)
-    Label.BackgroundTransparency = 1
-    Label.Text = text
-    Label.TextColor3 = Color3.fromRGB(240, 240, 240)
-    Label.TextSize = 12
-    Label.Font = Enum.Font.GothamBold
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.Parent = Row
+    local Text = Instance.new("TextLabel")
+    Text.Size = UDim2.new(1, -28, 1, 0)
+    Text.Position = UDim2.new(0, 4, 0, 0)
+    Text.BackgroundTransparency = 1
+    Text.Text = label
+    Text.TextColor3 = Color3.fromRGB(240, 240, 240)
+    Text.TextSize = 12
+    Text.Font = Enum.Font.GothamBold
+    Text.TextXAlignment = Enum.TextXAlignment.Left
+    Text.Parent = Row
 
     local CheckBox = Instance.new("Frame")
     CheckBox.Size = UDim2.new(0, 18, 0, 18)
@@ -981,7 +813,7 @@ local function AddToggleRow(text, configKey, callback)
     CheckMark.Size = UDim2.new(0, 10, 0, 10)
     CheckMark.Position = UDim2.new(0.5, -5, 0.5, -5)
     CheckMark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    CheckMark.BackgroundTransparency = Toggles[configKey] and 0 or 1
+    CheckMark.BackgroundTransparency = HubState[stateKey] and 0 or 1
     CheckMark.BorderSizePixel = 0
     CheckMark.Parent = CheckBox
 
@@ -990,14 +822,14 @@ local function AddToggleRow(text, configKey, callback)
     MarkCorner.Parent = CheckMark
 
     RowBtn.MouseButton1Click:Connect(function()
-        Toggles[configKey] = not Toggles[configKey]
-        CheckMark.BackgroundTransparency = Toggles[configKey] and 0 or 1
-        if callback then callback(Toggles[configKey]) end
+        HubState[stateKey] = not HubState[stateKey]
+        CheckMark.BackgroundTransparency = HubState[stateKey] and 0 or 1
+        if callback then callback(HubState[stateKey]) end
     end)
 end
 
--- Helper Function: Dual Control Stepper Pill Row
-local function AddStepperRow(text, toggleKey, valKey, minVal, maxVal, step, onToggleCallback, onChangeCallback)
+-- Row Builder: Dual Control Stepper Pill Row
+local function AddStepperRow(label, toggleKey, valKey, minVal, maxVal, step, onToggleCallback, onChangeCallback)
     local Row = Instance.new("Frame")
     Row.Size = UDim2.new(1, 0, 0, 23)
     Row.BackgroundTransparency = 1
@@ -1010,16 +842,16 @@ local function AddStepperRow(text, toggleKey, valKey, minVal, maxVal, step, onTo
     ToggleBtn.ZIndex = 5
     ToggleBtn.Parent = Row
 
-    local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(1, -28, 1, 0)
-    Label.Position = UDim2.new(0, 4, 0, 0)
-    Label.BackgroundTransparency = 1
-    Label.Text = text
-    Label.TextColor3 = Color3.fromRGB(240, 240, 240)
-    Label.TextSize = 12
-    Label.Font = Enum.Font.GothamBold
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.Parent = ToggleBtn
+    local Text = Instance.new("TextLabel")
+    Text.Size = UDim2.new(1, -28, 1, 0)
+    Text.Position = UDim2.new(0, 4, 0, 0)
+    Text.BackgroundTransparency = 1
+    Text.Text = label
+    Text.TextColor3 = Color3.fromRGB(240, 240, 240)
+    Text.TextSize = 12
+    Text.Font = Enum.Font.GothamBold
+    Text.TextXAlignment = Enum.TextXAlignment.Left
+    Text.Parent = ToggleBtn
 
     local CheckBox = Instance.new("Frame")
     CheckBox.Size = UDim2.new(0, 18, 0, 18)
@@ -1041,7 +873,7 @@ local function AddStepperRow(text, toggleKey, valKey, minVal, maxVal, step, onTo
     CheckMark.Size = UDim2.new(0, 10, 0, 10)
     CheckMark.Position = UDim2.new(0.5, -5, 0.5, -5)
     CheckMark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    CheckMark.BackgroundTransparency = Toggles[toggleKey] and 0 or 1
+    CheckMark.BackgroundTransparency = HubState[toggleKey] and 0 or 1
     CheckMark.BorderSizePixel = 0
     CheckMark.Parent = CheckBox
 
@@ -1074,15 +906,15 @@ local function AddStepperRow(text, toggleKey, valKey, minVal, maxVal, step, onTo
     MinusBtn.Font = Enum.Font.GothamBold
     MinusBtn.Parent = ControlFrame
 
-    local ValDisplay = Instance.new("TextLabel")
-    ValDisplay.Size = UDim2.new(1, -44, 1, 0)
-    ValDisplay.Position = UDim2.new(0, 22, 0, 0)
-    ValDisplay.BackgroundTransparency = 1
-    ValDisplay.Text = tostring(Sliders[valKey])
-    ValDisplay.TextColor3 = Color3.fromRGB(255, 255, 255)
-    ValDisplay.TextSize = 11
-    ValDisplay.Font = Enum.Font.GothamBold
-    ValDisplay.Parent = ControlFrame
+    local Display = Instance.new("TextLabel")
+    Display.Size = UDim2.new(1, -44, 1, 0)
+    Display.Position = UDim2.new(0, 22, 0, 0)
+    Display.BackgroundTransparency = 1
+    Display.Text = tostring(Settings[valKey])
+    Display.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Display.TextSize = 11
+    Display.Font = Enum.Font.GothamBold
+    Display.Parent = ControlFrame
 
     local PlusBtn = Instance.new("TextButton")
     PlusBtn.Size = UDim2.new(0, 22, 1, 0)
@@ -1095,21 +927,21 @@ local function AddStepperRow(text, toggleKey, valKey, minVal, maxVal, step, onTo
     PlusBtn.Parent = ControlFrame
 
     ToggleBtn.MouseButton1Click:Connect(function()
-        Toggles[toggleKey] = not Toggles[toggleKey]
-        CheckMark.BackgroundTransparency = Toggles[toggleKey] and 0 or 1
-        if onToggleCallback then onToggleCallback(Toggles[toggleKey]) end
+        HubState[toggleKey] = not HubState[toggleKey]
+        CheckMark.BackgroundTransparency = HubState[toggleKey] and 0 or 1
+        if onToggleCallback then onToggleCallback(HubState[toggleKey]) end
     end)
 
     MinusBtn.MouseButton1Click:Connect(function()
-        Sliders[valKey] = math.max(minVal, Sliders[valKey] - step)
-        ValDisplay.Text = tostring(Sliders[valKey])
-        if onChangeCallback then onChangeCallback(Sliders[valKey]) end
+        Settings[valKey] = math.max(minVal, Settings[valKey] - step)
+        Display.Text = tostring(Settings[valKey])
+        if onChangeCallback then onChangeCallback(Settings[valKey]) end
     end)
 
     PlusBtn.MouseButton1Click:Connect(function()
-        Sliders[valKey] = math.min(maxVal, Sliders[valKey] + step)
-        ValDisplay.Text = tostring(Sliders[valKey])
-        if onChangeCallback then onChangeCallback(Sliders[valKey]) end
+        Settings[valKey] = math.min(maxVal, Settings[valKey] + step)
+        Display.Text = tostring(Settings[valKey])
+        if onChangeCallback then onChangeCallback(Settings[valKey]) end
     end)
 end
 
@@ -1117,13 +949,7 @@ end
 -- POPULATE FEATURES
 -- ==============================================================================
 
--- 1. Action Button: Instant Cash Boost
-AddActionButton("⚡ Add +1B Cash Now", function()
-    AddCashInstant()
-end)
-
--- 2. Toggles List
-AddToggleRow("Infinite Cash (+999B)", "InfiniteCash")
+-- 1. Automation Toggles
 AddToggleRow("Auto Steal Egg", "AutoStealEgg")
 AddToggleRow("Auto Steal Rare Egg", "AutoStealRareEgg")
 AddToggleRow("Auto Steal Nearest Egg", "AutoStealNearestEgg")
@@ -1135,25 +961,25 @@ AddToggleRow("Auto Hatch Egg", "AutoHatchEgg")
 AddToggleRow("Auto Rebirth", "AutoRebirth")
 AddToggleRow("Auto Claim All Rewards", "AutoClaimRewards")
 
--- 3. Stepper Rows (Speed, Jump, Fly)
-AddStepperRow("WalkSpeed", "WalkSpeedBoost", "WalkSpeed", 16, 300, 15, function(enabled)
-    UpdateWalkSpeed()
-end, function(val)
-    UpdateWalkSpeed()
+-- 2. Movement Stepper Pills
+AddStepperRow("WalkSpeed", "WalkSpeedBoost", "WalkSpeed", 16, 300, 15, function()
+    ApplyWalkSpeed()
+end, function()
+    ApplyWalkSpeed()
 end)
 
 AddStepperRow("Infinite Jump", "InfiniteJump", "JumpPower", 50, 300, 20, nil, nil)
 
-AddStepperRow("Fly Mode", "FlyMode", "FlySpeed", 20, 250, 10, function(enabled)
-    if enabled then
-        StartFlying()
+AddStepperRow("Fly Mode", "FlyMode", "FlySpeed", 20, 250, 10, function(active)
+    if active then
+        EnableFlight()
     else
-        StopFlying()
+        DisableFlight()
     end
 end, nil)
 
 -- ==============================================================================
--- 4. FOOTER FRAME (MANDATORY ULTRA SCRIPT HUB FOOTER)
+-- 6. MANDATORY JUNEJO FOOTER
 -- ==============================================================================
 local Footer = Instance.new("Frame")
 Footer.Size = UDim2.new(1, 0, 0, 36)
