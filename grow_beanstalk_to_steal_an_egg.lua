@@ -36,12 +36,10 @@ for _, name in ipairs({"JunejoHubUI_GrowBeanstalk", "JunejoHubUI", "UltraHub_Bea
 end
 
 -- ==============================================================================
--- 1. STATE CONFIGURATION (CASH & NOCLIP COMPLETELY EXCLUDED)
+-- 1. STATE CONFIGURATION (SINGLE RARE EGG STEALER ONLY)
 -- ==============================================================================
 local HubState = {
-    AutoStealEgg = false,
     AutoStealRareEgg = false,
-    AutoStealNearestEgg = false,
     FastClimbBeanstalk = false,
     InfiniteBeanstalk = false,
     AutoUnlockTreadmill = false,
@@ -65,6 +63,8 @@ local SavedBaseCFrame = nil
 local FlyingActive = false
 local FlyVelocity = nil
 local FlyGyro = nil
+local isStealingEgg = false
+local CooldownEggs = {}
 
 -- ==============================================================================
 -- 2. ESSENTIAL ENGINE HELPERS
@@ -96,28 +96,29 @@ local function GetHumanoid()
     return char and char:FindFirstChildOfClass("Humanoid")
 end
 
--- Instant 0-second Proximity Prompt Resolver
-local function FastTriggerPrompt(prompt)
+-- High-Performance Proximity Prompt Resolver (0s Instant Hold)
+local function TriggerPromptInstant(prompt)
     if not prompt or not prompt:IsA("ProximityPrompt") then return end
     pcall(function()
         prompt.RequiresLineOfSight = false
         prompt.MaxActivationDistance = 99999
-        local origHold = prompt.HoldDuration or 0
+        prompt.Enabled = true
         prompt.HoldDuration = 0
 
         if fireproximityprompt then
-            fireproximityprompt(prompt, 0)
-            fireproximityprompt(prompt)
-        else
+            pcall(function() fireproximityprompt(prompt, 0) end)
+            pcall(function() fireproximityprompt(prompt) end)
+        end
+
+        if prompt.InputHoldBegin and prompt.InputHoldEnd then
             prompt:InputHoldBegin()
             task.wait(0.04)
             prompt:InputHoldEnd()
         end
-        prompt.HoldDuration = origHold
     end)
 end
 
--- Touch Transmitter / Pad Interactor
+-- Direct Part Touch Transmitter
 local function DirectTouch(part)
     local root = GetRootPart()
     if not root or not part or not part:IsA("BasePart") then return end
@@ -130,7 +131,7 @@ local function DirectTouch(part)
     end)
 end
 
--- Proximity prompt global optimizer
+-- Global Proximity Prompt Optimizer
 task.spawn(function()
     local function Optimize(p)
         if p:IsA("ProximityPrompt") then
@@ -147,7 +148,7 @@ end)
 local function LocatePlot()
     if CachedPlot and CachedPlot.Parent then return CachedPlot end
 
-    local candidates = {
+    local containers = {
         Workspace:FindFirstChild("Plots"),
         Workspace:FindFirstChild("Bases"),
         Workspace:FindFirstChild("Tycoons"),
@@ -159,7 +160,7 @@ local function LocatePlot()
     local pName = LocalPlayer.Name:lower()
     local pUserId = tostring(LocalPlayer.UserId)
 
-    for _, container in ipairs(candidates) do
+    for _, container in ipairs(containers) do
         if container then
             for _, item in ipairs(container:GetChildren()) do
                 if item:IsA("Model") or item:IsA("Folder") then
@@ -187,7 +188,7 @@ local function GetBaseCFrame()
     if SavedBaseCFrame then return SavedBaseCFrame end
     local plot = LocatePlot()
     if plot then
-        local sp = plot:FindFirstChild("Spawn") or plot:FindFirstChild("BaseSpawn") or plot:FindFirstChildWhichIsA("BasePart")
+        local sp = plot:FindFirstChild("Spawn") or plot:FindFirstChild("BaseSpawn") or plot:FindFirstChild("Floor") or plot:FindFirstChildWhichIsA("BasePart")
         if sp then
             SavedBaseCFrame = sp.CFrame + Vector3.new(0, 3, 0)
             return SavedBaseCFrame
@@ -200,6 +201,15 @@ local function GetBaseCFrame()
     end
     return CFrame.new(0, 5, 0)
 end
+
+-- Auto-cache base position on launch
+task.spawn(function()
+    task.wait(0.5)
+    local root = GetRootPart()
+    if root and not SavedBaseCFrame then
+        SavedBaseCFrame = root.CFrame
+    end
+end)
 
 -- Smart Remote Dispatcher
 local function DispatchRemotes(tags, args)
@@ -234,166 +244,224 @@ local function DispatchRemotes(tags, args)
 end
 
 -- ==============================================================================
--- 3. GAMEPLAY AUTOMATION SYSTEMS
+-- 3. BULLETPROOF AUTO STEAL RARE EGG ENGINE
 -- ==============================================================================
 
--- Egg Scoring Evaluator
-local function CalculateEggValue(egg)
-    local n = egg.Name:lower()
-    local val = 1
-    if n:find("secret") or n:find("celestial") then val = 100
-    elseif n:find("rainbow") or n:find("diamond") then val = 80
-    elseif n:find("legendary") or n:find("mythic") then val = 60
-    elseif n:find("golden") or n:find("gold") then val = 40
-    elseif n:find("rare") or n:find("epic") then val = 25
+-- Evaluates Egg Rarity Score based on name, tier keywords, and altitude along beanstalk
+local function EvaluateEggRarity(eggModel, prompt, part)
+    local name = eggModel.Name:lower()
+    local promptText = prompt and (prompt.ObjectText .. " " .. prompt.ActionText):lower() or ""
+    local combined = name .. " " .. promptText
+    local score = 10
+
+    if combined:find("secret") or combined:find("celestial") or combined:find("infinity") then
+        score = score + 500
+    elseif combined:find("divine") or combined:find("void") or combined:find("galactic") then
+        score = score + 350
+    elseif combined:find("rainbow") or combined:find("diamond") then
+        score = score + 250
+    elseif combined:find("legendary") or combined:find("mythic") then
+        score = score + 180
+    elseif combined:find("golden") or combined:find("gold") then
+        score = score + 120
+    elseif combined:find("rare") or combined:find("epic") then
+        score = score + 70
     end
-    local part = egg:IsA("BasePart") and egg or egg:FindFirstChildWhichIsA("BasePart")
-    if part then
-        val = val + math.floor(part.Position.Y / 15)
+
+    -- Altitude bonus: summit eggs higher up the beanstalk have higher value
+    if part and part:IsA("BasePart") then
+        score = score + math.floor(part.Position.Y / 8)
     end
-    return val
+
+    return score
 end
 
--- Discover All Active Eggs
-local function ScanWorldEggs()
-    local list = {}
-    local function Collect(folder)
-        if not folder then return end
-        for _, obj in ipairs(folder:GetChildren()) do
-            local ln = obj.Name:lower()
-            if ln:find("egg") or ln:find("nest") or ln:find("steal") then
-                local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
-                local bp = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
-                if bp or prompt then
-                    table.insert(list, {
-                        Object = obj,
-                        Part = bp or (prompt and prompt.Parent:IsA("BasePart") and prompt.Parent),
-                        Prompt = prompt,
-                        Score = CalculateEggValue(obj)
+-- Scans the entire world, beanstalk summit, clouds, and nests for valid eggs
+local function FindAllActiveEggs()
+    local eggs = {}
+    local now = os.clock()
+
+    for _, desc in ipairs(Workspace:GetDescendants()) do
+        if desc:IsA("ProximityPrompt") then
+            local act = (desc.ActionText .. " " .. desc.ObjectText .. " " .. desc.Parent.Name):lower()
+            if act:find("steal") or act:find("take") or act:find("grab") or act:find("egg") or act:find("nest") then
+                local part = desc.Parent:IsA("BasePart") and desc.Parent or desc.Parent:FindFirstChildWhichIsA("BasePart", true)
+                if part and (not CooldownEggs[part] or now > CooldownEggs[part]) then
+                    table.insert(eggs, {
+                        Object = desc.Parent,
+                        Part = part,
+                        Prompt = desc,
+                        Score = EvaluateEggRarity(desc.Parent, desc, part)
                     })
                 end
             end
-            Collect(obj)
         end
     end
 
-    local searchRoots = {
-        Workspace:FindFirstChild("Eggs"),
-        Workspace:FindFirstChild("EggSpawns"),
-        Workspace:FindFirstChild("Nests"),
-        Workspace:FindFirstChild("Map"),
-        Workspace
-    }
-    for _, root in ipairs(searchRoots) do
-        if root then
-            Collect(root)
-            if #list > 0 then break end
-        end
-    end
-    return list
-end
-
--- Steal Action Runner
-local function ExecuteStealCycle(eggInfo)
-    local root = GetRootPart()
-    if not root or not eggInfo then return end
-    local target = eggInfo.Part or (eggInfo.Prompt and eggInfo.Prompt.Parent)
-    if not target then return end
-
-    root.AssemblyLinearVelocity = Vector3.zero
-    root.CFrame = target.CFrame + Vector3.new(0, 3, 0)
-    task.wait(0.12)
-
-    if eggInfo.Prompt then
-        FastTriggerPrompt(eggInfo.Prompt)
-    end
-    DirectTouch(target)
-
-    DispatchRemotes({"steal", "grabegg", "takeegg"}, {eggInfo.Object, eggInfo.Object.Name})
-    task.wait(0.14)
-
-    -- Deliver egg back to base plot
-    local baseCF = GetBaseCFrame()
-    root.AssemblyLinearVelocity = Vector3.zero
-    root.CFrame = baseCF
-    task.wait(0.18)
-
-    local plot = LocatePlot()
-    if plot then
-        for _, p in ipairs(plot:GetDescendants()) do
-            if p:IsA("ProximityPrompt") then
-                local pText = (p.ObjectText .. " " .. p.ActionText .. " " .. p.Name):lower()
-                if pText:find("place") or pText:find("deposit") or pText:find("drop") or pText:find("hatch") then
-                    FastTriggerPrompt(p)
-                end
-            end
-        end
-    end
-end
-
--- 1. Auto Steal Egg Routine
-task.spawn(function()
-    while true do
-        task.wait(0.3)
-        if HubState.AutoStealEgg then
-            local eggs = ScanWorldEggs()
-            for _, egg in ipairs(eggs) do
-                if not HubState.AutoStealEgg then break end
-                ExecuteStealCycle(egg)
-                task.wait(0.4)
-            end
-        end
-    end
-end)
-
--- 2. Auto Steal Rare Egg Routine
-task.spawn(function()
-    while true do
-        task.wait(0.35)
-        if HubState.AutoStealRareEgg then
-            local eggs = ScanWorldEggs()
-            if #eggs > 0 then
-                table.sort(eggs, function(a, b) return a.Score > b.Score end)
-                local rarest = eggs[1]
-                if rarest then
-                    ExecuteStealCycle(rarest)
-                    task.wait(0.5)
-                end
-            end
-        end
-    end
-end)
-
--- 3. Auto Steal Nearest Egg Routine
-task.spawn(function()
-    while true do
-        task.wait(0.3)
-        if HubState.AutoStealNearestEgg then
-            local root = GetRootPart()
-            if root then
-                local eggs = ScanWorldEggs()
-                local closest = nil
-                local minDistance = math.huge
-                for _, egg in ipairs(eggs) do
-                    local p = egg.Part or (egg.Prompt and egg.Prompt.Parent)
-                    if p then
-                        local d = (root.Position - p.Position).Magnitude
-                        if d < minDistance then
-                            minDistance = d
-                            closest = egg
-                        end
+    -- Also check egg parts without prompts
+    for _, obj in ipairs(Workspace:GetChildren()) do
+        local n = obj.Name:lower()
+        if n:find("egg") or n:find("nest") or n:find("summit") or n:find("cloud") then
+            for _, desc in ipairs(obj:GetDescendants()) do
+                if desc:IsA("BasePart") and desc.Name:lower():find("egg") then
+                    local p = desc:FindFirstChildOfClass("ProximityPrompt") or desc.Parent:FindFirstChildOfClass("ProximityPrompt")
+                    if p and (not CooldownEggs[desc] or now > CooldownEggs[desc]) then
+                        table.insert(eggs, {
+                            Object = desc,
+                            Part = desc,
+                            Prompt = p,
+                            Score = EvaluateEggRarity(desc, p, desc)
+                        })
                     end
                 end
-                if closest then
-                    ExecuteStealCycle(closest)
-                    task.wait(0.45)
+            end
+        end
+    end
+
+    return eggs
+end
+
+-- Checks if player is holding or carrying an egg
+local function IsCarryingEgg()
+    local char = LocalPlayer.Character
+    if not char then return false end
+
+    for _, child in ipairs(char:GetChildren()) do
+        if child:IsA("Tool") and child.Name:lower():find("egg") then
+            return true
+        end
+        local cn = child.Name:lower()
+        if cn:find("egg") or cn:find("carried") or cn:find("held") then
+            return true
+        end
+    end
+
+    local bp = LocalPlayer:FindFirstChild("Backpack")
+    if bp then
+        for _, item in ipairs(bp:GetChildren()) do
+            if item.Name:lower():find("egg") then
+                return true
+            end
+        end
+    end
+
+    return false
+end
+
+-- Deposits carried egg into the player's base plot
+local function DepositEggInPlot()
+    local plot = LocatePlot()
+    local root = GetRootPart()
+    if not plot or not root then return end
+
+    -- Trigger all place/deposit prompts in plot
+    for _, p in ipairs(plot:GetDescendants()) do
+        if p:IsA("ProximityPrompt") then
+            local act = (p.ActionText .. " " .. p.ObjectText .. " " .. p.Parent.Name):lower()
+            if act:find("place") or act:find("deposit") or act:find("drop") or act:find("store") or act:find("incubator") or act:find("hatch") then
+                TriggerPromptInstant(p)
+            end
+        end
+    end
+
+    -- Touch deposit pads
+    for _, part in ipairs(plot:GetDescendants()) do
+        if part:IsA("BasePart") then
+            local pn = part.Name:lower()
+            if pn:find("deposit") or pn:find("drop") or pn:find("nest") or pn:find("eggslot") or pn:find("place") then
+                DirectTouch(part)
+            end
+        end
+    end
+
+    -- Fire deposit remotes
+    DispatchRemotes({"deposit", "placeegg", "dropegg", "deliveregg", "storeegg"}, {true, 1})
+end
+
+-- Single Continuous Auto Steal Rare Egg Loop
+task.spawn(function()
+    while true do
+        task.wait(0.15)
+        if HubState.AutoStealRareEgg and not isStealingEgg then
+            local root = GetRootPart()
+            local hum = GetHumanoid()
+
+            if root and hum and hum.Health > 0 then
+                -- 1. If already holding an egg, return home and deposit first
+                if IsCarryingEgg() then
+                    local baseCF = GetBaseCFrame()
+                    root.AssemblyLinearVelocity = Vector3.zero
+                    root.CFrame = baseCF
+                    task.wait(0.3)
+                    DepositEggInPlot()
+                    task.wait(0.2)
+                else
+                    -- 2. Find and target the highest-value rare egg in the game
+                    local eggs = FindAllActiveEggs()
+                    if #eggs > 0 then
+                        table.sort(eggs, function(a, b) return a.Score > b.Score end)
+                        local targetEgg = eggs[1]
+
+                        if targetEgg and targetEgg.Part and targetEgg.Prompt then
+                            isStealingEgg = true
+
+                            -- Warp directly above the rare egg
+                            root.AssemblyLinearVelocity = Vector3.zero
+                            root.AssemblyAngularVelocity = Vector3.zero
+                            root.CFrame = targetEgg.Part.CFrame + Vector3.new(0, 2.5, 0)
+                            task.wait(0.12)
+
+                            -- Trigger interactions repeatedly for up to 0.75s
+                            local startTime = os.clock()
+                            local success = false
+
+                            while os.clock() - startTime < 0.75 do
+                                if not HubState.AutoStealRareEgg then break end
+
+                                root.AssemblyLinearVelocity = Vector3.zero
+                                root.CFrame = targetEgg.Part.CFrame + Vector3.new(0, 2.5, 0)
+
+                                TriggerPromptInstant(targetEgg.Prompt)
+                                DirectTouch(targetEgg.Part)
+                                DispatchRemotes({"steal", "grabegg", "takeegg"}, {targetEgg.Object, targetEgg.Object.Name})
+
+                                if IsCarryingEgg() or not targetEgg.Prompt.Enabled or not targetEgg.Prompt.Parent then
+                                    success = true
+                                    break
+                                end
+                                task.wait(0.06)
+                            end
+
+                            task.wait(0.08)
+
+                            -- Return immediately to Base Plot and deposit
+                            local baseCF = GetBaseCFrame()
+                            root.AssemblyLinearVelocity = Vector3.zero
+                            root.CFrame = baseCF
+                            task.wait(0.35)
+                            DepositEggInPlot()
+                            task.wait(0.2)
+
+                            -- Set cooldown on stolen egg
+                            CooldownEggs[targetEgg.Part] = os.clock() + 4
+                            isStealingEgg = false
+                        end
+                    else
+                        task.wait(0.4)
+                    end
                 end
             end
+        else
+            task.wait(0.3)
         end
     end
 end)
 
--- 4. Fast Climb on Beanstalk (Smooth Summit Lift)
+-- ==============================================================================
+-- 4. ADDITIONAL AUTOMATION SYSTEMS
+-- ==============================================================================
+
+-- 1. Fast Climb on Beanstalk (Smooth Summit Lift)
 task.spawn(function()
     while true do
         task.wait(0.04)
@@ -409,7 +477,7 @@ task.spawn(function()
     end
 end)
 
--- 5. Infinite Long Beanstalk (Skyward Growth Engine)
+-- 2. Infinite Long Beanstalk (Skyward Growth Engine)
 task.spawn(function()
     while true do
         task.wait(0.2)
@@ -424,7 +492,7 @@ task.spawn(function()
                     local n = obj.Name:lower()
                     local pn = obj.Parent and obj.Parent.Name:lower() or ""
                     if n:find("grow") or n:find("beanstalk") or n:find("water") or n:find("feed") or pn:find("grow") then
-                        if obj:IsA("ProximityPrompt") then FastTriggerPrompt(obj)
+                        if obj:IsA("ProximityPrompt") then TriggerPromptInstant(obj)
                         elseif obj:IsA("ClickDetector") and fireclickdetector then fireclickdetector(obj)
                         elseif obj:IsA("BasePart") then DirectTouch(obj) end
                     end
@@ -445,7 +513,7 @@ task.spawn(function()
     end
 end)
 
--- 6. Auto Unlock & Train Treadmill Engine
+-- 3. Auto Unlock & Train Treadmill Engine
 task.spawn(function()
     while true do
         task.wait(0.25)
@@ -461,7 +529,7 @@ task.spawn(function()
                     for _, obj in ipairs(z:GetDescendants()) do
                         local n = obj.Name:lower()
                         if n:find("treadmill") or n:find("speed") or n:find("runner") or n:find("track") then
-                            if obj:IsA("ProximityPrompt") then FastTriggerPrompt(obj)
+                            if obj:IsA("ProximityPrompt") then TriggerPromptInstant(obj)
                             elseif obj:IsA("ClickDetector") and fireclickdetector then fireclickdetector(obj)
                             elseif obj:IsA("BasePart") then DirectTouch(obj) end
                         end
@@ -472,7 +540,7 @@ task.spawn(function()
     end
 end)
 
--- 7. Auto Upgrade Base (Tycoon Plot Upgrades)
+-- 4. Auto Upgrade Base (Tycoon Plot Upgrades)
 task.spawn(function()
     while true do
         task.wait(0.3)
@@ -482,7 +550,7 @@ task.spawn(function()
                 for _, obj in ipairs(plot:GetDescendants()) do
                     local n = obj.Name:lower()
                     if n:find("upgrade") or n:find("buy") or n:find("button") or n:find("pad") then
-                        if obj:IsA("ProximityPrompt") then FastTriggerPrompt(obj)
+                        if obj:IsA("ProximityPrompt") then TriggerPromptInstant(obj)
                         elseif obj:IsA("ClickDetector") and fireclickdetector then fireclickdetector(obj)
                         elseif obj:IsA("BasePart") then DirectTouch(obj) end
                     end
@@ -493,7 +561,7 @@ task.spawn(function()
     end
 end)
 
--- 8. Auto Hatch Egg
+-- 5. Auto Hatch Egg
 task.spawn(function()
     while true do
         task.wait(0.3)
@@ -504,7 +572,7 @@ task.spawn(function()
                     if p:IsA("ProximityPrompt") then
                         local t = (p.ObjectText .. " " .. p.ActionText .. " " .. p.Name):lower()
                         if t:find("hatch") or t:find("open") or t:find("crack") or t:find("egg") or t:find("incubator") then
-                            FastTriggerPrompt(p)
+                            TriggerPromptInstant(p)
                         end
                     end
                 end
@@ -517,7 +585,7 @@ task.spawn(function()
     end
 end)
 
--- 9. Auto Rebirth
+-- 6. Auto Rebirth
 task.spawn(function()
     while true do
         task.wait(0.4)
@@ -531,7 +599,7 @@ task.spawn(function()
                 for _, obj in ipairs(plot:GetDescendants()) do
                     local n = obj.Name:lower()
                     if n:find("rebirth") or n:find("prestige") then
-                        if obj:IsA("ProximityPrompt") then FastTriggerPrompt(obj)
+                        if obj:IsA("ProximityPrompt") then TriggerPromptInstant(obj)
                         elseif obj:IsA("ClickDetector") and fireclickdetector then fireclickdetector(obj)
                         elseif obj:IsA("BasePart") then DirectTouch(obj) end
                     end
@@ -541,7 +609,7 @@ task.spawn(function()
     end
 end)
 
--- 10. Auto Claim All Rewards
+-- 7. Auto Claim All Rewards
 task.spawn(function()
     while true do
         task.wait(1.2)
@@ -553,7 +621,7 @@ task.spawn(function()
             for _, obj in ipairs(Workspace:GetDescendants()) do
                 local n = obj.Name:lower()
                 if n:find("reward") or n:find("chest") or n:find("gift") then
-                    if obj:IsA("ProximityPrompt") then FastTriggerPrompt(obj)
+                    if obj:IsA("ProximityPrompt") then TriggerPromptInstant(obj)
                     elseif obj:IsA("ClickDetector") and fireclickdetector then fireclickdetector(obj)
                     elseif obj:IsA("BasePart") then DirectTouch(obj) end
                 end
@@ -563,7 +631,7 @@ task.spawn(function()
 end)
 
 -- ==============================================================================
--- 4. MOVEMENT ENGINES
+-- 5. MOVEMENT ENGINES
 -- ==============================================================================
 
 local function ApplyWalkSpeed()
@@ -650,7 +718,7 @@ local function DisableFlight()
 end
 
 -- ==============================================================================
--- 5. OFFICIAL JUNEJO UI 1 - CLASSIC MATTE DARK INTERFACE
+-- 6. OFFICIAL JUNEJO UI 1 - CLASSIC MATTE DARK INTERFACE
 -- ==============================================================================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoHubUI_GrowBeanstalk"
@@ -661,11 +729,11 @@ ScreenGui.DisplayOrder = 999999
 local guiParent = (gethui and gethui()) or CoreGui or LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.Parent = guiParent
 
--- Main Container (Classic Matte Dark 280x305px)
+-- Main Container (Classic Matte Dark 280x280px)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 305)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -152)
+MainFrame.Size = UDim2.new(0, 280, 0, 280)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -140)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -946,13 +1014,13 @@ local function AddStepperRow(label, toggleKey, valKey, minVal, maxVal, step, onT
 end
 
 -- ==============================================================================
--- POPULATE FEATURES
+-- POPULATE FEATURES (SINGLE EXCLUSIVE RARE EGG STEALER)
 -- ==============================================================================
 
--- 1. Automation Toggles
-AddToggleRow("Auto Steal Egg", "AutoStealEgg")
+-- 1. Sole Egg Steal Engine: Auto Steal Rare Egg (Summit & High Value Target)
 AddToggleRow("Auto Steal Rare Egg", "AutoStealRareEgg")
-AddToggleRow("Auto Steal Nearest Egg", "AutoStealNearestEgg")
+
+-- 2. Automation Features
 AddToggleRow("Fast Climb Beanstalk", "FastClimbBeanstalk")
 AddToggleRow("Infinite Long Beanstalk", "InfiniteBeanstalk")
 AddToggleRow("Auto Unlock Treadmill", "AutoUnlockTreadmill")
@@ -961,7 +1029,7 @@ AddToggleRow("Auto Hatch Egg", "AutoHatchEgg")
 AddToggleRow("Auto Rebirth", "AutoRebirth")
 AddToggleRow("Auto Claim All Rewards", "AutoClaimRewards")
 
--- 2. Movement Stepper Pills
+-- 3. Movement Stepper Pills
 AddStepperRow("WalkSpeed", "WalkSpeedBoost", "WalkSpeed", 16, 300, 15, function()
     ApplyWalkSpeed()
 end, function()
@@ -979,7 +1047,7 @@ AddStepperRow("Fly Mode", "FlyMode", "FlySpeed", 20, 250, 10, function(active)
 end, nil)
 
 -- ==============================================================================
--- 6. MANDATORY JUNEJO FOOTER
+-- 7. MANDATORY JUNEJO FOOTER
 -- ==============================================================================
 local Footer = Instance.new("Frame")
 Footer.Size = UDim2.new(1, 0, 0, 36)
