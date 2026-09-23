@@ -1483,13 +1483,18 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
 - **Raw Script URL**: `https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/steal_an_egg.lua`
 - **Key System Status**: Disabled (Direct Standalone Executable)
 - **Features Included**:
-  - 1. ☑️ Auto Steal & Return (Auto teleport to egg, 0s prompt trigger, return to base)
-  - 2. ☑️ Auto Treadmill Train (Auto train speed on treadmills/speedpads & remotes)
-  - 3. ☑️ Auto Hatch & Place (Automatic egg opening & remote hatch)
-  - 4. ☑️ Infinite Jump (Continuous multi-jump)
-  - 5. ⚡ WalkSpeed Controller (Checkbox Toggle + [ - 50 + ] Stepper Pill)
-  - 6. 🛡️ 24/7 Anti-AFK Engine (Idle disconnect prevention)
-- **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280x240px`) with Centered Branding Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
+  - 1. 🔘 Teleport to My Base (1-Click Instant Safe Base Warp)
+  - 2. ☑️ Auto Steal & Return (Auto teleport to egg, 0s prompt trigger, return to base)
+  - 3. ☑️ Auto Treadmill Train (Smart: Physical position lock, motion simulator, touch trigger & remote sync)
+  - 4. ☑️ Auto Hatch & Place (Automatic egg opening & remote hatch)
+  - 5. ☑️ Remove Guards & Lasers (Auto voids guards/NPCs and disables killparts/lasers)
+  - 6. 👁️ Egg & Player ESP (Gold highlight on eggs, Red highlight on players)
+  - 7. 🕊️ Fly Mode & Stepper Pill ([20 - 250])
+  - 8. ⚡ WalkSpeed Controller (Checkbox Toggle + [ - 50 + ] Stepper Pill)
+  - 9. 👻 No Clip (Phase through walls and gates)
+  - 10. ☑️ Infinite Jump (Continuous multi-jump)
+  - 11. 🛡️ 24/7 Anti-AFK Engine (VirtualUser idle disconnect bypass)
+- **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280x310px`) with Scrollable Content and Centered Branding Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
 
 ---
 
