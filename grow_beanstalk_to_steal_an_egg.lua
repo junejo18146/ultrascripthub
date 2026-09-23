@@ -1,11 +1,12 @@
---[[
-    JUNEJO SCRIPT HUB
-    Game: Grow Beanstalk to Steal An Egg
-    PlaceId: 87695656520229
-    Creator: Made by Junejo (junejo18146)
-    Repository: ultrascripthub
-    UI Design: Junejo Classic Executive Dark UI (Flat Borderless Rows & Interactive Line Bars)
-]]
+-- ==============================================================================
+-- JUNEJO ULTRA SCRIPT HUB - GROW BEANSTALK TO STEAL AN EGG
+-- Made by Junejo (junejo18146)
+-- GitHub: https://github.com/junejo18146/ultrascripthub
+-- UI Framework: UI 1 (Official Ultra Script Hub Classic Matte Dark)
+-- Universal Mobile & PC Delta / Codex / Fluxus / PC Optimized
+-- ==============================================================================
+
+local GameName = "GROW BEANSTALK TO STEAL AN EGG"
 
 -- Services
 local Players = game:GetService("Players")
@@ -18,6 +19,11 @@ local CoreGui = game:GetService("CoreGui")
 local VirtualUser = game:GetService("VirtualUser")
 
 local LocalPlayer = Players.LocalPlayer
+while not LocalPlayer do
+    task.wait(0.1)
+    LocalPlayer = Players.LocalPlayer
+end
+
 local Camera = Workspace.CurrentCamera
 
 -- Destroy existing UI if re-executed
@@ -78,6 +84,8 @@ task.spawn(function()
     local function OptimizePrompt(prompt)
         if prompt and prompt:IsA("ProximityPrompt") then
             prompt.HoldDuration = 0
+            prompt.RequiresLineOfSight = false
+            prompt.MaxActivationDistance = 99999
         end
     end
     for _, prompt in ipairs(Workspace:GetDescendants()) do
@@ -163,6 +171,7 @@ local function TriggerPrompt(prompt)
     if not prompt or not prompt:IsA("ProximityPrompt") then return end
     pcall(function()
         if fireproximityprompt then
+            fireproximityprompt(prompt, 0)
             fireproximityprompt(prompt)
         else
             prompt.HoldDuration = 0
@@ -343,6 +352,7 @@ local function ExecuteSteal(eggData, returnToBase)
     if not targetPart then return end
 
     local targetPos = targetPart.Position + Vector3.new(0, 3, 0)
+    root.AssemblyLinearVelocity = Vector3.zero
     root.CFrame = CFrame.new(targetPos)
     task.wait(0.12)
     
@@ -357,6 +367,7 @@ local function ExecuteSteal(eggData, returnToBase)
     
     if returnToBase then
         local basePos = GetBasePosition()
+        root.AssemblyLinearVelocity = Vector3.zero
         root.CFrame = CFrame.new(basePos)
         task.wait(0.2)
         
@@ -440,7 +451,7 @@ task.spawn(function()
     end
 end)
 
--- 5. Fast Climb on Beanstalk (UPGRADED: Instant Glide & Summit Reach)
+-- 5. Fast Climb on Beanstalk
 task.spawn(function()
     while true do
         task.wait(0.04)
@@ -456,7 +467,7 @@ task.spawn(function()
     end
 end)
 
--- 6. SUPER BEANSTALK GROW ENGINE (Server Spammer + Tycoon Unlocker + Skyward Stacker)
+-- 6. SUPER BEANSTALK GROW ENGINE
 task.spawn(function()
     while true do
         task.wait(0.15)
@@ -497,7 +508,7 @@ task.spawn(function()
     end
 end)
 
--- 7. SUPER TREADMILL UNLOCK & TRAIN ENGINE (5-Layer Auto Unlock & Trainer)
+-- 7. SUPER TREADMILL UNLOCK & TRAIN ENGINE
 task.spawn(function()
     while true do
         task.wait(0.25)
@@ -540,7 +551,7 @@ task.spawn(function()
     end
 end)
 
--- 8. Auto Upgrade Base (Auto Tycoon Builder)
+-- 8. Auto Upgrade Base
 task.spawn(function()
     while true do
         task.wait(0.3)
@@ -563,7 +574,7 @@ task.spawn(function()
     end
 end)
 
--- 9. Auto Hatch Egg (4-Layer Comprehensive Hatching Engine)
+-- 9. Auto Hatch Egg
 task.spawn(function()
     while true do
         task.wait(0.25)
@@ -613,7 +624,7 @@ task.spawn(function()
     end
 end)
 
--- 10. Auto Rebirth (4-Layer Universal Rebirth Engine)
+-- 10. Auto Rebirth
 task.spawn(function()
     while true do
         task.wait(0.35)
@@ -674,7 +685,7 @@ task.spawn(function()
     end
 end)
 
--- 12. WalkSpeed Boost Engine
+-- Movement Helpers
 local function UpdateWalkSpeed()
     local hum = GetHumanoid()
     if hum then
@@ -695,7 +706,6 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- 13. Infinite Jump Engine with Jump Height
 UserInputService.JumpRequest:Connect(function()
     if Toggles.InfiniteJump then
         local hum = GetHumanoid()
@@ -707,9 +717,7 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
--- 14. 3D Fly Mode Engine
 local function StartFlying()
-    local char = GetCharacter()
     local root = GetRootPart()
     if not root then return end
     
@@ -773,61 +781,28 @@ local function StopFlying()
     if FlyBodyGyro then FlyBodyGyro:Destroy() FlyBodyGyro = nil end
 end
 
--- ==========================================
--- JUNEJO CLASSIC EXECUTIVE UI DESIGN
--- ==========================================
-
+-- ==============================================================================
+-- JUNEJO OFFICIAL UI 1 - CLASSIC MATTE DARK INTERFACE
+-- ==============================================================================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "JunejoHubUI_GrowBeanstalk"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999999
 
-if syn and syn.protect_gui then
-    syn.protect_gui(ScreenGui)
-    ScreenGui.Parent = CoreGui
-elseif gethui then
-    ScreenGui.Parent = gethui()
-else
-    ScreenGui.Parent = CoreGui or LocalPlayer:WaitForChild("PlayerGui")
-end
+local guiParent = (gethui and gethui()) or CoreGui or LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.Parent = guiParent
 
+-- Main Window Frame (Matte Black Compact Container)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 285, 0, 320)
-MainFrame.Position = UDim2.new(0.5, -142, 0.5, -160)
+MainFrame.Size = UDim2.new(0, 280, 0, 310)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -155)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.ClipsDescendants = true
 MainFrame.Parent = ScreenGui
-
--- Draggable MainFrame
-local isDragging = false
-local dragInput, dragStart, startPos
-MainFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        isDragging = true
-        dragStart = input.Position
-        startPos = MainFrame.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                isDragging = false
-            end
-        end)
-    end
-end)
-MainFrame.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        dragInput = input
-    end
-end)
-UserInputService.InputChanged:Connect(function(input)
-    if input == dragInput and isDragging then
-        local delta = input.Position - dragStart
-        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-end)
 
 local MainCorner = Instance.new("UICorner")
 MainCorner.CornerRadius = UDim.new(0, 10)
@@ -838,7 +813,35 @@ MainStroke.Color = Color3.fromRGB(35, 35, 42)
 MainStroke.Thickness = 1
 MainStroke.Parent = MainFrame
 
--- Header
+-- Draggable Logic (Mobile Touch & PC Mouse)
+local dragging, dragInput, dragStart, startPos
+MainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+MainFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- 1. Header Frame
 local Header = Instance.new("Frame")
 Header.Name = "Header"
 Header.Size = UDim2.new(1, 0, 0, 32)
@@ -849,7 +852,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(1, -40, 1, 0)
 TitleLabel.Position = UDim2.new(0, 12, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "GROW BEANSTALK TO STEAL AN EGG"
+TitleLabel.Text = GameName
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleLabel.TextSize = 11
 TitleLabel.Font = Enum.Font.GothamBold
@@ -865,7 +868,11 @@ CloseButton.TextColor3 = Color3.fromRGB(160, 160, 160)
 CloseButton.TextSize = 13
 CloseButton.Font = Enum.Font.GothamBold
 CloseButton.Parent = Header
-CloseButton.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+
+CloseButton.MouseButton1Click:Connect(function()
+    StopFlying()
+    ScreenGui:Destroy()
+end)
 
 -- Header Separation Line
 local HeaderLine = Instance.new("Frame")
@@ -875,40 +882,77 @@ HeaderLine.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
 HeaderLine.BorderSizePixel = 0
 HeaderLine.Parent = MainFrame
 
--- Scrolling Content Frame
-local ContentScroll = Instance.new("ScrollingFrame")
-ContentScroll.Name = "ContentScroll"
-ContentScroll.Size = UDim2.new(1, -24, 1, -74)
-ContentScroll.Position = UDim2.new(0, 12, 0, 36)
-ContentScroll.BackgroundTransparency = 1
-ContentScroll.BorderSizePixel = 0
-ContentScroll.ScrollBarThickness = 2
-ContentScroll.ScrollBarImageColor3 = Color3.fromRGB(50, 50, 60)
-ContentScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-ContentScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-ContentScroll.Parent = MainFrame
+-- 2. Scrollable Content Container
+local ContentFrame = Instance.new("ScrollingFrame")
+ContentFrame.Name = "ContentFrame"
+ContentFrame.Size = UDim2.new(1, -20, 1, -74)
+ContentFrame.Position = UDim2.new(0, 10, 0, 36)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.BorderSizePixel = 0
+ContentFrame.ScrollBarThickness = 2
+ContentFrame.ScrollBarImageColor3 = Color3.fromRGB(45, 45, 55)
+ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ContentFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+ContentFrame.Parent = MainFrame
 
 local UIList = Instance.new("UIListLayout")
 UIList.SortOrder = Enum.SortOrder.LayoutOrder
 UIList.Padding = UDim.new(0, 4)
-UIList.Parent = ContentScroll
+UIList.Parent = ContentFrame
 
--- Helper: Add Borderless Toggle Row
+-- Helper Function: Action Button (Official Junejo Standard)
+local function AddActionButton(text, callback)
+    local BtnFrame = Instance.new("Frame")
+    BtnFrame.Size = UDim2.new(1, 0, 0, 26)
+    BtnFrame.BackgroundTransparency = 1
+    BtnFrame.Parent = ContentFrame
+
+    local Btn = Instance.new("TextButton")
+    Btn.Size = UDim2.new(1, 0, 1, 0)
+    Btn.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+    Btn.BorderSizePixel = 0
+    Btn.AutoButtonColor = false
+    Btn.Text = text
+    Btn.TextColor3 = Color3.fromRGB(240, 240, 240)
+    Btn.TextSize = 11
+    Btn.Font = Enum.Font.GothamBold
+    Btn.Parent = BtnFrame
+
+    local BtnCorner = Instance.new("UICorner")
+    BtnCorner.CornerRadius = UDim.new(0, 5)
+    BtnCorner.Parent = Btn
+
+    local BtnStroke = Instance.new("UIStroke")
+    BtnStroke.Color = Color3.fromRGB(45, 45, 55)
+    BtnStroke.Thickness = 1
+    BtnStroke.Parent = Btn
+
+    Btn.MouseButton1Click:Connect(function()
+        TweenService:Create(Btn, TweenInfo.new(0.08), { BackgroundColor3 = Color3.fromRGB(40, 40, 50) }):Play()
+        task.delay(0.12, function()
+            TweenService:Create(Btn, TweenInfo.new(0.12), { BackgroundColor3 = Color3.fromRGB(27, 27, 32) }):Play()
+        end)
+        if callback then callback() end
+    end)
+end
+
+-- Helper Function: Flat Toggle Row
 local function AddToggleRow(text, configKey, callback)
     local Row = Instance.new("Frame")
     Row.Size = UDim2.new(1, 0, 0, 23)
     Row.BackgroundTransparency = 1
-    Row.Parent = ContentScroll
-    
+    Row.Parent = ContentFrame
+
     local RowBtn = Instance.new("TextButton")
     RowBtn.Size = UDim2.new(1, 0, 1, 0)
     RowBtn.BackgroundTransparency = 1
     RowBtn.Text = ""
     RowBtn.ZIndex = 5
     RowBtn.Parent = Row
-    
+
     local Label = Instance.new("TextLabel")
     Label.Size = UDim2.new(1, -28, 1, 0)
+    Label.Position = UDim2.new(0, 4, 0, 0)
     Label.BackgroundTransparency = 1
     Label.Text = text
     Label.TextColor3 = Color3.fromRGB(240, 240, 240)
@@ -916,23 +960,23 @@ local function AddToggleRow(text, configKey, callback)
     Label.Font = Enum.Font.GothamBold
     Label.TextXAlignment = Enum.TextXAlignment.Left
     Label.Parent = Row
-    
+
     local CheckBox = Instance.new("Frame")
     CheckBox.Size = UDim2.new(0, 18, 0, 18)
-    CheckBox.Position = UDim2.new(1, -18, 0.5, -9)
+    CheckBox.Position = UDim2.new(1, -20, 0.5, -9)
     CheckBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
     CheckBox.BorderSizePixel = 0
     CheckBox.Parent = Row
-    
+
     local CheckCorner = Instance.new("UICorner")
     CheckCorner.CornerRadius = UDim.new(0, 4)
     CheckCorner.Parent = CheckBox
-    
+
     local CheckStroke = Instance.new("UIStroke")
     CheckStroke.Color = Color3.fromRGB(45, 45, 55)
     CheckStroke.Thickness = 1.2
     CheckStroke.Parent = CheckBox
-    
+
     local CheckMark = Instance.new("Frame")
     CheckMark.Size = UDim2.new(0, 10, 0, 10)
     CheckMark.Position = UDim2.new(0.5, -5, 0.5, -5)
@@ -940,11 +984,11 @@ local function AddToggleRow(text, configKey, callback)
     CheckMark.BackgroundTransparency = Toggles[configKey] and 0 or 1
     CheckMark.BorderSizePixel = 0
     CheckMark.Parent = CheckBox
-    
+
     local MarkCorner = Instance.new("UICorner")
     MarkCorner.CornerRadius = UDim.new(0, 2)
     MarkCorner.Parent = CheckMark
-    
+
     RowBtn.MouseButton1Click:Connect(function()
         Toggles[configKey] = not Toggles[configKey]
         CheckMark.BackgroundTransparency = Toggles[configKey] and 0 or 1
@@ -952,275 +996,174 @@ local function AddToggleRow(text, configKey, callback)
     end)
 end
 
--- Helper: Add 1-Click Action Button Row
-local function AddActionRow(text, callback)
+-- Helper Function: Dual Control Stepper Pill Row
+local function AddStepperRow(text, toggleKey, valKey, minVal, maxVal, step, onToggleCallback, onChangeCallback)
     local Row = Instance.new("Frame")
     Row.Size = UDim2.new(1, 0, 0, 23)
     Row.BackgroundTransparency = 1
-    Row.Parent = ContentScroll
-    
-    local RowBtn = Instance.new("TextButton")
-    RowBtn.Size = UDim2.new(1, 0, 1, 0)
-    RowBtn.BackgroundTransparency = 1
-    RowBtn.Text = ""
-    RowBtn.ZIndex = 5
-    RowBtn.Parent = Row
-    
+    Row.Parent = ContentFrame
+
+    local ToggleBtn = Instance.new("TextButton")
+    ToggleBtn.Size = UDim2.new(0.55, 0, 1, 0)
+    ToggleBtn.BackgroundTransparency = 1
+    ToggleBtn.Text = ""
+    ToggleBtn.ZIndex = 5
+    ToggleBtn.Parent = Row
+
     local Label = Instance.new("TextLabel")
     Label.Size = UDim2.new(1, -28, 1, 0)
+    Label.Position = UDim2.new(0, 4, 0, 0)
     Label.BackgroundTransparency = 1
     Label.Text = text
     Label.TextColor3 = Color3.fromRGB(240, 240, 240)
     Label.TextSize = 12
     Label.Font = Enum.Font.GothamBold
     Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.Parent = Row
-    
-    local ActionBox = Instance.new("Frame")
-    ActionBox.Size = UDim2.new(0, 18, 0, 18)
-    ActionBox.Position = UDim2.new(1, -18, 0.5, -9)
-    ActionBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-    ActionBox.BorderSizePixel = 0
-    ActionBox.Parent = Row
-    
-    local ActionCorner = Instance.new("UICorner")
-    ActionCorner.CornerRadius = UDim.new(0, 4)
-    ActionCorner.Parent = ActionBox
-    
-    local ActionStroke = Instance.new("UIStroke")
-    ActionStroke.Color = Color3.fromRGB(45, 45, 55)
-    ActionStroke.Thickness = 1.2
-    ActionStroke.Parent = ActionBox
-    
-    local ActionIcon = Instance.new("TextLabel")
-    ActionIcon.Size = UDim2.new(1, 0, 1, 0)
-    ActionIcon.BackgroundTransparency = 1
-    ActionIcon.Text = "⚡"
-    ActionIcon.TextColor3 = Color3.fromRGB(255, 255, 255)
-    ActionIcon.TextSize = 9
-    ActionIcon.Font = Enum.Font.GothamBold
-    ActionIcon.Parent = ActionBox
-    
-    RowBtn.MouseButton1Click:Connect(function()
-        ActionBox.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-        task.delay(0.15, function() ActionBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32) end)
-        if callback then callback() end
-    end)
-end
+    Label.Parent = ToggleBtn
 
--- Helper: Add Interactive Line Bar Slider Row (Toggle + Smooth Line Bar)
-local function AddSliderRow(title, configKey, sliderKey, minVal, maxVal, defaultVal, onChangeCallback, onToggleCallback)
-    Sliders[sliderKey] = defaultVal
-    
-    local Container = Instance.new("Frame")
-    Container.Size = UDim2.new(1, 0, 0, 38)
-    Container.BackgroundTransparency = 1
-    Container.Parent = ContentScroll
-    
-    local TopRow = Instance.new("Frame")
-    TopRow.Size = UDim2.new(1, 0, 0, 20)
-    TopRow.BackgroundTransparency = 1
-    TopRow.Parent = Container
-    
-    local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(0.6, 0, 1, 0)
-    Label.BackgroundTransparency = 1
-    Label.Text = title
-    Label.TextColor3 = Color3.fromRGB(240, 240, 240)
-    Label.TextSize = 12
-    Label.Font = Enum.Font.GothamBold
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.Parent = TopRow
-    
-    local ValLabel = Instance.new("TextLabel")
-    ValLabel.Size = UDim2.new(0.2, 0, 1, 0)
-    ValLabel.Position = UDim2.new(0.6, 0, 0, 0)
-    ValLabel.BackgroundTransparency = 1
-    ValLabel.Text = tostring(defaultVal)
-    ValLabel.TextColor3 = Color3.fromRGB(180, 180, 195)
-    ValLabel.TextSize = 11
-    ValLabel.Font = Enum.Font.GothamBold
-    ValLabel.TextXAlignment = Enum.TextXAlignment.Right
-    ValLabel.Parent = TopRow
-    
     local CheckBox = Instance.new("Frame")
     CheckBox.Size = UDim2.new(0, 18, 0, 18)
-    CheckBox.Position = UDim2.new(1, -18, 0.5, -9)
+    CheckBox.Position = UDim2.new(1, -20, 0.5, -9)
     CheckBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
     CheckBox.BorderSizePixel = 0
-    CheckBox.Parent = TopRow
-    
+    CheckBox.Parent = ToggleBtn
+
     local CheckCorner = Instance.new("UICorner")
     CheckCorner.CornerRadius = UDim.new(0, 4)
     CheckCorner.Parent = CheckBox
-    
+
     local CheckStroke = Instance.new("UIStroke")
     CheckStroke.Color = Color3.fromRGB(45, 45, 55)
     CheckStroke.Thickness = 1.2
     CheckStroke.Parent = CheckBox
-    
+
     local CheckMark = Instance.new("Frame")
     CheckMark.Size = UDim2.new(0, 10, 0, 10)
     CheckMark.Position = UDim2.new(0.5, -5, 0.5, -5)
     CheckMark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    CheckMark.BackgroundTransparency = Toggles[configKey] and 0 or 1
+    CheckMark.BackgroundTransparency = Toggles[toggleKey] and 0 or 1
     CheckMark.BorderSizePixel = 0
     CheckMark.Parent = CheckBox
-    
+
     local MarkCorner = Instance.new("UICorner")
     MarkCorner.CornerRadius = UDim.new(0, 2)
     MarkCorner.Parent = CheckMark
-    
-    local ToggleBtn = Instance.new("TextButton")
-    ToggleBtn.Size = UDim2.new(1, 0, 1, 0)
-    ToggleBtn.BackgroundTransparency = 1
-    ToggleBtn.Text = ""
-    ToggleBtn.ZIndex = 5
-    ToggleBtn.Parent = TopRow
-    
+
+    local ControlFrame = Instance.new("Frame")
+    ControlFrame.Size = UDim2.new(0, 95, 0, 22)
+    ControlFrame.Position = UDim2.new(1, -97, 0.5, -11)
+    ControlFrame.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+    ControlFrame.BorderSizePixel = 0
+    ControlFrame.Parent = Row
+
+    local CtrlCorner = Instance.new("UICorner")
+    CtrlCorner.CornerRadius = UDim.new(0, 4)
+    CtrlCorner.Parent = ControlFrame
+
+    local CtrlStroke = Instance.new("UIStroke")
+    CtrlStroke.Color = Color3.fromRGB(45, 45, 55)
+    CtrlStroke.Thickness = 1
+    CtrlStroke.Parent = ControlFrame
+
+    local MinusBtn = Instance.new("TextButton")
+    MinusBtn.Size = UDim2.new(0, 22, 1, 0)
+    MinusBtn.BackgroundTransparency = 1
+    MinusBtn.Text = "-"
+    MinusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
+    MinusBtn.TextSize = 14
+    MinusBtn.Font = Enum.Font.GothamBold
+    MinusBtn.Parent = ControlFrame
+
+    local ValDisplay = Instance.new("TextLabel")
+    ValDisplay.Size = UDim2.new(1, -44, 1, 0)
+    ValDisplay.Position = UDim2.new(0, 22, 0, 0)
+    ValDisplay.BackgroundTransparency = 1
+    ValDisplay.Text = tostring(Sliders[valKey])
+    ValDisplay.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ValDisplay.TextSize = 11
+    ValDisplay.Font = Enum.Font.GothamBold
+    ValDisplay.Parent = ControlFrame
+
+    local PlusBtn = Instance.new("TextButton")
+    PlusBtn.Size = UDim2.new(0, 22, 1, 0)
+    PlusBtn.Position = UDim2.new(1, -22, 0, 0)
+    PlusBtn.BackgroundTransparency = 1
+    PlusBtn.Text = "+"
+    PlusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
+    PlusBtn.TextSize = 14
+    PlusBtn.Font = Enum.Font.GothamBold
+    PlusBtn.Parent = ControlFrame
+
     ToggleBtn.MouseButton1Click:Connect(function()
-        Toggles[configKey] = not Toggles[configKey]
-        CheckMark.BackgroundTransparency = Toggles[configKey] and 0 or 1
-        if onToggleCallback then onToggleCallback(Toggles[configKey]) end
+        Toggles[toggleKey] = not Toggles[toggleKey]
+        CheckMark.BackgroundTransparency = Toggles[toggleKey] and 0 or 1
+        if onToggleCallback then onToggleCallback(Toggles[toggleKey]) end
     end)
-    
-    local SliderTrack = Instance.new("Frame")
-    SliderTrack.Size = UDim2.new(1, 0, 0, 6)
-    SliderTrack.Position = UDim2.new(0, 0, 0, 24)
-    SliderTrack.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-    SliderTrack.BorderSizePixel = 0
-    SliderTrack.Parent = Container
-    
-    local TrackCorner = Instance.new("UICorner")
-    TrackCorner.CornerRadius = UDim.new(1, 0)
-    TrackCorner.Parent = SliderTrack
-    
-    local TrackStroke = Instance.new("UIStroke")
-    TrackStroke.Color = Color3.fromRGB(40, 40, 50)
-    TrackStroke.Thickness = 1
-    TrackStroke.Parent = SliderTrack
-    
-    local initialPercent = math.clamp((defaultVal - minVal) / (maxVal - minVal), 0, 1)
-    local SliderFill = Instance.new("Frame")
-    SliderFill.Size = UDim2.new(initialPercent, 0, 1, 0)
-    SliderFill.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    SliderFill.BorderSizePixel = 0
-    SliderFill.Parent = SliderTrack
-    
-    local FillCorner = Instance.new("UICorner")
-    FillCorner.CornerRadius = UDim.new(1, 0)
-    FillCorner.Parent = SliderFill
-    
-    local SliderBtn = Instance.new("TextButton")
-    SliderBtn.Size = UDim2.new(1, 0, 1, 8)
-    SliderBtn.Position = UDim2.new(0, 0, 0, -4)
-    SliderBtn.BackgroundTransparency = 1
-    SliderBtn.Text = ""
-    SliderBtn.ZIndex = 6
-    SliderBtn.Parent = SliderTrack
-    
-    local isSliding = false
-    local function UpdateSlider(input)
-        local posX = input.Position.X - SliderTrack.AbsolutePosition.X
-        local percent = math.clamp(posX / SliderTrack.AbsoluteSize.X, 0, 1)
-        local val = math.floor(minVal + (maxVal - minVal) * percent)
-        Sliders[sliderKey] = val
-        ValLabel.Text = tostring(val)
-        SliderFill.Size = UDim2.new(percent, 0, 1, 0)
-        if onChangeCallback then onChangeCallback(val) end
-    end
-    
-    SliderBtn.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            isSliding = true
-            UpdateSlider(input)
-        end
+
+    MinusBtn.MouseButton1Click:Connect(function()
+        Sliders[valKey] = math.max(minVal, Sliders[valKey] - step)
+        ValDisplay.Text = tostring(Sliders[valKey])
+        if onChangeCallback then onChangeCallback(Sliders[valKey]) end
     end)
-    
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            isSliding = false
-        end
-    end)
-    
-    UserInputService.InputChanged:Connect(function(input)
-        if isSliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            UpdateSlider(input)
-        end
+
+    PlusBtn.MouseButton1Click:Connect(function()
+        Sliders[valKey] = math.min(maxVal, Sliders[valKey] + step)
+        ValDisplay.Text = tostring(Sliders[valKey])
+        if onChangeCallback then onChangeCallback(Sliders[valKey]) end
     end)
 end
 
--- ==========================================
--- POPULATE FEATURES (EXACT JUNEJO STANDARD)
--- ==========================================
+-- ==============================================================================
+-- POPULATE FEATURES
+-- ==============================================================================
 
--- 1. Infinite Cash (+999B) Toggle
-AddToggleRow("Infinite Cash (+999B)", "InfiniteCash")
-
--- 2. Add Cash Now (1-Click Instant Action)
-AddActionRow("⚡ Add +1B Cash Now", function()
+-- 1. Action Button: Instant Cash Boost
+AddActionButton("⚡ Add +1B Cash Now", function()
     AddCashInstant()
 end)
 
--- 3. Auto Steal Egg
+-- 2. Toggles List
+AddToggleRow("Infinite Cash (+999B)", "InfiniteCash")
 AddToggleRow("Auto Steal Egg", "AutoStealEgg")
-
--- 4. Auto Steal Rare Egg
 AddToggleRow("Auto Steal Rare Egg", "AutoStealRareEgg")
-
--- 5. Auto Steal Nearest Egg
 AddToggleRow("Auto Steal Nearest Egg", "AutoStealNearestEgg")
-
--- 6. Fast Climb on Beanstalk
 AddToggleRow("Fast Climb Beanstalk", "FastClimbBeanstalk")
-
--- 7. Infinite Long Beanstalk (Mega Height & Auto Grow)
 AddToggleRow("Infinite Long Beanstalk", "InfiniteBeanstalk")
-
--- 8. Auto Unlock Treadmill
 AddToggleRow("Auto Unlock Treadmill", "AutoUnlockTreadmill")
-
--- 9. Auto Upgrade Base
 AddToggleRow("Auto Upgrade Base", "AutoUpgradeBase")
-
--- 10. Auto Hatch Egg
 AddToggleRow("Auto Hatch Egg", "AutoHatchEgg")
-
--- 11. Auto Rebirth
 AddToggleRow("Auto Rebirth", "AutoRebirth")
-
--- 12. Auto Claim All Rewards
 AddToggleRow("Auto Claim All Rewards", "AutoClaimRewards")
 
--- 13. WalkSpeed with Line Bar Slider
-AddSliderRow("WalkSpeed", "WalkSpeedBoost", "WalkSpeed", 16, 300, 75, function(val)
+-- 3. Stepper Rows (Speed, Jump, Fly)
+AddStepperRow("WalkSpeed", "WalkSpeedBoost", "WalkSpeed", 16, 300, 15, function(enabled)
     UpdateWalkSpeed()
-end, function(enabled)
+end, function(val)
     UpdateWalkSpeed()
 end)
 
--- 14. Infinite Jump with Line Bar Slider
-AddSliderRow("Infinite Jump", "InfiniteJump", "JumpPower", 50, 300, 120, nil, nil)
+AddStepperRow("Infinite Jump", "InfiniteJump", "JumpPower", 50, 300, 20, nil, nil)
 
--- 15. Fly Mode with Line Bar Slider
-AddSliderRow("Fly Mode", "FlyMode", "FlySpeed", 20, 250, 70, nil, function(enabled)
+AddStepperRow("Fly Mode", "FlyMode", "FlySpeed", 20, 250, 10, function(enabled)
     if enabled then
         StartFlying()
     else
         StopFlying()
     end
-end)
+end, nil)
 
--- Footer (Pinned at bottom)
+-- ==============================================================================
+-- 4. FOOTER FRAME (MANDATORY ULTRA SCRIPT HUB FOOTER)
+-- ==============================================================================
 local Footer = Instance.new("Frame")
-Footer.Size = UDim2.new(1, 0, 0, 34)
-Footer.Position = UDim2.new(0, 0, 1, -36)
+Footer.Size = UDim2.new(1, 0, 0, 36)
+Footer.Position = UDim2.new(0, 0, 1, -38)
 Footer.BackgroundTransparency = 1
 Footer.Parent = MainFrame
 
 local FooterTitle = Instance.new("TextLabel")
 FooterTitle.Size = UDim2.new(1, 0, 0, 14)
-FooterTitle.Position = UDim2.new(0, 0, 0, 2)
+FooterTitle.Position = UDim2.new(0, 0, 0, 4)
 FooterTitle.BackgroundTransparency = 1
 FooterTitle.Text = "ULTRA SCRIPT HUB"
 FooterTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -1230,7 +1173,7 @@ FooterTitle.Parent = Footer
 
 local FooterSub = Instance.new("TextLabel")
 FooterSub.Size = UDim2.new(1, 0, 0, 12)
-FooterSub.Position = UDim2.new(0, 0, 0, 16)
+FooterSub.Position = UDim2.new(0, 0, 0, 18)
 FooterSub.BackgroundTransparency = 1
 FooterSub.Text = "Made by Junejo"
 FooterSub.TextColor3 = Color3.fromRGB(136, 136, 153)
@@ -1238,4 +1181,4 @@ FooterSub.TextSize = 9
 FooterSub.Font = Enum.Font.GothamMedium
 FooterSub.Parent = Footer
 
-print("Junejo Ultra Script Hub V5 loaded successfully with Infinite Cash & 1-Click Cash!")
+print("[ULTRA SCRIPT HUB] Grow Beanstalk to Steal An Egg loaded successfully!")
