@@ -1098,9 +1098,7 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   ```
 - **Key System Status**: Disabled (Direct Standalone Executable)
 - **Features Included**:
-  - Auto Steal Egg (Continuous automated egg stealing & plot deposit loop)
-  - Auto Steal Rare Egg (Prioritizes highest tier & rarest eggs on beanstalk summit)
-  - Auto Steal Nearest Egg (Instant grab of closest egg in range)
+  - Auto Steal Rare Egg (Bulletproof Summit & Rare Tier Scanner, Prompt Bypass & Base Plot Auto-Deposit)
   - Fast Climb on Beanstalk (UPGRADED: Superfast smooth upward glide & summit reach)
   - Infinite Long Beanstalk (Beanstalk Growth & Skyward Stacker Engine)
   - Auto Unlock Treadmill (Auto Unlock & Speed Trainer)
@@ -1112,7 +1110,7 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   - Infinite Jump & Jump Power Stepper Pill ([50 - 300])
   - Fly Mode & Fly Speed Stepper Pill ([20 - 250] with Mobile/PC 3D navigation)
   - Anti-AFK Engine (Auto 24/7 VirtualUser idle disconnect protection)
-- **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280x305px`) with Scrollable Content and Centered Branding Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
+- **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280x280px`) with Scrollable Content and Centered Branding Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
 
 ---
 
