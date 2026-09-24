@@ -1632,13 +1632,42 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   - 11. 🛡️ 24/7 Anti-AFK Engine (VirtualUser idle kick bypass)
 - **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280px` width) with Scrollable Content and Centered Branding Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
 
+---
+
+## Break and Steal an Egg 🥚
+- **Game Name**: Break and Steal an Egg
+- **Place ID**: `114326934417838`
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/break_and_steal_an_egg.lua"))()
+  ```
+- **Raw Script URL**: `https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/break_and_steal_an_egg.lua`
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included**:
+  - 1. 🔘 Teleport to Base (1-Click Safe Base Return Action)
+  - 2. 🔘 Set Base Position (1-Click Custom Base Anchor Save)
+  - 3. ☑️ Instant Break Egg (Infinite Hammer / Pickaxe Power - Multi-Hit Burst)
+  - 4. ☑️ Auto Break Rare Egg (Scans Diamond & Gold Eggs, Floats Above & Auto-Hits)
+  - 5. ☑️ Auto Steal Rare Animal (Scans Heaviest Kg Animals & Triggers 0s Prompt)
+  - 6. ☑️ Auto Deposit to Base (Auto-Returns & Banks Carried Animals to Plot)
+  - 7. ☑️ Auto Upgrade Base (Auto-Buys Base Capacity & Animal Stands 1 to 8)
+  - 8. ☑️ Auto Buy Best Pickaxe (Shop Auto-Scanner Buying Strongest Available Tool)
+  - 9. ☑️ Auto Train Speed (Base Treadmill Auto-Train & Speed Gain Remote)
+  - 10. ☑️ Rare Egg ESP (Neon Cyan/Gold Highlights + HP & Distance Billboard Tags)
+  - 11. ☑️ Animal ESP (Weight & Rarity Highlights + Clean Name & Kg Tags)
+  - 12. ☑️ Player ESP (Red Wallhack Highlights + Distance Radar)
+  - 13. ⚡ WalkSpeed Boost (+ / - Stepper Pill: 16 to 300)
+  - 14. 🕊️ Fly Mode (Smooth 3D Flight Navigation with WASD & Mobile Controls)
+  - 15. 👻 Noclip (Pass through invisible barriers, fences & plot walls)
+  - 16. 🦘 Infinite Jump (Airborne Continuous Multi-Jump)
+  - 17. 🔘 Teleport: Safe Zone (1-Click Instant Safe Haven Warp)
+  - 18. 🔘 Teleport: Zone 9 (Galaxy / Sun Realm Warp)
+  - 19. 🔘 Teleport: Zone 8 (Fortune Realm Warp)
+  - 20. 🔘 Teleport: Zone 7 (Angel & Volcano Realm Warp)
+  - 21. ⚡ Fast 0s Proximity Prompts Bypass (Instant Hold Across Map)
+  - 22. 🛡️ 24/7 Anti-AFK Engine (VirtualUser Idle Disconnect Protection)
+- **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280px` width) with Scrollable Content and Centered Branding Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
+
 ====================================================
-Updated: September 22, 2026
+Updated: September 24, 2026
 ====================================================
-
-
-
-
-
-
-
