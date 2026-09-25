@@ -1,66 +1,76 @@
--- ==============================================================================
--- JUNEJO ULTRA SCRIPT HUB - STEAL AN EGG
--- Made by Junejo (junejo18146)
--- GitHub: https://github.com/junejo18146/ultrascripthub
--- UI Framework: UI 1 (Official Ultra Script Hub Classic Matte Dark)
--- Universal Mobile & PC Delta / Codex / Fluxus / PC Optimized
--- ==============================================================================
+--[[
+    ========================================================================
+    ULTRA SCRIPT HUB - OFFICIAL PRODUCTION SCRIPT
+    ========================================================================
+    Game: Steal An Egg 🥚
+    Creator: Made by Junejo (junejo18146)
+    UI Style: UI 1 (Official Ultra Script Hub Classic Matte Dark - 280px)
+    GitHub: https://github.com/junejo18146/ultrascripthub
+    Loadstring: loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/steal_an_egg.lua"))()
+    ========================================================================
+]]
 
-local GameName = "STEAL AN EGG"
+repeat task.wait() until game:IsLoaded()
 
--- ==============================================================================
--- 1. SERVICES & VARIABLES
--- ==============================================================================
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local VirtualUser = game:GetService("VirtualUser")
 local CoreGui = game:GetService("CoreGui")
 
-local LocalPlayer = Players.LocalPlayer
-while not LocalPlayer do
-    task.wait(0.1)
-    LocalPlayer = Players.LocalPlayer
+local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
+
+-- Safe Parent Selection for CoreGui / PlayerGui / gethui
+local function GetSafeGuiParent()
+    local target = nil
+    pcall(function()
+        if gethui then
+            target = gethui()
+        elseif CoreGui and pcall(function() return CoreGui.Name end) then
+            local test = Instance.new("Folder")
+            test.Parent = CoreGui
+            test:Destroy()
+            target = CoreGui
+        end
+    end)
+    if not target then
+        target = LocalPlayer:WaitForChild("PlayerGui")
+    end
+    return target
 end
 
-local Camera = Workspace.CurrentCamera
+local GuiParent = GetSafeGuiParent()
 
--- Anti-AFK Engine
-local VirtualUser = nil
-pcall(function() VirtualUser = game:GetService("VirtualUser") end)
-LocalPlayer.Idled:Connect(function()
-    if VirtualUser then
-        pcall(function()
-            VirtualUser:CaptureController()
-            VirtualUser:ClickButton2(Vector2.new())
-        end)
+-- Cleanup Existing Instances
+pcall(function()
+    for _, name in ipairs({"UltraScriptHub_StealAnEgg", "JunejoHubUI_StealAnEgg", "Junejo_StealAnEgg_UI"}) do
+        if GuiParent:FindFirstChild(name) then GuiParent[name]:Destroy() end
+        if CoreGui and CoreGui:FindFirstChild(name) then CoreGui[name]:Destroy() end
+        if LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild(name) then
+            LocalPlayer.PlayerGui[name]:Destroy()
+        end
     end
 end)
 
+-- Global State Table
 local State = {
     AutoSteal = false,
-    AutoTreadmill = false,
-    AutoHatch = false,
-    RemoveGuards = false,
-    ESP = false,
+    RareEggESP = false,
+    AllEggsESP = false,
+    PlayerESP = false,
+    WalkSpeed = false,
+    WalkSpeedValue = 50,
     FlyMode = false,
     FlySpeed = 60,
-    WalkSpeedBoost = false,
-    WalkSpeed = 50,
-    NoClip = false,
     InfiniteJump = false
 }
 
 local SavedBaseCFrame = nil
-local cachedTreadmill = nil
 
 -- Character Helper Functions
-local function getChar()
-    return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-end
-
 local function getRoot()
     local char = LocalPlayer.Character
     if not char then return nil end
@@ -73,8 +83,33 @@ local function getHum()
     return char:FindFirstChildOfClass("Humanoid")
 end
 
--- Helper: Trigger Proximity Prompts Instant
-local function triggerPrompt(prompt)
+-- Save Base Position on Spawn
+task.spawn(function()
+    task.wait(0.8)
+    local root = getRoot()
+    if root and not SavedBaseCFrame then
+        SavedBaseCFrame = root.CFrame
+    end
+end)
+
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(1)
+    local root = getRoot()
+    if root and not SavedBaseCFrame then
+        SavedBaseCFrame = root.CFrame
+    end
+end)
+
+-- 24/7 Anti-AFK Idle Kick Protection
+pcall(function()
+    LocalPlayer.Idled:Connect(function()
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new(0, 0))
+    end)
+end)
+
+-- Instant ProximityPrompt Trigger Helper
+local function TriggerPrompt(prompt)
     if not prompt or not prompt:IsA("ProximityPrompt") then return end
     pcall(function()
         prompt.RequiresLineOfSight = false
@@ -90,459 +125,92 @@ local function triggerPrompt(prompt)
             task.wait(0.04)
             prompt:InputHoldEnd()
         end
-
         prompt.HoldDuration = origHold
     end)
 end
 
--- Base Position Auto-Saver
-task.spawn(function()
-    task.wait(0.5)
-    local root = getRoot()
-    if root and not SavedBaseCFrame then
-        SavedBaseCFrame = root.CFrame
-    end
-end)
+-- Safe Teleport with Anti-Fall Safety Platform
+local function TeleportSafe(targetCFrame)
+    pcall(function()
+        local root = getRoot()
+        if not root then return end
 
--- Safe Teleport to Base
-local function teleportToBase()
-    local root = getRoot()
-    if root and SavedBaseCFrame then
+        local plat = Instance.new("Part")
+        plat.Name = "JunejoSafePlat"
+        plat.Size = Vector3.new(16, 1, 16)
+        plat.Anchored = true
+        plat.CanCollide = true
+        plat.Transparency = 1
+        plat.CFrame = targetCFrame - Vector3.new(0, 2.5, 0)
+        plat.Parent = Workspace
+
+        root.CFrame = targetCFrame + Vector3.new(0, 2, 0)
         root.AssemblyLinearVelocity = Vector3.zero
         root.AssemblyAngularVelocity = Vector3.zero
-        root.CFrame = SavedBaseCFrame + Vector3.new(0, 2, 0)
-    end
+
+        task.delay(4, function()
+            if plat and plat.Parent then plat:Destroy() end
+        end)
+    end)
 end
 
--- ==============================================================================
--- 2. BACKGROUND FEATURE LOOPS
--- ==============================================================================
+-- Rare Egg Keywords Matcher
+local rareKeywords = {
+    "rare", "golden", "gold", "diamond", "legendary", "mythic", "dragon",
+    "godly", "void", "huge", "ruby", "emerald", "rainbow", "secret", "tier"
+}
 
--- 1. Auto Steal & Safe Teleport Engine
-task.spawn(function()
-    while true do
-        task.wait(0.2)
-        if State.AutoSteal then
-            pcall(function()
-                local root = getRoot()
-                if root then
-                    if not SavedBaseCFrame then
-                        SavedBaseCFrame = root.CFrame
-                    end
-
-                    for _, obj in ipairs(Workspace:GetDescendants()) do
-                        if not State.AutoSteal then break end
-                        if obj:IsA("ProximityPrompt") then
-                            local parentName = string.lower(obj.Parent and obj.Parent.Name or "")
-                            local actionText = string.lower(obj.ActionText or "")
-                            local objText = string.lower(obj.ObjectText or "")
-
-                            if string.find(parentName, "egg") or string.find(actionText, "steal") or string.find(actionText, "take") or string.find(objText, "egg") then
-                                local eggPart = obj.Parent:IsA("BasePart") and obj.Parent or obj.Parent:FindFirstChildWhichIsA("BasePart")
-                                if eggPart then
-                                    root.AssemblyLinearVelocity = Vector3.zero
-                                    root.CFrame = eggPart.CFrame + Vector3.new(0, 3, 0)
-                                    task.wait(0.1)
-                                    triggerPrompt(obj)
-                                    task.wait(0.12)
-                                    if SavedBaseCFrame then
-                                        root.AssemblyLinearVelocity = Vector3.zero
-                                        root.CFrame = SavedBaseCFrame + Vector3.new(0, 1.5, 0)
-                                    end
-                                    task.wait(0.2)
-                                    break
-                                end
-                            end
-                        end
-                    end
-                end
-            end)
-        else
-            task.wait(0.3)
-        end
-    end
-end)
-
--- 2. Bulletproof Auto Treadmill Engine (Physical Lock + Motion + Remote Sync)
-local function findTreadmillPart()
-    if cachedTreadmill and cachedTreadmill.Parent then
-        return cachedTreadmill
-    end
-
-    -- 1. Search near player / in Bases
-    for _, desc in ipairs(Workspace:GetDescendants()) do
-        if desc:IsA("BasePart") then
-            local n = desc.Name:lower()
-            if n == "treadmill" or n:find("treadmill") or n == "speedpad" or n:find("speedpad") or n:find("speed_pad") or n == "trainpad" then
-                cachedTreadmill = desc
-                return desc
-            end
-        end
-    end
-
-    -- 2. Search TouchTransmitters
-    for _, desc in ipairs(Workspace:GetDescendants()) do
-        if desc:IsA("TouchTransmitter") and desc.Parent and desc.Parent:IsA("BasePart") then
-            local pName = desc.Parent.Name:lower()
-            if pName:find("tread") or pName:find("train") or pName:find("speed") then
-                cachedTreadmill = desc.Parent
-                return desc.Parent
-            end
-        end
-    end
-
-    return nil
-end
-
-task.spawn(function()
-    while true do
-        task.wait(0.15)
-        if State.AutoTreadmill and not State.AutoSteal then
-            pcall(function()
-                local root = getRoot()
-                local hum = getHum()
-                if root and hum then
-                    local tm = findTreadmillPart()
-                    if tm and tm:IsA("BasePart") then
-                        -- Position character directly on treadmill pad
-                        local targetCF = tm.CFrame + Vector3.new(0, 2.5, 0)
-                        if (root.Position - tm.Position).Magnitude > 6 then
-                            root.AssemblyLinearVelocity = Vector3.zero
-                            root.CFrame = targetCF
-                        end
-
-                        -- Trigger touch interaction
-                        if firetouchinterest then
-                            pcall(function()
-                                firetouchinterest(tm, root, 0)
-                                task.wait()
-                                firetouchinterest(tm, root, 1)
-                            end)
-                        end
-
-                        -- Simulate slight motion so game detects movement on treadmill
-                        pcall(function()
-                            hum:Move(Vector3.new(0, 0, -1), true)
-                        end)
-                    end
-
-                    -- Fire all speed/train remotes across ReplicatedStorage
-                    for _, container in ipairs({ReplicatedStorage, LocalPlayer:FindFirstChild("PlayerGui")}) do
-                        if container then
-                            for _, remote in ipairs(container:GetDescendants()) do
-                                if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
-                                    local rName = string.lower(remote.Name)
-                                    if string.find(rName, "train") or string.find(rName, "treadmill") or string.find(rName, "addspeed") or string.find(rName, "speed") or string.find(rName, "velocity") then
-                                        pcall(function()
-                                            if remote:IsA("RemoteEvent") then
-                                                remote:FireServer()
-                                                remote:FireServer(true)
-                                            else
-                                                remote:InvokeServer()
-                                                remote:InvokeServer(true)
-                                            end
-                                        end)
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-            end)
-        else
-            task.wait(0.4)
-        end
-    end
-end)
-
--- 3. Auto Hatch & Place Engine
-task.spawn(function()
-    while true do
-        task.wait(0.4)
-        if State.AutoHatch then
-            pcall(function()
-                for _, container in ipairs({ReplicatedStorage, LocalPlayer:FindFirstChild("PlayerGui"), Workspace}) do
-                    if container then
-                        for _, remote in ipairs(container:GetDescendants()) do
-                            if not State.AutoHatch then break end
-                            if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
-                                local rName = string.lower(remote.Name)
-                                if string.find(rName, "hatch") or string.find(rName, "place") or string.find(rName, "openegg") or string.find(rName, "egghatch") then
-                                    pcall(function()
-                                        if remote:IsA("RemoteEvent") then
-                                            remote:FireServer()
-                                            remote:FireServer(true)
-                                            remote:FireServer(1)
-                                        else
-                                            remote:InvokeServer()
-                                            remote:InvokeServer(true)
-                                        end
-                                    end)
-                                end
-                            end
-                        end
-                    end
-                end
-
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if not State.AutoHatch then break end
-                    if obj:IsA("ProximityPrompt") then
-                        local aText = string.lower(obj.ActionText or "")
-                        local oText = string.lower(obj.ObjectText or "")
-                        if string.find(aText, "hatch") or string.find(aText, "place") or string.find(oText, "hatch") then
-                            triggerPrompt(obj)
-                        end
-                    end
-                end
-            end)
-        else
-            task.wait(0.5)
-        end
-    end
-end)
-
--- 4. Remove Guards, Hazards & Lasers Engine
-local function isHazardOrGuard(obj)
-    if not obj or obj == LocalPlayer.Character then return false end
-
-    -- Check Guard NPC Models
-    if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") then
-        if not Players:GetPlayerFromCharacter(obj) then
-            local n = obj.Name:lower()
-            if n:find("guard") or n:find("cop") or n:find("npc") or n:find("enemy") or n:find("bot") or n == "model" or n:find("security") then
-                return true
-            end
-        end
-    end
-
-    -- Check Lasers, Traps, Killparts
-    if obj:IsA("BasePart") then
-        local n = obj.Name:lower()
-        if n:find("laser") or n:find("kill") or n:find("barrier") or n:find("spike") or n:find("trap") or n:find("death") or n:find("danger") then
+local function IsRareEgg(name)
+    local lower = string.lower(name)
+    for _, kw in ipairs(rareKeywords) do
+        if string.find(lower, kw) then
             return true
         end
     end
-
     return false
 end
 
-local function cleanHazards()
+-- Find All Eggs Helper
+local function GetAllEggs()
+    local eggs = {}
     for _, desc in ipairs(Workspace:GetDescendants()) do
-        if isHazardOrGuard(desc) then
-            pcall(function()
-                if desc:IsA("Model") then
-                    desc:PivotTo(CFrame.new(0, -9999, 0))
-                    desc:Destroy()
-                elseif desc:IsA("BasePart") then
-                    desc.CanCollide = false
-                    desc.CanTouch = false
-                    desc.Transparency = 1
+        if desc:IsA("ProximityPrompt") then
+            local pName = string.lower(desc.Parent and desc.Parent.Name or "")
+            local act = string.lower(desc.ActionText or "")
+            local obj = string.lower(desc.ObjectText or "")
+            if string.find(pName, "egg") or string.find(act, "steal") or string.find(act, "take") or string.find(obj, "egg") then
+                local part = desc.Parent:IsA("BasePart") and desc.Parent or desc.Parent:FindFirstChildWhichIsA("BasePart")
+                if part then
+                    table.insert(eggs, {Object = desc.Parent, Part = part, Prompt = desc, Name = desc.Parent.Name})
                 end
-            end)
-        end
-    end
-end
-
-task.spawn(function()
-    while true do
-        if State.RemoveGuards then
-            pcall(cleanHazards)
-            task.wait(0.5)
-        else
-            task.wait(0.8)
-        end
-    end
-end)
-
-Workspace.DescendantAdded:Connect(function(desc)
-    if State.RemoveGuards and isHazardOrGuard(desc) then
-        task.wait(0.05)
-        pcall(function()
-            if desc:IsA("Model") then
-                desc:PivotTo(CFrame.new(0, -9999, 0))
-                desc:Destroy()
-            elseif desc:IsA("BasePart") then
-                desc.CanCollide = false
-                desc.CanTouch = false
-                desc.Transparency = 1
             end
-        end)
-    end
-end)
-
--- 5. ESP System (Gold Egg ESP & Red Player ESP)
-local function applyESP(target, color)
-    if not target or target:FindFirstChild("UltraHub_ESP") then return end
-    pcall(function()
-        local hl = Instance.new("Highlight")
-        hl.Name = "UltraHub_ESP"
-        hl.FillColor = color
-        hl.FillTransparency = 0.5
-        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-        hl.OutlineTransparency = 0
-        hl.Adornee = target
-        hl.Parent = target
-    end)
-end
-
-local function clearESP()
-    for _, desc in ipairs(Workspace:GetDescendants()) do
-        if desc.Name == "UltraHub_ESP" and desc:IsA("Highlight") then
-            desc:Destroy()
-        end
-    end
-end
-
-task.spawn(function()
-    while true do
-        if State.ESP then
-            pcall(function()
-                -- 1. Player ESP
-                for _, player in ipairs(Players:GetPlayers()) do
-                    if player ~= LocalPlayer and player.Character then
-                        applyESP(player.Character, Color3.fromRGB(255, 60, 60))
-                    end
-                end
-
-                -- 2. Egg ESP
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if not State.ESP then break end
-                    local n = obj.Name:lower()
-                    if (n:find("egg") or n:find("nest")) and (obj:IsA("Model") or obj:IsA("BasePart")) then
-                        if not obj:FindFirstChild("UltraHub_ESP") and not obj:IsDescendantOf(LocalPlayer.Character) then
-                            applyESP(obj, Color3.fromRGB(255, 215, 0))
-                        end
-                    end
-                end
-            end)
-            task.wait(2)
-        else
-            task.wait(0.6)
-        end
-    end
-end)
-
--- 6. Fly System (Mobile Touch & PC Keyboard Compatible)
-local flyBodyVel = nil
-local flyBodyGyro = nil
-
-local function startFlying()
-    local root = getRoot()
-    if not root then return end
-
-    flyBodyVel = Instance.new("BodyVelocity")
-    flyBodyVel.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-    flyBodyVel.Velocity = Vector3.new(0, 0, 0)
-    flyBodyVel.Parent = root
-
-    flyBodyGyro = Instance.new("BodyGyro")
-    flyBodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
-    flyBodyGyro.P = 10000
-    flyBodyGyro.CFrame = root.CFrame
-    flyBodyGyro.Parent = root
-
-    task.spawn(function()
-        while State.FlyMode and flyBodyVel and flyBodyGyro do
-            local currentRoot = getRoot()
-            local hum = getHum()
-            if not currentRoot or not hum then break end
-
-            local moveDir = hum.MoveDirection
-            local camCF = Camera.CFrame
-            flyBodyGyro.CFrame = camCF
-
-            if moveDir.Magnitude > 0 then
-                flyBodyVel.Velocity = camCF.LookVector * State.FlySpeed
-            else
-                flyBodyVel.Velocity = Vector3.new(0, 0, 0)
-            end
-
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-                flyBodyVel.Velocity = flyBodyVel.Velocity + Vector3.new(0, State.FlySpeed, 0)
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
-                flyBodyVel.Velocity = flyBodyVel.Velocity - Vector3.new(0, State.FlySpeed, 0)
-            end
-
-            task.wait()
-        end
-
-        if flyBodyVel then flyBodyVel:Destroy() flyBodyVel = nil end
-        if flyBodyGyro then flyBodyGyro:Destroy() flyBodyGyro = nil end
-    end)
-end
-
-local function stopFlying()
-    if flyBodyVel then flyBodyVel:Destroy() flyBodyVel = nil end
-    if flyBodyGyro then flyBodyGyro:Destroy() flyBodyGyro = nil end
-end
-
--- 7. Movement Hacks (NoClip, Infinite Jump, WalkSpeed)
-RunService.Stepped:Connect(function()
-    if State.NoClip then
-        local char = LocalPlayer.Character
-        if char then
-            for _, part in ipairs(char:GetDescendants()) do
-                if part:IsA("BasePart") and part.CanCollide then
-                    part.CanCollide = false
+        elseif desc:IsA("BasePart") or desc:IsA("Model") then
+            local n = string.lower(desc.Name)
+            if string.find(n, "egg") and not desc:IsDescendantOf(LocalPlayer.Character or Workspace) and not Players:GetPlayerFromCharacter(desc) then
+                local part = desc:IsA("BasePart") and desc or desc:FindFirstChildWhichIsA("BasePart")
+                if part and part.Transparency < 1 then
+                    table.insert(eggs, {Object = desc, Part = part, Prompt = desc:FindFirstChildOfClass("ProximityPrompt"), Name = desc.Name})
                 end
             end
         end
     end
-end)
-
-UserInputService.JumpRequest:Connect(function()
-    if State.InfiniteJump then
-        pcall(function()
-            local hum = getHum()
-            if hum then
-                hum:ChangeState(Enum.HumanoidStateType.Jumping)
-            end
-        end)
-    end
-end)
-
-local function UpdateCharacterSpeed()
-    pcall(function()
-        local hum = getHum()
-        if hum then
-            if State.WalkSpeedBoost then
-                hum.WalkSpeed = State.WalkSpeed
-            else
-                hum.WalkSpeed = 16
-            end
-        end
-    end)
+    return eggs
 end
 
-RunService.RenderStepped:Connect(function()
-    pcall(function()
-        local hum = getHum()
-        if hum and State.WalkSpeedBoost and State.WalkSpeed then
-            if hum.WalkSpeed ~= State.WalkSpeed then
-                hum.WalkSpeed = State.WalkSpeed
-            end
-        end
-    end)
-end)
+-- =================================================================
+-- UI 1 MASTER CONTAINER (280px Width Classic Matte Dark)
+-- =================================================================
 
--- ==============================================================================
--- 3. JUNEJO OFFICIAL UI 1 - CLASSIC MATTE DARK INTERFACE
--- ==============================================================================
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "JunejoHubUI_StealAnEgg"
+ScreenGui.Name = "UltraScriptHub_StealAnEgg"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.DisplayOrder = 999999
+ScreenGui.Parent = GuiParent
 
-local guiParent = (gethui and gethui()) or CoreGui or LocalPlayer:WaitForChild("PlayerGui")
-ScreenGui.Parent = guiParent
-
--- Main Window Frame (Matte Black Compact Container)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 310)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -155)
+MainFrame.Size = UDim2.new(0, 280, 0, 260)
+MainFrame.Position = UDim2.new(0.5, -140, 0.45, -130)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -550,7 +218,7 @@ MainFrame.ClipsDescendants = true
 MainFrame.Parent = ScreenGui
 
 local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 10)
+MainCorner.CornerRadius = UDim.new(0, 12)
 MainCorner.Parent = MainFrame
 
 local MainStroke = Instance.new("UIStroke")
@@ -558,8 +226,23 @@ MainStroke.Color = Color3.fromRGB(35, 35, 42)
 MainStroke.Thickness = 1
 MainStroke.Parent = MainFrame
 
--- Draggable Logic (Mobile Touch & PC Mouse)
-local dragging, dragInput, dragStart, startPos
+-- Bulletproof Click & Tap Event Binder (Delta Mobile & PC)
+local function BindClick(button, callback)
+    local lastClick = 0
+    local function trigger()
+        local now = os.clock()
+        if now - lastClick < 0.25 then return end
+        lastClick = now
+        pcall(callback)
+    end
+    button.Activated:Connect(trigger)
+    button.MouseButton1Click:Connect(trigger)
+end
+
+-- Draggable Logic
+local dragging = false
+local dragInput, dragStart, startPos
+
 MainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
@@ -586,425 +269,721 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- 1. Header Frame
+-- Mobile Floating Toggle Button
+local FloatingToggle = Instance.new("ImageButton")
+FloatingToggle.Name = "FloatingToggle"
+FloatingToggle.Size = UDim2.new(0, 42, 0, 42)
+FloatingToggle.Position = UDim2.new(0.04, 0, 0.45, 0)
+FloatingToggle.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
+FloatingToggle.BorderSizePixel = 0
+FloatingToggle.Visible = false
+FloatingToggle.Active = true
+FloatingToggle.Parent = ScreenGui
+
+local FloatCorner = Instance.new("UICorner")
+FloatCorner.CornerRadius = UDim.new(1, 0)
+FloatCorner.Parent = FloatingToggle
+
+local FloatStroke = Instance.new("UIStroke")
+FloatStroke.Color = Color3.fromRGB(35, 35, 42)
+FloatStroke.Thickness = 1
+FloatStroke.Parent = FloatingToggle
+
+local FloatIcon = Instance.new("TextLabel")
+FloatIcon.Size = UDim2.new(1, 0, 1, 0)
+FloatIcon.BackgroundTransparency = 1
+FloatIcon.Text = "🥚"
+FloatIcon.TextSize = 20
+FloatIcon.Font = Enum.Font.GothamBold
+FloatIcon.TextColor3 = Color3.fromRGB(255, 255, 255)
+FloatIcon.Parent = FloatingToggle
+
+-- Floating Toggle Dragging
+local floatDragging = false
+local floatDragStart, floatStartPos
+
+FloatingToggle.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        floatDragging = true
+        floatDragStart = input.Position
+        floatStartPos = FloatingToggle.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                floatDragging = false
+            end
+        end)
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if floatDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - floatDragStart
+        FloatingToggle.Position = UDim2.new(floatStartPos.X.Scale, floatStartPos.X.Offset + delta.X, floatStartPos.Y.Scale, floatStartPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- Header Bar
 local Header = Instance.new("Frame")
 Header.Name = "Header"
-Header.Size = UDim2.new(1, 0, 0, 32)
+Header.Size = UDim2.new(1, 0, 0, 36)
 Header.BackgroundTransparency = 1
 Header.Parent = MainFrame
 
 local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Size = UDim2.new(1, -40, 1, 0)
-TitleLabel.Position = UDim2.new(0, 12, 0, 0)
+TitleLabel.Name = "TitleLabel"
+TitleLabel.Size = UDim2.new(1, -50, 1, 0)
+TitleLabel.Position = UDim2.new(0, 14, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = GameName
+TitleLabel.Text = "STEAL AN EGG"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleLabel.TextSize = 12
+TitleLabel.TextSize = 13
 TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.Parent = Header
 
 local CloseButton = Instance.new("TextButton")
-CloseButton.Size = UDim2.new(0, 24, 0, 24)
-CloseButton.Position = UDim2.new(1, -28, 0, 4)
-CloseButton.BackgroundTransparency = 1
-CloseButton.Text = "X"
-CloseButton.TextColor3 = Color3.fromRGB(160, 160, 160)
-CloseButton.TextSize = 13
+CloseButton.Name = "CloseButton"
+CloseButton.Size = UDim2.new(0, 22, 0, 22)
+CloseButton.Position = UDim2.new(1, -32, 0.5, -11)
+CloseButton.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+CloseButton.BorderSizePixel = 0
+CloseButton.Text = "×"
+CloseButton.TextColor3 = Color3.fromRGB(170, 170, 185)
+CloseButton.TextSize = 16
 CloseButton.Font = Enum.Font.GothamBold
+CloseButton.AutoButtonColor = false
 CloseButton.Parent = Header
 
-CloseButton.MouseButton1Click:Connect(function()
-    stopFlying()
-    clearESP()
-    ScreenGui:Destroy()
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 6)
+CloseCorner.Parent = CloseButton
+
+local CloseStroke = Instance.new("UIStroke")
+CloseStroke.Color = Color3.fromRGB(45, 45, 55)
+CloseStroke.Thickness = 1
+CloseStroke.Parent = CloseButton
+
+BindClick(CloseButton, function()
+    MainFrame.Visible = false
+    FloatingToggle.Visible = true
 end)
 
--- Header Separation Line
-local HeaderLine = Instance.new("Frame")
-HeaderLine.Size = UDim2.new(1, -24, 0, 1)
-HeaderLine.Position = UDim2.new(0, 12, 0, 32)
-HeaderLine.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
-HeaderLine.BorderSizePixel = 0
-HeaderLine.Parent = MainFrame
+BindClick(FloatingToggle, function()
+    MainFrame.Visible = true
+    FloatingToggle.Visible = false
+end)
 
--- 2. Scrollable Content Container
-local ContentFrame = Instance.new("ScrollingFrame")
-ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -20, 1, -74)
-ContentFrame.Position = UDim2.new(0, 10, 0, 36)
-ContentFrame.BackgroundTransparency = 1
-ContentFrame.BorderSizePixel = 0
-ContentFrame.ScrollBarThickness = 2
-ContentFrame.ScrollBarImageColor3 = Color3.fromRGB(45, 45, 55)
-ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-ContentFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-ContentFrame.Parent = MainFrame
+-- Divider Line
+local Divider = Instance.new("Frame")
+Divider.Name = "Divider"
+Divider.Size = UDim2.new(1, -28, 0, 1)
+Divider.Position = UDim2.new(0, 14, 0, 36)
+Divider.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+Divider.BorderSizePixel = 0
+Divider.Parent = MainFrame
 
-local UIList = Instance.new("UIListLayout")
-UIList.SortOrder = Enum.SortOrder.LayoutOrder
-UIList.Padding = UDim.new(0, 4)
-UIList.Parent = ContentFrame
+-- Content Scrollable Container
+local Content = Instance.new("ScrollingFrame")
+Content.Name = "Content"
+Content.Size = UDim2.new(1, -16, 0, 186)
+Content.Position = UDim2.new(0, 8, 0, 40)
+Content.BackgroundTransparency = 1
+Content.BorderSizePixel = 0
+Content.ScrollBarThickness = 3
+Content.ScrollBarImageColor3 = Color3.fromRGB(60, 60, 75)
+Content.CanvasSize = UDim2.new(0, 0, 0, 0)
+Content.Parent = MainFrame
 
--- Helper Function: Action Button
-local function AddActionButton(text, callback)
-    local BtnFrame = Instance.new("Frame")
-    BtnFrame.Size = UDim2.new(1, 0, 0, 26)
-    BtnFrame.BackgroundTransparency = 1
-    BtnFrame.Parent = ContentFrame
+local ContentLayout = Instance.new("UIListLayout")
+ContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ContentLayout.Padding = UDim.new(0, 5)
+ContentLayout.Parent = Content
 
-    local Btn = Instance.new("TextButton")
-    Btn.Size = UDim2.new(1, 0, 1, 0)
-    Btn.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-    Btn.BorderSizePixel = 0
-    Btn.AutoButtonColor = false
-    Btn.Text = text
-    Btn.TextColor3 = Color3.fromRGB(240, 240, 240)
-    Btn.TextSize = 11
-    Btn.Font = Enum.Font.GothamBold
-    Btn.Parent = BtnFrame
+local ContentPadding = Instance.new("UIPadding")
+ContentPadding.PaddingLeft = UDim.new(0, 6)
+ContentPadding.PaddingRight = UDim.new(0, 6)
+ContentPadding.PaddingTop = UDim.new(0, 4)
+ContentPadding.PaddingBottom = UDim.new(0, 12)
+ContentPadding.Parent = Content
 
-    local BtnCorner = Instance.new("UICorner")
-    BtnCorner.CornerRadius = UDim.new(0, 5)
-    BtnCorner.Parent = Btn
+ContentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    Content.CanvasSize = UDim2.new(0, 0, 0, ContentLayout.AbsoluteContentSize.Y + 24)
+end)
 
-    local BtnStroke = Instance.new("UIStroke")
-    BtnStroke.Color = Color3.fromRGB(45, 45, 55)
-    BtnStroke.Thickness = 1
-    BtnStroke.Parent = Btn
+-- =================================================================
+-- UI BUILDER FUNCTIONS
+-- =================================================================
 
-    Btn.MouseButton1Click:Connect(function()
-        TweenService:Create(Btn, TweenInfo.new(0.08), { BackgroundColor3 = Color3.fromRGB(40, 40, 50) }):Play()
-        task.delay(0.12, function()
-            TweenService:Create(Btn, TweenInfo.new(0.12), { BackgroundColor3 = Color3.fromRGB(27, 27, 32) }):Play()
-        end)
-        if callback then callback() end
-    end)
+local function CreateSectionHeader(text, layoutOrder)
+    local header = Instance.new("TextLabel")
+    header.Name = "Header_" .. text
+    header.Size = UDim2.new(1, 0, 0, 20)
+    header.BackgroundTransparency = 1
+    header.Text = string.upper(text)
+    header.TextColor3 = Color3.fromRGB(150, 150, 170)
+    header.TextSize = 10
+    header.Font = Enum.Font.GothamBold
+    header.TextXAlignment = Enum.TextXAlignment.Left
+    header.LayoutOrder = layoutOrder
+    header.Parent = Content
+    return header
 end
 
--- Helper Function: Flat Toggle Row
-local function AddToggleRow(text, stateKey, callback)
-    local Row = Instance.new("Frame")
-    Row.Size = UDim2.new(1, 0, 0, 23)
-    Row.BackgroundTransparency = 1
-    Row.Parent = ContentFrame
+local function CreateActionButton(name, layoutOrder, onClick)
+    local btn = Instance.new("TextButton")
+    btn.Name = "Btn_" .. name
+    btn.Size = UDim2.new(1, 0, 0, 28)
+    btn.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+    btn.BorderSizePixel = 0
+    btn.Text = name
+    btn.TextColor3 = Color3.fromRGB(240, 240, 245)
+    btn.TextSize = 12
+    btn.Font = Enum.Font.GothamBold
+    btn.AutoButtonColor = true
+    btn.LayoutOrder = layoutOrder
+    btn.Parent = Content
 
-    local RowBtn = Instance.new("TextButton")
-    RowBtn.Size = UDim2.new(1, 0, 1, 0)
-    RowBtn.BackgroundTransparency = 1
-    RowBtn.Text = ""
-    RowBtn.ZIndex = 5
-    RowBtn.Parent = Row
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = btn
 
-    local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(1, -28, 1, 0)
-    Label.Position = UDim2.new(0, 4, 0, 0)
-    Label.BackgroundTransparency = 1
-    Label.Text = text
-    Label.TextColor3 = Color3.fromRGB(240, 240, 240)
-    Label.TextSize = 12
-    Label.Font = Enum.Font.GothamBold
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.Parent = Row
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(45, 45, 55)
+    stroke.Thickness = 1
+    stroke.Parent = btn
 
-    local CheckBox = Instance.new("Frame")
-    CheckBox.Size = UDim2.new(0, 18, 0, 18)
-    CheckBox.Position = UDim2.new(1, -20, 0.5, -9)
-    CheckBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-    CheckBox.BorderSizePixel = 0
-    CheckBox.Parent = Row
+    BindClick(btn, function()
+        if onClick then task.spawn(onClick) end
+    end)
+    return btn
+end
 
-    local CheckCorner = Instance.new("UICorner")
-    CheckCorner.CornerRadius = UDim.new(0, 4)
-    CheckCorner.Parent = CheckBox
+local function CreateFeatureRow(name, defaultVal, layoutOrder, callback)
+    local state = defaultVal or false
 
-    local CheckStroke = Instance.new("UIStroke")
-    CheckStroke.Color = Color3.fromRGB(45, 45, 55)
-    CheckStroke.Thickness = 1.2
-    CheckStroke.Parent = CheckBox
+    local row = Instance.new("Frame")
+    row.Name = name .. "_Row"
+    row.Size = UDim2.new(1, 0, 0, 26)
+    row.BackgroundTransparency = 1
+    row.LayoutOrder = layoutOrder
+    row.Parent = Content
 
-    local CheckMark = Instance.new("Frame")
-    CheckMark.Size = UDim2.new(0, 10, 0, 10)
-    CheckMark.Position = UDim2.new(0.5, -5, 0.5, -5)
-    CheckMark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    CheckMark.BackgroundTransparency = State[stateKey] and 0 or 1
-    CheckMark.BorderSizePixel = 0
-    CheckMark.Parent = CheckBox
+    local rowBtn = Instance.new("TextButton")
+    rowBtn.Name = "RowBtn"
+    rowBtn.Size = UDim2.new(1, 0, 1, 0)
+    rowBtn.BackgroundTransparency = 1
+    rowBtn.Text = ""
+    rowBtn.AutoButtonColor = false
+    rowBtn.Parent = row
 
-    local MarkCorner = Instance.new("UICorner")
-    MarkCorner.CornerRadius = UDim.new(0, 2)
-    MarkCorner.Parent = CheckMark
+    local label = Instance.new("TextLabel")
+    label.Name = "Label"
+    label.Size = UDim2.new(1, -30, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Text = name
+    label.TextColor3 = Color3.fromRGB(240, 240, 245)
+    label.TextSize = 12
+    label.Font = Enum.Font.GothamMedium
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = rowBtn
 
-    RowBtn.MouseButton1Click:Connect(function()
-        State[stateKey] = not State[stateKey]
-        CheckMark.BackgroundTransparency = State[stateKey] and 0 or 1
-        if callback then
-            callback(State[stateKey])
+    local box = Instance.new("Frame")
+    box.Name = "Box"
+    box.Size = UDim2.new(0, 20, 0, 20)
+    box.Position = UDim2.new(1, -20, 0.5, -10)
+    box.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+    box.BorderSizePixel = 0
+    box.Parent = rowBtn
+
+    local boxCorner = Instance.new("UICorner")
+    boxCorner.CornerRadius = UDim.new(0, 5)
+    boxCorner.Parent = box
+
+    local boxStroke = Instance.new("UIStroke")
+    boxStroke.Color = Color3.fromRGB(45, 45, 55)
+    boxStroke.Thickness = 1
+    boxStroke.Parent = box
+
+    local check = Instance.new("Frame")
+    check.Name = "Check"
+    check.Size = UDim2.new(0, 12, 0, 12)
+    check.Position = UDim2.new(0.5, -6, 0.5, -6)
+    check.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    check.BorderSizePixel = 0
+    check.Visible = state
+    check.Parent = box
+
+    local checkCorner = Instance.new("UICorner")
+    checkCorner.CornerRadius = UDim.new(0, 3)
+    checkCorner.Parent = check
+
+    BindClick(rowBtn, function()
+        state = not state
+        check.Visible = state
+        if callback then task.spawn(callback, state) end
+    end)
+
+    return row
+end
+
+local function CreateSpeedRow(name, defaultSpeed, layoutOrder, toggleCallback, valueCallback)
+    local active = false
+    local currentSpeed = defaultSpeed or 50
+
+    local row = Instance.new("Frame")
+    row.Name = name .. "_Row"
+    row.Size = UDim2.new(1, 0, 0, 26)
+    row.BackgroundTransparency = 1
+    row.LayoutOrder = layoutOrder
+    row.Parent = Content
+
+    local label = Instance.new("TextLabel")
+    label.Name = "Label"
+    label.Size = UDim2.new(0, 75, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Text = name
+    label.TextColor3 = Color3.fromRGB(240, 240, 245)
+    label.TextSize = 12
+    label.Font = Enum.Font.GothamMedium
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = row
+
+    local boxBtn = Instance.new("TextButton")
+    boxBtn.Name = "BoxBtn"
+    boxBtn.Size = UDim2.new(0, 20, 0, 20)
+    boxBtn.Position = UDim2.new(0, 80, 0.5, -10)
+    boxBtn.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+    boxBtn.BorderSizePixel = 0
+    boxBtn.Text = ""
+    boxBtn.AutoButtonColor = false
+    boxBtn.Parent = row
+
+    local boxCorner = Instance.new("UICorner")
+    boxCorner.CornerRadius = UDim.new(0, 5)
+    boxCorner.Parent = boxBtn
+
+    local boxStroke = Instance.new("UIStroke")
+    boxStroke.Color = Color3.fromRGB(45, 45, 55)
+    boxStroke.Thickness = 1
+    boxStroke.Parent = boxBtn
+
+    local check = Instance.new("Frame")
+    check.Name = "Check"
+    check.Size = UDim2.new(0, 12, 0, 12)
+    check.Position = UDim2.new(0.5, -6, 0.5, -6)
+    check.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    check.BorderSizePixel = 0
+    check.Visible = false
+    check.Parent = boxBtn
+
+    local checkCorner = Instance.new("UICorner")
+    checkCorner.CornerRadius = UDim.new(0, 3)
+    checkCorner.Parent = check
+
+    BindClick(boxBtn, function()
+        active = not active
+        check.Visible = active
+        if toggleCallback then task.spawn(toggleCallback, active, currentSpeed) end
+    end)
+
+    local pill = Instance.new("Frame")
+    pill.Name = "Pill"
+    pill.Size = UDim2.new(0, 105, 0, 24)
+    pill.Position = UDim2.new(1, -105, 0.5, -12)
+    pill.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+    pill.BorderSizePixel = 0
+    pill.Parent = row
+
+    local pillCorner = Instance.new("UICorner")
+    pillCorner.CornerRadius = UDim.new(0, 6)
+    pillCorner.Parent = pill
+
+    local pillStroke = Instance.new("UIStroke")
+    pillStroke.Color = Color3.fromRGB(45, 45, 55)
+    pillStroke.Thickness = 1
+    pillStroke.Parent = pill
+
+    local minus = Instance.new("TextButton")
+    minus.Name = "Minus"
+    minus.Size = UDim2.new(0, 28, 1, 0)
+    minus.Position = UDim2.new(0, 0, 0, 0)
+    minus.BackgroundTransparency = 1
+    minus.Text = "-"
+    minus.Font = Enum.Font.GothamBold
+    minus.TextSize = 14
+    minus.TextColor3 = Color3.fromRGB(200, 200, 210)
+    minus.Parent = pill
+
+    local valLabel = Instance.new("TextLabel")
+    valLabel.Name = "Value"
+    valLabel.Size = UDim2.new(1, -56, 1, 0)
+    valLabel.Position = UDim2.new(0, 28, 0, 0)
+    valLabel.BackgroundTransparency = 1
+    valLabel.Text = tostring(currentSpeed)
+    valLabel.Font = Enum.Font.GothamBold
+    valLabel.TextSize = 12
+    valLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    valLabel.Parent = pill
+
+    local plus = Instance.new("TextButton")
+    plus.Name = "Plus"
+    plus.Size = UDim2.new(0, 28, 1, 0)
+    plus.Position = UDim2.new(1, -28, 0, 0)
+    plus.BackgroundTransparency = 1
+    plus.Text = "+"
+    plus.Font = Enum.Font.GothamBold
+    plus.TextSize = 14
+    plus.TextColor3 = Color3.fromRGB(200, 200, 210)
+    plus.Parent = pill
+
+    BindClick(minus, function()
+        currentSpeed = math.max(16, currentSpeed - 5)
+        valLabel.Text = tostring(currentSpeed)
+        if valueCallback then task.spawn(valueCallback, currentSpeed) end
+        if active and toggleCallback then task.spawn(toggleCallback, true, currentSpeed) end
+    end)
+
+    BindClick(plus, function()
+        currentSpeed = math.min(250, currentSpeed + 5)
+        valLabel.Text = tostring(currentSpeed)
+        if valueCallback then task.spawn(valueCallback, currentSpeed) end
+        if active and toggleCallback then task.spawn(toggleCallback, true, currentSpeed) end
+    end)
+
+    return row
+end
+
+-- =================================================================
+-- REGISTER ALL FEATURES IN UI
+-- =================================================================
+
+local order = 0
+local function nextOrder()
+    order = order + 1
+    return order
+end
+
+-- 1. STEAL SECTION (EXACTLY 1 STEAL FEATURE)
+CreateSectionHeader("🥚 Steal Engine", nextOrder())
+
+CreateFeatureRow("Auto Steal Egg", State.AutoSteal, nextOrder(), function(val)
+    State.AutoSteal = val
+end)
+
+-- 2. TELEPORTS SECTION (EXACTLY 1 TELEPORT FEATURE)
+CreateSectionHeader("🚀 Teleports", nextOrder())
+
+CreateActionButton("⚡ Teleport to Rare Egg", nextOrder(), function()
+    pcall(function()
+        local root = getRoot()
+        if not root then return end
+
+        local allEggs = GetAllEggs()
+        local targetEgg = nil
+
+        -- 1. Priority: Find keyword-matched Rare Egg
+        for _, eggData in ipairs(allEggs) do
+            if IsRareEgg(eggData.Name) then
+                targetEgg = eggData
+                break
+            end
+        end
+
+        -- 2. Fallback: Furthest Egg from spawn/base
+        if not targetEgg and #allEggs > 0 then
+            local maxDist = 0
+            for _, eggData in ipairs(allEggs) do
+                local d = (root.Position - eggData.Part.Position).Magnitude
+                if d > maxDist then
+                    maxDist = d
+                    targetEgg = eggData
+                end
+            end
+        end
+
+        if targetEgg then
+            TeleportSafe(targetEgg.Part.CFrame + Vector3.new(0, 2, 0))
+            if targetEgg.Prompt then
+                task.wait(0.1)
+                TriggerPrompt(targetEgg.Prompt)
+            end
         end
     end)
-end
-
--- ==============================================================================
--- BUILD FEATURE ROWS
--- ==============================================================================
-
--- 1. Action Button: Teleport to Base
-AddActionButton("Teleport to My Base", function()
-    teleportToBase()
 end)
 
--- 2. Auto Steal & Return
-AddToggleRow("Auto Steal & Return", "AutoSteal", function(state)
-    if state and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        SavedBaseCFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
-    end
+-- 3. VISUALS & ESP SECTION
+CreateSectionHeader("👁️ Visuals & ESP", nextOrder())
+
+CreateFeatureRow("Rare Egg ESP", State.RareEggESP, nextOrder(), function(val)
+    State.RareEggESP = val
 end)
 
--- 3. Auto Treadmill Train (Smart)
-AddToggleRow("Auto Treadmill Train", "AutoTreadmill")
-
--- 4. Auto Hatch & Place
-AddToggleRow("Auto Hatch & Place", "AutoHatch")
-
--- 5. Remove Guards & Lasers
-AddToggleRow("Remove Guards & Lasers", "RemoveGuards")
-
--- 6. Egg & Player ESP
-AddToggleRow("Egg & Player ESP", "ESP", function(enabled)
-    if not enabled then
-        clearESP()
-    end
+CreateFeatureRow("All Eggs ESP", State.AllEggsESP, nextOrder(), function(val)
+    State.AllEggsESP = val
 end)
 
--- 7. Fly Mode Toggle
-AddToggleRow("Fly Mode", "FlyMode", function(enabled)
-    if enabled then
-        startFlying()
-    else
-        stopFlying()
-    end
+CreateFeatureRow("Player ESP", State.PlayerESP, nextOrder(), function(val)
+    State.PlayerESP = val
 end)
 
--- 8. Fly Speed Stepper Row
-local FlySpeedRow = Instance.new("Frame")
-FlySpeedRow.Size = UDim2.new(1, 0, 0, 23)
-FlySpeedRow.BackgroundTransparency = 1
-FlySpeedRow.Parent = ContentFrame
+-- 4. MOVEMENT & PLAYER UTILITIES (2-3 MOVEMENT FEATURES)
+CreateSectionHeader("🏃 Movement & Utilities", nextOrder())
 
-local FlySpeedLabel = Instance.new("TextLabel")
-FlySpeedLabel.Size = UDim2.new(0.55, 0, 1, 0)
-FlySpeedLabel.Position = UDim2.new(0, 4, 0, 0)
-FlySpeedLabel.BackgroundTransparency = 1
-FlySpeedLabel.Text = "Fly Speed"
-FlySpeedLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
-FlySpeedLabel.TextSize = 12
-FlySpeedLabel.Font = Enum.Font.GothamBold
-FlySpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
-FlySpeedLabel.Parent = FlySpeedRow
-
-local FlyControlFrame = Instance.new("Frame")
-FlyControlFrame.Size = UDim2.new(0, 95, 0, 22)
-FlyControlFrame.Position = UDim2.new(1, -97, 0.5, -11)
-FlyControlFrame.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-FlyControlFrame.BorderSizePixel = 0
-FlyControlFrame.Parent = FlySpeedRow
-
-local FlyCtrlCorner = Instance.new("UICorner")
-FlyCtrlCorner.CornerRadius = UDim.new(0, 4)
-FlyCtrlCorner.Parent = FlyControlFrame
-
-local FlyCtrlStroke = Instance.new("UIStroke")
-FlyCtrlStroke.Color = Color3.fromRGB(45, 45, 55)
-FlyCtrlStroke.Thickness = 1
-FlyCtrlStroke.Parent = FlyControlFrame
-
-local FlyMinusBtn = Instance.new("TextButton")
-FlyMinusBtn.Size = UDim2.new(0, 22, 1, 0)
-FlyMinusBtn.BackgroundTransparency = 1
-FlyMinusBtn.Text = "-"
-FlyMinusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
-FlyMinusBtn.TextSize = 14
-FlyMinusBtn.Font = Enum.Font.GothamBold
-FlyMinusBtn.Parent = FlyControlFrame
-
-local FlySpeedDisplay = Instance.new("TextLabel")
-FlySpeedDisplay.Size = UDim2.new(1, -44, 1, 0)
-FlySpeedDisplay.Position = UDim2.new(0, 22, 0, 0)
-FlySpeedDisplay.BackgroundTransparency = 1
-FlySpeedDisplay.Text = tostring(State.FlySpeed)
-FlySpeedDisplay.TextColor3 = Color3.fromRGB(255, 255, 255)
-FlySpeedDisplay.TextSize = 11
-FlySpeedDisplay.Font = Enum.Font.GothamBold
-FlySpeedDisplay.Parent = FlyControlFrame
-
-local FlyPlusBtn = Instance.new("TextButton")
-FlyPlusBtn.Size = UDim2.new(0, 22, 1, 0)
-FlyPlusBtn.Position = UDim2.new(1, -22, 0, 0)
-FlyPlusBtn.BackgroundTransparency = 1
-FlyPlusBtn.Text = "+"
-FlyPlusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
-FlyPlusBtn.TextSize = 14
-FlyPlusBtn.Font = Enum.Font.GothamBold
-FlyPlusBtn.Parent = FlyControlFrame
-
-FlyMinusBtn.MouseButton1Click:Connect(function()
-    State.FlySpeed = math.max(20, State.FlySpeed - 10)
-    FlySpeedDisplay.Text = tostring(State.FlySpeed)
+CreateSpeedRow("WalkSpeed", State.WalkSpeedValue, nextOrder(), function(enabled, speed)
+    State.WalkSpeed = enabled
+    State.WalkSpeedValue = speed
+end, function(speed)
+    State.WalkSpeedValue = speed
 end)
 
-FlyPlusBtn.MouseButton1Click:Connect(function()
-    State.FlySpeed = math.min(250, State.FlySpeed + 10)
-    FlySpeedDisplay.Text = tostring(State.FlySpeed)
+CreateFeatureRow("Fly Mode", State.FlyMode, nextOrder(), function(val)
+    State.FlyMode = val
 end)
 
--- 9. WalkSpeed Row (Dual Toggle Checkbox + Stepper Pill)
-local SpeedRow = Instance.new("Frame")
-SpeedRow.Size = UDim2.new(1, 0, 0, 23)
-SpeedRow.BackgroundTransparency = 1
-SpeedRow.Parent = ContentFrame
-
-local SpeedToggleBtn = Instance.new("TextButton")
-SpeedToggleBtn.Size = UDim2.new(0.55, 0, 1, 0)
-SpeedToggleBtn.BackgroundTransparency = 1
-SpeedToggleBtn.Text = ""
-SpeedToggleBtn.ZIndex = 5
-SpeedToggleBtn.Parent = SpeedRow
-
-local SpeedLabel = Instance.new("TextLabel")
-SpeedLabel.Size = UDim2.new(1, -28, 1, 0)
-SpeedLabel.Position = UDim2.new(0, 4, 0, 0)
-SpeedLabel.BackgroundTransparency = 1
-SpeedLabel.Text = "WalkSpeed"
-SpeedLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
-SpeedLabel.TextSize = 12
-SpeedLabel.Font = Enum.Font.GothamBold
-SpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
-SpeedLabel.Parent = SpeedToggleBtn
-
-local SpeedCheckBox = Instance.new("Frame")
-SpeedCheckBox.Size = UDim2.new(0, 18, 0, 18)
-SpeedCheckBox.Position = UDim2.new(1, -20, 0.5, -9)
-SpeedCheckBox.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-SpeedCheckBox.BorderSizePixel = 0
-SpeedCheckBox.Parent = SpeedToggleBtn
-
-local SpeedCheckCorner = Instance.new("UICorner")
-SpeedCheckCorner.CornerRadius = UDim.new(0, 4)
-SpeedCheckCorner.Parent = SpeedCheckBox
-
-local SpeedCheckStroke = Instance.new("UIStroke")
-SpeedCheckStroke.Color = Color3.fromRGB(45, 45, 55)
-SpeedCheckStroke.Thickness = 1.2
-SpeedCheckStroke.Parent = SpeedCheckBox
-
-local SpeedCheckMark = Instance.new("Frame")
-SpeedCheckMark.Size = UDim2.new(0, 10, 0, 10)
-SpeedCheckMark.Position = UDim2.new(0.5, -5, 0.5, -5)
-SpeedCheckMark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-SpeedCheckMark.BackgroundTransparency = State.WalkSpeedBoost and 0 or 1
-SpeedCheckMark.BorderSizePixel = 0
-SpeedCheckMark.Parent = SpeedCheckBox
-
-local SpeedMarkCorner = Instance.new("UICorner")
-SpeedMarkCorner.CornerRadius = UDim.new(0, 2)
-SpeedMarkCorner.Parent = SpeedCheckMark
-
-SpeedToggleBtn.MouseButton1Click:Connect(function()
-    State.WalkSpeedBoost = not State.WalkSpeedBoost
-    SpeedCheckMark.BackgroundTransparency = State.WalkSpeedBoost and 0 or 1
-    UpdateCharacterSpeed()
+CreateFeatureRow("Infinite Jump", State.InfiniteJump, nextOrder(), function(val)
+    State.InfiniteJump = val
 end)
 
-local SpeedControlFrame = Instance.new("Frame")
-SpeedControlFrame.Size = UDim2.new(0, 95, 0, 22)
-SpeedControlFrame.Position = UDim2.new(1, -97, 0.5, -11)
-SpeedControlFrame.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-SpeedControlFrame.BorderSizePixel = 0
-SpeedControlFrame.Parent = SpeedRow
-
-local CtrlCorner = Instance.new("UICorner")
-CtrlCorner.CornerRadius = UDim.new(0, 4)
-CtrlCorner.Parent = SpeedControlFrame
-
-local CtrlStroke = Instance.new("UIStroke")
-CtrlStroke.Color = Color3.fromRGB(45, 45, 55)
-CtrlStroke.Thickness = 1
-CtrlStroke.Parent = SpeedControlFrame
-
-local MinusBtn = Instance.new("TextButton")
-MinusBtn.Size = UDim2.new(0, 22, 1, 0)
-MinusBtn.BackgroundTransparency = 1
-MinusBtn.Text = "-"
-MinusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
-MinusBtn.TextSize = 14
-MinusBtn.Font = Enum.Font.GothamBold
-MinusBtn.Parent = SpeedControlFrame
-
-local SpeedDisplay = Instance.new("TextLabel")
-SpeedDisplay.Size = UDim2.new(1, -44, 1, 0)
-SpeedDisplay.Position = UDim2.new(0, 22, 0, 0)
-SpeedDisplay.BackgroundTransparency = 1
-SpeedDisplay.Text = tostring(State.WalkSpeed)
-SpeedDisplay.TextColor3 = Color3.fromRGB(255, 255, 255)
-SpeedDisplay.TextSize = 11
-SpeedDisplay.Font = Enum.Font.GothamBold
-SpeedDisplay.Parent = SpeedControlFrame
-
-local PlusBtn = Instance.new("TextButton")
-PlusBtn.Size = UDim2.new(0, 22, 1, 0)
-PlusBtn.Position = UDim2.new(1, -22, 0, 0)
-PlusBtn.BackgroundTransparency = 1
-PlusBtn.Text = "+"
-PlusBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
-PlusBtn.TextSize = 14
-PlusBtn.Font = Enum.Font.GothamBold
-PlusBtn.Parent = SpeedControlFrame
-
-MinusBtn.MouseButton1Click:Connect(function()
-    State.WalkSpeed = math.max(16, State.WalkSpeed - 15)
-    SpeedDisplay.Text = tostring(State.WalkSpeed)
-    UpdateCharacterSpeed()
-end)
-
-PlusBtn.MouseButton1Click:Connect(function()
-    State.WalkSpeed = math.min(300, State.WalkSpeed + 15)
-    SpeedDisplay.Text = tostring(State.WalkSpeed)
-    UpdateCharacterSpeed()
-end)
-
--- 10. No Clip Toggle
-AddToggleRow("No Clip", "NoClip")
-
--- 11. Infinite Jump Toggle
-AddToggleRow("Infinite Jump", "InfiniteJump")
-
--- ==============================================================================
--- 4. FOOTER FRAME (MANDATORY ULTRA SCRIPT HUB FOOTER)
--- ==============================================================================
+-- =================================================================
+-- MANDATORY FOOTER (CENTERED BRANDING)
+-- =================================================================
 local Footer = Instance.new("Frame")
-Footer.Size = UDim2.new(1, 0, 0, 36)
-Footer.Position = UDim2.new(0, 0, 1, -38)
+Footer.Name = "Footer"
+Footer.Size = UDim2.new(1, 0, 0, 30)
+Footer.Position = UDim2.new(0, 0, 1, -32)
 Footer.BackgroundTransparency = 1
 Footer.Parent = MainFrame
 
-local FooterTitle = Instance.new("TextLabel")
-FooterTitle.Size = UDim2.new(1, 0, 0, 14)
-FooterTitle.Position = UDim2.new(0, 0, 0, 4)
-FooterTitle.BackgroundTransparency = 1
-FooterTitle.Text = "ULTRA SCRIPT HUB"
-FooterTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-FooterTitle.TextSize = 11
-FooterTitle.Font = Enum.Font.GothamBold
-FooterTitle.Parent = Footer
+local HubTitle = Instance.new("TextLabel")
+HubTitle.Name = "HubTitle"
+HubTitle.Size = UDim2.new(1, 0, 0, 14)
+HubTitle.Position = UDim2.new(0, 0, 0, 0)
+HubTitle.BackgroundTransparency = 1
+HubTitle.Text = "ULTRA SCRIPT HUB"
+HubTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+HubTitle.TextSize = 11
+HubTitle.Font = Enum.Font.GothamBold
+HubTitle.TextXAlignment = Enum.TextXAlignment.Center
+HubTitle.Parent = Footer
 
-local FooterSub = Instance.new("TextLabel")
-FooterSub.Size = UDim2.new(1, 0, 0, 12)
-FooterSub.Position = UDim2.new(0, 0, 0, 18)
-FooterSub.BackgroundTransparency = 1
-FooterSub.Text = "Made by Junejo"
-FooterSub.TextColor3 = Color3.fromRGB(136, 136, 153)
-FooterSub.TextSize = 9
-FooterSub.Font = Enum.Font.GothamMedium
-FooterSub.Parent = Footer
+local CreatorTitle = Instance.new("TextLabel")
+CreatorTitle.Name = "CreatorTitle"
+CreatorTitle.Size = UDim2.new(1, 0, 0, 13)
+CreatorTitle.Position = UDim2.new(0, 0, 0, 14)
+CreatorTitle.BackgroundTransparency = 1
+CreatorTitle.Text = "Made by Junejo"
+CreatorTitle.TextColor3 = Color3.fromRGB(136, 136, 153)
+CreatorTitle.TextSize = 10
+CreatorTitle.Font = Enum.Font.GothamMedium
+CreatorTitle.TextXAlignment = Enum.TextXAlignment.Center
+CreatorTitle.Parent = Footer
 
-print("[ULTRA SCRIPT HUB] Steal An Egg loaded successfully!")
+-- =================================================================
+-- GAMEPLAY ENGINES & FEATURE IMPLEMENTATIONS
+-- =================================================================
+
+-- 1. BULLETPROOF AUTO STEAL EGG & BASE RETURN ENGINE
+task.spawn(function()
+    while true do
+        task.wait(0.2)
+        if State.AutoSteal then
+            pcall(function()
+                local root = getRoot()
+                if not root then return end
+
+                if not SavedBaseCFrame then
+                    SavedBaseCFrame = root.CFrame
+                end
+
+                local allEggs = GetAllEggs()
+                local targetEgg = nil
+                local shortestDist = 99999
+
+                -- Prioritize nearest stealable egg
+                for _, eggData in ipairs(allEggs) do
+                    local d = (root.Position - eggData.Part.Position).Magnitude
+                    if d < shortestDist then
+                        shortestDist = d
+                        targetEgg = eggData
+                    end
+                end
+
+                if targetEgg then
+                    -- Warp to Egg
+                    root.AssemblyLinearVelocity = Vector3.zero
+                    root.CFrame = targetEgg.Part.CFrame + Vector3.new(0, 2.5, 0)
+                    task.wait(0.12)
+
+                    -- Trigger Prompt & Touch
+                    if targetEgg.Prompt then
+                        TriggerPrompt(targetEgg.Prompt)
+                    end
+                    pcall(function()
+                        if firetouchinterest then
+                            firetouchinterest(root, targetEgg.Part, 0)
+                            firetouchinterest(root, targetEgg.Part, 1)
+                        end
+                    end)
+                    task.wait(0.15)
+
+                    -- Warp safely back to Base to secure the egg
+                    if SavedBaseCFrame then
+                        root.AssemblyLinearVelocity = Vector3.zero
+                        root.CFrame = SavedBaseCFrame + Vector3.new(0, 2, 0)
+                    end
+                    task.wait(0.3)
+                end
+            end)
+        else
+            task.wait(0.3)
+        end
+    end
+end)
+
+-- 2. WALKSPEED CONTROLLER (HUMANOID SYNC + VELOCITY ASSIST)
+RunService.Heartbeat:Connect(function()
+    pcall(function()
+        local root = getRoot()
+        local hum = getHum()
+        if hum and root then
+            if State.WalkSpeed and State.WalkSpeedValue and State.WalkSpeedValue > 16 then
+                hum.WalkSpeed = State.WalkSpeedValue
+                if hum.MoveDirection.Magnitude > 0 then
+                    local speed = State.WalkSpeedValue
+                    root.AssemblyLinearVelocity = Vector3.new(
+                        hum.MoveDirection.X * speed,
+                        root.AssemblyLinearVelocity.Y,
+                        hum.MoveDirection.Z * speed
+                    )
+                end
+            end
+        end
+    end)
+end)
+
+-- 3. INFINITE JUMP (MOBILE TOUCH & PC KEYBOARD)
+UserInputService.JumpRequest:Connect(function()
+    if State.InfiniteJump then
+        pcall(function()
+            local hum = getHum()
+            if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+        end)
+    end
+end)
+
+RunService.Heartbeat:Connect(function()
+    if State.InfiniteJump then
+        pcall(function()
+            local hum = getHum()
+            if hum and hum.Jump then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+        end)
+    end
+end)
+
+-- 4. SMOOTH FLY ENGINE (3D DIRECTIONAL FLIGHT)
+RunService.Heartbeat:Connect(function()
+    pcall(function()
+        local root = getRoot()
+        local hum = getHum()
+        local cam = Workspace.CurrentCamera
+
+        if State.FlyMode and root and hum and cam then
+            local moveDir = hum.MoveDirection
+            if moveDir.Magnitude > 0 then
+                local speed = State.FlySpeed or 60
+                local forward = cam.CFrame.LookVector
+                local right = cam.CFrame.RightVector
+                local move = (forward * -moveDir.Z + right * moveDir.X).Unit
+                root.AssemblyLinearVelocity = move * speed
+            else
+                root.AssemblyLinearVelocity = Vector3.zero
+            end
+        end
+    end)
+end)
+
+-- =================================================================
+-- LIGHTWEIGHT, LAG-FREE ESP ENGINES
+-- =================================================================
+
+local espFolder = Instance.new("Folder")
+espFolder.Name = "Junejo_StealAnEgg_ESP"
+espFolder.Parent = ScreenGui
+
+task.spawn(function()
+    while true do
+        task.wait(1.5)
+        pcall(function()
+            espFolder:ClearAllChildren()
+            local root = getRoot()
+
+            -- A. PLAYER ESP
+            if State.PlayerESP then
+                for _, plr in ipairs(Players:GetPlayers()) do
+                    if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                        local pChar = plr.Character
+                        local hrp = pChar.HumanoidRootPart
+                        local hum = pChar:FindFirstChildOfClass("Humanoid")
+                        local dist = root and math.floor((root.Position - hrp.Position).Magnitude) or 0
+                        local hp = hum and math.floor(hum.Health) or 0
+
+                        local bill = Instance.new("BillboardGui")
+                        bill.AlwaysOnTop = true
+                        bill.Size = UDim2.new(0, 130, 0, 24)
+                        bill.StudsOffset = Vector3.new(0, 3, 0)
+                        bill.Adornee = hrp
+                        bill.Parent = espFolder
+
+                        local lbl = Instance.new("TextLabel")
+                        lbl.Size = UDim2.new(1, 0, 1, 0)
+                        lbl.BackgroundTransparency = 1
+                        lbl.Text = plr.DisplayName .. " [" .. tostring(hp) .. " HP] (" .. tostring(dist) .. "m)"
+                        lbl.TextColor3 = Color3.fromRGB(255, 75, 75)
+                        lbl.Font = Enum.Font.GothamBold
+                        lbl.TextSize = 11
+                        lbl.TextStrokeTransparency = 0.3
+                        lbl.Parent = bill
+                    end
+                end
+            end
+
+            -- B. RARE EGG ESP & ALL EGGS ESP
+            if State.RareEggESP or State.AllEggsESP then
+                local allEggs = GetAllEggs()
+                for _, eggData in ipairs(allEggs) do
+                    local isRare = IsRareEgg(eggData.Name)
+                    local shouldRender = (isRare and State.RareEggESP) or (State.AllEggsESP and not isRare)
+
+                    if shouldRender and eggData.Part then
+                        local dist = root and math.floor((root.Position - eggData.Part.Position).Magnitude) or 0
+                        local bill = Instance.new("BillboardGui")
+                        bill.AlwaysOnTop = true
+                        bill.Size = UDim2.new(0, 140, 0, 26)
+                        bill.StudsOffset = Vector3.new(0, 2.5, 0)
+                        bill.Adornee = eggData.Part
+                        bill.Parent = espFolder
+
+                        local lbl = Instance.new("TextLabel")
+                        lbl.Size = UDim2.new(1, 0, 1, 0)
+                        lbl.BackgroundTransparency = 1
+
+                        if isRare then
+                            lbl.Text = "🌟 " .. eggData.Name .. " [" .. tostring(dist) .. "m]"
+                            lbl.TextColor3 = Color3.fromRGB(255, 80, 220)
+                        else
+                            lbl.Text = "🥚 " .. eggData.Name .. " [" .. tostring(dist) .. "m]"
+                            lbl.TextColor3 = Color3.fromRGB(80, 255, 140)
+                        end
+
+                        lbl.Font = Enum.Font.GothamBold
+                        lbl.TextSize = 11
+                        lbl.TextStrokeTransparency = 0.3
+                        lbl.Parent = bill
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+print("[ULTRA SCRIPT HUB] Steal An Egg Loaded Successfully!")
