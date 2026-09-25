@@ -31,7 +31,6 @@ local function GetSafeGuiParent()
         if gethui then
             target = gethui()
         elseif CoreGui and pcall(function() return CoreGui.Name end) then
-            -- Test if parenting to CoreGui is permitted
             local test = Instance.new("Folder")
             test.Parent = CoreGui
             test:Destroy()
@@ -60,10 +59,9 @@ end)
 -- Global State Table
 local State = {
     AutoFarmLevel = false,
-    FastAttack = false,
+    AutoAttackPlayers = false,
     AutoChests = false,
     AutoRandomFruit = false,
-    AutoStoreFruit = false,
     TeleportToFruits = false,
     AutoBusoHaki = false,
     AutoKenHaki = false,
@@ -71,11 +69,6 @@ local State = {
     ChestESP = false,
     FruitESP = false,
     FlowerESP = false,
-    MirageESP = false,
-    AutoStatsMelee = false,
-    AutoStatsDefense = false,
-    AutoStatsSword = false,
-    AutoStatsFruit = false,
     WalkSpeed = false,
     WalkSpeedValue = 50,
     FlyMode = false,
@@ -142,7 +135,7 @@ task.spawn(function()
     end)
 end)
 
--- Safe Teleport with Anti-Fall Floating Platform (Prevents Drowning in Unloaded Chunks)
+-- Safe Teleport with Anti-Fall Floating Platform
 local function TeleportSafe(targetCFrame)
     pcall(function()
         local char = LocalPlayer.Character
@@ -197,7 +190,7 @@ MainStroke.Color = Color3.fromRGB(35, 35, 42)
 MainStroke.Thickness = 1
 MainStroke.Parent = MainFrame
 
--- Bulletproof Click & Tap Event Binder (Works on Mobile Delta Touch & PC Mouse)
+-- Bulletproof Click & Tap Event Binder
 local function BindClick(button, callback)
     local lastClick = 0
     local function trigger()
@@ -377,7 +370,7 @@ ContentPadding.PaddingTop = UDim.new(0, 4)
 ContentPadding.PaddingBottom = UDim.new(0, 12)
 ContentPadding.Parent = Content
 
--- Dynamic CanvasSize Update (100% Reliable Scrolling on Delta Executor)
+-- Dynamic CanvasSize Update
 ContentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     Content.CanvasSize = UDim2.new(0, 0, 0, ContentLayout.AbsoluteContentSize.Y + 24)
 end)
@@ -644,8 +637,8 @@ CreateFeatureRow("Auto Farm Level / Enemies", State.AutoFarmLevel, nextOrder(), 
     State.AutoFarmLevel = val
 end)
 
-CreateFeatureRow("Fast Attack Burst", State.FastAttack, nextOrder(), function(val)
-    State.FastAttack = val
+CreateFeatureRow("Auto Attack (Near Players)", State.AutoAttackPlayers, nextOrder(), function(val)
+    State.AutoAttackPlayers = val
 end)
 
 CreateFeatureRow("Auto Collect Chests", State.AutoChests, nextOrder(), function(val)
@@ -683,10 +676,6 @@ CreateActionButton("🎲 Buy Random Fruit (Zioles)", nextOrder(), function()
     end
 end)
 
-CreateFeatureRow("Auto Store Fruits", State.AutoStoreFruit, nextOrder(), function(val)
-    State.AutoStoreFruit = val
-end)
-
 CreateFeatureRow("Teleport To Fruits", State.TeleportToFruits, nextOrder(), function(val)
     State.TeleportToFruits = val
 end)
@@ -710,47 +699,7 @@ CreateFeatureRow("Flower ESP (Race V2)", State.FlowerESP, nextOrder(), function(
     State.FlowerESP = val
 end)
 
-CreateFeatureRow("Mirage Island ESP", State.MirageESP, nextOrder(), function(val)
-    State.MirageESP = val
-end)
-
--- 4. STATS & PROGRESSION SECTION
-CreateSectionHeader("📊 Stats & Progression", nextOrder())
-
-CreateFeatureRow("Auto Stats: Melee", State.AutoStatsMelee, nextOrder(), function(val)
-    State.AutoStatsMelee = val
-end)
-
-CreateFeatureRow("Auto Stats: Defense", State.AutoStatsDefense, nextOrder(), function(val)
-    State.AutoStatsDefense = val
-end)
-
-CreateFeatureRow("Auto Stats: Sword", State.AutoStatsSword, nextOrder(), function(val)
-    State.AutoStatsSword = val
-end)
-
-CreateFeatureRow("Auto Stats: Fruit", State.AutoStatsFruit, nextOrder(), function(val)
-    State.AutoStatsFruit = val
-end)
-
-CreateActionButton("🎁 Redeem All Promo Codes", nextOrder(), function()
-    local commF = GetCommF()
-    if commF then
-        local codes = {
-            "NOOB2PRO", "KITT_RESET", "Sub2Fer999", "Enyu_is_Pro", "Magicbus",
-            "JCWK", "Starcodeheo", "Bluxxy", "fudd10_v2", "SUB2GAMERROBOT_EXP1",
-            "Sub2OfficialNoobie", "TheGreatAce", "Axiore", "Sub2Daigrock",
-            "TantaiGaming", "StrawHatMaine", "Sub2UncleKizaru", "Bignews", "FUDD10",
-            "CHANDLER", "NEWTROLL"
-        }
-        for _, code in ipairs(codes) do
-            pcall(function() commF:InvokeServer("RedeemCode", code) end)
-            task.wait(0.12)
-        end
-    end
-end)
-
--- 5. MOVEMENT & PLAYER UTILITY SECTION
+-- 4. MOVEMENT & PLAYER UTILITY SECTION
 CreateSectionHeader("🏃 Movement & Utilities", nextOrder())
 
 CreateSpeedRow("WalkSpeed", State.WalkSpeedValue, nextOrder(), function(enabled, speed)
@@ -776,7 +725,7 @@ CreateFeatureRow("Noclip", State.Noclip, nextOrder(), function(val)
     State.Noclip = val
 end)
 
--- 6. TELEPORTS SECTION
+-- 5. TELEPORTS SECTION
 CreateSectionHeader("🌀 World & Island Teleports", nextOrder())
 
 CreateActionButton("🛡️ Teleport to Safe Zone", nextOrder(), function()
@@ -935,7 +884,7 @@ task.spawn(function()
                     local eRoot = targetEnemy:FindFirstChild("HumanoidRootPart")
                     local eHum = targetEnemy:FindFirstChildOfClass("Humanoid")
                     if eRoot and eHum and eHum.Health > 0 then
-                        -- Safe Hover 8 studs above enemy (Immune to enemy melee)
+                        -- Safe Hover 8.5 studs above enemy (Immune to enemy melee)
                         root.CFrame = eRoot.CFrame * CFrame.new(0, 8.5, 0) * CFrame.Angles(math.rad(-90), 0, 0)
                         root.AssemblyLinearVelocity = Vector3.zero
 
@@ -954,19 +903,48 @@ task.spawn(function()
     end
 end)
 
--- 3. FAST ATTACK BURST ENGINE
+-- 3. AUTO ATTACK NEARBY PLAYERS (PROXIMITY ATTACK ENGINE)
 task.spawn(function()
     while true do
-        task.wait(0.05)
-        if State.FastAttack then
+        task.wait(0.08)
+        if State.AutoAttackPlayers then
             pcall(function()
                 local char = LocalPlayer.Character
-                if char then
-                    EquipCombatWeapon()
-                    local tool = char:FindFirstChildOfClass("Tool")
-                    if tool then tool:Activate() end
-                    VirtualUser:CaptureController()
-                    VirtualUser:ClickButton1(Vector2.new(500, 500))
+                local root = char and char:FindFirstChild("HumanoidRootPart")
+                local hum = char and char:FindFirstChildOfClass("Humanoid")
+                if not root or not hum or hum.Health <= 0 then return end
+
+                local nearestPlrChar = nil
+                local shortestDist = 32
+
+                for _, plr in ipairs(Players:GetPlayers()) do
+                    if plr ~= LocalPlayer and plr.Character then
+                        local pChar = plr.Character
+                        local pHum = pChar:FindFirstChildOfClass("Humanoid")
+                        local pRoot = pChar:FindFirstChild("HumanoidRootPart")
+                        if pHum and pHum.Health > 0 and pRoot then
+                            local d = (root.Position - pRoot.Position).Magnitude
+                            if d < shortestDist then
+                                shortestDist = d
+                                nearestPlrChar = pChar
+                            end
+                        end
+                    end
+                end
+
+                if nearestPlrChar then
+                    local pRoot = nearestPlrChar:FindFirstChild("HumanoidRootPart")
+                    if pRoot then
+                        -- Smoothly turn/aim towards the approaching player
+                        root.CFrame = CFrame.new(root.Position, Vector3.new(pRoot.Position.X, root.Position.Y, pRoot.Position.Z))
+
+                        -- Auto-equip best weapon and attack
+                        EquipCombatWeapon()
+                        local tool = char:FindFirstChildOfClass("Tool")
+                        if tool then tool:Activate() end
+                        VirtualUser:CaptureController()
+                        VirtualUser:ClickButton1(Vector2.new(500, 500))
+                    end
                 end
             end)
         end
@@ -1008,32 +986,7 @@ task.spawn(function()
     end
 end)
 
--- 5. AUTO STORE FRUITS (BAG AUTO-STORER)
-task.spawn(function()
-    while true do
-        task.wait(2.5)
-        if State.AutoStoreFruit then
-            pcall(function()
-                local commF = GetCommF()
-                if not commF then return end
-
-                local function storeItem(tool)
-                    if tool and tool:IsA("Tool") and string.find(string.lower(tool.Name), "fruit") then
-                        pcall(function() commF:InvokeServer("StoreFruit", tool.Name, tool) end)
-                        pcall(function() commF:InvokeServer("StoreFruit", tool.Name:gsub(" Fruit", ""), tool) end)
-                    end
-                end
-
-                local bp = LocalPlayer:FindFirstChild("Backpack")
-                if bp then for _, item in ipairs(bp:GetChildren()) do storeItem(item) end end
-                local char = LocalPlayer.Character
-                if char then for _, item in ipairs(char:GetChildren()) do storeItem(item) end end
-            end)
-        end
-    end
-end)
-
--- 6. TELEPORT TO LIVE SPAWNED FRUITS
+-- 5. TELEPORT TO LIVE SPAWNED FRUITS
 task.spawn(function()
     while true do
         task.wait(2)
@@ -1059,32 +1012,7 @@ task.spawn(function()
     end
 end)
 
--- 7. AUTO STATS DISTRIBUTOR
-task.spawn(function()
-    while true do
-        task.wait(1.5)
-        if State.AutoStatsMelee or State.AutoStatsDefense or State.AutoStatsSword or State.AutoStatsFruit then
-            pcall(function()
-                local commF = GetCommF()
-                if not commF then return end
-
-                local points = 3
-                if LocalPlayer:FindFirstChild("Data") and LocalPlayer.Data:FindFirstChild("Points") then
-                    points = math.min(LocalPlayer.Data.Points.Value, 25)
-                end
-
-                if points > 0 then
-                    if State.AutoStatsMelee then commF:InvokeServer("AddPoint", "Melee", points) end
-                    if State.AutoStatsDefense then commF:InvokeServer("AddPoint", "Defense", points) end
-                    if State.AutoStatsSword then commF:InvokeServer("AddPoint", "Sword", points) end
-                    if State.AutoStatsFruit then commF:InvokeServer("AddPoint", "Demon Fruit", points) end
-                end
-            end)
-        end
-    end
-end)
-
--- 8. AUTO BUSO & KEN HAKI RESPAWN WATCHER
+-- 6. AUTO BUSO & KEN HAKI RESPAWN WATCHER
 LocalPlayer.CharacterAdded:Connect(function()
     task.wait(1.5)
     pcall(function()
@@ -1099,7 +1027,7 @@ LocalPlayer.CharacterAdded:Connect(function()
     end)
 end)
 
--- 9. WALKSPEED ENGINE (HUMANOID SYNC + VELOCITY ASSISTANCE)
+-- 7. WALKSPEED ENGINE (HUMANOID SYNC + VELOCITY ASSISTANCE)
 RunService.Heartbeat:Connect(function()
     pcall(function()
         local char = LocalPlayer.Character
@@ -1121,7 +1049,7 @@ RunService.Heartbeat:Connect(function()
     end)
 end)
 
--- 10. INFINITE JUMP (MOBILE TOUCH & PC KEYBOARD)
+-- 8. INFINITE JUMP (MOBILE TOUCH & PC KEYBOARD)
 UserInputService.JumpRequest:Connect(function()
     if State.InfiniteJump then
         pcall(function()
@@ -1142,7 +1070,7 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- 11. NOCLIP ENGINE
+-- 9. NOCLIP ENGINE
 RunService.Stepped:Connect(function()
     if State.Noclip then
         pcall(function()
@@ -1158,7 +1086,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- 12. INFINITE ENERGY
+-- 10. INFINITE ENERGY
 RunService.Heartbeat:Connect(function()
     if State.InfiniteEnergy then
         pcall(function()
@@ -1170,7 +1098,7 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- 13. SMOOTH FLY ENGINE (3D DIRECTIONAL FLIGHT)
+-- 11. SMOOTH FLY ENGINE (3D DIRECTIONAL FLIGHT)
 RunService.Heartbeat:Connect(function()
     pcall(function()
         local char = LocalPlayer.Character
@@ -1320,34 +1248,6 @@ task.spawn(function()
                             lbl.Font = Enum.Font.GothamBold
                             lbl.TextSize = 11
                             lbl.TextStrokeTransparency = 0.3
-                            lbl.Parent = bill
-                        end
-                    end
-                end
-            end
-
-            -- E. MIRAGE ISLAND ESP
-            if State.MirageESP then
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if string.find(string.lower(obj.Name), "mirage") then
-                        local part = obj:IsA("BasePart") and obj or (obj:IsA("Model") and (obj:FindFirstChildWhichIsA("BasePart") or obj.PrimaryPart))
-                        if part then
-                            local dist = root and math.floor((root.Position - part.Position).Magnitude) or 0
-                            local bill = Instance.new("BillboardGui")
-                            bill.AlwaysOnTop = true
-                            bill.Size = UDim2.new(0, 150, 0, 28)
-                            bill.StudsOffset = Vector3.new(0, 10, 0)
-                            bill.Adornee = part
-                            bill.Parent = espFolder
-
-                            local lbl = Instance.new("TextLabel")
-                            lbl.Size = UDim2.new(1, 0, 1, 0)
-                            lbl.BackgroundTransparency = 1
-                            lbl.Text = "🌕 MIRAGE ISLAND [" .. tostring(dist) .. "m]"
-                            lbl.TextColor3 = Color3.fromRGB(0, 255, 255)
-                            lbl.Font = Enum.Font.GothamBold
-                            lbl.TextSize = 13
-                            lbl.TextStrokeTransparency = 0.2
                             lbl.Parent = bill
                         end
                     end
