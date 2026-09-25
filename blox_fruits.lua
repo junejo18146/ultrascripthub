@@ -17,7 +17,6 @@ local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VirtualUser = game:GetService("VirtualUser")
 local CoreGui = game:GetService("CoreGui")
 
@@ -49,7 +48,6 @@ pcall(function()
 end)
 
 -- Feature State Flags
-_G.AutoFarmLevel = false
 _G.InfJumpActive = false
 _G.ChestESPActive = false
 _G.FruitESPActive = false
@@ -76,8 +74,8 @@ ScreenGui.Parent = GuiParent
 -- =================================================================
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 260)
-MainFrame.Position = UDim2.new(0.5, -140, 0.45, -130)
+MainFrame.Size = UDim2.new(0, 280, 0, 230)
+MainFrame.Position = UDim2.new(0.5, -140, 0.45, -115)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -240,7 +238,7 @@ Divider.Parent = MainFrame
 -- Content Container
 local Content = Instance.new("Frame")
 Content.Name = "Content"
-Content.Size = UDim2.new(1, -28, 0, 172)
+Content.Size = UDim2.new(1, -28, 0, 142)
 Content.Position = UDim2.new(0, 14, 0, 44)
 Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
@@ -466,34 +464,29 @@ end
 -- REGISTER FEATURE ROWS
 -- =================================================================
 
--- 1. Auto Farm Level
-CreateFeatureRow("Auto Farm Level", _G.AutoFarmLevel, 1, function(enabled)
-    _G.AutoFarmLevel = enabled
-end)
-
--- 2. Chest ESP
-CreateFeatureRow("Chest ESP", _G.ChestESPActive, 2, function(enabled)
+-- 1. Chest ESP
+CreateFeatureRow("Chest ESP", _G.ChestESPActive, 1, function(enabled)
     _G.ChestESPActive = enabled
     if not enabled and chestESPFolder then
         chestESPFolder:ClearAllChildren()
     end
 end)
 
--- 3. Fruit ESP
-CreateFeatureRow("Fruit ESP", _G.FruitESPActive, 3, function(enabled)
+-- 2. Fruit ESP
+CreateFeatureRow("Fruit ESP", _G.FruitESPActive, 2, function(enabled)
     _G.FruitESPActive = enabled
     if not enabled and fruitESPFolder then
         fruitESPFolder:ClearAllChildren()
     end
 end)
 
--- 4. Infinite Jump
-CreateFeatureRow("Infinite Jump", _G.InfJumpActive, 4, function(enabled)
+-- 3. Infinite Jump
+CreateFeatureRow("Infinite Jump", _G.InfJumpActive, 3, function(enabled)
     _G.InfJumpActive = enabled
 end)
 
--- 5. WalkSpeed (With Checkbox & Stepper Pill)
-CreateSpeedRow(5)
+-- 4. WalkSpeed (With Checkbox & Stepper Pill)
+CreateSpeedRow(4)
 
 -- =================================================================
 -- MANDATORY FOOTER (CENTERED BRANDING)
@@ -530,7 +523,7 @@ CreatorTitle.TextXAlignment = Enum.TextXAlignment.Center
 CreatorTitle.Parent = Footer
 
 -- =================================================================
--- GAMEPLAY ENGINE & FEATURE IMPLEMENTATIONS (FROM PROVIDED CODE)
+-- GAMEPLAY ENGINE & FEATURE IMPLEMENTATIONS
 -- =================================================================
 
 -- 1. WalkSpeed Bypass Engine (RenderStepped CFrame translation bypass)
@@ -559,219 +552,6 @@ UserInputService.JumpRequest:Connect(function()
                 char:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
             end
         end)
-    end
-end)
-
--- 3. Noclip Handler (Prevents getting stuck in terrain/objects during auto-farm)
-RunService.Stepped:Connect(function()
-    if _G.AutoFarmLevel then
-        pcall(function()
-            local char = LocalPlayer.Character
-            if char then
-                for _, part in ipairs(char:GetDescendants()) do
-                    if part:IsA("BasePart") and part.CanCollide then
-                        part.CanCollide = false
-                    end
-                end
-            end
-        end)
-    end
-end)
-
--- Helper: Auto-Equip Weapon / Combat Tool
-local function equipCombatTool()
-    pcall(function()
-        local character = LocalPlayer.Character
-        local backpack = LocalPlayer:FindFirstChild("Backpack")
-        if not character or not backpack then return end
-        
-        local currentTool = character:FindFirstChildOfClass("Tool")
-        if not currentTool then
-            for _, tool in ipairs(backpack:GetChildren()) do
-                if tool:IsA("Tool") then
-                    character.Humanoid:EquipTool(tool)
-                    break
-                end
-            end
-        end
-    end)
-end
-
--- Helper: Safe BodyPosition / CFrame movement for Farming
-local function setFarmPosition(targetCFrame)
-    pcall(function()
-        local character = LocalPlayer.Character
-        if not character then return end
-        local rootPart = character:FindFirstChild("HumanoidRootPart")
-        if not rootPart then return end
-        
-        local bv = rootPart:FindFirstChild("BF_FlyVelocity")
-        if not bv then
-            bv = Instance.new("BodyVelocity")
-            bv.Name = "BF_FlyVelocity"
-            bv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
-            bv.Velocity = Vector3.zero
-            bv.Parent = rootPart
-        end
-        
-        rootPart.CFrame = targetCFrame
-    end)
-end
-
-local function removeFarmVelocity()
-    pcall(function()
-        local rootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if rootPart and rootPart:FindFirstChild("BF_FlyVelocity") then
-            rootPart.BF_FlyVelocity:Destroy()
-        end
-    end)
-end
-
--- Quest Database for Blox Fruits Leveling
-local QuestList = {
-    { Min = 1, Max = 9, Quest = "BanditQuest1", ID = 1, Mob = "Bandit" },
-    { Min = 10, Max = 14, Quest = "JungleQuest", ID = 1, Mob = "Monkey" },
-    { Min = 15, Max = 29, Quest = "JungleQuest", ID = 2, Mob = "Gorilla" },
-    { Min = 30, Max = 39, Quest = "BuggyQuest1", ID = 1, Mob = "Pirate" },
-    { Min = 40, Max = 59, Quest = "BuggyQuest1", ID = 2, Mob = "Brute" },
-    { Min = 60, Max = 74, Quest = "DesertQuest", ID = 1, Mob = "Desert Bandit" },
-    { Min = 75, Max = 89, Quest = "DesertQuest", ID = 2, Mob = "Desert Officer" },
-    { Min = 90, Max = 99, Quest = "SnowQuest", ID = 1, Mob = "Snow Bandit" },
-    { Min = 100, Max = 119, Quest = "SnowQuest", ID = 2, Mob = "Snowman" },
-    { Min = 120, Max = 149, Quest = "MarineQuest2", ID = 1, Mob = "Chief Petty Officer" },
-    { Min = 150, Max = 174, Quest = "SkyQuest", ID = 1, Mob = "Sky Bandit" },
-    { Min = 175, Max = 189, Quest = "SkyQuest", ID = 2, Mob = "Dark Master" },
-    { Min = 190, Max = 209, Quest = "PrisonerQuest", ID = 1, Mob = "Prisoner" },
-    { Min = 210, Max = 249, Quest = "PrisonerQuest", ID = 2, Mob = "Dangerous Prisoner" },
-    { Min = 250, Max = 274, Quest = "ColosseumQuest", ID = 1, Mob = "Toga Warrior" },
-    { Min = 275, Max = 299, Quest = "ColosseumQuest", ID = 2, Mob = "Gladiator" },
-    { Min = 300, Max = 324, Quest = "MagmaQuest", ID = 1, Mob = "Military Soldier" },
-    { Min = 325, Max = 374, Quest = "MagmaQuest", ID = 2, Mob = "Military Spy" },
-    { Min = 375, Max = 399, Quest = "FishmanQuest", ID = 1, Mob = "Fishman Warrior" },
-    { Min = 400, Max = 449, Quest = "FishmanQuest", ID = 2, Mob = "Fishman Commando" },
-    { Min = 450, Max = 474, Quest = "SkyQuest", ID = 1, Mob = "God's Guard" },
-    { Min = 475, Max = 524, Quest = "SkyQuest", ID = 2, Mob = "Shanda" },
-    { Min = 525, Max = 624, Quest = "SkyQuest", ID = 1, Mob = "Royal Squad" },
-    { Min = 625, Max = 649, Quest = "FountainQuest", ID = 1, Mob = "Galley Pirate" },
-    { Min = 650, Max = 700, Quest = "FountainQuest", ID = 2, Mob = "Galley Captain" },
-}
-
-local function getPlayerLevel()
-    local level = 1
-    pcall(function()
-        if LocalPlayer:FindFirstChild("Data") and LocalPlayer.Data:FindFirstChild("Level") then
-            level = LocalPlayer.Data.Level.Value
-        elseif LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild("Main") and LocalPlayer.PlayerGui.Main:FindFirstChild("Level") then
-            local txt = LocalPlayer.PlayerGui.Main.Level.Text
-            local num = tonumber(string.match(txt, "%d+"))
-            if num then level = num end
-        end
-    end)
-    return level
-end
-
-local function hasActiveQuest()
-    local hasQuest = false
-    pcall(function()
-        if LocalPlayer.PlayerGui.Main.Quest.Visible == true then
-            hasQuest = true
-        end
-    end)
-    return hasQuest
-end
-
-local function getQuestDataForLevel(lvl)
-    for _, q in ipairs(QuestList) do
-        if lvl >= q.Min and lvl <= q.Max then
-            return q
-        end
-    end
-    return QuestList[#QuestList]
-end
-
--- Auto Farm Level Execution Loop
-task.spawn(function()
-    while true do
-        task.wait(0.1)
-        if _G.AutoFarmLevel then
-            pcall(function()
-                local character = LocalPlayer.Character
-                if not character or not character:FindFirstChild("HumanoidRootPart") or not character:FindFirstChild("Humanoid") then
-                    return
-                end
-
-                if character.Humanoid.Health <= 0 then
-                    task.wait(2)
-                    return
-                end
-
-                local myLevel = getPlayerLevel()
-                local questInfo = getQuestDataForLevel(myLevel)
-
-                -- Take active quest
-                if not hasActiveQuest() then
-                    local commF = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
-                    if not commF and ReplicatedStorage:FindFirstChild("CommF_") then
-                        commF = ReplicatedStorage.CommF_
-                    end
-                    if commF then
-                        commF:InvokeServer("StartQuest", questInfo.Quest, questInfo.ID)
-                        task.wait(0.3)
-                    end
-                end
-
-                -- Target Mob search
-                local targetMob = nil
-                local enemiesFolder = Workspace:FindFirstChild("Enemies")
-
-                if enemiesFolder then
-                    for _, enemy in ipairs(enemiesFolder:GetChildren()) do
-                        if enemy:IsA("Model") and enemy:FindFirstChild("Humanoid") and enemy:FindFirstChild("HumanoidRootPart") then
-                            if enemy.Humanoid.Health > 0 then
-                                if string.find(string.lower(enemy.Name), string.lower(questInfo.Mob)) then
-                                    targetMob = enemy
-                                    break
-                                elseif not targetMob then
-                                    targetMob = enemy
-                                end
-                            end
-                        end
-                    end
-                end
-
-                if not targetMob then
-                    for _, enemy in ipairs(Workspace:GetChildren()) do
-                        if enemy:IsA("Model") and enemy:FindFirstChild("Humanoid") and enemy:FindFirstChild("HumanoidRootPart") and enemy ~= character then
-                            if enemy.Humanoid.Health > 0 and string.find(string.lower(enemy.Name), string.lower(questInfo.Mob)) then
-                                targetMob = enemy
-                                break
-                            end
-                        end
-                    end
-                end
-
-                if targetMob and targetMob:FindFirstChild("HumanoidRootPart") then
-                    equipCombatTool()
-
-                    -- Safe combat position: 10 studs above enemy facing down
-                    local mobCFrame = targetMob.HumanoidRootPart.CFrame
-                    local safeAttackCFrame = mobCFrame * CFrame.new(0, 10, 0) * CFrame.Angles(math.rad(-90), 0, 0)
-                    setFarmPosition(safeAttackCFrame)
-
-                    -- Trigger attack
-                    local tool = character:FindFirstChildOfClass("Tool")
-                    if tool then
-                        tool:Activate()
-                    end
-                    VirtualUser:CaptureController()
-                    VirtualUser:Button1Down(Vector2.new(500, 500), Workspace.CurrentCamera.CFrame)
-                else
-                    removeFarmVelocity()
-                end
-            end)
-        else
-            removeFarmVelocity()
-        end
     end
 end)
 
