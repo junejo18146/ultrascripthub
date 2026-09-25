@@ -16,12 +16,10 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascri
 -------------------------------------------------------
 FEATURES LIST:
 -------------------------------------------------------
-1. ⚔️ Auto Farm Level (Smart Level Quest Auto-Accept, Mob Target Lock, Safe Top-Down Float CFrame & Auto-Attack)
-2. 💎 Chest ESP (Distance Meter & Glowing Billboard Tags)
-3. 🍎 Fruit ESP (Real-time Fruit Radar with Distance Tags)
-4. 🦘 Infinite Jump (Continuous Airborne Jumping)
-5. 🏃 WalkSpeed Controller (Middle Checkbox Toggle + Right Stepper Pill [ - 50 + ] 16 to 250)
-6. 🛡️ 24/7 Anti-AFK Engine (VirtualUser idle disconnect bypass)
-7. 👻 Auto Noclip (Prevents terrain collision while farming)
-8. 📱 Draggable PC Mouse & Mobile Touch + Mobile Floating Icon Toggle
+1. 💎 Chest ESP (Live Distance Meter & Glowing Billboard Tags)
+2. 🍎 Fruit ESP (Real-time Devil Fruit Radar with Distance Tags & Billboard Labels)
+3. 🦘 Infinite Jump (Continuous Airborne Jumping)
+4. 🏃 WalkSpeed Controller (Middle Checkbox Toggle + Right Stepper Pill [ - 50 + ] 16 to 250)
+5. 🛡️ 24/7 Anti-AFK Engine (VirtualUser idle disconnect bypass)
+6. 📱 Draggable PC Mouse & Mobile Touch + Mobile Floating Icon Toggle
 =======================================================
