@@ -1681,13 +1681,35 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
 - **Raw Script URL**: `https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/blox_fruits.lua`
 - **Key System Status**: Disabled (Direct Standalone Executable)
 - **Features Included**:
-  - 1. 💎 Chest ESP (Distance Meter & Glowing Billboard Tags)
-  - 2. 🍎 Fruit ESP (Real-time Fruit Radar with Distance Tags)
-  - 3. 🦘 Infinite Jump (Continuous Airborne Jumping)
-  - 4. 🏃 WalkSpeed Controller (Middle Checkbox Toggle + Right Stepper Pill [ - 50 + ] 16 to 250)
-  - 5. 🛡️ 24/7 Anti-AFK Engine (VirtualUser idle disconnect bypass)
-  - 6. 🚨 Mobile Floating Toggle Button
-- **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280px` width) with Centered Branding Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
+  - 1. 🍎 Auto Random Fruit (Gacha Zioles Fruit Roll via CommF_)
+  - 2. 📦 Auto Store Fruits (Stores Held/Inventory Fruits to Bag)
+  - 3. 🚀 Teleport To Fruits (Finds Spawned Fruits & Warps To Them)
+  - 4. 💎 Auto Collect Chests (Fast Map Chest Auto-Collect & Beli Farm)
+  - 5. ⚡ Fast Attack Engine (High-frequency Attack Burst)
+  - 6. 🛡️ Auto Buso Haki (Maintains Armament Haki for Bonus Damage)
+  - 7. 👁️ Auto Ken Haki (Observation Haki / Instinct Keep-Alive)
+  - 8. 🌊 Auto Sea Beast Hunter (Sea 2 / Sea 3 Sea Beast & Terror Shark Auto-Hover & Attack)
+  - 9. 🔮 Auto Buy Raid Chip (Microchip Purchase from Mysterious Scientist)
+  - 10. 🚪 Auto Next Raid Island (Instant Gate Warp in Raids)
+  - 11. ✨ Auto Awaken Fruit (Auto Skill Awakening in Fruit Chamber)
+  - 12. 👤 Player ESP (Health Bar, Distance & Name Tags)
+  - 13. 💎 Chest ESP (Distance Meter & Gold Billboard Tags)
+  - 14. 🍎 Fruit ESP (Real-time Fruit Scanner with Distance Tags)
+  - 15. 🌸 Flower ESP (Race V2 Red, Blue & Yellow Flowers)
+  - 16. 🌕 Mirage Island ESP (Mirage Island & Moon Gear Scanner)
+  - 17. 📊 Auto Stats: Melee + Defense (Auto Points Distributor)
+  - 18. ⚔️ Auto Stats: Sword + Fruit (Auto Points Distributor)
+  - 19. 🎁 Redeem All Promo Codes (1-Click Working 2x EXP & Stat Reset Codes)
+  - 20. 🏃 WalkSpeed Controller (Middle Checkbox Toggle + Right Stepper Pill [ - 50 + ] 16 to 250)
+  - 21. 🕊️ Fly Mode (Smooth 3D WASD & Camera Flight)
+  - 22. 🦘 Infinite Jump (Continuous Airborne Jumping)
+  - 23. ⚡ Infinite Energy (Client Energy/Stamina Keep-Alive)
+  - 24. 👻 Noclip (Collision bypass through walls & terrain)
+  - 25. 🛡️ Teleport to Safe Zone (1-Click Sky Safe Zone Platform Warp)
+  - 26. 📍 Island Teleports (Jungle, Pirate Village, Desert, Marine Fortress, Skylands, Prison, Colosseum, Magma, Underwater, Fountain, Cafe, Mansion)
+  - 27. 🛡️ 24/7 Anti-AFK Engine (VirtualUser idle disconnect bypass)
+  - 28. 🚨 Mobile Floating Toggle Button (⚔️ Icon)
+- **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280px` width) with Scrollable Content and Centered Branding Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
 
 ====================================================
 Updated: September 25, 2026
