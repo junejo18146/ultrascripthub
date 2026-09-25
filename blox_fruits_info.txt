@@ -1,0 +1,27 @@
+=======================================================
+ULTRA SCRIPT HUB - GAME METADATA & LOADSTRING INFO
+=======================================================
+Game Name: Blox Fruits
+Script Name: blox_fruits.lua
+UI Standard: UI 1 (Official Ultra Script Hub Classic Matte Dark - 280px)
+Creator: Made by Junejo (junejo18146)
+GitHub Repo: junejo18146/ultrascripthub
+Upload Date: 2026-09-25
+
+-------------------------------------------------------
+LOADSTRING (Delta / Executor Ready):
+-------------------------------------------------------
+loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/blox_fruits.lua"))()
+
+-------------------------------------------------------
+FEATURES LIST:
+-------------------------------------------------------
+1. ⚔️ Auto Farm Level (Smart Level Quest Auto-Accept, Mob Target Lock, Safe Top-Down Float CFrame & Auto-Attack)
+2. 💎 Chest ESP (Distance Meter & Glowing Billboard Tags)
+3. 🍎 Fruit ESP (Real-time Fruit Radar with Distance Tags)
+4. 🦘 Infinite Jump (Continuous Airborne Jumping)
+5. 🏃 WalkSpeed Controller (Middle Checkbox Toggle + Right Stepper Pill [ - 50 + ] 16 to 250)
+6. 🛡️ 24/7 Anti-AFK Engine (VirtualUser idle disconnect bypass)
+7. 👻 Auto Noclip (Prevents terrain collision while farming)
+8. 📱 Draggable PC Mouse & Mobile Touch + Mobile Floating Icon Toggle
+=======================================================
