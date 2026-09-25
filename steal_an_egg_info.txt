@@ -1,36 +1,34 @@
-====================================================
-JUNEJO ULTRA SCRIPT HUB - STEAL AN EGG
-====================================================
+=======================================================
+ULTRA SCRIPT HUB - GAME METADATA & LOADSTRING INFO
+=======================================================
 Game Name: Steal An Egg
+Script Name: steal_an_egg.lua
+UI Standard: UI 1 (Official Ultra Script Hub Classic Matte Dark - 280px)
 Creator: Made by Junejo (junejo18146)
-Repository: ultrascripthub
-Script File: steal_an_egg.lua
+GitHub Repo: junejo18146/ultrascripthub
+Upload Date: 2026-09-25
 
-RAW LOADSTRING LINK:
+-------------------------------------------------------
+LOADSTRING (Delta / Executor Ready):
+-------------------------------------------------------
 loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/steal_an_egg.lua"))()
 
+-------------------------------------------------------
 RAW SCRIPT URL:
+-------------------------------------------------------
 https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/steal_an_egg.lua
 
-STATUS: Direct Standalone Execution (Key System Disabled)
-
-UI THEME:
-- Official UI 1 (Classic Matte Dark Standard #0F0F11, 280x310px)
-- Centered Mandatory Branding Footer (ULTRA SCRIPT HUB | Made by Junejo)
-- Smooth Dragging (Desktop & Mobile Touch)
-
-FEATURES INCLUDED:
-1. 🔘 Teleport to My Base (1-Click Instant Safe Base Warp)
-2. ☑️ Auto Steal & Return (Auto teleport to egg, 0s prompt trigger, return to base)
-3. ☑️ Auto Treadmill Train (Smart: Physical position lock, motion simulator, touch trigger & remote sync)
-4. ☑️ Auto Hatch & Place (Automatic egg opening & remote hatch)
-5. ☑️ Remove Guards & Lasers (Auto voids guards/NPCs and disables killparts/lasers)
-6. 👁️ Egg & Player ESP (Gold highlight on eggs, Red highlight on players)
-7. 🕊️ Fly Mode & Stepper Pill ([20 - 250])
-8. ⚡ WalkSpeed Controller (Checkbox Toggle + [ - 50 + ] Stepper Pill)
-9. 👻 No Clip (Phase through walls and gates)
-10. ☑️ Infinite Jump (Continuous multi-jump)
-11. 🛡️ 24/7 Anti-AFK Engine (VirtualUser idle disconnect bypass)
-====================================================
-Updated: September 23, 2026
-====================================================
+-------------------------------------------------------
+FEATURES INCLUDED (100% TESTED & VERIFIED):
+-------------------------------------------------------
+1. 🥚 Auto Steal Egg (Auto-warp to nearest egg, trigger prompt & touch, auto safe return to base)
+2. ⚡ Teleport to Rare Egg (1-Click instant warp to rarest/highest tier egg with safety platform)
+3. 🌟 Rare Egg ESP (Magenta/Pink glow with live distance meters on rare eggs)
+4. 🥚 All Eggs ESP (Green/Cyan radar tags with live distance meters on all eggs)
+5. 👤 Player ESP (Player Health, display names & live distance tags)
+6. 🏃 WalkSpeed Controller (Middle Checkbox Toggle + Right Stepper Pill [ - 50 + ] 16 to 250)
+7. 🕊️ Fly Mode (Smooth 3D WASD & Camera Directional Flight)
+8. 🦘 Infinite Jump (Dual PC Spacebar & Mobile Touch Button Support)
+9. 🛡️ 24/7 Anti-AFK Engine (VirtualUser idle kick protection)
+10. 📱 Mobile Floating Toggle Button (🥚 Icon)
+=======================================================
