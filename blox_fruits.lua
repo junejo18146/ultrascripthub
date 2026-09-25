@@ -2,11 +2,12 @@
     ========================================================================
     ULTRA SCRIPT HUB - OFFICIAL PRODUCTION SCRIPT
     ========================================================================
-    Game: Blox Fruits
+    Game: Blox Fruits ⚔️
     Game Link: https://www.roblox.com/games/2753915549/Blox-Fruits
     Creator: Made by Junejo (junejo18146)
     UI Style: UI 1 (Official Ultra Script Hub Classic Matte Dark - 280px)
     GitHub: https://github.com/junejo18146/ultrascripthub
+    Loadstring: loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/blox_fruits.lua"))()
     ========================================================================
 ]]
 
@@ -25,21 +26,29 @@ local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
 -- Safe Parent Selection for CoreGui / PlayerGui / gethui
 local function GetSafeGuiParent()
-    local success, parent = pcall(function()
-        if gethui then return gethui() end
-        if CoreGui and pcall(function() return CoreGui.Name end) then
-            return CoreGui
+    local target = nil
+    pcall(function()
+        if gethui then
+            target = gethui()
+        elseif CoreGui and pcall(function() return CoreGui.Name end) then
+            -- Test if parenting to CoreGui is permitted
+            local test = Instance.new("Folder")
+            test.Parent = CoreGui
+            test:Destroy()
+            target = CoreGui
         end
-        return LocalPlayer:WaitForChild("PlayerGui")
     end)
-    return (success and parent) or LocalPlayer:WaitForChild("PlayerGui")
+    if not target then
+        target = LocalPlayer:WaitForChild("PlayerGui")
+    end
+    return target
 end
 
 local GuiParent = GetSafeGuiParent()
 
--- Cleanup Existing UI Instances
+-- Cleanup Existing Instances
 pcall(function()
-    for _, name in ipairs({"UltraScriptHub_BloxFruits", "SakiScriptsBloxFruitsUI", "JunejoHubUI_BloxFruits"}) do
+    for _, name in ipairs({"UltraScriptHub_BloxFruits", "JunejoHubUI_BloxFruits", "SakiScriptsBloxFruitsUI"}) do
         if GuiParent:FindFirstChild(name) then GuiParent[name]:Destroy() end
         if CoreGui and CoreGui:FindFirstChild(name) then CoreGui[name]:Destroy() end
         if LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild(name) then
@@ -48,35 +57,33 @@ pcall(function()
     end
 end)
 
--- Feature State Flags
-local Toggles = {
+-- Global State Table
+local State = {
+    AutoFarmLevel = false,
+    FastAttack = false,
     AutoChests = false,
     AutoRandomFruit = false,
     AutoStoreFruit = false,
     TeleportToFruits = false,
     AutoBusoHaki = false,
     AutoKenHaki = false,
-    FastAttack = false,
     PlayerESP = false,
     ChestESP = false,
     FruitESP = false,
     FlowerESP = false,
     MirageESP = false,
-    AutoStatsMeleeDef = false,
-    AutoStatsSwordFruit = false,
-    AutoBuyRaidChip = false,
-    AutoNextRaidIsland = false,
-    AutoAwakenFruit = false,
-    AutoSeaBeastHunter = false,
-    InfiniteEnergy = false,
+    AutoStatsMelee = false,
+    AutoStatsDefense = false,
+    AutoStatsSword = false,
+    AutoStatsFruit = false,
+    WalkSpeed = false,
+    WalkSpeedValue = 50,
     FlyMode = false,
-    Noclip = false,
+    FlySpeed = 60,
     InfiniteJump = false,
-    WalkSpeed = false
+    InfiniteEnergy = false,
+    Noclip = false
 }
-
-_G.WalkSpeedValue = 50
-_G.FlySpeedValue = 60
 
 -- 24/7 Anti-AFK Idle Kick Protection
 pcall(function()
@@ -86,16 +93,91 @@ pcall(function()
     end)
 end)
 
--- ScreenGui Setup
+-- =================================================================
+-- REMOTE RESOLUTION ENGINE (AUTO-DISCOVERY & BULLETPROOF FALLBACK)
+-- =================================================================
+
+local function GetCommF()
+    local rem = ReplicatedStorage:FindFirstChild("Remotes")
+    if rem and rem:FindFirstChild("CommF_") then
+        return rem.CommF_
+    end
+    if ReplicatedStorage:FindFirstChild("CommF_") then
+        return ReplicatedStorage.CommF_
+    end
+    for _, desc in ipairs(ReplicatedStorage:GetDescendants()) do
+        if desc.Name == "CommF_" and desc:IsA("RemoteFunction") then
+            return desc
+        end
+    end
+    return nil
+end
+
+local function GetCommE()
+    local rem = ReplicatedStorage:FindFirstChild("Remotes")
+    if rem and rem:FindFirstChild("CommE") then
+        return rem.CommE
+    end
+    if ReplicatedStorage:FindFirstChild("CommE") then
+        return ReplicatedStorage.CommE
+    end
+    for _, desc in ipairs(ReplicatedStorage:GetDescendants()) do
+        if desc.Name == "CommE" and desc:IsA("RemoteEvent") then
+            return desc
+        end
+    end
+    return nil
+end
+
+-- Auto-Select Pirates Team if on Selection Screen
+task.spawn(function()
+    pcall(function()
+        task.wait(1)
+        if not LocalPlayer.Team then
+            local commF = GetCommF()
+            if commF then
+                commF:InvokeServer("SetTeam", "Pirates")
+            end
+        end
+    end)
+end)
+
+-- Safe Teleport with Anti-Fall Floating Platform (Prevents Drowning in Unloaded Chunks)
+local function TeleportSafe(targetCFrame)
+    pcall(function()
+        local char = LocalPlayer.Character
+        local root = char and char:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+
+        local plat = Instance.new("Part")
+        plat.Name = "JunejoSafePlat"
+        plat.Size = Vector3.new(20, 1, 20)
+        plat.Anchored = true
+        plat.CanCollide = true
+        plat.Transparency = 1
+        plat.CFrame = targetCFrame - Vector3.new(0, 2.5, 0)
+        plat.Parent = Workspace
+
+        root.CFrame = targetCFrame + Vector3.new(0, 2, 0)
+        root.AssemblyLinearVelocity = Vector3.zero
+        root.AssemblyAngularVelocity = Vector3.zero
+
+        task.delay(4, function()
+            if plat and plat.Parent then plat:Destroy() end
+        end)
+    end)
+end
+
+-- =================================================================
+-- UI 1 MASTER CONTAINER (280px Width Classic Matte Dark)
+-- =================================================================
+
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "UltraScriptHub_BloxFruits"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = GuiParent
 
--- =================================================================
--- UI 1 MASTER CONTAINER (280px Width Classic Matte Dark)
--- =================================================================
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Size = UDim2.new(0, 280, 0, 260)
@@ -114,6 +196,19 @@ local MainStroke = Instance.new("UIStroke")
 MainStroke.Color = Color3.fromRGB(35, 35, 42)
 MainStroke.Thickness = 1
 MainStroke.Parent = MainFrame
+
+-- Bulletproof Click & Tap Event Binder (Works on Mobile Delta Touch & PC Mouse)
+local function BindClick(button, callback)
+    local lastClick = 0
+    local function trigger()
+        local now = os.clock()
+        if now - lastClick < 0.25 then return end
+        lastClick = now
+        pcall(callback)
+    end
+    button.Activated:Connect(trigger)
+    button.MouseButton1Click:Connect(trigger)
+end
 
 -- Draggable Logic (PC Mouse & Mobile Touch)
 local dragging = false
@@ -239,13 +334,12 @@ CloseStroke.Color = Color3.fromRGB(45, 45, 55)
 CloseStroke.Thickness = 1
 CloseStroke.Parent = CloseButton
 
--- Close & Minimize Click Handling
-CloseButton.MouseButton1Click:Connect(function()
+BindClick(CloseButton, function()
     MainFrame.Visible = false
     FloatingToggle.Visible = true
 end)
 
-FloatingToggle.MouseButton1Click:Connect(function()
+BindClick(FloatingToggle, function()
     MainFrame.Visible = true
     FloatingToggle.Visible = false
 end)
@@ -262,13 +356,13 @@ Divider.Parent = MainFrame
 -- Content Scrollable Container
 local Content = Instance.new("ScrollingFrame")
 Content.Name = "Content"
-Content.Size = UDim2.new(1, -16, 0, 184)
-Content.Position = UDim2.new(0, 8, 0, 42)
+Content.Size = UDim2.new(1, -16, 0, 186)
+Content.Position = UDim2.new(0, 8, 0, 40)
 Content.BackgroundTransparency = 1
 Content.BorderSizePixel = 0
-Content.ScrollBarThickness = 2
-Content.ScrollBarImageColor3 = Color3.fromRGB(45, 45, 55)
-Content.CanvasSize = UDim2.new(0, 0, 0, 1050)
+Content.ScrollBarThickness = 3
+Content.ScrollBarImageColor3 = Color3.fromRGB(60, 60, 75)
+Content.CanvasSize = UDim2.new(0, 0, 0, 0)
 Content.Parent = MainFrame
 
 local ContentLayout = Instance.new("UIListLayout")
@@ -279,20 +373,19 @@ ContentLayout.Parent = Content
 local ContentPadding = Instance.new("UIPadding")
 ContentPadding.PaddingLeft = UDim.new(0, 6)
 ContentPadding.PaddingRight = UDim.new(0, 6)
-ContentPadding.PaddingTop = UDim.new(0, 2)
-ContentPadding.PaddingBottom = UDim.new(0, 8)
+ContentPadding.PaddingTop = UDim.new(0, 4)
+ContentPadding.PaddingBottom = UDim.new(0, 12)
 ContentPadding.Parent = Content
 
--- Auto Canvas Resizer
+-- Dynamic CanvasSize Update (100% Reliable Scrolling on Delta Executor)
 ContentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    Content.CanvasSize = UDim2.new(0, 0, 0, ContentLayout.AbsoluteContentSize.Y + 16)
+    Content.CanvasSize = UDim2.new(0, 0, 0, ContentLayout.AbsoluteContentSize.Y + 24)
 end)
 
 -- =================================================================
--- UI BUILDER FUNCTIONS (UI 1 BORDERLESS ROW WITH CHECKBOX & STEPPER)
+-- UI BUILDER FUNCTIONS
 -- =================================================================
 
--- Section Title Header
 local function CreateSectionHeader(text, layoutOrder)
     local header = Instance.new("TextLabel")
     header.Name = "Header_" .. text
@@ -300,7 +393,7 @@ local function CreateSectionHeader(text, layoutOrder)
     header.BackgroundTransparency = 1
     header.Text = string.upper(text)
     header.TextColor3 = Color3.fromRGB(150, 150, 170)
-    header.TextSize = 11
+    header.TextSize = 10
     header.Font = Enum.Font.GothamBold
     header.TextXAlignment = Enum.TextXAlignment.Left
     header.LayoutOrder = layoutOrder
@@ -308,7 +401,6 @@ local function CreateSectionHeader(text, layoutOrder)
     return header
 end
 
--- Action Button Row (Full-width dark rounded action button)
 local function CreateActionButton(name, layoutOrder, onClick)
     local btn = Instance.new("TextButton")
     btn.Name = "Btn_" .. name
@@ -332,22 +424,29 @@ local function CreateActionButton(name, layoutOrder, onClick)
     stroke.Thickness = 1
     stroke.Parent = btn
 
-    btn.MouseButton1Click:Connect(function()
-        if onClick then
-            task.spawn(onClick)
-        end
+    BindClick(btn, function()
+        if onClick then task.spawn(onClick) end
     end)
     return btn
 end
 
--- Standard Feature Row (Left label, right rounded square checkbox)
-local function CreateFeatureRow(name, toggleKey, layoutOrder, onToggle)
+local function CreateFeatureRow(name, defaultVal, layoutOrder, callback)
+    local state = defaultVal or false
+
     local row = Instance.new("Frame")
-    row.Name = name .. "Row"
+    row.Name = name .. "_Row"
     row.Size = UDim2.new(1, 0, 0, 26)
     row.BackgroundTransparency = 1
     row.LayoutOrder = layoutOrder
     row.Parent = Content
+
+    local rowBtn = Instance.new("TextButton")
+    rowBtn.Name = "RowBtn"
+    rowBtn.Size = UDim2.new(1, 0, 1, 0)
+    rowBtn.BackgroundTransparency = 1
+    rowBtn.Text = ""
+    rowBtn.AutoButtonColor = false
+    rowBtn.Parent = row
 
     local label = Instance.new("TextLabel")
     label.Name = "Label"
@@ -358,17 +457,15 @@ local function CreateFeatureRow(name, toggleKey, layoutOrder, onToggle)
     label.TextSize = 12
     label.Font = Enum.Font.GothamMedium
     label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Parent = row
+    label.Parent = rowBtn
 
-    local box = Instance.new("TextButton")
+    local box = Instance.new("Frame")
     box.Name = "Box"
     box.Size = UDim2.new(0, 20, 0, 20)
     box.Position = UDim2.new(1, -20, 0.5, -10)
     box.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
     box.BorderSizePixel = 0
-    box.Text = ""
-    box.AutoButtonColor = false
-    box.Parent = row
+    box.Parent = rowBtn
 
     local boxCorner = Instance.new("UICorner")
     boxCorner.CornerRadius = UDim.new(0, 5)
@@ -385,38 +482,28 @@ local function CreateFeatureRow(name, toggleKey, layoutOrder, onToggle)
     check.Position = UDim2.new(0.5, -6, 0.5, -6)
     check.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     check.BorderSizePixel = 0
-    check.Visible = Toggles[toggleKey] or false
+    check.Visible = state
     check.Parent = box
 
     local checkCorner = Instance.new("UICorner")
     checkCorner.CornerRadius = UDim.new(0, 3)
     checkCorner.Parent = check
 
-    local function toggleState()
-        Toggles[toggleKey] = not Toggles[toggleKey]
-        check.Visible = Toggles[toggleKey]
-        if onToggle then
-            task.spawn(onToggle, Toggles[toggleKey])
-        end
-    end
-
-    box.MouseButton1Click:Connect(toggleState)
-
-    local hitArea = Instance.new("TextButton")
-    hitArea.Name = "HitArea"
-    hitArea.Size = UDim2.new(1, -25, 1, 0)
-    hitArea.BackgroundTransparency = 1
-    hitArea.Text = ""
-    hitArea.Parent = row
-    hitArea.MouseButton1Click:Connect(toggleState)
+    BindClick(rowBtn, function()
+        state = not state
+        check.Visible = state
+        if callback then task.spawn(callback, state) end
+    end)
 
     return row
 end
 
--- Speed Row: Checkbox + Integrated Stepper Pill `[ - 50 + ]`
-local function CreateSpeedRow(layoutOrder)
+local function CreateSpeedRow(name, defaultSpeed, layoutOrder, toggleCallback, valueCallback)
+    local active = false
+    local currentSpeed = defaultSpeed or 50
+
     local row = Instance.new("Frame")
-    row.Name = "WalkSpeedRow"
+    row.Name = name .. "_Row"
     row.Size = UDim2.new(1, 0, 0, 26)
     row.BackgroundTransparency = 1
     row.LayoutOrder = layoutOrder
@@ -426,32 +513,32 @@ local function CreateSpeedRow(layoutOrder)
     label.Name = "Label"
     label.Size = UDim2.new(0, 75, 1, 0)
     label.BackgroundTransparency = 1
-    label.Text = "WalkSpeed"
+    label.Text = name
     label.TextColor3 = Color3.fromRGB(240, 240, 245)
     label.TextSize = 12
     label.Font = Enum.Font.GothamMedium
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = row
 
-    -- Checkbox
-    local box = Instance.new("TextButton")
-    box.Name = "Box"
-    box.Size = UDim2.new(0, 20, 0, 20)
-    box.Position = UDim2.new(0, 80, 0.5, -10)
-    box.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
-    box.BorderSizePixel = 0
-    box.Text = ""
-    box.AutoButtonColor = false
-    box.Parent = row
+    -- Checkbox Button
+    local boxBtn = Instance.new("TextButton")
+    boxBtn.Name = "BoxBtn"
+    boxBtn.Size = UDim2.new(0, 20, 0, 20)
+    boxBtn.Position = UDim2.new(0, 80, 0.5, -10)
+    boxBtn.BackgroundColor3 = Color3.fromRGB(27, 27, 32)
+    boxBtn.BorderSizePixel = 0
+    boxBtn.Text = ""
+    boxBtn.AutoButtonColor = false
+    boxBtn.Parent = row
 
     local boxCorner = Instance.new("UICorner")
     boxCorner.CornerRadius = UDim.new(0, 5)
-    boxCorner.Parent = box
+    boxCorner.Parent = boxBtn
 
     local boxStroke = Instance.new("UIStroke")
     boxStroke.Color = Color3.fromRGB(45, 45, 55)
     boxStroke.Thickness = 1
-    boxStroke.Parent = box
+    boxStroke.Parent = boxBtn
 
     local check = Instance.new("Frame")
     check.Name = "Check"
@@ -459,23 +546,17 @@ local function CreateSpeedRow(layoutOrder)
     check.Position = UDim2.new(0.5, -6, 0.5, -6)
     check.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     check.BorderSizePixel = 0
-    check.Visible = Toggles.WalkSpeed
-    check.Parent = box
+    check.Visible = false
+    check.Parent = boxBtn
 
     local checkCorner = Instance.new("UICorner")
     checkCorner.CornerRadius = UDim.new(0, 3)
     checkCorner.Parent = check
 
-    box.MouseButton1Click:Connect(function()
-        Toggles.WalkSpeed = not Toggles.WalkSpeed
-        check.Visible = Toggles.WalkSpeed
-        if not Toggles.WalkSpeed then
-            pcall(function()
-                if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-                    LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = 16
-                end
-            end)
-        end
+    BindClick(boxBtn, function()
+        active = not active
+        check.Visible = active
+        if toggleCallback then task.spawn(toggleCallback, active, currentSpeed) end
     end)
 
     -- Stepper Pill Frame
@@ -512,7 +593,7 @@ local function CreateSpeedRow(layoutOrder)
     valLabel.Size = UDim2.new(1, -56, 1, 0)
     valLabel.Position = UDim2.new(0, 28, 0, 0)
     valLabel.BackgroundTransparency = 1
-    valLabel.Text = tostring(_G.WalkSpeedValue)
+    valLabel.Text = tostring(currentSpeed)
     valLabel.Font = Enum.Font.GothamBold
     valLabel.TextSize = 12
     valLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -529,61 +610,25 @@ local function CreateSpeedRow(layoutOrder)
     plus.TextColor3 = Color3.fromRGB(200, 200, 210)
     plus.Parent = pill
 
-    minus.MouseButton1Click:Connect(function()
-        _G.WalkSpeedValue = math.max(16, _G.WalkSpeedValue - 5)
-        valLabel.Text = tostring(_G.WalkSpeedValue)
+    BindClick(minus, function()
+        currentSpeed = math.max(16, currentSpeed - 5)
+        valLabel.Text = tostring(currentSpeed)
+        if valueCallback then task.spawn(valueCallback, currentSpeed) end
+        if active and toggleCallback then task.spawn(toggleCallback, true, currentSpeed) end
     end)
 
-    plus.MouseButton1Click:Connect(function()
-        _G.WalkSpeedValue = math.min(250, _G.WalkSpeedValue + 5)
-        valLabel.Text = tostring(_G.WalkSpeedValue)
+    BindClick(plus, function()
+        currentSpeed = math.min(250, currentSpeed + 5)
+        valLabel.Text = tostring(currentSpeed)
+        if valueCallback then task.spawn(valueCallback, currentSpeed) end
+        if active and toggleCallback then task.spawn(toggleCallback, true, currentSpeed) end
     end)
+
+    return row
 end
 
 -- =================================================================
--- BLOX FRUITS CORE REMOTES & NETWORK INTERACTION ENGINE
--- =================================================================
-
-local function GetCommF()
-    local rem = ReplicatedStorage:FindFirstChild("Remotes")
-    if rem and rem:FindFirstChild("CommF_") then
-        return rem.CommF_
-    end
-    if ReplicatedStorage:FindFirstChild("CommF_") then
-        return ReplicatedStorage.CommF_
-    end
-    return nil
-end
-
-local function GetCommE()
-    local rem = ReplicatedStorage:FindFirstChild("Remotes")
-    if rem and rem:FindFirstChild("CommE") then
-        return rem.CommE
-    end
-    if ReplicatedStorage:FindFirstChild("CommE") then
-        return ReplicatedStorage.CommE
-    end
-    return nil
-end
-
--- Safe Root Part & CFrame Teleport
-local function GetRootPart()
-    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    return char:WaitForChild("HumanoidRootPart", 5)
-end
-
-local function TeleportTo(targetCFrame)
-    pcall(function()
-        local root = GetRootPart()
-        if root then
-            root.CFrame = targetCFrame
-            root.AssemblyLinearVelocity = Vector3.zero
-        end
-    end)
-end
-
--- =================================================================
--- REGISTER ALL REQUESTED FEATURES & CONTROLS IN UI
+-- REGISTER ALL FEATURES IN UI
 -- =================================================================
 
 local order = 0
@@ -592,38 +637,102 @@ local function nextOrder()
     return order
 end
 
--- 1. DEVIL FRUIT SECTION
-CreateSectionHeader("🍎 Devil Fruit Utilities", nextOrder())
-CreateFeatureRow("Auto Random Fruit (Gacha)", "AutoRandomFruit", nextOrder())
-CreateFeatureRow("Auto Store Fruits", "AutoStoreFruit", nextOrder())
-CreateFeatureRow("Teleport To Fruits", "TeleportToFruits", nextOrder())
-
--- 2. COMBAT & FARM SECTION
+-- 1. COMBAT & AUTO FARM SECTION
 CreateSectionHeader("⚔️ Combat & Farming", nextOrder())
-CreateFeatureRow("Auto Collect Chests", "AutoChests", nextOrder())
-CreateFeatureRow("Fast Attack", "FastAttack", nextOrder())
-CreateFeatureRow("Auto Buso Haki", "AutoBusoHaki", nextOrder())
-CreateFeatureRow("Auto Ken Haki", "AutoKenHaki", nextOrder())
-CreateFeatureRow("Auto Sea Beast Hunter", "AutoSeaBeastHunter", nextOrder())
 
--- 3. RAIDS & AWAKENING SECTION
-CreateSectionHeader("🔮 Raids & Awakening", nextOrder())
-CreateFeatureRow("Auto Buy Raid Chip", "AutoBuyRaidChip", nextOrder())
-CreateFeatureRow("Auto Next Raid Island", "AutoNextRaidIsland", nextOrder())
-CreateFeatureRow("Auto Awaken Fruit", "AutoAwakenFruit", nextOrder())
+CreateFeatureRow("Auto Farm Level / Enemies", State.AutoFarmLevel, nextOrder(), function(val)
+    State.AutoFarmLevel = val
+end)
 
--- 4. VISUALS & ESP SECTION
+CreateFeatureRow("Fast Attack Burst", State.FastAttack, nextOrder(), function(val)
+    State.FastAttack = val
+end)
+
+CreateFeatureRow("Auto Collect Chests", State.AutoChests, nextOrder(), function(val)
+    State.AutoChests = val
+end)
+
+CreateFeatureRow("Auto Buso Haki", State.AutoBusoHaki, nextOrder(), function(val)
+    State.AutoBusoHaki = val
+    if val then
+        pcall(function()
+            local commF = GetCommF()
+            if commF then commF:InvokeServer("Buso") end
+        end)
+    end
+end)
+
+CreateFeatureRow("Auto Ken Haki", State.AutoKenHaki, nextOrder(), function(val)
+    State.AutoKenHaki = val
+    if val then
+        pcall(function()
+            local commE = GetCommE()
+            if commE then commE:FireServer("Ken", true) end
+        end)
+    end
+end)
+
+-- 2. DEVIL FRUIT SECTION
+CreateSectionHeader("🍎 Devil Fruit Utilities", nextOrder())
+
+CreateActionButton("🎲 Buy Random Fruit (Zioles)", nextOrder(), function()
+    local commF = GetCommF()
+    if commF then
+        local res = commF:InvokeServer("Cousin", "Buy")
+        print("[ULTRA SCRIPT HUB] Random Fruit Gacha Result:", tostring(res))
+    end
+end)
+
+CreateFeatureRow("Auto Store Fruits", State.AutoStoreFruit, nextOrder(), function(val)
+    State.AutoStoreFruit = val
+end)
+
+CreateFeatureRow("Teleport To Fruits", State.TeleportToFruits, nextOrder(), function(val)
+    State.TeleportToFruits = val
+end)
+
+-- 3. VISUALS & ESP SECTION
 CreateSectionHeader("👁️ Visuals & ESP", nextOrder())
-CreateFeatureRow("Player ESP", "PlayerESP", nextOrder())
-CreateFeatureRow("Chest ESP", "ChestESP", nextOrder())
-CreateFeatureRow("Fruit ESP", "FruitESP", nextOrder())
-CreateFeatureRow("Flower ESP (Race V2)", "FlowerESP", nextOrder())
-CreateFeatureRow("Mirage Island ESP", "MirageESP", nextOrder())
 
--- 5. STATS & PROGRESSION SECTION
+CreateFeatureRow("Player ESP", State.PlayerESP, nextOrder(), function(val)
+    State.PlayerESP = val
+end)
+
+CreateFeatureRow("Chest ESP", State.ChestESP, nextOrder(), function(val)
+    State.ChestESP = val
+end)
+
+CreateFeatureRow("Fruit ESP", State.FruitESP, nextOrder(), function(val)
+    State.FruitESP = val
+end)
+
+CreateFeatureRow("Flower ESP (Race V2)", State.FlowerESP, nextOrder(), function(val)
+    State.FlowerESP = val
+end)
+
+CreateFeatureRow("Mirage Island ESP", State.MirageESP, nextOrder(), function(val)
+    State.MirageESP = val
+end)
+
+-- 4. STATS & PROGRESSION SECTION
 CreateSectionHeader("📊 Stats & Progression", nextOrder())
-CreateFeatureRow("Auto Stats (Melee + Defense)", "AutoStatsMeleeDef", nextOrder())
-CreateFeatureRow("Auto Stats (Sword + Fruit)", "AutoStatsSwordFruit", nextOrder())
+
+CreateFeatureRow("Auto Stats: Melee", State.AutoStatsMelee, nextOrder(), function(val)
+    State.AutoStatsMelee = val
+end)
+
+CreateFeatureRow("Auto Stats: Defense", State.AutoStatsDefense, nextOrder(), function(val)
+    State.AutoStatsDefense = val
+end)
+
+CreateFeatureRow("Auto Stats: Sword", State.AutoStatsSword, nextOrder(), function(val)
+    State.AutoStatsSword = val
+end)
+
+CreateFeatureRow("Auto Stats: Fruit", State.AutoStatsFruit, nextOrder(), function(val)
+    State.AutoStatsFruit = val
+end)
+
 CreateActionButton("🎁 Redeem All Promo Codes", nextOrder(), function()
     local commF = GetCommF()
     if commF then
@@ -631,44 +740,63 @@ CreateActionButton("🎁 Redeem All Promo Codes", nextOrder(), function()
             "NOOB2PRO", "KITT_RESET", "Sub2Fer999", "Enyu_is_Pro", "Magicbus",
             "JCWK", "Starcodeheo", "Bluxxy", "fudd10_v2", "SUB2GAMERROBOT_EXP1",
             "Sub2OfficialNoobie", "TheGreatAce", "Axiore", "Sub2Daigrock",
-            "TantaiGaming", "StrawHatMaine", "Sub2UncleKizaru", "Bignews", "FUDD10"
+            "TantaiGaming", "StrawHatMaine", "Sub2UncleKizaru", "Bignews", "FUDD10",
+            "CHANDLER", "NEWTROLL"
         }
         for _, code in ipairs(codes) do
-            pcall(function()
-                commF:InvokeServer("RedeemCode", code)
-            end)
-            task.wait(0.1)
+            pcall(function() commF:InvokeServer("RedeemCode", code) end)
+            task.wait(0.12)
         end
     end
 end)
 
--- 6. MOVEMENT & PLAYER UTILITY SECTION
+-- 5. MOVEMENT & PLAYER UTILITY SECTION
 CreateSectionHeader("🏃 Movement & Utilities", nextOrder())
-CreateSpeedRow(nextOrder())
-CreateFeatureRow("Fly Mode", "FlyMode", nextOrder())
-CreateFeatureRow("Infinite Jump", "InfiniteJump", nextOrder())
-CreateFeatureRow("Infinite Energy", "InfiniteEnergy", nextOrder())
-CreateFeatureRow("Noclip", "Noclip", nextOrder())
 
--- 7. TELEPORTS SECTION
+CreateSpeedRow("WalkSpeed", State.WalkSpeedValue, nextOrder(), function(enabled, speed)
+    State.WalkSpeed = enabled
+    State.WalkSpeedValue = speed
+end, function(speed)
+    State.WalkSpeedValue = speed
+end)
+
+CreateFeatureRow("Fly Mode", State.FlyMode, nextOrder(), function(val)
+    State.FlyMode = val
+end)
+
+CreateFeatureRow("Infinite Jump", State.InfiniteJump, nextOrder(), function(val)
+    State.InfiniteJump = val
+end)
+
+CreateFeatureRow("Infinite Energy", State.InfiniteEnergy, nextOrder(), function(val)
+    State.InfiniteEnergy = val
+end)
+
+CreateFeatureRow("Noclip", State.Noclip, nextOrder(), function(val)
+    State.Noclip = val
+end)
+
+-- 6. TELEPORTS SECTION
 CreateSectionHeader("🌀 World & Island Teleports", nextOrder())
+
 CreateActionButton("🛡️ Teleport to Safe Zone", nextOrder(), function()
     pcall(function()
-        local root = GetRootPart()
+        local char = LocalPlayer.Character
+        local root = char and char:FindFirstChild("HumanoidRootPart")
         if root then
-            -- Create floating platform high above
-            local safePos = root.Position + Vector3.new(0, 150, 0)
-            local platform = Workspace:FindFirstChild("JunejoSafeZonePart")
-            if not platform then
-                platform = Instance.new("Part")
-                platform.Name = "JunejoSafeZonePart"
-                platform.Size = Vector3.new(30, 2, 30)
-                platform.Anchored = true
-                platform.Color = Color3.fromRGB(20, 20, 25)
-                platform.Parent = Workspace
+            local safePos = root.Position + Vector3.new(0, 200, 0)
+            local p = Workspace:FindFirstChild("JunejoSafeZonePart")
+            if not p then
+                p = Instance.new("Part")
+                p.Name = "JunejoSafeZonePart"
+                p.Size = Vector3.new(35, 2, 35)
+                p.Anchored = true
+                p.Color = Color3.fromRGB(20, 20, 25)
+                p.Parent = Workspace
             end
-            platform.CFrame = CFrame.new(safePos - Vector3.new(0, 3, 0))
+            p.CFrame = CFrame.new(safePos - Vector3.new(0, 3, 0))
             root.CFrame = CFrame.new(safePos)
+            root.AssemblyLinearVelocity = Vector3.zero
         end
     end)
 end)
@@ -692,7 +820,7 @@ for _, isl in ipairs(IslandLocations) do
     local islName = isl[1]
     local islCFrame = isl[2]
     CreateActionButton("📍 " .. islName, nextOrder(), function()
-        TeleportTo(islCFrame)
+        TeleportSafe(islCFrame)
     end)
 end
 
@@ -731,114 +859,94 @@ CreatorTitle.TextXAlignment = Enum.TextXAlignment.Center
 CreatorTitle.Parent = Footer
 
 -- =================================================================
--- GAMEPLAY ENGINE & FEATURE IMPLEMENTATIONS
+-- HIGH-PERFORMANCE GAME ENGINES & FEATURE IMPLEMENTATIONS
 -- =================================================================
 
--- 1. Auto Collect Chests (Iterates map chests, teleports & collects Beli/Frags)
+-- 1. Helper: Auto-Equip Best Combat Weapon
+local function EquipCombatWeapon()
+    pcall(function()
+        local char = LocalPlayer.Character
+        if not char then return end
+        local equippedTool = char:FindFirstChildOfClass("Tool")
+        if not equippedTool then
+            local bp = LocalPlayer:FindFirstChild("Backpack")
+            if bp then
+                for _, t in ipairs(bp:GetChildren()) do
+                    if t:IsA("Tool") and (t.ToolTip == "Melee" or t.ToolTip == "Sword" or t.ToolTip == "Blox Fruit" or string.find(string.lower(t.Name), "combat") or string.find(string.lower(t.Name), "blade") or string.find(string.lower(t.Name), "katana") or string.find(string.lower(t.Name), "sword")) then
+                        t.Parent = char
+                        break
+                    end
+                end
+            end
+        end
+    end)
+end
+
+-- 2. SMART AUTO FARM LEVEL / ENEMIES (ABOVE-MOB LOCK + RAPID STRIKE)
 task.spawn(function()
     while true do
-        task.wait(0.25)
-        if Toggles.AutoChests then
+        task.wait(0.1)
+        if State.AutoFarmLevel then
             pcall(function()
-                local root = GetRootPart()
-                if not root then return end
+                local char = LocalPlayer.Character
+                local root = char and char:FindFirstChild("HumanoidRootPart")
+                local hum = char and char:FindFirstChildOfClass("Humanoid")
+                if not root or not hum or hum.Health <= 0 then return end
 
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if not Toggles.AutoChests then break end
-                    if obj:IsA("BasePart") and string.find(string.lower(obj.Name), "chest") and obj.Transparency < 1 then
-                        local startTime = tick()
-                        while Toggles.AutoChests and obj and obj.Parent and (tick() - startTime < 1.2) do
-                            root.CFrame = obj.CFrame + Vector3.new(0, 1.5, 0)
-                            root.AssemblyLinearVelocity = Vector3.zero
-                            task.wait(0.1)
+                EquipCombatWeapon()
+
+                -- Find Nearest Enemy
+                local enemiesFolder = Workspace:FindFirstChild("Enemies")
+                local targetEnemy = nil
+                local shortestDist = 500
+
+                if enemiesFolder then
+                    for _, enemy in ipairs(enemiesFolder:GetChildren()) do
+                        local eHum = enemy:FindFirstChildOfClass("Humanoid")
+                        local eRoot = enemy:FindFirstChild("HumanoidRootPart")
+                        if eHum and eHum.Health > 0 and eRoot then
+                            local d = (root.Position - eRoot.Position).Magnitude
+                            if d < shortestDist then
+                                shortestDist = d
+                                targetEnemy = enemy
+                            end
                         end
                     end
                 end
-            end)
-        end
-    end
-end)
 
--- 2. Auto Random Fruit (Gacha Zioles roll)
-task.spawn(function()
-    while true do
-        task.wait(10)
-        if Toggles.AutoRandomFruit then
-            pcall(function()
-                local commF = GetCommF()
-                if commF then
-                    commF:InvokeServer("Cousin", "Buy")
-                end
-            end)
-        end
-    end
-end)
-
--- 3. Auto Store Fruit (Safely stores any inventory or held fruits)
-task.spawn(function()
-    while true do
-        task.wait(3)
-        if Toggles.AutoStoreFruit then
-            pcall(function()
-                local commF = GetCommF()
-                if not commF then return end
-                
-                local backpack = LocalPlayer:FindFirstChild("Backpack")
-                local char = LocalPlayer.Character
-                
-                local function checkFruit(tool)
-                    if tool and tool:IsA("Tool") and string.find(string.lower(tool.Name), "fruit") then
-                        commF:InvokeServer("StoreFruit", tool.Name, tool)
-                    end
-                end
-
-                if backpack then
-                    for _, item in ipairs(backpack:GetChildren()) do checkFruit(item) end
-                end
-                if char then
-                    for _, item in ipairs(char:GetChildren()) do checkFruit(item) end
-                end
-            end)
-        end
-    end
-end)
-
--- 4. Teleport To Fruits (Finds spawned fruits on map and warps player to them)
-task.spawn(function()
-    while true do
-        task.wait(2)
-        if Toggles.TeleportToFruits then
-            pcall(function()
-                local root = GetRootPart()
-                if not root then return end
-
-                for _, obj in ipairs(Workspace:GetChildren()) do
-                    if not Toggles.TeleportToFruits then break end
-                    if (obj:IsA("Tool") or obj:IsA("Model")) and string.find(string.lower(obj.Name), "fruit") then
-                        local part = obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart")
-                        if part then
-                            root.CFrame = part.CFrame + Vector3.new(0, 2, 0)
-                            root.AssemblyLinearVelocity = Vector3.zero
-                            task.wait(0.5)
+                -- Fallback to general workspace mobs if Enemies folder is empty
+                if not targetEnemy then
+                    for _, obj in ipairs(Workspace:GetChildren()) do
+                        if obj:IsA("Model") and obj ~= char and not Players:GetPlayerFromCharacter(obj) then
+                            local eHum = obj:FindFirstChildOfClass("Humanoid")
+                            local eRoot = obj:FindFirstChild("HumanoidRootPart")
+                            if eHum and eHum.Health > 0 and eRoot and eHum.MaxHealth > 100 then
+                                local d = (root.Position - eRoot.Position).Magnitude
+                                if d < shortestDist then
+                                    shortestDist = d
+                                    targetEnemy = obj
+                                end
+                            end
                         end
                     end
                 end
-            end)
-        end
-    end
-end)
 
--- 5. Auto Buso Haki (Maintains Armament Haki)
-task.spawn(function()
-    while true do
-        task.wait(2)
-        if Toggles.AutoBusoHaki then
-            pcall(function()
-                local char = LocalPlayer.Character
-                if char and not char:FindFirstChild("HasBuso") then
-                    local commF = GetCommF()
-                    if commF then
-                        commF:InvokeServer("Buso")
+                if targetEnemy then
+                    local eRoot = targetEnemy:FindFirstChild("HumanoidRootPart")
+                    local eHum = targetEnemy:FindFirstChildOfClass("Humanoid")
+                    if eRoot and eHum and eHum.Health > 0 then
+                        -- Safe Hover 8 studs above enemy (Immune to enemy melee)
+                        root.CFrame = eRoot.CFrame * CFrame.new(0, 8.5, 0) * CFrame.Angles(math.rad(-90), 0, 0)
+                        root.AssemblyLinearVelocity = Vector3.zero
+
+                        -- Disable enemy collision
+                        pcall(function() eRoot.CanCollide = false end)
+
+                        -- Attack
+                        local tool = char:FindFirstChildOfClass("Tool")
+                        if tool then tool:Activate() end
+                        VirtualUser:CaptureController()
+                        VirtualUser:ClickButton1(Vector2.new(500, 500))
                     end
                 end
             end)
@@ -846,159 +954,197 @@ task.spawn(function()
     end
 end)
 
--- 6. Auto Ken Haki (Observation Haki / Instinct)
+-- 3. FAST ATTACK BURST ENGINE
 task.spawn(function()
     while true do
-        task.wait(3)
-        if Toggles.AutoKenHaki then
-            pcall(function()
-                local commE = GetCommE()
-                if commE then
-                    commE:FireServer("Ken", true)
-                else
-                    local commF = GetCommF()
-                    if commF then
-                        commF:InvokeServer("KenTalk", "Buy")
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- 7. Fast Attack Engine (Rapid attack burst with active weapon)
-task.spawn(function()
-    while true do
-        task.wait(0.06)
-        if Toggles.FastAttack then
+        task.wait(0.05)
+        if State.FastAttack then
             pcall(function()
                 local char = LocalPlayer.Character
                 if char then
-                    local tool = char:FindFirstChildOfClass("Tool")
-                    if tool then
-                        tool:Activate()
-                    end
-                    VirtualUser:CaptureController()
-                    VirtualUser:Button1Down(Vector2.new(500, 500), Workspace.CurrentCamera.CFrame)
-                end
-            end)
-        end
-    end
-end)
-
--- 8. Auto Stats Allocation (Melee, Defense, Sword, Demon Fruit)
-task.spawn(function()
-    while true do
-        task.wait(1.5)
-        if Toggles.AutoStatsMeleeDef or Toggles.AutoStatsSwordFruit then
-            pcall(function()
-                local commF = GetCommF()
-                if not commF then return end
-                
-                local points = 3
-                if LocalPlayer:FindFirstChild("Data") and LocalPlayer.Data:FindFirstChild("Points") then
-                    points = math.min(LocalPlayer.Data.Points.Value, 50)
-                end
-                
-                if points > 0 then
-                    if Toggles.AutoStatsMeleeDef then
-                        commF:InvokeServer("AddPoint", "Melee", math.ceil(points / 2))
-                        commF:InvokeServer("AddPoint", "Defense", math.floor(points / 2))
-                    elseif Toggles.AutoStatsSwordFruit then
-                        commF:InvokeServer("AddPoint", "Sword", math.ceil(points / 2))
-                        commF:InvokeServer("AddPoint", "Demon Fruit", math.floor(points / 2))
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- 9. Auto Buy Raid Chip & Next Raid Island & Awaken Fruit
-task.spawn(function()
-    while true do
-        task.wait(2)
-        local commF = GetCommF()
-        if not commF then continue end
-
-        if Toggles.AutoBuyRaidChip then
-            pcall(function()
-                commF:InvokeServer("RaidsNpc", "Select", "Flame")
-            end)
-        end
-
-        if Toggles.AutoAwakenFruit then
-            pcall(function()
-                commF:InvokeServer("AwakenAbility", "Z")
-            end)
-        end
-
-        if Toggles.AutoNextRaidIsland then
-            pcall(function()
-                local map = Workspace:FindFirstChild("Map")
-                local raidIsland = map and map:FindFirstChild("RaidIsland")
-                if raidIsland then
-                    local gate = raidIsland:FindFirstChild("Gate") or raidIsland:FindFirstChildWhichIsA("BasePart")
-                    if gate then
-                        TeleportTo(gate.CFrame + Vector3.new(0, 5, 0))
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- 10. Auto Sea Beast Hunter (Sea 2 / Sea 3)
-task.spawn(function()
-    while true do
-        task.wait(0.2)
-        if Toggles.AutoSeaBeastHunter then
-            pcall(function()
-                local char = LocalPlayer.Character
-                local root = GetRootPart()
-                if not char or not root then return end
-
-                local targetSB = nil
-                for _, obj in ipairs(Workspace:GetChildren()) do
-                    if obj:IsA("Model") and (string.find(string.lower(obj.Name), "sea beast") or string.find(string.lower(obj.Name), "terror shark")) then
-                        if obj:FindFirstChild("Humanoid") and obj.Humanoid.Health > 0 and obj:FindFirstChild("HumanoidRootPart") then
-                            targetSB = obj
-                            break
-                        end
-                    end
-                end
-
-                if targetSB then
-                    -- Hover 35 studs safely above Sea Beast
-                    local sbRoot = targetSB.HumanoidRootPart
-                    root.CFrame = sbRoot.CFrame * CFrame.new(0, 35, 0) * CFrame.Angles(math.rad(-90), 0, 0)
-                    root.AssemblyLinearVelocity = Vector3.zero
-
+                    EquipCombatWeapon()
                     local tool = char:FindFirstChildOfClass("Tool")
                     if tool then tool:Activate() end
                     VirtualUser:CaptureController()
-                    VirtualUser:Button1Down(Vector2.new(500, 500), Workspace.CurrentCamera.CFrame)
+                    VirtualUser:ClickButton1(Vector2.new(500, 500))
                 end
             end)
         end
     end
 end)
 
--- 11. Infinite Energy
+-- 4. AUTO COLLECT ALL MAP CHESTS
+task.spawn(function()
+    while true do
+        task.wait(0.4)
+        if State.AutoChests then
+            pcall(function()
+                local char = LocalPlayer.Character
+                local root = char and char:FindFirstChild("HumanoidRootPart")
+                if not root then return end
+
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    if not State.AutoChests then break end
+                    if obj:IsA("BasePart") or obj:IsA("Model") then
+                        local lowerName = string.lower(obj.Name)
+                        if string.find(lowerName, "chest") then
+                            local part = obj:IsA("BasePart") and obj or (obj:IsA("Model") and (obj:FindFirstChildWhichIsA("BasePart") or obj.PrimaryPart))
+                            if part and part.Transparency < 1 then
+                                root.CFrame = part.CFrame + Vector3.new(0, 1.2, 0)
+                                root.AssemblyLinearVelocity = Vector3.zero
+                                pcall(function()
+                                    if firetouchinterest then
+                                        firetouchinterest(root, part, 0)
+                                        firetouchinterest(root, part, 1)
+                                    end
+                                end)
+                                task.wait(0.3)
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- 5. AUTO STORE FRUITS (BAG AUTO-STORER)
+task.spawn(function()
+    while true do
+        task.wait(2.5)
+        if State.AutoStoreFruit then
+            pcall(function()
+                local commF = GetCommF()
+                if not commF then return end
+
+                local function storeItem(tool)
+                    if tool and tool:IsA("Tool") and string.find(string.lower(tool.Name), "fruit") then
+                        pcall(function() commF:InvokeServer("StoreFruit", tool.Name, tool) end)
+                        pcall(function() commF:InvokeServer("StoreFruit", tool.Name:gsub(" Fruit", ""), tool) end)
+                    end
+                end
+
+                local bp = LocalPlayer:FindFirstChild("Backpack")
+                if bp then for _, item in ipairs(bp:GetChildren()) do storeItem(item) end end
+                local char = LocalPlayer.Character
+                if char then for _, item in ipairs(char:GetChildren()) do storeItem(item) end end
+            end)
+        end
+    end
+end)
+
+-- 6. TELEPORT TO LIVE SPAWNED FRUITS
+task.spawn(function()
+    while true do
+        task.wait(2)
+        if State.TeleportToFruits then
+            pcall(function()
+                local char = LocalPlayer.Character
+                local root = char and char:FindFirstChild("HumanoidRootPart")
+                if not root then return end
+
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    if not State.TeleportToFruits then break end
+                    if (obj:IsA("Tool") or obj:IsA("Model")) and string.find(string.lower(obj.Name), "fruit") then
+                        local part = obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart")
+                        if part and not obj:IsDescendantOf(LocalPlayer.Character) and not obj:IsDescendantOf(LocalPlayer:FindFirstChild("Backpack")) then
+                            root.CFrame = part.CFrame + Vector3.new(0, 1.5, 0)
+                            root.AssemblyLinearVelocity = Vector3.zero
+                            task.wait(0.8)
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- 7. AUTO STATS DISTRIBUTOR
+task.spawn(function()
+    while true do
+        task.wait(1.5)
+        if State.AutoStatsMelee or State.AutoStatsDefense or State.AutoStatsSword or State.AutoStatsFruit then
+            pcall(function()
+                local commF = GetCommF()
+                if not commF then return end
+
+                local points = 3
+                if LocalPlayer:FindFirstChild("Data") and LocalPlayer.Data:FindFirstChild("Points") then
+                    points = math.min(LocalPlayer.Data.Points.Value, 25)
+                end
+
+                if points > 0 then
+                    if State.AutoStatsMelee then commF:InvokeServer("AddPoint", "Melee", points) end
+                    if State.AutoStatsDefense then commF:InvokeServer("AddPoint", "Defense", points) end
+                    if State.AutoStatsSword then commF:InvokeServer("AddPoint", "Sword", points) end
+                    if State.AutoStatsFruit then commF:InvokeServer("AddPoint", "Demon Fruit", points) end
+                end
+            end)
+        end
+    end
+end)
+
+-- 8. AUTO BUSO & KEN HAKI RESPAWN WATCHER
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(1.5)
+    pcall(function()
+        if State.AutoBusoHaki then
+            local commF = GetCommF()
+            if commF then commF:InvokeServer("Buso") end
+        end
+        if State.AutoKenHaki then
+            local commE = GetCommE()
+            if commE then commE:FireServer("Ken", true) end
+        end
+    end)
+end)
+
+-- 9. WALKSPEED ENGINE (HUMANOID SYNC + VELOCITY ASSISTANCE)
 RunService.Heartbeat:Connect(function()
-    if Toggles.InfiniteEnergy then
+    pcall(function()
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hum and hrp then
+            if State.WalkSpeed and State.WalkSpeedValue and State.WalkSpeedValue > 16 then
+                hum.WalkSpeed = State.WalkSpeedValue
+                if hum.MoveDirection.Magnitude > 0 then
+                    local speed = State.WalkSpeedValue
+                    hrp.AssemblyLinearVelocity = Vector3.new(
+                        hum.MoveDirection.X * speed,
+                        hrp.AssemblyLinearVelocity.Y,
+                        hum.MoveDirection.Z * speed
+                    )
+                end
+            end
+        end
+    end)
+end)
+
+-- 10. INFINITE JUMP (MOBILE TOUCH & PC KEYBOARD)
+UserInputService.JumpRequest:Connect(function()
+    if State.InfiniteJump then
         pcall(function()
             local char = LocalPlayer.Character
-            if char and char:FindFirstChild("Energy") and char.Energy:IsA("NumberValue") then
-                char.Energy.Value = 999999
-            end
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
         end)
     end
 end)
 
--- 12. Noclip
+RunService.Heartbeat:Connect(function()
+    if State.InfiniteJump then
+        pcall(function()
+            local char = LocalPlayer.Character
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            if hum and hum.Jump then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+        end)
+    end
+end)
+
+-- 11. NOCLIP ENGINE
 RunService.Stepped:Connect(function()
-    if Toggles.Noclip then
+    if State.Noclip then
         pcall(function()
             local char = LocalPlayer.Character
             if char then
@@ -1012,113 +1158,79 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- 13. WalkSpeed Bypass Engine
-RunService.RenderStepped:Connect(function(deltaTime)
-    pcall(function()
-        if Toggles.WalkSpeed and _G.WalkSpeedValue and _G.WalkSpeedValue > 16 then
+-- 12. INFINITE ENERGY
+RunService.Heartbeat:Connect(function()
+    if State.InfiniteEnergy then
+        pcall(function()
             local char = LocalPlayer.Character
-            if char and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
-                local hum = char.Humanoid
-                local hrp = char.HumanoidRootPart
-                if hum.MoveDirection.Magnitude > 0 then
-                    local speedBoost = (_G.WalkSpeedValue - 16)
-                    hrp.CFrame = hrp.CFrame + (hum.MoveDirection * (speedBoost * deltaTime))
-                end
+            if char and char:FindFirstChild("Energy") and char.Energy:IsA("NumberValue") then
+                char.Energy.Value = 999999
+            end
+        end)
+    end
+end)
+
+-- 13. SMOOTH FLY ENGINE (3D DIRECTIONAL FLIGHT)
+RunService.Heartbeat:Connect(function()
+    pcall(function()
+        local char = LocalPlayer.Character
+        local root = char and char:FindFirstChild("HumanoidRootPart")
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        local cam = Workspace.CurrentCamera
+
+        if State.FlyMode and root and hum and cam then
+            local moveDir = hum.MoveDirection
+            if moveDir.Magnitude > 0 then
+                local speed = State.FlySpeed or 60
+                local forward = cam.CFrame.LookVector
+                local right = cam.CFrame.RightVector
+                local move = (forward * -moveDir.Z + right * moveDir.X).Unit
+                root.AssemblyLinearVelocity = move * speed
+            else
+                root.AssemblyLinearVelocity = Vector3.zero
             end
         end
     end)
 end)
 
--- 14. Infinite Jump (Mobile & PC)
-UserInputService.JumpRequest:Connect(function()
-    if Toggles.InfiniteJump then
-        pcall(function()
-            local char = LocalPlayer.Character
-            if char and char:FindFirstChildOfClass("Humanoid") then
-                char:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
-            end
-        end)
-    end
-end)
-
--- 15. Smooth Fly Mode (WASD & Camera Flight)
-local flyBodyVel, flyBodyGyro
-task.spawn(function()
-    while true do
-        task.wait(0.1)
-        pcall(function()
-            local char = LocalPlayer.Character
-            local root = char and char:FindFirstChild("HumanoidRootPart")
-            if not root then return end
-
-            if Toggles.FlyMode then
-                if not flyBodyVel then
-                    flyBodyVel = Instance.new("BodyVelocity")
-                    flyBodyVel.Name = "JunejoFlyVelocity"
-                    flyBodyVel.MaxForce = Vector3.new(1e9, 1e9, 1e9)
-                    flyBodyVel.Velocity = Vector3.zero
-                    flyBodyVel.Parent = root
-                end
-
-                if not flyBodyGyro then
-                    flyBodyGyro = Instance.new("BodyGyro")
-                    flyBodyGyro.Name = "JunejoFlyGyro"
-                    flyBodyGyro.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
-                    flyBodyGyro.P = 10000
-                    flyBodyGyro.CFrame = root.CFrame
-                    flyBodyGyro.Parent = root
-                end
-
-                local cam = Workspace.CurrentCamera
-                local hum = char:FindFirstChildOfClass("Humanoid")
-                local moveDir = hum and hum.MoveDirection or Vector3.zero
-                flyBodyGyro.CFrame = cam.CFrame
-
-                if moveDir.Magnitude > 0 then
-                    flyBodyVel.Velocity = cam.CFrame:VectorToWorldSpace(Vector3.new(moveDir.X, 0, -moveDir.Z)) * _G.FlySpeedValue
-                else
-                    flyBodyVel.Velocity = Vector3.zero
-                end
-            else
-                if flyBodyVel then flyBodyVel:Destroy(); flyBodyVel = nil end
-                if flyBodyGyro then flyBodyGyro:Destroy(); flyBodyGyro = nil end
-            end
-        end)
-    end
-end)
-
 -- =================================================================
--- ESP ENGINES (CHEST, FRUIT, PLAYER, FLOWER, MIRAGE)
+-- LIGHTWEIGHT, LAG-FREE ESP ENGINES
 -- =================================================================
 
-local espMasterFolder = Instance.new("Folder")
-espMasterFolder.Name = "Junejo_BloxFruits_ESP"
-espMasterFolder.Parent = ScreenGui
+local espFolder = Instance.new("Folder")
+espFolder.Name = "Junejo_BloxFruits_ESP"
+espFolder.Parent = ScreenGui
 
 task.spawn(function()
     while true do
         task.wait(1.5)
         pcall(function()
-            espMasterFolder:ClearAllChildren()
-            local root = GetRootPart()
+            espFolder:ClearAllChildren()
+            local char = LocalPlayer.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
 
-            -- A. CHEST ESP
-            if Toggles.ChestESP then
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if obj:IsA("BasePart") and string.find(string.lower(obj.Name), "chest") and obj.Transparency < 1 then
-                        local dist = root and math.floor((root.Position - obj.Position).Magnitude) or 0
+            -- A. PLAYER ESP
+            if State.PlayerESP then
+                for _, plr in ipairs(Players:GetPlayers()) do
+                    if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                        local pChar = plr.Character
+                        local hrp = pChar.HumanoidRootPart
+                        local hum = pChar:FindFirstChildOfClass("Humanoid")
+                        local dist = root and math.floor((root.Position - hrp.Position).Magnitude) or 0
+                        local hp = hum and math.floor(hum.Health) or 0
+
                         local bill = Instance.new("BillboardGui")
                         bill.AlwaysOnTop = true
-                        bill.Size = UDim2.new(0, 100, 0, 24)
-                        bill.StudsOffset = Vector3.new(0, 2, 0)
-                        bill.Adornee = obj
-                        bill.Parent = espMasterFolder
+                        bill.Size = UDim2.new(0, 130, 0, 24)
+                        bill.StudsOffset = Vector3.new(0, 3, 0)
+                        bill.Adornee = hrp
+                        bill.Parent = espFolder
 
                         local lbl = Instance.new("TextLabel")
                         lbl.Size = UDim2.new(1, 0, 1, 0)
                         lbl.BackgroundTransparency = 1
-                        lbl.Text = "💎 Chest [" .. tostring(dist) .. "m]"
-                        lbl.TextColor3 = Color3.fromRGB(255, 215, 0)
+                        lbl.Text = plr.DisplayName .. " [" .. tostring(hp) .. " HP] (" .. tostring(dist) .. "m)"
+                        lbl.TextColor3 = Color3.fromRGB(255, 80, 80)
                         lbl.Font = Enum.Font.GothamBold
                         lbl.TextSize = 11
                         lbl.TextStrokeTransparency = 0.3
@@ -1127,19 +1239,50 @@ task.spawn(function()
                 end
             end
 
-            -- B. FRUIT ESP
-            if Toggles.FruitESP then
-                for _, obj in ipairs(Workspace:GetChildren()) do
+            -- B. CHEST ESP
+            if State.ChestESP then
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    if obj:IsA("BasePart") or obj:IsA("Model") then
+                        local lowerName = string.lower(obj.Name)
+                        if string.find(lowerName, "chest") then
+                            local part = obj:IsA("BasePart") and obj or (obj:IsA("Model") and (obj:FindFirstChildWhichIsA("BasePart") or obj.PrimaryPart))
+                            if part and part.Transparency < 1 then
+                                local dist = root and math.floor((root.Position - part.Position).Magnitude) or 0
+                                local bill = Instance.new("BillboardGui")
+                                bill.AlwaysOnTop = true
+                                bill.Size = UDim2.new(0, 100, 0, 24)
+                                bill.StudsOffset = Vector3.new(0, 2, 0)
+                                bill.Adornee = part
+                                bill.Parent = espFolder
+
+                                local lbl = Instance.new("TextLabel")
+                                lbl.Size = UDim2.new(1, 0, 1, 0)
+                                lbl.BackgroundTransparency = 1
+                                lbl.Text = "💎 Chest [" .. tostring(dist) .. "m]"
+                                lbl.TextColor3 = Color3.fromRGB(255, 215, 0)
+                                lbl.Font = Enum.Font.GothamBold
+                                lbl.TextSize = 11
+                                lbl.TextStrokeTransparency = 0.3
+                                lbl.Parent = bill
+                            end
+                        end
+                    end
+                end
+            end
+
+            -- C. FRUIT ESP
+            if State.FruitESP then
+                for _, obj in ipairs(Workspace:GetDescendants()) do
                     if (obj:IsA("Tool") or obj:IsA("Model")) and string.find(string.lower(obj.Name), "fruit") then
                         local part = obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart")
-                        if part then
+                        if part and not obj:IsDescendantOf(LocalPlayer.Character) and not obj:IsDescendantOf(LocalPlayer:FindFirstChild("Backpack")) then
                             local dist = root and math.floor((root.Position - part.Position).Magnitude) or 0
                             local bill = Instance.new("BillboardGui")
                             bill.AlwaysOnTop = true
                             bill.Size = UDim2.new(0, 140, 0, 26)
                             bill.StudsOffset = Vector3.new(0, 2.5, 0)
                             bill.Adornee = part
-                            bill.Parent = espMasterFolder
+                            bill.Parent = espFolder
 
                             local lbl = Instance.new("TextLabel")
                             lbl.Size = UDim2.new(1, 0, 1, 0)
@@ -1155,67 +1298,39 @@ task.spawn(function()
                 end
             end
 
-            -- C. PLAYER ESP
-            if Toggles.PlayerESP then
-                for _, plr in ipairs(Players:GetPlayers()) do
-                    if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-                        local char = plr.Character
-                        local hrp = char.HumanoidRootPart
-                        local hum = char:FindFirstChildOfClass("Humanoid")
-                        local dist = root and math.floor((root.Position - hrp.Position).Magnitude) or 0
-                        local hp = hum and math.floor(hum.Health) or 0
-
-                        local bill = Instance.new("BillboardGui")
-                        bill.AlwaysOnTop = true
-                        bill.Size = UDim2.new(0, 130, 0, 26)
-                        bill.StudsOffset = Vector3.new(0, 3, 0)
-                        bill.Adornee = hrp
-                        bill.Parent = espMasterFolder
-
-                        local lbl = Instance.new("TextLabel")
-                        lbl.Size = UDim2.new(1, 0, 1, 0)
-                        lbl.BackgroundTransparency = 1
-                        lbl.Text = plr.DisplayName .. " [" .. tostring(hp) .. " HP] (" .. tostring(dist) .. "m)"
-                        lbl.TextColor3 = Color3.fromRGB(255, 80, 80)
-                        lbl.Font = Enum.Font.GothamBold
-                        lbl.TextSize = 11
-                        lbl.TextStrokeTransparency = 0.3
-                        lbl.Parent = bill
-                    end
-                end
-            end
-
-            -- D. FLOWER ESP (Race V2 Red/Blue/Yellow Flowers)
-            if Toggles.FlowerESP then
+            -- D. FLOWER ESP
+            if State.FlowerESP then
                 for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if obj:IsA("BasePart") and string.find(string.lower(obj.Name), "flower") then
-                        local dist = root and math.floor((root.Position - obj.Position).Magnitude) or 0
-                        local bill = Instance.new("BillboardGui")
-                        bill.AlwaysOnTop = true
-                        bill.Size = UDim2.new(0, 110, 0, 24)
-                        bill.StudsOffset = Vector3.new(0, 2, 0)
-                        bill.Adornee = obj
-                        bill.Parent = espMasterFolder
+                    if string.find(string.lower(obj.Name), "flower") then
+                        local part = obj:IsA("BasePart") and obj or (obj:IsA("Model") and obj:FindFirstChildWhichIsA("BasePart"))
+                        if part then
+                            local dist = root and math.floor((root.Position - part.Position).Magnitude) or 0
+                            local bill = Instance.new("BillboardGui")
+                            bill.AlwaysOnTop = true
+                            bill.Size = UDim2.new(0, 110, 0, 24)
+                            bill.StudsOffset = Vector3.new(0, 2, 0)
+                            bill.Adornee = part
+                            bill.Parent = espFolder
 
-                        local lbl = Instance.new("TextLabel")
-                        lbl.Size = UDim2.new(1, 0, 1, 0)
-                        lbl.BackgroundTransparency = 1
-                        lbl.Text = "🌸 " .. obj.Name .. " [" .. tostring(dist) .. "m]"
-                        lbl.TextColor3 = Color3.fromRGB(80, 255, 120)
-                        lbl.Font = Enum.Font.GothamBold
-                        lbl.TextSize = 11
-                        lbl.TextStrokeTransparency = 0.3
-                        lbl.Parent = bill
+                            local lbl = Instance.new("TextLabel")
+                            lbl.Size = UDim2.new(1, 0, 1, 0)
+                            lbl.BackgroundTransparency = 1
+                            lbl.Text = "🌸 " .. obj.Name .. " [" .. tostring(dist) .. "m]"
+                            lbl.TextColor3 = Color3.fromRGB(80, 255, 120)
+                            lbl.Font = Enum.Font.GothamBold
+                            lbl.TextSize = 11
+                            lbl.TextStrokeTransparency = 0.3
+                            lbl.Parent = bill
+                        end
                     end
                 end
             end
 
             -- E. MIRAGE ISLAND ESP
-            if Toggles.MirageESP then
-                local map = Workspace:FindFirstChild("Map") or Workspace
-                for _, obj in ipairs(map:GetChildren()) do
+            if State.MirageESP then
+                for _, obj in ipairs(Workspace:GetDescendants()) do
                     if string.find(string.lower(obj.Name), "mirage") then
-                        local part = obj:FindFirstChildWhichIsA("BasePart") or obj:FindFirstChild("Hitbox")
+                        local part = obj:IsA("BasePart") and obj or (obj:IsA("Model") and (obj:FindFirstChildWhichIsA("BasePart") or obj.PrimaryPart))
                         if part then
                             local dist = root and math.floor((root.Position - part.Position).Magnitude) or 0
                             local bill = Instance.new("BillboardGui")
@@ -1223,7 +1338,7 @@ task.spawn(function()
                             bill.Size = UDim2.new(0, 150, 0, 28)
                             bill.StudsOffset = Vector3.new(0, 10, 0)
                             bill.Adornee = part
-                            bill.Parent = espMasterFolder
+                            bill.Parent = espFolder
 
                             local lbl = Instance.new("TextLabel")
                             lbl.Size = UDim2.new(1, 0, 1, 0)
@@ -1242,4 +1357,4 @@ task.spawn(function()
     end
 end)
 
-print("[ULTRA SCRIPT HUB] Blox Fruits Comprehensive Production Script Loaded Successfully!")
+print("[ULTRA SCRIPT HUB] Blox Fruits Ultra Engine v2 Loaded Successfully!")
