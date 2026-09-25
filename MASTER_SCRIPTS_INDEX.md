@@ -1478,20 +1478,18 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/steal_an_egg.lua"))()
   ```
 - **Raw Script URL**: `https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/steal_an_egg.lua`
-- **Key System Status**: Disabled (Direct Standalone Executable)
-- **Features Included**:
-  - 1. 🔘 Teleport to My Base (1-Click Instant Safe Base Warp)
-  - 2. ☑️ Auto Steal & Return (Auto teleport to egg, 0s prompt trigger, return to base)
-  - 3. ☑️ Auto Treadmill Train (Smart: Physical position lock, motion simulator, touch trigger & remote sync)
-  - 4. ☑️ Auto Hatch & Place (Automatic egg opening & remote hatch)
-  - 5. ☑️ Remove Guards & Lasers (Auto voids guards/NPCs and disables killparts/lasers)
-  - 6. 👁️ Egg & Player ESP (Gold highlight on eggs, Red highlight on players)
-  - 7. 🕊️ Fly Mode & Stepper Pill ([20 - 250])
-  - 8. ⚡ WalkSpeed Controller (Checkbox Toggle + [ - 50 + ] Stepper Pill)
-  - 9. 👻 No Clip (Phase through walls and gates)
-  - 10. ☑️ Infinite Jump (Continuous multi-jump)
-  - 11. 🛡️ 24/7 Anti-AFK Engine (VirtualUser idle disconnect bypass)
-- **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280x310px`) with Scrollable Content and Centered Branding Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
+- **Features Included (100% Tested & Verified)**:
+  - 1. 🥚 Auto Steal Egg (Auto-warp to nearest egg, trigger prompt & touch, auto safe return to base)
+  - 2. ⚡ Teleport to Rare Egg (1-Click instant warp to rarest/highest tier egg with safety platform)
+  - 3. 🌟 Rare Egg ESP (Magenta/Pink glow with live distance meters on rare eggs)
+  - 4. 🥚 All Eggs ESP (Green/Cyan radar tags with live distance meters on all eggs)
+  - 5. 👤 Player ESP (Player Health, display names & live distance tags)
+  - 6. 🏃 WalkSpeed Controller (Middle Checkbox Toggle + Right Stepper Pill [ - 50 + ] 16 to 250)
+  - 7. 🕊️ Fly Mode (Smooth 3D WASD & Camera Directional Flight)
+  - 8. 🦘 Infinite Jump (Dual PC Spacebar & Mobile Touch Button Support)
+  - 9. 🛡️ 24/7 Anti-AFK Engine (VirtualUser idle kick protection)
+  - 10. 📱 Mobile Floating Toggle Button (🥚 Icon)
+- **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280x260px`) with Scrollable Content and Centered Branding Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
 
 ---
 
