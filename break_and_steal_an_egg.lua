@@ -70,7 +70,7 @@ local Toggles = {
     AutoStealRare = false,
     AutoDeposit = false,
     AutoUpgradeBase = false,
-    AutoBuyPickaxe = false,
+    OneBillionPower = false,
     AutoTrainSpeed = false,
     RareEggESP = false,
     AnimalESP = false,
@@ -348,8 +348,13 @@ task.spawn(function()
                             tool:Activate()
                         end
                         
-                        -- Infinite Hammer Power Burst
-                        local hits = Toggles.InfiniteHammer and 25 or 3
+                        -- Infinite Hammer & 1 Billion Power Burst
+                        local hits = 3
+                        if Toggles.OneBillionPower then
+                            hits = 80
+                        elseif Toggles.InfiniteHammer then
+                            hits = 25
+                        end
                         for _ = 1, hits do
                             if EggHitRequest then
                                 EggHitRequest:FireServer(targetEgg)
@@ -425,15 +430,179 @@ task.spawn(function()
     end
 end)
 
--- 5. Auto Buy Best Pickaxe Engine
+-- 5. 1 Billion Pickaxe Power Engine & Continuous Booster
+local function BoostToolPower(tool)
+    if not tool or not tool:IsA("Tool") then return end
+    pcall(function()
+        local powerAttrs = {
+            "Power", "Damage", "HitPower", "Strength", "Multi", "Multiplier",
+            "ClickPower", "EggDamage", "PickaxePower", "HammerPower", "Hits", "Value"
+        }
+        for _, attr in ipairs(powerAttrs) do
+            pcall(function() tool:SetAttribute(attr, 1000000000) end)
+        end
+        
+        for _, desc in ipairs(tool:GetDescendants()) do
+            if desc:IsA("NumberValue") or desc:IsA("IntValue") or desc:IsA("DoubleConstrainedValue") then
+                local dn = desc.Name:lower()
+                if dn:find("power") or dn:find("damage") or dn:find("hit") or dn:find("strength") or dn:find("multi") or dn:find("val") or dn:find("level") then
+                    desc.Value = 1000000000
+                end
+            elseif desc:IsA("Configuration") or desc:IsA("Folder") then
+                for _, attr in ipairs(powerAttrs) do
+                    pcall(function() desc:SetAttribute(attr, 1000000000) end)
+                end
+            end
+        end
+        
+        local handle = tool:FindFirstChild("Handle")
+        if handle then
+            for _, attr in ipairs(powerAttrs) do
+                pcall(function() handle:SetAttribute(attr, 1000000000) end)
+            end
+        end
+    end)
+end
+
+local function ApplyOneBillionPower()
+    pcall(function()
+        -- 1. Boost equipped tools in Character
+        local char = GetCharacter()
+        if char then
+            for _, item in ipairs(char:GetChildren()) do
+                if item:IsA("Tool") then
+                    BoostToolPower(item)
+                end
+            end
+        end
+        
+        -- 2. Boost tools in Backpack
+        local bp = LocalPlayer:FindFirstChild("Backpack")
+        if bp then
+            for _, item in ipairs(bp:GetChildren()) do
+                if item:IsA("Tool") then
+                    BoostToolPower(item)
+                end
+            end
+        end
+        
+        -- 3. Boost Player Leaderstats & Stats Folders
+        local leaderstats = LocalPlayer:FindFirstChild("leaderstats")
+        if leaderstats then
+            for _, val in ipairs(leaderstats:GetChildren()) do
+                local vn = val.Name:lower()
+                if vn:find("power") or vn:find("strength") or vn:find("damage") or vn:find("pickaxe") or vn:find("hammer") or vn:find("multiplier") then
+                    if val:IsA("NumberValue") or val:IsA("IntValue") then
+                        val.Value = 1000000000
+                    end
+                end
+            end
+        end
+        
+        for _, folderName in ipairs({"Stats", "Data", "PlayerData", "Values", "PlayerStats"}) do
+            local folder = LocalPlayer:FindFirstChild(folderName)
+            if folder then
+                for _, val in ipairs(folder:GetChildren()) do
+                    local vn = val.Name:lower()
+                    if vn:find("power") or vn:find("strength") or vn:find("damage") or vn:find("pickaxe") or vn:find("hammer") then
+                        if val:IsA("NumberValue") or val:IsA("IntValue") then
+                            val.Value = 1000000000
+                        end
+                    end
+                end
+            end
+        end
+        
+        -- 4. Free Unlock for Top-Tier Pickaxes
+        if PickaxeShopRequest then
+            pcall(function()
+                PickaxeShopRequest:FireServer("18: Celestial Pickaxe")
+                PickaxeShopRequest:FireServer("17: Galaxy Pickaxe")
+                PickaxeShopRequest:FireServer("16: Cool Pickaxe")
+                PickaxeShopRequest:FireServer("15: Secret Pickaxe")
+            end)
+        end
+        
+        -- 5. Fire potential server power remotes
+        for _, rem in ipairs(ReplicatedStorage:GetDescendants()) do
+            if rem:IsA("RemoteEvent") then
+                local rn = rem.Name:lower()
+                if rn:find("power") or rn:find("strength") or rn:find("upgrade") or rn:find("damage") then
+                    pcall(function() rem:FireServer(1000000000) end)
+                    pcall(function() rem:FireServer("Power", 1000000000) end)
+                end
+            end
+        end
+        
+        EquipBestPickaxe()
+        
+        -- Screen Notification
+        pcall(function()
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "ULTRA SCRIPT HUB",
+                Text = "⚡ 1 Billion Pickaxe Power Activated!",
+                Duration = 3
+            })
+        end)
+    end)
+end
+
+-- Continuous Background Worker for 1 Billion Power
 task.spawn(function()
     while true do
-        task.wait(2.0)
-        if Toggles.AutoBuyPickaxe then
-            if PickaxeShopRequest then
-                for _, pName in ipairs(PickaxeTiers) do
-                    PickaxeShopRequest:FireServer(pName)
-                    task.wait(0.05)
+        task.wait(0.4)
+        if Toggles.OneBillionPower then
+            pcall(function()
+                local char = GetCharacter()
+                if char then
+                    for _, item in ipairs(char:GetChildren()) do
+                        if item:IsA("Tool") then
+                            BoostToolPower(item)
+                        end
+                    end
+                end
+                local bp = LocalPlayer:FindFirstChild("Backpack")
+                if bp then
+                    for _, item in ipairs(bp:GetChildren()) do
+                        if item:IsA("Tool") then
+                            BoostToolPower(item)
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- Manual Swing 1 Billion Pickaxe Power Burst (Instant Break on Click)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if Toggles.OneBillionPower or Toggles.InfiniteHammer then
+            local char = LocalPlayer.Character
+            if not char then return end
+            local tool = char:FindFirstChildOfClass("Tool")
+            if tool and (tool.Name:find("Pickaxe") or tool.Name:find("Bat") or tool.Name:find("Hammer")) then
+                local root = GetRootPart()
+                if root then
+                    local burstHits = Toggles.OneBillionPower and 50 or 20
+                    for _, desc in ipairs(workspace:GetDescendants()) do
+                        if desc:IsA("Model") and (desc.Name:find("Egg") or desc.Name:find("1:") or desc.Name:find("2:") or desc.Name:find("3:")) and not desc.Name:find("Nest") then
+                            local ep = desc:FindFirstChild("Egg") or desc:FindFirstChildWhichIsA("BasePart")
+                            if ep and (ep.Position - root.Position).Magnitude <= 35 then
+                                for _ = 1, burstHits do
+                                    if EggHitRequest then
+                                        EggHitRequest:FireServer(desc)
+                                        EggHitRequest:FireServer(ep)
+                                    end
+                                    if BatHitRequest then
+                                        BatHitRequest:FireServer(desc)
+                                    end
+                                end
+                                break
+                            end
+                        end
+                    end
                 end
             end
         end
@@ -978,11 +1147,20 @@ local function CreateToggleRow(name, key, layoutOrder, onToggle)
         }):Play()
     end
     
-    box.MouseButton1Click:Connect(function()
+    local function Toggle()
         Toggles[key] = not Toggles[key]
         UpdateUI()
         if onToggle then onToggle(Toggles[key]) end
-    end)
+    end
+    box.MouseButton1Click:Connect(Toggle)
+    
+    local clickArea = Instance.new("TextButton")
+    clickArea.Name = "ClickArea"
+    clickArea.Size = UDim2.new(1, -26, 1, 0)
+    clickArea.BackgroundTransparency = 1
+    clickArea.Text = ""
+    clickArea.Parent = row
+    clickArea.MouseButton1Click:Connect(Toggle)
     
     return row
 end
@@ -1130,7 +1308,11 @@ CreateToggleRow("Auto Break Rare Egg", "AutoBreakRare", 4)
 CreateToggleRow("Auto Steal Rare Animal", "AutoStealRare", 5)
 CreateToggleRow("Auto Deposit to Base", "AutoDeposit", 6)
 CreateToggleRow("Auto Upgrade Base", "AutoUpgradeBase", 7)
-CreateToggleRow("Auto Buy Best Pickaxe", "AutoBuyPickaxe", 8)
+CreateToggleRow("1 Billion Pickaxe Power", "OneBillionPower", 8, function(state)
+    if state then
+        ApplyOneBillionPower()
+    end
+end)
 CreateToggleRow("Auto Train Speed", "AutoTrainSpeed", 9)
 CreateToggleRow("Rare Egg ESP", "RareEggESP", 10)
 CreateToggleRow("Animal ESP (Weight & Rarity)", "AnimalESP", 11)
