@@ -1668,6 +1668,30 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
   - 22. 🛡️ 24/7 Anti-AFK Engine (VirtualUser Idle Disconnect Protection)
 - **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280px` width) with Scrollable Content and Centered Branding Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
 
+---
+
+## Blox Fruits ⚔️
+- **Game Name**: Blox Fruits
+- **Place ID**: `2753915549`
+- **Game Link**: `https://www.roblox.com/games/2753915549/Blox-Fruits`
+- **Raw Script Loadstring**:
+  ```lua
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/blox_fruits.lua"))()
+  ```
+- **Raw Script URL**: `https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/blox_fruits.lua`
+- **Key System Status**: Disabled (Direct Standalone Executable)
+- **Features Included**:
+  - 1. ⚔️ Auto Farm Level (Smart Level Quest Auto-Accept, Mob Target Lock, Safe Top-Down Float CFrame & Auto-Attack)
+  - 2. 💎 Chest ESP (Distance Meter & Glowing Billboard Tags)
+  - 3. 🍎 Fruit ESP (Real-time Fruit Radar with Distance Tags)
+  - 4. 🦘 Infinite Jump (Continuous Airborne Jumping)
+  - 5. 🏃 WalkSpeed Controller (Middle Checkbox Toggle + Right Stepper Pill [ - 50 + ] 16 to 250)
+  - 6. 🛡️ 24/7 Anti-AFK Engine (VirtualUser idle disconnect bypass)
+  - 7. 👻 Auto Noclip (Prevents terrain collision while farming)
+  - 8. 🚨 Mobile Floating Toggle Button
+- **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280px` width) with Centered Branding Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
+
 ====================================================
-Updated: September 24, 2026
+Updated: September 25, 2026
 ====================================================
+
