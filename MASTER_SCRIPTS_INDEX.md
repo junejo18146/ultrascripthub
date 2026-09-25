@@ -1681,14 +1681,12 @@ Key System Policy: Disabled on all scripts (Direct Standalone Executables)
 - **Raw Script URL**: `https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/blox_fruits.lua`
 - **Key System Status**: Disabled (Direct Standalone Executable)
 - **Features Included**:
-  - 1. ⚔️ Auto Farm Level (Smart Level Quest Auto-Accept, Mob Target Lock, Safe Top-Down Float CFrame & Auto-Attack)
-  - 2. 💎 Chest ESP (Distance Meter & Glowing Billboard Tags)
-  - 3. 🍎 Fruit ESP (Real-time Fruit Radar with Distance Tags)
-  - 4. 🦘 Infinite Jump (Continuous Airborne Jumping)
-  - 5. 🏃 WalkSpeed Controller (Middle Checkbox Toggle + Right Stepper Pill [ - 50 + ] 16 to 250)
-  - 6. 🛡️ 24/7 Anti-AFK Engine (VirtualUser idle disconnect bypass)
-  - 7. 👻 Auto Noclip (Prevents terrain collision while farming)
-  - 8. 🚨 Mobile Floating Toggle Button
+  - 1. 💎 Chest ESP (Distance Meter & Glowing Billboard Tags)
+  - 2. 🍎 Fruit ESP (Real-time Fruit Radar with Distance Tags)
+  - 3. 🦘 Infinite Jump (Continuous Airborne Jumping)
+  - 4. 🏃 WalkSpeed Controller (Middle Checkbox Toggle + Right Stepper Pill [ - 50 + ] 16 to 250)
+  - 5. 🛡️ 24/7 Anti-AFK Engine (VirtualUser idle disconnect bypass)
+  - 6. 🚨 Mobile Floating Toggle Button
 - **UI Design**: UI 1 - Official Ultra Script Hub Classic Matte Dark (`280px` width) with Centered Branding Footer (`ULTRA SCRIPT HUB` | `Made by Junejo`).
 
 ====================================================
