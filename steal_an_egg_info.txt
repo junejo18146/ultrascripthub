@@ -23,10 +23,10 @@ https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/steal_an_egg.l
 FEATURES INCLUDED (UI 3 TABBED SYSTEM):
 -------------------------------------------------------
 [FARM TAB]
-1. 🥚 Auto Steal Eggs (Purple Status Chip Toggle)
+1. 🥚 Auto Steal Eggs (Prioritizes Rarest / Highest Tier Egg first, Purple Status Chip Toggle)
 2. 🚚 Auto Deliver to Base (Purple Status Chip Toggle)
 3. 🐣 Auto Hatch Eggs (Purple Status Chip Toggle)
-4. 🏃 Auto Train Speed (Purple Status Chip Toggle)
+4. 🏃 Auto Train Speed (Multi-engine treadmill touch & remotes fire, Purple Status Chip Toggle)
 
 [MOVE TAB]
 5. ⚡ WalkSpeed Controller (Purple Status Chip Toggle + Pill Stepper [ - 50 + ])
@@ -37,5 +37,6 @@ FEATURES INCLUDED (UI 3 TABBED SYSTEM):
 8. ⚠️ Guardian ESP (Enemy & Nest Guard Detection)
 
 [TELEPORT TAB]
-9. 🏰 Teleport to Safe Base (Full-width Purple Accent Action Button)
+9. 🏰 Teleport to Safe Base (Purple Accent Action Button)
+10. 🎯 Teleport to Rare Egg (Instant warp to rarest / highest tier egg, Purple Accent Action Button)
 =======================================================
