@@ -18,6 +18,7 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local VirtualUser = game:GetService("VirtualUser")
 local CoreGui = game:GetService("CoreGui")
 
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
@@ -113,10 +114,119 @@ local function triggerPrompt(prompt)
 end
 
 -- =================================================================
+-- RAREST EGG DETECTION ENGINE
+-- =================================================================
+local RarityKeywords = {
+    { word = "secret", score = 100000 },
+    { word = "divine", score = 80000 },
+    { word = "angel", score = 70000 },
+    { word = "demon", score = 65000 },
+    { word = "godly", score = 60000 },
+    { word = "void", score = 50000 },
+    { word = "celestial", score = 40000 },
+    { word = "mythic", score = 30000 },
+    { word = "legendary", score = 20000 },
+    { word = "epic", score = 10000 },
+    { word = "rare", score = 5000 },
+    { word = "uncommon", score = 2000 },
+    { word = "common", score = 500 },
+}
+
+local function CalculateRarityScore(instance)
+    local score = 0
+    local textBlob = string.lower(instance.Name)
+
+    if instance.Parent then
+        textBlob = textBlob .. " " .. string.lower(instance.Parent.Name)
+        if instance.Parent.Parent then
+            textBlob = textBlob .. " " .. string.lower(instance.Parent.Parent.Name)
+        end
+    end
+
+    for _, desc in ipairs(instance:GetDescendants()) do
+        if desc:IsA("TextLabel") or desc:IsA("TextButton") then
+            textBlob = textBlob .. " " .. string.lower(desc.Text)
+        elseif desc:IsA("ProximityPrompt") then
+            textBlob = textBlob .. " " .. string.lower(desc.ActionText or "") .. " " .. string.lower(desc.ObjectText or "")
+        end
+    end
+
+    pcall(function()
+        for attrName, attrVal in pairs(instance:GetAttributes()) do
+            textBlob = textBlob .. " " .. string.lower(tostring(attrName)) .. " " .. string.lower(tostring(attrVal))
+            if type(attrVal) == "number" and attrVal > score then
+                score = math.max(score, attrVal)
+            end
+        end
+    end)
+
+    for _, kw in ipairs(RarityKeywords) do
+        if string.find(textBlob, kw.word) then
+            score = math.max(score, kw.score)
+        end
+    end
+
+    local primary = instance:IsA("BasePart") and instance or instance:FindFirstChildWhichIsA("BasePart")
+    if primary then
+        local dist = (primary.Position - Vector3.new(0, primary.Position.Y, 0)).Magnitude
+        score = score + math.floor(dist * 2)
+    end
+
+    return score
+end
+
+local function FindRarestEgg()
+    local bestEggPart = nil
+    local bestPrompt = nil
+    local highestScore = -1
+
+    -- Pass 1: ProximityPrompts for stealing eggs
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("ProximityPrompt") then
+            local pName = string.lower(obj.Parent and obj.Parent.Name or "")
+            local aText = string.lower(obj.ActionText or "")
+            local oText = string.lower(obj.ObjectText or "")
+
+            if string.find(pName, "egg") or string.find(aText, "steal") or string.find(aText, "take") or string.find(oText, "egg") then
+                local parent = obj.Parent
+                local part = parent:IsA("BasePart") and parent or parent:FindFirstChildWhichIsA("BasePart")
+                if part then
+                    local score = CalculateRarityScore(parent)
+                    if score > highestScore then
+                        highestScore = score
+                        bestEggPart = part
+                        bestPrompt = obj
+                    end
+                end
+            end
+        end
+    end
+
+    -- Pass 2: BaseParts / Models named Egg if no prompt found
+    if not bestEggPart then
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if (obj:IsA("Model") or obj:IsA("BasePart")) and string.find(string.lower(obj.Name), "egg") and obj ~= LocalPlayer.Character then
+                local part = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
+                if part then
+                    local score = CalculateRarityScore(obj)
+                    if score > highestScore then
+                        highestScore = score
+                        bestEggPart = part
+                        bestPrompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
+                    end
+                end
+            end
+        end
+    end
+
+    return bestEggPart, bestPrompt
+end
+
+-- =================================================================
 -- FEATURE ENGINES
 -- =================================================================
 
--- 1. Auto Steal Eggs Engine
+-- 1. Auto Steal Eggs Engine (Prioritizes Rarest Egg)
 task.spawn(function()
     while true do
         task.wait(0.35)
@@ -124,23 +234,43 @@ task.spawn(function()
             pcall(function()
                 local root = getRoot()
                 if root then
-                    for _, obj in ipairs(Workspace:GetDescendants()) do
-                        if not State.AutoSteal then break end
-                        if obj:IsA("ProximityPrompt") then
-                            local parentName = string.lower(obj.Parent and obj.Parent.Name or "")
-                            local actionText = string.lower(obj.ActionText or "")
-                            local objText = string.lower(obj.ObjectText or "")
+                    local rarestPart, rarestPrompt = FindRarestEgg()
+                    if rarestPart then
+                        root.CFrame = rarestPart.CFrame + Vector3.new(0, 3, 0)
+                        task.wait(0.12)
+                        if rarestPrompt then
+                            triggerPrompt(rarestPrompt)
+                        else
+                            local prompt = rarestPart.Parent:FindFirstChildWhichIsA("ProximityPrompt", true)
+                            if prompt then triggerPrompt(prompt) end
+                        end
+                        task.wait(0.12)
 
-                            if string.find(parentName, "egg") or string.find(actionText, "steal") or string.find(actionText, "take") or string.find(objText, "egg") then
-                                local targetPart = obj.Parent:IsA("BasePart") and obj.Parent or obj.Parent:FindFirstChildWhichIsA("BasePart")
-                                if targetPart then
-                                    root.CFrame = targetPart.CFrame + Vector3.new(0, 3, 0)
-                                    task.wait(0.12)
-                                    triggerPrompt(obj)
-                                    task.wait(0.12)
-                                    if State.AutoDeliver and SavedBaseCFrame then
-                                        root.CFrame = SavedBaseCFrame
-                                        task.wait(0.2)
+                        if State.AutoDeliver and SavedBaseCFrame then
+                            root.CFrame = SavedBaseCFrame
+                            task.wait(0.25)
+                        end
+                    else
+                        -- Fallback to any egg prompt
+                        for _, obj in ipairs(Workspace:GetDescendants()) do
+                            if not State.AutoSteal then break end
+                            if obj:IsA("ProximityPrompt") then
+                                local parentName = string.lower(obj.Parent and obj.Parent.Name or "")
+                                local actionText = string.lower(obj.ActionText or "")
+                                local objText = string.lower(obj.ObjectText or "")
+
+                                if string.find(parentName, "egg") or string.find(actionText, "steal") or string.find(actionText, "take") or string.find(objText, "egg") then
+                                    local targetPart = obj.Parent:IsA("BasePart") and obj.Parent or obj.Parent:FindFirstChildWhichIsA("BasePart")
+                                    if targetPart then
+                                        root.CFrame = targetPart.CFrame + Vector3.new(0, 3, 0)
+                                        task.wait(0.12)
+                                        triggerPrompt(obj)
+                                        task.wait(0.12)
+                                        if State.AutoDeliver and SavedBaseCFrame then
+                                            root.CFrame = SavedBaseCFrame
+                                            task.wait(0.2)
+                                        end
+                                        break
                                     end
                                 end
                             end
@@ -155,7 +285,7 @@ end)
 -- 2. Auto Deliver to Base Engine
 task.spawn(function()
     while true do
-        task.wait(0.5)
+        task.wait(0.4)
         if State.AutoDeliver and not State.AutoSteal then
             pcall(function()
                 local char = LocalPlayer.Character
@@ -224,51 +354,88 @@ task.spawn(function()
     end
 end)
 
--- 4. Auto Train Speed Engine
+-- 4. Auto Train Speed Engine (Robust Multi-Method Implementation)
 task.spawn(function()
     while true do
-        task.wait(0.15)
+        task.wait(0.1)
         if State.AutoTrain then
             pcall(function()
+                local char = LocalPlayer.Character
                 local root = getRoot()
-                if root then
-                    for _, obj in ipairs(Workspace:GetDescendants()) do
-                        if not State.AutoTrain then break end
-                        local oName = string.lower(obj.Name)
-                        if string.find(oName, "treadmill") or string.find(oName, "train") or string.find(oName, "speedpad") then
-                            if obj:IsA("TouchTransmitter") and obj.Parent then
-                                if firetouchinterest then
-                                    firetouchinterest(obj.Parent, root, 0)
-                                    task.wait()
-                                    firetouchinterest(obj.Parent, root, 1)
+                if not char or not root then return end
+
+                local feet = {
+                    root,
+                    char:FindFirstChild("LeftFoot"),
+                    char:FindFirstChild("RightFoot"),
+                    char:FindFirstChild("Left Leg"),
+                    char:FindFirstChild("Right Leg")
+                }
+
+                -- Method A: Touch & ProximityPrompts on Treadmills
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    if not State.AutoTrain then break end
+                    local oName = string.lower(obj.Name)
+                    local pName = string.lower(obj.Parent and obj.Parent.Name or "")
+
+                    if string.find(oName, "treadmill") or string.find(oName, "train") or string.find(oName, "speed") or string.find(oName, "pad")
+                    or string.find(pName, "treadmill") or string.find(pName, "train") then
+                        if obj:IsA("BasePart") then
+                            if firetouchinterest then
+                                for _, part in ipairs(feet) do
+                                    if part then
+                                        firetouchinterest(obj, part, 0)
+                                        task.wait()
+                                        firetouchinterest(obj, part, 1)
+                                    end
                                 end
-                            elseif obj:IsA("ProximityPrompt") then
+                            end
+                        elseif obj:IsA("ProximityPrompt") then
+                            local aText = string.lower(obj.ActionText or "")
+                            local oText = string.lower(obj.ObjectText or "")
+                            if string.find(aText, "train") or string.find(aText, "run") or string.find(aText, "speed")
+                            or string.find(oText, "treadmill") or string.find(oText, "speed") then
                                 triggerPrompt(obj)
                             end
                         end
                     end
+                end
 
-                    for _, container in ipairs({ReplicatedStorage, LocalPlayer:FindFirstChild("PlayerGui")}) do
-                        if container then
-                            for _, remote in ipairs(container:GetDescendants()) do
-                                if not State.AutoTrain then break end
-                                if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
-                                    local rName = string.lower(remote.Name)
-                                    if string.find(rName, "train") or string.find(rName, "treadmill") or string.find(rName, "addspeed") or string.find(rName, "speed") then
-                                        pcall(function()
-                                            if remote:IsA("RemoteEvent") then
-                                                remote:FireServer()
-                                                remote:FireServer(true)
-                                            else
-                                                remote:InvokeServer()
-                                            end
-                                        end)
-                                    end
+                -- Method B: Fire All Training / Speed Remotes
+                for _, container in ipairs({ReplicatedStorage, LocalPlayer:FindFirstChild("PlayerGui"), Workspace}) do
+                    if container then
+                        for _, remote in ipairs(container:GetDescendants()) do
+                            if not State.AutoTrain then break end
+                            if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
+                                local rName = string.lower(remote.Name)
+                                if string.find(rName, "train") or string.find(rName, "treadmill") or string.find(rName, "addspeed")
+                                or string.find(rName, "speed") or string.find(rName, "step") or string.find(rName, "click")
+                                or string.find(rName, "workout") or string.find(rName, "exercise") or string.find(rName, "run") then
+                                    pcall(function()
+                                        if remote:IsA("RemoteEvent") then
+                                            remote:FireServer()
+                                            remote:FireServer(true)
+                                            remote:FireServer(1)
+                                            remote:FireServer("Treadmill")
+                                            remote:FireServer("Train")
+                                        else
+                                            remote:InvokeServer()
+                                            remote:InvokeServer(true)
+                                        end
+                                    end)
                                 end
                             end
                         end
                     end
                 end
+
+                -- Method C: Virtual Click Simulation (For click-based treadmill training)
+                pcall(function()
+                    VirtualUser:CaptureController()
+                    VirtualUser:Button1Down(Vector2.new(0, 0))
+                    task.wait(0.02)
+                    VirtualUser:Button1Up(Vector2.new(0, 0))
+                end)
             end)
         end
     end
@@ -896,49 +1063,82 @@ CreateChipToggle(VisualsPage, "Guardian ESP", State.GuardianESP, function(v)
     State.GuardianESP = v
 end)
 
--- 4. Teleport Page (Safe Base Action Button)
-local ActionBtnRow = Instance.new("Frame")
-ActionBtnRow.Name = "TeleportAction_Row"
-ActionBtnRow.Size = UDim2.new(1, 0, 0, 36)
-ActionBtnRow.BackgroundTransparency = 1
-ActionBtnRow.Parent = TeleportPage
+-- 4. Teleport Page (Action Buttons)
+local function CreateActionButton(parentPage, text, callback)
+    local btnRow = Instance.new("Frame")
+    btnRow.Name = text .. "_Row"
+    btnRow.Size = UDim2.new(1, 0, 0, 32)
+    btnRow.BackgroundTransparency = 1
+    btnRow.Parent = parentPage
 
-local ActionBtn = Instance.new("TextButton")
-ActionBtn.Name = "ActionBtn"
-ActionBtn.Size = UDim2.new(1, 0, 0, 32)
-ActionBtn.Position = UDim2.new(0, 0, 0, 2)
-ActionBtn.BackgroundColor3 = Color3.fromRGB(24, 26, 36)
-ActionBtn.Text = "TELEPORT TO SAFE BASE"
-ActionBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ActionBtn.Font = Enum.Font.GothamBold
-ActionBtn.TextSize = 12
-ActionBtn.BorderSizePixel = 0
-ActionBtn.Parent = ActionBtnRow
+    local actionBtn = Instance.new("TextButton")
+    actionBtn.Name = "ActionBtn"
+    actionBtn.Size = UDim2.new(1, 0, 0, 28)
+    actionBtn.Position = UDim2.new(0, 0, 0, 2)
+    actionBtn.BackgroundColor3 = Color3.fromRGB(24, 26, 36)
+    actionBtn.Text = text
+    actionBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    actionBtn.Font = Enum.Font.GothamBold
+    actionBtn.TextSize = 11
+    actionBtn.BorderSizePixel = 0
+    actionBtn.Parent = btnRow
 
-local ActionCorner = Instance.new("UICorner")
-ActionCorner.CornerRadius = UDim.new(0, 4)
-ActionCorner.Parent = ActionBtn
+    local actionCorner = Instance.new("UICorner")
+    actionCorner.CornerRadius = UDim.new(0, 4)
+    actionCorner.Parent = actionBtn
 
-local ActionStroke = Instance.new("UIStroke")
-ActionStroke.Thickness = 1
-ActionStroke.Color = Color3.fromRGB(157, 78, 221)
-ActionStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-ActionStroke.Parent = ActionBtn
+    local actionStroke = Instance.new("UIStroke")
+    actionStroke.Thickness = 1
+    actionStroke.Color = Color3.fromRGB(157, 78, 221)
+    actionStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    actionStroke.Parent = actionBtn
 
-ActionBtn.MouseButton1Click:Connect(function()
-    pcall(function()
-        local root = getRoot()
-        if root then
-            if SavedBaseCFrame then
-                root.CFrame = SavedBaseCFrame
-            else
-                SavedBaseCFrame = root.CFrame
-            end
-        end
+    actionBtn.MouseEnter:Connect(function()
+        actionBtn.BackgroundColor3 = Color3.fromRGB(35, 25, 48)
     end)
-    ActionBtn.Text = "TELEPORTED!"
-    task.wait(1)
-    ActionBtn.Text = "TELEPORT TO SAFE BASE"
+
+    actionBtn.MouseLeave:Connect(function()
+        actionBtn.BackgroundColor3 = Color3.fromRGB(24, 26, 36)
+    end)
+
+    actionBtn.MouseButton1Click:Connect(function()
+        pcall(callback, actionBtn)
+    end)
+
+    return actionBtn
+end
+
+-- Teleport to Safe Base Button
+CreateActionButton(TeleportPage, "TELEPORT TO SAFE BASE", function(btn)
+    local root = getRoot()
+    if root then
+        if SavedBaseCFrame then
+            root.CFrame = SavedBaseCFrame
+        else
+            SavedBaseCFrame = root.CFrame
+        end
+        btn.Text = "TELEPORTED TO BASE!"
+        task.wait(1)
+        btn.Text = "TELEPORT TO SAFE BASE"
+    end
+end)
+
+-- Teleport to Rare Egg Button
+CreateActionButton(TeleportPage, "TELEPORT TO RARE EGG", function(btn)
+    local root = getRoot()
+    if root then
+        local rarestPart = FindRarestEgg()
+        if rarestPart then
+            root.CFrame = rarestPart.CFrame + Vector3.new(0, 4, 0)
+            btn.Text = "WARPED TO RARE EGG!"
+            task.wait(1)
+            btn.Text = "TELEPORT TO RARE EGG"
+        else
+            btn.Text = "NO EGG FOUND!"
+            task.wait(1)
+            btn.Text = "TELEPORT TO RARE EGG"
+        end
+    end
 end)
 
 -- Set Default Active Tab
