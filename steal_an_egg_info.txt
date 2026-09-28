@@ -3,10 +3,11 @@ ULTRA SCRIPT HUB - GAME METADATA & LOADSTRING INFO
 =======================================================
 Game Name: Steal An Egg
 Script Name: steal_an_egg.lua
-UI Standard: UI 1 (Official Ultra Script Hub Classic Matte Dark - 280px)
+UI Standard: UI 3 (Wide Tabbed Category Hub - 340px x 220px)
+Theme: Technical Dark #0F1016, Border #242738, Accent #9D4EDD Purple
 Creator: Made by Junejo (junejo18146)
 GitHub Repo: junejo18146/ultrascripthub
-Upload Date: 2026-09-25
+Upload Date: 2026-09-28
 
 -------------------------------------------------------
 LOADSTRING (Delta / Executor Ready):
@@ -19,16 +20,22 @@ RAW SCRIPT URL:
 https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/steal_an_egg.lua
 
 -------------------------------------------------------
-FEATURES INCLUDED (100% TESTED & VERIFIED):
+FEATURES INCLUDED (UI 3 TABBED SYSTEM):
 -------------------------------------------------------
-1. 🥚 Auto Steal Egg (Auto-warp to nearest egg, trigger prompt & touch, auto safe return to base)
-2. ⚡ Teleport to Rare Egg (1-Click instant warp to rarest/highest tier egg with safety platform)
-3. 🌟 Rare Egg ESP (Magenta/Pink glow with live distance meters on rare eggs)
-4. 🥚 All Eggs ESP (Green/Cyan radar tags with live distance meters on all eggs)
-5. 👤 Player ESP (Player Health, display names & live distance tags)
-6. 🏃 WalkSpeed Controller (Middle Checkbox Toggle + Right Stepper Pill [ - 50 + ] 16 to 250)
-7. 🕊️ Fly Mode (Smooth 3D WASD & Camera Directional Flight)
-8. 🦘 Infinite Jump (Dual PC Spacebar & Mobile Touch Button Support)
-9. 🛡️ 24/7 Anti-AFK Engine (VirtualUser idle kick protection)
-10. 📱 Mobile Floating Toggle Button (🥚 Icon)
+[FARM TAB]
+1. 🥚 Auto Steal Eggs (Purple Status Chip Toggle)
+2. 🚚 Auto Deliver to Base (Purple Status Chip Toggle)
+3. 🐣 Auto Hatch Eggs (Purple Status Chip Toggle)
+4. 🏃 Auto Train Speed (Purple Status Chip Toggle)
+
+[MOVE TAB]
+5. ⚡ WalkSpeed Controller (Purple Status Chip Toggle + Pill Stepper [ - 50 + ])
+6. 🦘 Infinite Jump (Purple Status Chip Toggle)
+
+[VISUALS TAB]
+7. 🌟 Egg ESP (Highlight + Billboard Labels)
+8. ⚠️ Guardian ESP (Enemy & Nest Guard Detection)
+
+[TELEPORT TAB]
+9. 🏰 Teleport to Safe Base (Full-width Purple Accent Action Button)
 =======================================================
