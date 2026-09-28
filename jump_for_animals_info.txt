@@ -1,0 +1,45 @@
+=======================================================
+ULTRA SCRIPT HUB - GAME METADATA & LOADSTRING INFO
+=======================================================
+Game Name: Jump for Animals 🐾🥚
+Script Name: jump_for_animals.lua
+UI Standard: UI 1 (Official Ultra Script Hub Classic Matte Dark - 280px)
+Creator: Made by Junejo (junejo18146)
+GitHub Repo: junejo18146/ultrascripthub
+Upload Date: 2026-09-28
+
+-------------------------------------------------------
+LOADSTRING (Delta / Executor Ready):
+-------------------------------------------------------
+loadstring(game:HttpGet("https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/jump_for_animals.lua"))()
+
+-------------------------------------------------------
+RAW SCRIPT URL:
+-------------------------------------------------------
+https://raw.githubusercontent.com/junejo18146/ultrascripthub/main/jump_for_animals.lua
+
+-------------------------------------------------------
+FEATURES INCLUDED (100% OPERATIONAL IN UI 1):
+-------------------------------------------------------
+[ACTION BUTTONS]
+1. 🏰 Teleport to Base (Instant warp to owned plot/base)
+2. ☁️ Teleport to Highest Island (Warp to highest platform/zone)
+3. ⚡ Instant Steal Egg (1-Click warp, prompt trigger, auto-return)
+
+[AUTOMATION TOGGLES]
+4. 🏋️ Auto Train Jump Power (Auto equip weight, activate, click & remotes)
+5. 🥚 Auto Steal Eggs (Target egg proximity prompts & warp)
+6. 🚚 Auto Deliver to Base (Auto-deposit carried eggs/animals to plot)
+7. 🐣 Auto Hatch Eggs (Plot incubator & proximity prompt trigger)
+
+[VISUALS & ESP]
+8. 🥚 Egg ESP (Gold Highlight & live distance tags)
+9. 🐾 Animal Guardian ESP (Red Highlight & live distance tags)
+
+[MOVEMENT & UTILITIES]
+10. 🦘 Infinite Jump (Continuous air jump)
+11. 🏃 WalkSpeed Controller (Checkbox Toggle + Stepper Pill [ - 50 + ] 16 to 300)
+
+[BRANDING]
+- Mandatory Centered Footer: ULTRA SCRIPT HUB / Made by Junejo
+=======================================================
